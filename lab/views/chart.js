@@ -34,9 +34,10 @@
     for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9 * step; v += step) out.push(Math.abs(v) < step * 1e-9 ? 0 : v);
     return out;
   }
+  const trim = (t) => (t.includes(".") ? t.replace(/0+$/, "").replace(/\.$/, "") : t); // 2.50 → 2.5, but 100 stays 100
   const num = (v) => {
     const a = Math.abs(v), d = a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : a >= 0.01 ? 3 : 4;
-    return (v < 0 ? "−" : "") + (a === 0 ? "0" : a < 1e-4 ? a.toExponential(0) : a.toFixed(d).replace(/\.?0+$/, ""));
+    return (v < 0 ? "−" : "") + (a === 0 ? "0" : a < 1e-4 ? a.toExponential(0) : trim(a.toFixed(d)));
   };
 
   class LineChart {

@@ -223,11 +223,11 @@
     const at = Array.from({ length: points }, (_, i) => Math.max(1, Math.round(episodes ** (i / (points - 1)))));
     const p = RL.fig.plot(host, {
       label: "Ten runs of ordinary importance sampling whose estimates have infinite variance",
-      right: 40,
+      right: 84,
       x: { max: episodes, log: true, ticks: [1, 10, 100, 1000, 10000, 100000, 1000000], label: "Episodes (log scale)", format: (u) => (u >= 1000 ? `10${"⁰¹²³⁴⁵⁶"[Math.round(Math.log10(u))]}` : String(u)) },
       y: { min: 0, max: 3, ticks: [0, 1, 2, 3], label: "Estimate of v(s)", digits: 2, tickDigits: 0 },
       curves: Array.from({ length: runs }, (_, i) => ({ id: `r${i}`, name: "", light: i > 0, marks: false })),
-      refs: [{ value: 1, label: "true value 1" }],
+      refs: [{ value: 1, label: "true value", side: true }],
       at: (k) => `After ${k.toLocaleString("en")} episodes`,
     });
     const lines = {};

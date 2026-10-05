@@ -300,6 +300,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .fig .axis-name, .fig .curve-name { font-size: 14.5px; }
 .fig .curve { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
 .fig .leader { fill: none; stroke: var(--ink-3); stroke-width: 1; }
+.fig .ref-line { stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 4 4; }
 .fig .cross { stroke: var(--ink-3); opacity: 0; }
 .fig .hit { fill: transparent; }
 .fig-status { margin: 2px 0 0; font: 12.5px var(--font); color: var(--ink-3); text-align: right; }

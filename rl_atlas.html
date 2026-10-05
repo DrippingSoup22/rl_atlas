@@ -737,6 +737,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .fig .axis-name, .fig .curve-name { font-size: 14.5px; }
 .fig .curve { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
 .fig .leader { fill: none; stroke: var(--ink-3); stroke-width: 1; }
+.fig .ref-line { stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 4 4; }
 .fig .cross { stroke: var(--ink-3); opacity: 0; }
 .fig .hit { fill: transparent; }
 .fig-status { margin: 2px 0 0; font: 12.5px var(--font); color: var(--ink-3); text-align: right; }
@@ -1173,8 +1174,9 @@ a.ref:hover { text-decoration-color: var(--ink); }
 }
 @media (max-width: 640px) {
   .lab { padding: 14px 12px 40px; }
-  .pos { min-width: 0; font-size: 12px; }
-  .transport { gap: 6px; padding: 8px; }
+  .pos { min-width: 0; margin-left: auto; font-size: 12px; }
+  .transport { gap: 6px; padding: 8px 10px; flex-wrap: wrap; }
+  .transport .scrub { order: 9; flex-basis: 100%; min-width: 0; } /* the slider takes its own row under the buttons */
 }
 
 </style>
@@ -3407,7 +3409,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
       A.pi = el("rect", { class: "pi", x: -11, width: 22, rx: 3 }, g);
       A.piText = el("text", { class: "pi-num", x: 0 }, g);
       A.count = el("text", { class: "count", x: 0, y: H - 8 }, g);
-      A.star = el("text", { class: "star", x: 0, y: TOP + PH + 14 }, g);
+      A.star = el("text", { class: "star", x: -22, y: 16 }, g); // by the machine, clear of the bars and their labels
       A.star.textContent = "★";
       this.arms[a] = A;
     }
@@ -4171,9 +4173,10 @@ a.ref:hover { text-decoration-color: var(--ink); }
     for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9 * step; v += step) out.push(Math.abs(v) < step * 1e-9 ? 0 : v);
     return out;
   }
+  const trim = (t) => (t.includes(".") ? t.replace(/0+$/, "").replace(/\.$/, "") : t); // 2.50 → 2.5, but 100 stays 100
   const num = (v) => {
     const a = Math.abs(v), d = a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : a >= 0.01 ? 3 : 4;
-    return (v < 0 ? "−" : "") + (a === 0 ? "0" : a < 1e-4 ? a.toExponential(0) : a.toFixed(d).replace(/\.?0+$/, ""));
+    return (v < 0 ? "−" : "") + (a === 0 ? "0" : a < 1e-4 ? a.toExponential(0) : trim(a.toFixed(d)));
   };
 
   class LineChart {
@@ -5290,13 +5293,21 @@ a.ref:hover { text-decoration-color: var(--ink); }
     const yv = Y.log ? (v) => (Math.log10(Y.max) - Math.log10(Math.max(Y.min, v))) / (Math.log10(Y.max) - Math.log10(Y.min)) : (v) => (Y.max - Math.min(Y.max, Math.max(Y.min, v))) / (Y.max - Y.min);
     const y = (v) => M.t + yv(v) * ph;
     const fy = Y.percent ? (v) => `${Math.round(v * 100)}%` : (v) => num(v, Y.digits);
-    const fyTick = Y.tickDigits != null ? (v) => num(v, Y.tickDigits) : fy; // ticks may be rounder than read-outs
+    // Ticks may be rounder than read-outs: as few decimals as the ticks need, the same for all of them
+    // (each its own on a log axis, where 0.001 and 100 share the scale).
+    const places = (v) => { for (let d = 0; d < 4; d++) if (Math.abs(v - +v.toFixed(d)) < 1e-9) return d; return 4; };
+    const tickPlaces = Math.max(0, ...(Y.ticks || []).map(places));
+    const fyTick = Y.percent ? fy : Y.tickDigits != null ? (v) => num(v, Y.tickDigits) : Y.log ? (v) => num(v, places(v)) : (v) => num(v, tickPlaces);
     const svg = el("svg", { class: "fig plot", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": spec.label || "" });
     let g = "";
     for (const v of Y.ticks) g += `<line class="gridline" x1="${M.l}" x2="${M.l + pw}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${M.l - 8}" y="${y(v) + 4}" text-anchor="end">${fyTick(v)}</text>`;
     for (const u of X.ticks) g += `<text class="tick" x="${x(u)}" y="${M.t + ph + 20}" text-anchor="middle">${fx(u)}</text>`;
-    // a reference label sits at the right end of its line, or from x = r.at when the curves crowd the right
-    for (const r of spec.refs || []) g += `<line class="ref-line" x1="${M.l}" x2="${M.l + pw}" y1="${y(r.value)}" y2="${y(r.value)}"/><text class="note" x="${r.at != null ? x(r.at) + 4 : M.l + pw - 4}" y="${y(r.value) - 6}" text-anchor="${r.at != null ? "start" : "end"}">${r.label}</text>`;
+    // A reference label sits at the right end of its line, from x = r.at when the curves crowd the right,
+    // or past the end of the plot (side) when they crowd everywhere.
+    for (const r of spec.refs || []) {
+      const lx = r.side ? M.l + pw + 6 : r.at != null ? x(r.at) + 4 : M.l + pw - 4, ly = r.side ? y(r.value) + 4 : y(r.value) - 6;
+      g += `<line class="ref-line" x1="${M.l}" x2="${M.l + pw}" y1="${y(r.value)}" y2="${y(r.value)}"/><text class="note" x="${lx}" y="${ly}" text-anchor="${r.side || r.at != null ? "start" : "end"}">${r.label}</text>`;
+    }
     g += `<line class="axis" x1="${M.l}" x2="${M.l + pw}" y1="${M.t + ph}" y2="${M.t + ph}"/><line class="axis" x1="${M.l}" x2="${M.l}" y1="${M.t}" y2="${M.t + ph}"/>
       <text class="axis-name" x="${M.l + pw / 2}" y="${H - 6}" text-anchor="middle">${X.label}</text>
       <text class="axis-name" transform="translate(16 ${M.t + ph / 2}) rotate(-90)" text-anchor="middle">${Y.label}</text>`;
@@ -6085,11 +6096,11 @@ a.ref:hover { text-decoration-color: var(--ink); }
     const at = Array.from({ length: points }, (_, i) => Math.max(1, Math.round(episodes ** (i / (points - 1)))));
     const p = RL.fig.plot(host, {
       label: "Ten runs of ordinary importance sampling whose estimates have infinite variance",
-      right: 40,
+      right: 84,
       x: { max: episodes, log: true, ticks: [1, 10, 100, 1000, 10000, 100000, 1000000], label: "Episodes (log scale)", format: (u) => (u >= 1000 ? `10${"⁰¹²³⁴⁵⁶"[Math.round(Math.log10(u))]}` : String(u)) },
       y: { min: 0, max: 3, ticks: [0, 1, 2, 3], label: "Estimate of v(s)", digits: 2, tickDigits: 0 },
       curves: Array.from({ length: runs }, (_, i) => ({ id: `r${i}`, name: "", light: i > 0, marks: false })),
-      refs: [{ value: 1, label: "true value 1" }],
+      refs: [{ value: 1, label: "true value", side: true }],
       at: (k) => `After ${k.toLocaleString("en")} episodes`,
     });
     const lines = {};

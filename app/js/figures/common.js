@@ -42,13 +42,21 @@
     const yv = Y.log ? (v) => (Math.log10(Y.max) - Math.log10(Math.max(Y.min, v))) / (Math.log10(Y.max) - Math.log10(Y.min)) : (v) => (Y.max - Math.min(Y.max, Math.max(Y.min, v))) / (Y.max - Y.min);
     const y = (v) => M.t + yv(v) * ph;
     const fy = Y.percent ? (v) => `${Math.round(v * 100)}%` : (v) => num(v, Y.digits);
-    const fyTick = Y.tickDigits != null ? (v) => num(v, Y.tickDigits) : fy; // ticks may be rounder than read-outs
+    // Ticks may be rounder than read-outs: as few decimals as the ticks need, the same for all of them
+    // (each its own on a log axis, where 0.001 and 100 share the scale).
+    const places = (v) => { for (let d = 0; d < 4; d++) if (Math.abs(v - +v.toFixed(d)) < 1e-9) return d; return 4; };
+    const tickPlaces = Math.max(0, ...(Y.ticks || []).map(places));
+    const fyTick = Y.percent ? fy : Y.tickDigits != null ? (v) => num(v, Y.tickDigits) : Y.log ? (v) => num(v, places(v)) : (v) => num(v, tickPlaces);
     const svg = el("svg", { class: "fig plot", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": spec.label || "" });
     let g = "";
     for (const v of Y.ticks) g += `<line class="gridline" x1="${M.l}" x2="${M.l + pw}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${M.l - 8}" y="${y(v) + 4}" text-anchor="end">${fyTick(v)}</text>`;
     for (const u of X.ticks) g += `<text class="tick" x="${x(u)}" y="${M.t + ph + 20}" text-anchor="middle">${fx(u)}</text>`;
-    // a reference label sits at the right end of its line, or from x = r.at when the curves crowd the right
-    for (const r of spec.refs || []) g += `<line class="ref-line" x1="${M.l}" x2="${M.l + pw}" y1="${y(r.value)}" y2="${y(r.value)}"/><text class="note" x="${r.at != null ? x(r.at) + 4 : M.l + pw - 4}" y="${y(r.value) - 6}" text-anchor="${r.at != null ? "start" : "end"}">${r.label}</text>`;
+    // A reference label sits at the right end of its line, from x = r.at when the curves crowd the right,
+    // or past the end of the plot (side) when they crowd everywhere.
+    for (const r of spec.refs || []) {
+      const lx = r.side ? M.l + pw + 6 : r.at != null ? x(r.at) + 4 : M.l + pw - 4, ly = r.side ? y(r.value) + 4 : y(r.value) - 6;
+      g += `<line class="ref-line" x1="${M.l}" x2="${M.l + pw}" y1="${y(r.value)}" y2="${y(r.value)}"/><text class="note" x="${lx}" y="${ly}" text-anchor="${r.side || r.at != null ? "start" : "end"}">${r.label}</text>`;
+    }
     g += `<line class="axis" x1="${M.l}" x2="${M.l + pw}" y1="${M.t + ph}" y2="${M.t + ph}"/><line class="axis" x1="${M.l}" x2="${M.l}" y1="${M.t}" y2="${M.t + ph}"/>
       <text class="axis-name" x="${M.l + pw / 2}" y="${H - 6}" text-anchor="middle">${X.label}</text>
       <text class="axis-name" transform="translate(16 ${M.t + ph / 2}) rotate(-90)" text-anchor="middle">${Y.label}</text>`;
