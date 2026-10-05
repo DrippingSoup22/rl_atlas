@@ -105,6 +105,8 @@ $$L(\boldsymbol\theta) = -\sum_t \err{\hat A_t}\,\ln \pol{\pi(A_t \mid S_t, \bol
 
 where $\hat G_t$ is the $n$-step return, $\err{\hat A_t}$ is treated as a constant (no gradient flows through it), and $c_v$ balances the two heads. Mnih and colleagues trained Atari agents this way on 16 CPU threads, faster than DQN on GPUs, and also solved continuous-control tasks with Gaussian policies. A2C is also the starting point of the methods that limit each policy step ([[trpo]], [[ppo]]) and of the advantage estimates that tune the bias–variance trade more finely ([[gae]]).
 
+The guide's recorded A2C keeps two separate networks of 64 + 64 units, with eight workers and a step every 5 of their steps. On CartPole, trained from five seeds per value: learning rates of $3 \cdot 10^{-4}$ and $10^{-3}$ balance the pole in all five runs; at $3 \cdot 10^{-3}$ one run of five falls short, and at $10^{-2}$ one collapses, its last training episodes lasting 9 steps on average. [The run and its sweeps, in the Lab](lab:a2c-cartpole).
+
 ### Example: four workers in a maze {#example}
 
 In the Dyna maze ([[dyna-q]]), with a reward of 1 at the goal, $\gam = 0.95$, tabular features, $N = 4$ workers, $\alp^{\boldsymbol\theta} = 2$, $\alp^{\mathbf w} = 0.3$ and no entropy bonus, A2C brings the average episode from about 600 steps to 18 within 60 rounds of four episodes, with $n = 5$; the shortest path has 14 steps. Updating every step ($n = 1$) learns slowest, because each update passes the news of the goal back by a single step; $n = 20$ learns fastest at first and ends a little worse than $n = 5$, at 20 steps.
