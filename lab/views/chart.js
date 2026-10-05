@@ -202,4 +202,72 @@
   }
 
   RL.LineChart = LineChart;
+
+  // The odds against one knob: a dot per value the knob was swept over (evenly spaced, the value the Lab is set to
+  // shaded), joined by lines, one series per racer: the share of runs that succeeded, or their average score.
+  class SweepChart {
+    constructor(host, { height = 170, label = "", percent = false, log = false, values = [], fmtX = String, current = null } = {}) {
+      Object.assign(this, { host, height, percent, log, values, fmtX, current });
+      this.series = [];
+      this.svg = el("svg", { class: "linechart sweep", role: "img", "aria-label": label }, host);
+      this.ro = new ResizeObserver(() => this.render());
+      this.ro.observe(host);
+    }
+
+    // series: [{ name, color, points: [a number or NaN per value], notes: [what a dot's tooltip says] }]
+    set(series) {
+      this.series = series;
+      this.render();
+    }
+
+    fmt(v) { return this.percent ? `${Math.round(v * 100)}%` : num(v); }
+
+    render() {
+      const W = Math.max(280, this.host.clientWidth), H = this.height, svg = this.svg, k = this.values.length;
+      svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      svg.setAttribute("width", W);
+      svg.setAttribute("height", H);
+      svg.replaceChildren();
+      let lo = Infinity, hi = -Infinity;
+      for (const s of this.series) for (const v of s.points) if (Number.isFinite(v) && (!this.log || v > 0)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      if (this.percent) [lo, hi] = [0, 1];
+      else if (!Number.isFinite(lo)) [lo, hi] = this.log ? [1, 10] : [0, 1]; // no dots yet (a log axis cannot start at 0)
+      else if (this.log) [lo, hi] = [10 ** Math.floor(Math.log10(lo)), 10 ** Math.ceil(Math.log10(Math.max(hi, lo * 1.01)))];
+      else {
+        if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+        const t = ticks(lo, hi, 4);
+        [lo, hi] = [Math.min(t[0], lo), Math.max(t[t.length - 1], hi)];
+      }
+      const pw = W - M.l - M.r, ph = H - M.t - M.b, slot = pw / Math.max(1, k);
+      const x = (i) => M.l + (i + 0.5) * slot;
+      const yv = this.log ? (v) => (Math.log10(hi) - Math.log10(Math.min(hi, Math.max(lo, v)))) / (Math.log10(hi) - Math.log10(lo)) : (v) => (hi - Math.min(hi, Math.max(lo, v))) / (hi - lo);
+      const y = (v) => M.t + yv(v) * ph;
+      const grid = el("g", { class: "grid" }, svg);
+      const at = this.values.indexOf(this.current);
+      if (at >= 0) el("rect", { class: "now-band", x: M.l + at * slot, y: M.t, width: slot, height: ph }, grid);
+      for (const v of this.log ? logTicks(lo, hi) : ticks(lo, hi, 4)) {
+        el("line", { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v) }, grid);
+        el("text", { class: "tick", x: M.l - 8, y: y(v) + 4, "text-anchor": "end" }, grid).textContent = this.fmt(v);
+      }
+      const every = slot < 34 ? 2 : 1; // crowded labels: every other one, always keeping the current value
+      this.values.forEach((v, i) => {
+        if (i % every && i !== at) return;
+        el("text", { class: `tick${i === at ? " now" : ""}`, x: x(i), y: H - 8, "text-anchor": "middle" }, grid).textContent = this.fmtX(v);
+      });
+      for (const s of this.series) {
+        const pts = s.points.map((v, i) => [i, v]).filter(([, v]) => Number.isFinite(v));
+        if (pts.length > 1) el("polyline", { class: "past", points: pts.map(([i, v]) => `${x(i)},${y(v)}`).join(" "), style: `stroke: var(${s.color})` }, svg);
+        for (const [i, v] of pts) {
+          const dot = el("circle", { class: "dot", r: 4, cx: x(i), cy: y(v), style: `fill: var(${s.color})` }, svg);
+          el("title", {}, dot).textContent = `${s.name}, ${this.fmtX(this.values[i])}: ${s.notes?.[i] ?? this.fmt(v)}`;
+        }
+      }
+    }
+
+    destroy() {
+      this.ro.disconnect();
+      this.svg.remove();
+    }
+  }
+  RL.SweepChart = SweepChart;
 })(globalThis.RL = globalThis.RL || {});

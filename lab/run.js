@@ -141,4 +141,15 @@
     }
     return { path, reached: true };
   };
+
+  // How a run ended, by a preset's rule: { metric, min or max, window: [first, last] unit (1-based; the last tenth by
+  // default) }. score is the metric's average over the window; ok whether it reached min or stayed within max.
+  lab.success = function (rule, metrics) {
+    const v = metrics[rule.metric], n = v.length;
+    const [from, to] = rule.window || [n - Math.max(1, Math.round(n / 10)) + 1, n];
+    let sum = 0, count = 0;
+    for (let t = Math.max(1, from) - 1; t < Math.min(n, to); t++) if (Number.isFinite(v[t])) { sum += v[t]; count++; }
+    const score = count ? sum / count : NaN;
+    return { score, ok: rule.min !== undefined ? score >= rule.min : rule.max !== undefined ? score <= rule.max : undefined };
+  };
 })(globalThis.RL = globalThis.RL || {});

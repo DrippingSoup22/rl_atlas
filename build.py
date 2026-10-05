@@ -34,7 +34,7 @@ REQUIRED = {
 }
 FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story"}
 # The keys of a Lab preset (content/lab.toml); any other key is a knob, and what its charts may plot.
-PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro"}
+PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro", "success"}
 CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights",
           "policy-value", "right", "aim", "kl", "clipped"}
 # What a preset of recorded runs (racers that name a recording) can chart: from the recordings, nothing is recomputed.
@@ -455,11 +455,28 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
     for m in measures:
         if m not in MEASURES:
             problems.error(where, f"unknown measure '{m}'")
+    success = raw.get("success")
+    if success is not None:  # what counts as a run that ended well, for the odds the Lab counts over many seeds
+        units = raw.get("units", 500)
+        metric, window = success.get("metric"), success.get("window")
+        if set(success) - {"metric", "min", "max", "window", "text"}:
+            problems.error(where, f"success has unknown keys: {', '.join(sorted(set(success) - {'metric', 'min', 'max', 'window', 'text'}))}")
+        if metric not in CHARTS:
+            problems.error(where, f"success judges '{metric}', which no run records (one of: {', '.join(sorted(CHARTS))})")
+        elif metric in MEASURES and metric not in measures:
+            problems.error(where, f"success judges '{metric}' but the preset does not measure it (add it to measures)")
+        if ("min" in success) == ("max" in success):
+            problems.error(where, "success needs exactly one of min and max")
+        if not success.get("text"):
+            problems.error(where, "success needs a text: what the runs that end well do, as in \"how many <text>\"")
+        if window is not None and not (isinstance(window, list) and len(window) == 2 and 1 <= window[0] <= window[1] <= units):
+            problems.error(where, f"success window must be [first, last] units within 1 to {units}")
     return {
         "title": raw.get("title", pid), "env": raw.get("env", ""), "racers": racers,
         "units": raw.get("units", 500), "seed": raw.get("seed", 1), "runs": raw.get("runs", 1),
         "charts": charts, "measures": measures, "film": raw.get("film", []), "intro": raw.get("intro", ""),
         "params": {k: v for k, v in raw.items() if k not in PRESET_KEYS},
+        **({"success": success} if success is not None else {}),
     }
 
 

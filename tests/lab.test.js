@@ -299,3 +299,33 @@ test("every Lab preset runs: its world, algorithms and measures exist", () => {
     }
   }
 });
+
+test("success rules: the average over a window, the last tenth by default, against a min or a max", () => {
+  const metrics = { steps: Float64Array.from([900, 500, 100, 40, 20, 20, 20, 20, 20, 30]) };
+  assert.deepEqual(lab.success({ metric: "steps", max: 25 }, metrics), { score: 30, ok: false }); // the last tenth: 1 unit
+  assert.deepEqual(lab.success({ metric: "steps", max: 25, window: [5, 9] }, metrics), { score: 20, ok: true });
+  assert.deepEqual(lab.success({ metric: "steps", min: 400, window: [1, 3] }, metrics), { score: 500, ok: true });
+});
+
+test("every preset's success rule judges its runs", () => {
+  for (const [id, p] of Object.entries(globalThis.RL.content.presets)) {
+    if (!p.success) continue;
+    for (const r of p.racers) {
+      const { metrics } = lab.simulate({ world: p.env, algorithm: A[r.algorithm], params: { ...p.params, ...r.params }, units: p.units, seed: p.seed, snapshots: false, measures: p.measures });
+      const { ok, score } = lab.success(p.success, metrics);
+      assert.equal(typeof ok, "boolean", id);
+      assert.ok(!Number.isNaN(score), `${id}: ${r.name} has no score`);
+    }
+  }
+});
+
+test("the odds the Lab shows: exploring finds the best arm more often; the entropy bonus finds the big gem", () => {
+  const odds = (id, k, n) => {
+    const p = globalThis.RL.content.presets[id], r = p.racers[k];
+    return seeds(n).filter((s) => lab.success(p.success, lab.simulate({ world: p.env, algorithm: A[r.algorithm], params: { ...p.params, ...r.params }, units: p.units, seed: s, snapshots: false, measures: p.measures }).metrics).ok).length / n;
+  };
+  const greedy = odds("bandit-epsilon", 0, 100), explore = odds("bandit-epsilon", 2, 100);
+  assert.ok(greedy < 0.55 && explore > 0.75, `greedy ${greedy}, ε = 0.1 ${explore}`);
+  const plain = odds("entropy-gems", 0, 20), bonus = odds("entropy-gems", 1, 20);
+  assert.ok(plain <= 0.15 && bonus >= 0.8, `no bonus ${plain}, bonus ${bonus}`);
+});

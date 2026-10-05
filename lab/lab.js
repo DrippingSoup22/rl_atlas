@@ -26,18 +26,19 @@
     round: [...walking("Step by step", [520, 200]), ...rates(1, 4, 20)], // every worker steps at once
   };
   // The knobs a preset can show as sliders. alpha = 0 means sample averages (1/n), where an algorithm allows it.
+  // sweep: the values a sweep of the odds tries for a slider (a knob with choices tries its choices).
   const KNOBS = {
-    alpha: { sym: "α", name: "step size", min: 0.01, max: 1, step: 0.01 },
-    epsilon: { sym: "ε", name: "exploration", min: 0, max: 0.5, step: 0.01 },
-    gamma: { sym: "γ", name: "discount", min: 0.5, max: 1, step: 0.01 },
-    c: { sym: "c", name: "confidence", min: 0, max: 5, step: 0.1 },
-    q0: { sym: "Q₁", name: "first estimate", min: -2, max: 10, step: 0.5 },
+    alpha: { sym: "α", name: "step size", min: 0.01, max: 1, step: 0.01, sweep: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1] },
+    epsilon: { sym: "ε", name: "exploration", min: 0, max: 0.5, step: 0.01, sweep: [0, 0.01, 0.05, 0.1, 0.2, 0.3, 0.5] },
+    gamma: { sym: "γ", name: "discount", min: 0.5, max: 1, step: 0.01, sweep: [0.5, 0.7, 0.9, 0.95, 0.99, 1] },
+    c: { sym: "c", name: "confidence", min: 0, max: 5, step: 0.1, sweep: [0, 0.5, 1, 2, 3, 5] },
+    q0: { sym: "Q₁", name: "first estimate", min: -2, max: 10, step: 0.5, sweep: [-2, 0, 1, 2, 5, 10] },
     theta: { sym: "θ", name: "tolerance", choices: [0.1, 0.01, 0.001, 0.0001] },
     n: { sym: "n", name: "steps ahead", choices: [1, 2, 3, 4, 8, 16, 32, 64] },
-    lambda: { sym: "λ", name: "trace decay", min: 0, max: 1, step: 0.01 },
+    lambda: { sym: "λ", name: "trace decay", min: 0, max: 1, step: 0.01, sweep: [0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1] },
     planning: { sym: "n", name: "planning steps", choices: [0, 1, 5, 10, 20, 50, 100] },
     kappa: { sym: "κ", name: "exploration bonus", choices: [0, 0.0001, 0.001, 0.01] },
-    alphaW: { sym: "αw", name: "critic step size", min: 0.01, max: 1, step: 0.01 },
+    alphaW: { sym: "αw", name: "critic step size", min: 0.01, max: 1, step: 0.01, sweep: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1] },
     beta: { sym: "β", name: "entropy bonus", choices: [0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1] },
     workers: { sym: "N", name: "workers", choices: [1, 2, 4, 8, 16] },
     epochs: { sym: "K", name: "passes over each batch", choices: [1, 2, 4, 10, 20] },
@@ -91,7 +92,7 @@
     const view = { seeds: false, show: {} };
     const from = RL.app?.from?.name === "entry" ? racers.findLastIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
     const P = { e: 0, playing: false, speed: "step", acc: 0, wait: 0, walkers: null, focus: Math.max(0, from >= 0 ? from : racers.length - 1) };
-    let runs = [], stages = [], views = [], job = null, film = null, charts = [];
+    let runs = [], stages = [], views = [], job = null, film = null, charts = [], avg = null, sweepJob = null, sweepCharts = [];
 
     host.innerHTML = `
       <section class="lab" data-kind="${env.kind}">
@@ -124,6 +125,17 @@
               <div class="chart-grid"></div>
               <p class="faint chart-note"></p>
               <p class="summary"></p>
+            </section>
+            <section class="odds-card card" hidden>
+              <h3>The odds</h3>
+              <p class="odds-tally"></p>
+              <div class="sweep-bar">
+                <label>Sweep <select class="sweep-knob" aria-label="Knob to sweep"></select></label>
+                <label>over <select class="sweep-runs" aria-label="Runs per value">${[10, 20, 50, 100].map((n) => `<option value="${n}"${n === 20 ? " selected" : ""}>${n}</option>`).join("")}</select> runs per value</label>
+                <button class="pill sweep-go" type="button">Run</button>
+              </div>
+              <div class="chart-grid sweep-grid"></div>
+              <p class="faint sweep-note"></p>
             </section>
           </div>
           <aside class="lab-side">
@@ -207,6 +219,7 @@
       liveNote.classList.add("faint");
       q(".legend").innerHTML = racers.map((r, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${esc(r.name)}</span>`).join("");
       knobPanel();
+      oddsPanel();
       chartsFor();
       focus(Math.min(P.focus, racers.length - 1));
       simulate();
@@ -230,15 +243,18 @@
       drawCharts();
       summary();
       seek(Math.min(P.e, knobs.units));
-      if (knobs.runs > 1 || view.seeds) average();
+      avg = null;
+      clearSweep(sweepCharts.length ? "The settings changed: run the sweep again to see the odds with them." : sweepIdle());
+      if (knobs.runs > 1 || view.seeds || preset.success) average();
     }
 
     // Many runs in the background, a few at a time, so the page stays responsive; the charts fill in as they come.
+    // They also count the runs that end as the preset's success rule asks (20 of them when the charts show one run).
     function average() {
-      const n = knobs.runs > 1 ? knobs.runs : 10, seeds = Array.from({ length: n }, (_, k) => knobs.seed + k);
-      const sums = racers.map(() => ({})), lines = racers.map(() => []);
+      const n = knobs.runs > 1 ? knobs.runs : preset.success ? 20 : 10, seeds = Array.from({ length: n }, (_, k) => knobs.seed + k);
+      const sums = racers.map(() => ({})), lines = racers.map(() => []), wins = racers.map(() => 0);
       let done = 0, cancelled = false;
-      const note = q(".chart-note");
+      const note = q(".chart-note"), charted = () => knobs.runs > 1 || view.seeds;
       const chunk = () => {
         if (cancelled) return;
         const t0 = performance.now();
@@ -249,12 +265,15 @@
               const s = (sums[i][k] ||= new Float64Array(knobs.units));
               for (let t = 0; t < knobs.units; t++) s[t] += metrics[k][t];
             }
-            if (knobs.runs <= 1) lines[i].push(metrics);
+            if (preset.success && lab.success(preset.success, metrics).ok) wins[i]++;
+            if (knobs.runs <= 1 && lines[i].length < 10) lines[i].push(metrics); // the thin lines: the first 10
           });
           done++;
         }
-        drawCharts({ sums, lines, done });
-        note.textContent = done < n ? `Running ${done} of ${n} runs…` : chartNote(n);
+        avg = { sums, lines, wins, done, n };
+        if (charted()) drawCharts(avg);
+        note.textContent = !charted() ? chartNote(1) : done < n ? `Running ${done} of ${n} runs…` : chartNote(n);
+        tally();
         if (done < n) timer = setTimeout(chunk, 0);
       };
       let timer = setTimeout(chunk, 30);
@@ -279,7 +298,7 @@
 
     function chartNote(n) {
       if (knobs.runs > 1) return `Each line is the average of ${n} runs, each with its own seed; the views above play the run with seed ${knobs.seed}. Click a chart to jump there.`;
-      if (view.seeds) return `Thin lines: 10 runs with seeds ${knobs.seed} to ${knobs.seed + 9}, the same settings each time. Thick lines: their average. Click a chart to jump there.`;
+      if (view.seeds) return `Thin lines: ${Math.min(10, n)} runs with seeds ${knobs.seed} to ${knobs.seed + Math.min(10, n) - 1}, the same settings each time. Thick lines: ${n > 10 ? `the average of all ${n}, seeds ${knobs.seed} to ${knobs.seed + n - 1}` : "their average"}. Click a chart to jump there.`;
       const smooth = preset.charts.some((k) => METRICS[k].smooth);
       return `${smooth ? "Smoothed over 10 " + noun()[1] + ". " : ""}Click a chart to jump there.`;
     }
@@ -323,6 +342,96 @@
       }
       if (k === "match" || k === "optimal") return [{ value: 1, label: "" }];
       return [];
+    }
+
+    // ---- the odds: how often runs end well, and how that moves with a knob ----
+    const knobOf = (k) => ({ ...KNOBS[k], ...racers.find((r) => r.algorithm.knobs?.[k])?.algorithm.knobs[k] });
+    // The values a sweep tries: a knob's choices or its sweep list. Tiny step sizes (linear methods, policy gradients)
+    // try the ladder around the ones in use; averaging methods also try 1/n.
+    function sweepValues(k) {
+      const now = [...(k in preset.params ? [knobs[k]] : []), ...racers.filter((r) => k in r.params).map((r) => r.params[k])];
+      if ((k === "alpha" || k === "alphaW") && Math.max(...now) < 0.01) return ALPHA_LADDER.filter((a) => a >= Math.min(...now) / 30 && a <= Math.max(...now) * 30);
+      const list = knobOf(k).choices || knobOf(k).sweep || [];
+      return k === "alpha" && racers.every((r) => AVERAGING.has(r.algorithm.id)) ? [0, ...list] : list;
+    }
+    const sweepable = () => Object.keys(KNOBS).filter((k) => (k in preset.params || racers.some((r) => k in r.params)) && sweepValues(k).length > 1);
+    const fmtSweep = (k, v) => (k === "alpha" && v === 0 ? "1/n" : v > 0 && v < 0.001 ? v.toExponential(0) : String(v));
+    const sweepIdle = () => `Run the sweep to see how ${preset.success ? "the odds move" : "the final score moves"} with a knob; every value gets the same seeds.`;
+
+    function oddsPanel() {
+      const ks = sweepable();
+      q(".odds-card").hidden = !ks.length && !preset.success;
+      q(".odds-tally").hidden = !preset.success;
+      q(".sweep-bar").hidden = !ks.length;
+      q(".sweep-knob").innerHTML = ks.map((k) => `<option value="${k}">${esc(knobOf(k).sym)} · ${esc(knobOf(k).name)}</option>`).join("");
+      clearSweep(sweepIdle());
+    }
+
+    // How many of the runs so far ended as the success rule asks, for each racer.
+    function tally() {
+      if (!preset.success || !avg) return;
+      const { wins, done, n } = avg, pct = (w) => Math.round((100 * w) / Math.max(1, done));
+      q(".odds-tally").innerHTML = `Out of ${done} runs with these settings${done < n ? ` (${n - done} still to come)` : ""}, how many ${esc(preset.success.text)}: ` +
+        racers.map((r, i) => `<b>${esc(r.name)}</b> ${wins[i]} (${pct(wins[i])}%)`).join(" · ") + ".";
+    }
+
+    function clearSweep(note) {
+      sweepJob?.cancel();
+      sweepCharts.forEach((c) => c.destroy());
+      sweepCharts = [];
+      q(".sweep-grid").innerHTML = "";
+      q(".sweep-note").textContent = note;
+    }
+
+    // Every value of one knob, the same seeds for each, the other knobs as set: the share of runs that end well and
+    // their average score. Racers that differ only in this knob become one line.
+    function sweep() {
+      clearSweep("");
+      const k = q(".sweep-knob").value, values = sweepValues(k), n = +q(".sweep-runs").value;
+      const rule = preset.success || { metric: preset.charts[0] }, m = METRICS[rule.metric] || {};
+      const groups = [];
+      racers.forEach((r, i) => {
+        const base = { ...paramsOf(r) };
+        delete base[k];
+        const key = r.algorithm.id + JSON.stringify(base), same = groups.find((g) => g.key === key);
+        if (same) same.name = r.algorithm.title;
+        else groups.push({ key, r, i, base, name: k in r.params ? r.algorithm.title : r.name }); // its own value is overridden
+      });
+      const kinds = preset.success ? ["ok", "score"] : ["score"], current = k in preset.params ? knobs[k] : null;
+      const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}` };
+      const grid = q(".sweep-grid");
+      grid.className = `chart-grid sweep-grid n${kinds.length}`;
+      grid.innerHTML = kinds.map((c) => `<div class="chart-box"><h3>${esc(titles[c])}</h3><div class="chart-host"></div></div>`).join("");
+      sweepCharts = kinds.map((c, j) => new RL.SweepChart(grid.querySelectorAll(".chart-host")[j], {
+        label: titles[c], percent: c === "ok" || m.percent, log: c === "score" && m.log, values, fmtX: (v) => fmtSweep(k, v), current,
+      }));
+      const res = groups.map(() => values.map(() => ({ runs: 0, wins: 0, sum: 0, scored: 0 })));
+      const total = values.length * groups.length * n;
+      let done = 0, cancelled = false, timer;
+      const draw = () => kinds.forEach((c, j) => sweepCharts[j].set(groups.map((g, gi) => ({
+        name: g.name, color: `--s${g.i + 1}`,
+        points: res[gi].map((x) => (c === "ok" ? (x.runs ? x.wins / x.runs : NaN) : x.scored ? x.sum / x.scored : NaN)),
+        notes: res[gi].map((x) => (c === "ok" ? `${x.wins} of ${x.runs} runs` : x.scored ? `average ${sweepCharts[j].fmt(x.sum / x.scored)} over ${x.scored} runs` : "")),
+      }))));
+      const chunk = () => {
+        if (cancelled) return;
+        const t0 = performance.now();
+        while (done < total && performance.now() - t0 < 14) {
+          const vi = Math.floor(done / (groups.length * n)), si = Math.floor(done / groups.length) % n, gi = done % groups.length, g = groups[gi];
+          const { metrics } = lab.simulate({ world: make, algorithm: g.r.algorithm, params: { ...g.base, [k]: values[vi] }, units: knobs.units, seed: knobs.seed + si, snapshots: false, measures: preset.measures });
+          const { ok, score } = lab.success(rule, metrics), x = res[gi][vi];
+          x.runs++;
+          if (ok) x.wins++;
+          if (!Number.isNaN(score)) { x.sum += score; x.scored++; }
+          done++;
+        }
+        draw();
+        q(".sweep-note").textContent = done < total ? `Running ${done} of ${total} runs…`
+          : `${n} runs per value, with seeds ${knobs.seed} to ${knobs.seed + n - 1} and the other knobs as set above.${current !== null ? " The shaded value is the one the Lab is set to." : ""} Hover a dot for its numbers.`;
+        if (done < total) timer = setTimeout(chunk, 0);
+      };
+      timer = setTimeout(chunk, 30);
+      sweepJob = { cancel() { cancelled = true; clearTimeout(timer); } };
     }
 
     // One sentence on where each run ended up.
@@ -636,10 +745,16 @@
       if (!b || +b.dataset.seeds === +view.seeds) return;
       view.seeds = b.dataset.seeds === "1";
       b.parentElement.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+      if (avg && avg.done === avg.n) { // the runs are all done (counted for the odds): only the charts change
+        drawCharts(view.seeds ? avg : undefined);
+        if (view.seeds) q(".chart-note").textContent = chartNote(avg.n);
+        return;
+      }
       job?.cancel();
       drawCharts();
-      if (view.seeds) average();
+      if (view.seeds || preset.success) average();
     });
+    q(".sweep-go").addEventListener("click", sweep);
     playBtn.addEventListener("click", () => (P.playing ? pause() : play()));
     q(".step").addEventListener("click", stepOnce);
     q(".restart").addEventListener("click", () => { pause(); seek(0); });
@@ -680,6 +795,7 @@
         cancelAnimationFrame(raf);
         cancelAnimationFrame(pending);
         job?.cancel();
+        clearSweep("");
         removeEventListener("keydown", onKey);
         charts.forEach((c) => c.destroy());
         views.forEach((v) => v.destroy());

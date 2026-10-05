@@ -9,6 +9,8 @@
 #   charts     what to plot: return, optimal, left, error, match, greedy, delta, steps, ve, weights
 #   measures   numbers computed against the exact answer after each unit: error, match, greedy, optimal-error, ve
 #   film       the moments the filmstrip shows (in units)
+#   success    what counts as a run that ended well, for the odds the Lab counts over many seeds: { metric, min or
+#              max, window = [first, last] units (the last tenth by default), text }; text finishes "how many …"
 # Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge,
 # n (n-step methods), lambda and trace ("accumulating" or "replacing"), planning and kappa (Dyna),
 # features ("groups", "tiles", "poly", "fourier", "table" or "own") with cells, tilings and order, and behavior (the
@@ -27,6 +29,7 @@ domain = [-100, 0]
 charts = ["return"]
 film = [1, 10, 100, 500]
 intro = "Same world, same randomness, one change in the update. Watch which path each one learns, and which one falls more often while learning."
+success = { metric = "return", min = -40, text = "end up losing less than 40 per episode on average, while still exploring" }
 
 [cliff-expected]
 title = "Expected SARSA on the cliff"
@@ -41,6 +44,7 @@ domain = [-100, 0]
 charts = ["return"]
 film = [1, 10, 100, 500]
 intro = "Expected SARSA averages over the next moves instead of sampling one. It learns a path between SARSA's and Q-learning's, and its rewards wobble less from episode to episode."
+success = { metric = "return", min = -40, text = "end up losing less than 40 per episode on average, while still exploring" }
 
 [bandit-epsilon]
 title = "Greedy vs ε-greedy"
@@ -57,6 +61,7 @@ alpha = 0.0
 charts = ["return", "optimal"]
 film = [10, 100, 1000]
 intro = "Ten slot machines with hidden payouts. The greedy learner settles on the first arm that looks good; a little exploration finds the best one. The charts average many runs, each on new machines."
+success = { metric = "optimal", min = 0.5, text = "end up pulling the best arm most of the time" }
 
 [bandit-optimistic]
 title = "Optimistic starts vs ε-greedy"
@@ -72,6 +77,7 @@ alpha = 0.1
 charts = ["optimal", "return"]
 film = [10, 100, 1000]
 intro = "Starting every estimate far too high makes even a greedy learner try every arm: each pull disappoints, so it moves on. Watch the spike in the first steps."
+success = { metric = "optimal", min = 0.5, text = "end up pulling the best arm most of the time" }
 
 [bandit-ucb]
 title = "UCB vs ε-greedy"
@@ -88,6 +94,7 @@ c = 2.0
 charts = ["return", "optimal"]
 film = [10, 100, 1000]
 intro = "UCB explores where it is unsure: each arm gets a bonus that shrinks the more it is tried. ε-greedy explores blindly, at the same rate forever."
+success = { metric = "optimal", min = 0.5, text = "end up pulling the best arm most of the time" }
 
 [bandit-gradient]
 title = "Gradient bandit, with and without a baseline"
@@ -103,6 +110,7 @@ alpha = 0.1
 charts = ["optimal"]
 film = [10, 100, 1000]
 intro = "Every payout here is around +4. Without a baseline every reward looks good and pushes up whatever was pulled; with the average reward as a baseline only better-than-usual rewards do."
+success = { metric = "optimal", min = 0.5, text = "end up pulling the best arm most of the time" }
 
 [bandit-drift]
 title = "Sample averages vs a constant step size on drifting machines"
@@ -118,6 +126,7 @@ epsilon = 0.1
 charts = ["return", "optimal"]
 film = [100, 1000, 10000]
 intro = "The machines slowly change their payouts. Averages weigh a pull from long ago as much as the last one and fall behind; a constant step size keeps up."
+success = { metric = "optimal", min = 0.5, text = "end up pulling the current best arm most of the time" }
 
 [dp-evaluation]
 title = "Policy evaluation, sweep by sweep"
@@ -189,6 +198,7 @@ charts = ["greedy"]
 measures = ["greedy"]
 film = [10, 100, 1000, 3000]
 intro = "Only the gem pays, and the ice is slippery. Monte Carlo learns from whole episodes and gets going quickly; Q-learning passes the news back one step at a time."
+success = { metric = "greedy", min = 0.5, text = "end with a greedy policy that reaches the gem at least half the time" }
 
 [random-walk]
 title = "TD(0) vs Monte Carlo on the random walk"
@@ -217,6 +227,7 @@ epsilon = 0.1
 gamma = 1.0
 charts = ["left"]
 intro = "Going left from A leads to B, whose many actions all lose a little on average, but some will look like winners by luck. Q-learning trusts the luckiest one; Double Q-learning does not."
+success = { metric = "left", max = 0.1, window = [41, 60], text = "go left from A at most 10% of the time by episodes 41 to 60" }
 
 [n-step-walk]
 title = "n-step TD on the 19-state random walk"
@@ -253,6 +264,7 @@ gamma = 0.95
 charts = ["steps"]
 film = [1, 2, 5, 50]
 intro = "Only the gem pays. When the first episode finally reaches it, one-step SARSA strengthens one move, the last; n-step SARSA strengthens the last n moves at once, so the way home is found in fewer episodes."
+success = { metric = "steps", max = 150, window = [3, 4], text = "already reach the gem in under 150 steps in episodes 3 and 4" }
 
 [td-lambda-walk]
 title = "TD(λ) on the 19-state random walk"
@@ -289,6 +301,7 @@ gamma = 0.95
 charts = ["steps"]
 film = [1, 2, 5, 50]
 intro = "The trace marks every move of the episode, fading with time. When the gem is reached, the whole glowing trail learns at once. Accumulating traces grow on moves made again and again, replacing traces stop at 1."
+success = { metric = "steps", max = 60, window = [3, 4], text = "already reach the gem in under 60 steps in episodes 3 and 4" }
 
 [dyna-maze]
 title = "Dyna-Q: planning in the maze"
@@ -307,6 +320,7 @@ gamma = 0.95
 charts = ["steps"]
 film = [1, 2, 3, 50]
 intro = "After every real step, Dyna-Q replays remembered moves to itself: the dashed sparks. The first episode is a long random search for all three; after it, the planners find the way home almost at once."
+success = { metric = "steps", max = 40, window = [3, 4], text = "already reach the gem in under 40 steps in episodes 3 and 4" }
 
 [dyna-blocking]
 title = "Dyna-Q vs Dyna-Q+ when the way is blocked"
@@ -343,6 +357,7 @@ kappa = 0.001
 charts = ["steps"]
 film = [50, 150, 250, 400]
 intro = "After 3000 steps a shortcut opens on the right. Nothing tells Dyna-Q: its model and its plans say the long way is best, and it never looks. Dyna-Q+'s curiosity bonus sends it to check, and it finds the shorter path."
+success = { metric = "steps", max = 15, text = "end up taking the shortcut (under 15 steps)" }
 
 [sweeping]
 title = "Prioritized sweeping vs Dyna-Q"
@@ -361,6 +376,7 @@ planning = 5
 charts = ["steps"]
 film = [1, 2, 5, 30]
 intro = "Both may make 5 planning updates per step. Dyna-Q picks remembered moves at random, mostly ones where nothing changes; prioritized sweeping works backward from wherever a value just changed, so the news spreads from the gem along the way it came."
+success = { metric = "steps", max = 60, window = [2, 3], text = "already reach the gem in under 60 steps in episodes 2 and 3" }
 
 [walk-aggregation]
 title = "Gradient Monte Carlo and semi-gradient TD on 1000 states"
@@ -411,6 +427,7 @@ cells = 8
 charts = ["steps"]
 film = [1, 12, 100, 500]
 intro = "Every step costs 1, and the engine is too weak to drive straight up. The landscape on the right is what the learner expects to pay from each position and speed: it starts flat and hopeful (all estimates 0), and every disappointment digs in, until the car learns to rock back first."
+success = { metric = "steps", max = 150, text = "end up getting out in under 150 steps" }
 
 [mountain-car-n]
 title = "One step or eight on Mountain Car"
@@ -430,6 +447,7 @@ cells = 8
 charts = ["steps"]
 film = [1, 10, 100, 300]
 intro = "The n-step return reaches eight steps ahead, so each disappointment travels back faster: the landscape fills in sooner, and the first episodes are shorter."
+success = { metric = "steps", max = 300, window = [1, 30], text = "average under 300 steps over the first 30 episodes" }
 
 [deadly-triad]
 title = "The deadly triad on Baird's counterexample"
@@ -448,6 +466,7 @@ charts = ["weights", "error"]
 measures = ["error"]
 film = [0, 100, 300, 1000]
 intro = "Every true value is 0, and nothing random can mislead the learner: rewards are always 0. Yet off-policy semi-gradient TD with these features walks its weights away to infinity. Take away any one of the three ingredients and the weights stay bounded."
+success = { metric = "weights", max = 100, text = "keep the size of their weights under 100" }
 
 [sandbox]
 title = "Sandbox"
@@ -480,6 +499,7 @@ charts = ["return", "right"]
 measures = ["right"]
 film = [0, 50, 200, 1000]
 intro = "Every cell looks the same to the agent, and the middle one swaps left and right. No fixed choice ever reaches the goal; the best is to step right about 59% of the time. REINFORCE starts at 5% and climbs the landscape below the corridor, one episode at a time. The biggest step size is the fastest, until a run is thrown off the landscape."
+success = { metric = "return", min = -50, text = "end up reaching the goal in under 50 steps on average" }
 
 [corridor-baseline]
 title = "REINFORCE with and without a baseline"
@@ -498,6 +518,7 @@ charts = ["return", "right"]
 measures = ["right"]
 film = [0, 50, 200, 1000]
 intro = "Every return here is negative, so without a baseline every action taken is made less likely, the good ones only a little less. Subtracting a learned estimate of the return leaves the direction of each update the same on average, and removes most of its noise: the step size can be sixteen times larger."
+success = { metric = "return", min = -50, text = "end up reaching the goal in under 50 steps on average" }
 
 [throw]
 title = "A Gaussian policy learns to throw"
@@ -514,6 +535,7 @@ charts = ["return", "aim"]
 measures = ["aim"]
 film = [0, 50, 200, 1000]
 intro = "The action is an angle, a real number: the policy is a bell curve around its aim. Each throw is drawn from the bell; a throw that flies farther than expected pulls the aim toward its angle, and the bell narrows as the policy grows sure. The best angle is 45°, but the learner is never told."
+success = { metric = "return", min = 39, text = "end up throwing 39 or farther on average, close to the longest throw" }
 
 [cliff-actor-critic]
 title = "Actor–critic on the cliff"
@@ -530,6 +552,7 @@ charts = ["return", "policy-value"]
 measures = ["policy-value"]
 film = [1, 10, 100, 500]
 intro = "The critic colors the tiles with what it expects from each; the actor's arrows are its policy, thicker for likelier moves. After every step, the critic's surprise δ judges the move just made: better than expected, it becomes likelier. Like SARSA, it learns from its own wandering, and the edge of the cliff costs it dearly."
+success = { metric = "return", min = -30, text = "end up reaching the goal in under 30 steps without falling" }
 
 [a2c-maze]
 title = "A2C: four workers in the maze"
@@ -551,6 +574,7 @@ maxSteps = 1000
 charts = ["steps"]
 film = [1, 5, 20, 60]
 intro = "Four workers explore copies of the maze at once, all with the same policy. Every n steps, all their experience makes one update. Each step is judged by the rewards of the steps after it, up to the update, and the critic's estimate beyond: the longer the stretch, the sooner the gem's news reaches the start."
+success = { metric = "steps", max = 25, text = "end up reaching the gem in under 25 steps" }
 
 [entropy-gems]
 title = "The entropy bonus: two gems"
@@ -571,6 +595,7 @@ maxSteps = 500
 charts = ["return"]
 film = [1, 20, 60, 200]
 intro = "A small gem two steps away pays 0.3; a big one seven steps away pays 1. A learner that settles on the first thing that works never finds the big gem. The entropy bonus rewards the policy for staying uncertain, so it keeps wandering long enough to find the better way."
+success = { metric = "return", min = 0.9, text = "end up going for the big gem" }
 
 [trpo-cliff]
 title = "TRPO: how big a trust region?"
@@ -591,6 +616,7 @@ maxSteps = 1000
 charts = ["steps", "kl"]
 film = [1, 5, 20, 60]
 intro = "After each round, TRPO takes the largest step that keeps the policy within a distance δ of the one that collected the experience, measured by the KL divergence. A small region learns steadily; a large one trusts each round's noisy estimates too far, and some runs walk into a corner they never leave."
+success = { metric = "steps", max = 100, text = "end up reaching the goal in under 100 steps" }
 
 [ppo-maze]
 title = "PPO: ten passes over each batch, with and without the clip"
@@ -613,6 +639,7 @@ maxSteps = 1000
 charts = ["steps", "kl"]
 film = [1, 5, 10, 40]
 intro = "PPO squeezes each round's experience: ten passes over it instead of one. Without the clip, every pass pushes the lucky actions further and the policy overfits its batch. With it, an action stops being pushed once its probability has moved 20% from where it was when the batch was collected."
+success = { metric = "steps", max = 100, text = "end up reaching the gem in under 100 steps" }
 
 [gae-cliff]
 title = "GAE: how far should advantages look?"
@@ -633,3 +660,4 @@ maxSteps = 1000
 charts = ["steps"]
 film = [1, 5, 20, 60]
 intro = "Each step's advantage is a weighted sum of the TD errors after it, with weights that fade by γλ per step. With λ = 0 it is the one-step TD error, steady but only as good as the critic; with λ = 1 it is the whole return minus the critic, honest but noisy. In between does best."
+success = { metric = "steps", max = 100, text = "end up reaching the goal in under 100 steps" }

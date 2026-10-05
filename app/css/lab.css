@@ -11,7 +11,7 @@
 .knob .name { color: var(--ink-3); }
 .knob input[type="range"] { width: 92px; accent-color: var(--ink); }
 .knob output { min-width: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.knob select, .transport select, .sandbox select { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.knob select, .transport select, .sandbox select, .sweep-bar select { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); }
 .pill.seed svg { width: 16px; height: 16px; }
 
 .lab-main { display: grid; grid-template-columns: minmax(0, 1fr) clamp(330px, 26vw, 380px); gap: 16px; align-items: start; }
@@ -97,6 +97,15 @@
 .chart-box h3 { margin: 0 0 2px; }
 .chart-note { margin: 6px 0 0; font-size: 12.5px; }
 .lab .summary { margin: 8px 0 0; font-size: 14px; }
+/* ---- the odds: how often runs end well, and a sweep of one knob ---- */
+.odds-card { padding: 14px 16px; }
+.odds-card h3 { margin: 0; }
+.odds-tally { margin: 6px 0 0; font-size: 14px; }
+.sweep-bar { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-top: 10px; font-size: 13.5px; color: var(--ink-2); }
+.sweep-bar label { display: inline-flex; align-items: center; gap: 6px; }
+.sweep-note { margin: 6px 0 0; font-size: 12.5px; }
+.linechart .now-band { fill: var(--ink); opacity: 0.05; }
+.linechart .tick.now { fill: var(--ink); font-weight: 600; }
 .lab-missing { max-width: 520px; margin: 60px auto; padding: 24px; }
 
 .linechart { display: block; overflow: visible; }
@@ -514,7 +523,7 @@
   .lab-main { grid-template-columns: minmax(0, 1fr); }
   .lab-flow { display: contents; }
   .lab-side { position: static; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); order: 1; }
-  .lab-flow > .transport, .lab-flow > .film, .lab-flow > .chart-card { order: 2; }
+  .lab-flow > .transport, .lab-flow > .film, .lab-flow > .chart-card, .lab-flow > .odds-card { order: 2; }
 }
 @media (max-width: 1100px) and (min-width: 701px) {
   /* The pseudocode on the left, "This step" and "Show" stacked beside it: no half-empty cards. */
