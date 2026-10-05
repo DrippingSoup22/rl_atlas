@@ -64,7 +64,13 @@ animations and hover effects this guide relies on would not be smooth.
   Lab runs. The book's figures are recomputed live by the Lab (the testbed, Figure 4.1, policy iteration on Frozen
   Lake, the Blackjack maps, importance sampling, the random walk, step sizes on the cliff, maximization bias), and
   a final pass retold the passages that still followed the book's wording too closely.
-- [ ] **M3 · Traces and planning**: n-step, TD(λ) with glowing traces, Dyna.
+- [x] **M3 · Traces and planning**: n-step, TD(λ) with glowing traces, Dyna.
+  Parts 6–7 are written: 9 new entries (n-step TD and SARSA, the λ-return, TD(λ), SARSA(λ), models and planning,
+  Dyna-Q, Dyna-Q+, prioritized sweeping), each with a Textbook and a Card, 7 with a Story on Lab runs. The Lab runs
+  them all, with replay checked by the tests: eligibility traces glow and fade on the tiles, the n-step window shows as
+  a bracket, planning updates as dashed sparks (in queue order for prioritized sweeping), fog hides what a model has
+  never seen, and maze walls move mid-run. Eight new Lab presets; new worlds: the 19-state random walk, the Dyna,
+  blocking and shortcut mazes. Figures recomputed live: Sutton & Barto's 7.2, 7.4, 8.2–8.5, 8.7, 12.3 and 12.6.
 - [ ] **M4 · Function approximation**: features, the "touch a tile" demo, Mountain Car in 3D, the deadly triad.
 - [ ] **M5 · Policy gradients, live**: gradient bandit, short corridor, REINFORCE, actor–critic, A2C; GAE and PPO demos.
 - [ ] **M6 · Recorded runs**: the recorder; DQN, A2C, TRPO and PPO on CartPole, Mountain Car and Pendulum.

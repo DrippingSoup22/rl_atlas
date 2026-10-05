@@ -295,11 +295,15 @@
       if (env.kind === "blackjack" && unitOf() === "episode") out.push(`Hands won in this run: ${each((r) => pct(r.metrics.return.reduce((n, g) => n + (g > 0), 0) / knobs.units))}.`);
       if (env.kind === "grid" && unitOf() === "episode") {
         if (env.ice) out.push(`Reached the gem in the last ${last} episodes: ${each((r) => pct(lab.mean(r.metrics.return, knobs.units - last)))}.`);
+        else if (preset.charts.includes("steps")) out.push(`Average steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(1))}.`);
         else out.push(`Average reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 0))}.`);
         const finals = runs.map((r) => r.algorithm.show(r.at(knobs.units), r.env, r.params));
         if (finals[0].t !== undefined) env.setTime?.(finals[0].t); // a maze whose walls moved: follow the final layout
         if (!env.slip && finals.every((d) => d.Q)) {
-          out.push(`Greedy path at the end: ${each((r, i) => { const g = lab.greedyPath(env, finals[i].Q); return g.reached ? plural(g.path.length - 1, ["step", "steps"]) : "none yet"; })}.`);
+          out.push(`Greedy path at the end: ${each((r, i) => { const g = lab.greedyPath(env, finals[i].Q); if (g.reached) return plural(g.path.length - 1, ["step", "steps"]);
+            // Still reaching the goal while learning, yet no greedy path: the greedy moves go round in circles
+            // (Dyna-Q+'s bonuses can do this: its values include the pull of moves not tried in a while).
+            return lab.mean(r.metrics.steps, Math.max(0, knobs.units - 10)) < 200 ? "none, its greedy moves go round in circles" : "none yet"; })}.`);
         }
       }
       if (unitOf() === "sweep") {
