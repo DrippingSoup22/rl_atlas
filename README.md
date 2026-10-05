@@ -58,10 +58,11 @@ shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of 
 
 - `[[station]]` or `[[station|text]]` for links that explain themselves on hover, and `[text](lab:preset)` for Lab links;
 - `$…$` and `$$…$$` math with the color macros `\val \rew \pol \err` and `\alp \gam \eps \lam \del`;
-- `{{demo arg}}` for a diagram, figure or demo: `backup` (bandit, sarsa, q-learning, v-pi, q-pi, v-star, q-star),
+- `{{demo arg}}` for a diagram, figure or demo: `backup` (bandit, mc, mc-q, td0, sarsa, q-learning, v-pi, q-pi, v-star, q-star),
   `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `loop`, `mdp-graph`, `discount`, `be-the-agent`,
   `testbed`, `sample-average`, `step-weights`, `step-sizes`, `bandit-curves` (epsilon, optimistic, ucb, gradient,
-  drift), `bandit-study`, `dp-sweeps`, `frozen` (pi, optimal), `dp-race`, `gpi`;
+  drift), `bandit-study`, `dp-sweeps`, `frozen` (pi, optimal), `dp-race`, `gpi`, `blackjack-values`,
+  `blackjack-policy`, `blackjack-match`, `frozen-mc`, `is-blackjack`, `is-infinite`;
 - `::: pseudocode` (end a line with `{#id}` to link it to the Lab's step-by-step mode), `::: question` (answer after `---`) and `::: analogy`.
 
 The Textbook numbers its sections, figures and statements, and any display equation with a `\label{name}`;

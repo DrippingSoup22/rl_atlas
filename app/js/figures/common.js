@@ -68,14 +68,25 @@
         let d = "";
         if (L.xs) {
           d = L.xs.map((u, i) => `${i ? "L" : "M"}${x(u).toFixed(1)} ${y(L.ys[i]).toFixed(1)}`).join("");
-          svg.querySelector(`.pts[data-id="${c.id}"]`).innerHTML = L.xs.map((u, i) => `<circle cx="${x(u).toFixed(1)}" cy="${y(L.ys[i]).toFixed(1)}" r="3"/>`).join("");
+          if (c.marks !== false) svg.querySelector(`.pts[data-id="${c.id}"]`).innerHTML = L.xs.map((u, i) => `<circle cx="${x(u).toFixed(1)}" cy="${y(L.ys[i]).toFixed(1)}" r="3"/>`).join("");
           ends.push({ id: c.id, y: y(L.ys[L.ys.length - 1]) + 4, x: x(L.xs[L.xs.length - 1]) + 9 }); // points end anywhere: name by the last one
         } else {
           const n = L.length, step = Math.max(1, Math.floor(n / (pw * 1.5)));
-          for (let i = 0; i < n; i += step) {
-            let sum = 0, k = 0;
-            for (let j = i; j < Math.min(n, i + step); j++) { sum += L[j]; k++; }
-            d += `${d ? "L" : "M"}${x(from + i + (k - 1) / 2).toFixed(1)} ${y(sum / k).toFixed(1)}`;
+          if (X.log && n > pw * 1.5) {
+            // On a log axis, equal buckets would average the early points away: draw log-spaced points instead.
+            let last = -1;
+            for (let j = 0; j <= pw * 1.5; j++) {
+              const i = Math.min(n - 1, Math.round(n ** (j / (pw * 1.5))) - 1);
+              if (i === last) continue;
+              last = i;
+              d += `${d ? "L" : "M"}${x(from + i).toFixed(1)} ${y(L[i]).toFixed(1)}`;
+            }
+          } else {
+            for (let i = 0; i < n; i += step) {
+              let sum = 0, k = 0;
+              for (let j = i; j < Math.min(n, i + step); j++) { sum += L[j]; k++; }
+              d += `${d ? "L" : "M"}${x(from + i + (k - 1) / 2).toFixed(1)} ${y(sum / k).toFixed(1)}`;
+            }
           }
           ends.push({ id: c.id, y: y(L[n - 1]) + 4 });
         }
@@ -86,6 +97,12 @@
       for (let i = 1; i < ends.length; i++) {
         const prev = ends.slice(0, i).reverse().find((e) => Math.abs((e.x || 0) - (ends[i].x || 0)) < 60);
         if (prev) ends[i].y = Math.max(ends[i].y, prev.y + 15);
+      }
+      let floor = M.t + ph + 2; // and none below the axis, where the tick labels are
+      for (let i = ends.length - 1; i >= 0; i--) {
+        if (ends[i].x) continue;
+        ends[i].y = Math.min(ends[i].y, floor);
+        floor = ends[i].y - 15;
       }
       for (const e of ends) {
         const name = svg.querySelector(`.curve-name[data-id="${e.id}"]`);

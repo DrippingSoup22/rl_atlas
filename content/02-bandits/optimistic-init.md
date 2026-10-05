@@ -88,7 +88,7 @@ The optimistic method starts worse, because it spends the early steps working th
 Optimistic initial values are a simple trick that is quite effective on stationary problems, but they are far from a general solution to exploration.
 
 - **The drive to explore is temporary.** It is used up in the first rounds of pulls. If the values later change, nothing makes the agent explore again ([[nonstationary]]). Any method that concentrates its exploration at the beginning is likely to fail in such problems, since the beginning occurs only once.
-- **It needs a sense of scale.** "Far above any plausible value" requires knowing what values are plausible. Too little optimism explores too little; too much wastes many pulls on arms whose estimates must first come down from the sky.
+- **It needs a sense of scale.** “Far above any plausible value” requires knowing what values are plausible. Too little optimism explores too little; too much wastes many pulls on arms whose estimates must first come down from the sky.
 - **It needs a constant step size**, or some way of counting the initial estimate as evidence. With sample averages the first pull of each arm erases its optimism, and the agent is only greedy.
 - **It does not keep the agent honest later.** Once the optimism has worn off, the agent is greedy, and an unlucky streak on the best arm can still leave it stuck on a worse one.
 
@@ -149,7 +149,7 @@ Repeat:
 ### Flaws
 
 - Explores only at the start: useless when the values change later ([[nonstationary]]).
-- Needs to know how high "optimistic" is; the scale of the rewards must be guessed.
+- Needs to know how high “optimistic” is; the scale of the rewards must be guessed.
 - Needs a constant step size: with sample averages the first pull erases the optimism.
 
 ### Knobs

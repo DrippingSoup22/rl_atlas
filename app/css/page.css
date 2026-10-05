@@ -283,6 +283,12 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .fig .gpi-line { stroke: var(--ink); stroke-width: 2; }
 .fig .gpi-step { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
 .fig .gpi-goal { fill: var(--ink); }
+.fig .tick.small { font-size: 11px; }
+.fig.bj .bj-cell { stroke: var(--surface); stroke-width: 0.6; }
+.fig.bj .bj-cell.off { stroke: var(--err); stroke-width: 1.8; }
+.fig .bj-txt { font-size: 9px; }
+.fig-scale { display: flex; justify-content: center; margin: 2px 0 0; }
+.fig-legend { justify-content: center; }
 .fig .back { stroke-width: 1.3; stroke-dasharray: 3 3; }
 .fig .wipe { transform: scaleX(0); }
 .fig.on .wipe { transform: none; transition: transform 1.6s var(--ease); }

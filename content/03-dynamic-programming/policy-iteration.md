@@ -98,7 +98,7 @@ If $\textit{policy-stable}$, then stop and return $\val{V} \approx \val{v_*}$ an
 
 Each evaluation starts from the value function of the previous policy, which typically speeds it up a great deal, because the value function changes little from one policy to the next.
 
-The stopping test has a subtle bug (Sutton & Barto, Exercise 4.4). If several actions are equally good in some state, the arg max may switch between them from one improvement to the next, and the policy never becomes "stable", although every policy in the cycle is optimal. Two fixes: change the action only when the new one is *strictly* better, or test whether the values, rather than the actions, stopped changing. The Lab's version keeps all tied actions, with equal probability, and stops when that set no longer changes.
+The stopping test has a subtle bug (Sutton & Barto, Exercise 4.4). If several actions are equally good in some state, the arg max may switch between them from one improvement to the next, and the policy never becomes “stable”, although every policy in the cycle is optimal. Two fixes: change the action only when the new one is *strictly* better, or test whether the values, rather than the actions, stopped changing. The Lab's version keeps all tied actions, with equal probability, and stops when that set no longer changes.
 
 ### Example: Frozen Lake {#example}
 

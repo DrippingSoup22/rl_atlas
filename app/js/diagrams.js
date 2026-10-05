@@ -13,6 +13,28 @@
       { kind: "action", label: "A" },
       { kind: "end", label: "", edge: "R" },
     ],
+    // Monte Carlo: one whole sampled episode, from the state (or pair) being updated to the end.
+    mc: { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "more" },
+      { kind: "end", label: "end of the episode", edge: "R" },
+    ] },
+    "mc-q": { gap: 50, levels: [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "more" },
+      { kind: "end", label: "end of the episode", edge: "R" },
+    ] },
+    // TD(0): one sampled step, then the estimate of where it led.
+    td0: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+    ],
     sarsa: [
       { kind: "action", label: "S, A" },
       { kind: "state", label: "S′", edge: "R" },

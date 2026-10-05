@@ -157,7 +157,7 @@ Value iteration, the method of successive approximation for the Bellman optimali
 In every sweep, give each state the value of its best move one step ahead: the max over actions of reward plus discounted value of where the move leads. The values converge to the optimal ones, and the greedy policy with respect to them is optimal. It is policy iteration with every evaluation cut to a single sweep.
 
 ::: analogy
-Working out the shortest drive home from every town, by repeatedly setting each town's distance to "the best neighbor's distance plus the road to it". Distances spread outward from home, and after enough rounds every town knows its shortest route.
+Working out the shortest drive home from every town, by repeatedly setting each town's distance to “the best neighbor's distance plus the road to it”. Distances spread outward from home, and after enough rounds every town knows its shortest route.
 :::
 
 ### The update {#update}

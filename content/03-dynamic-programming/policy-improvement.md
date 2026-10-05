@@ -131,7 +131,7 @@ It is the improvement half of every control method. Dynamic programming alternat
 ### Pitfalls
 
 - Improving with state values without a model: the lookahead needs $p$. Use action values instead.
-- Breaking ties arbitrarily and then testing "did the policy change?": a policy that flips between equally good actions never looks stable. Compare values, or break ties consistently.
+- Breaking ties arbitrarily and then testing “did the policy change?”: a policy that flips between equally good actions never looks stable. Compare values, or break ties consistently.
 - Expecting the greedy policy to be optimal after one step: it is only no worse; usually several rounds are needed.
 
 ### Check yourself {#check}

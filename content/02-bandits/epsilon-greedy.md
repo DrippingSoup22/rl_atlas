@@ -198,7 +198,7 @@ Repeat:
 
 ### Pitfalls
 
-- Always breaking ties toward the first arm: early on, when all estimates are equal, the "random" behavior then always starts with arm 1. Break ties at random.
+- Always breaking ties toward the first arm: early on, when all estimates are equal, the “random” behavior then always starts with arm 1. Break ties at random.
 - Judging what was learned from the ε-greedy behavior: the greedy policy is better than the behavior suggests.
 - Forgetting that the random pull can pick the greedy arm too: the greedy arm's probability is $1 - \eps + \eps/k$, not $1 - \eps$.
 
