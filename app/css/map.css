@@ -1,0 +1,93 @@
+/* The metro map. */
+
+.map-view { position: fixed; inset: 56px 0 0 0; overflow: hidden; }
+.map-banner {
+  position: absolute; top: 12px; left: 16px; right: 16px; z-index: 2; display: grid; gap: 8px;
+  padding: 9px 10px 9px 12px; font-size: 14px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+  animation: rise-in 0.5s var(--ease) both;
+}
+.mb-row { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.lens-caption { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.35; }
+.map-filters { gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.map-filters .eyebrow { flex: none; }
+.mf-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.mf-chips .chip { border: 0; cursor: pointer; font-family: inherit; transition: background-color 0.2s, color 0.2s; }
+.mf-chips .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); box-shadow: none; }
+.mf-count { margin-left: auto; font-size: 12.5px; white-space: nowrap; }
+.mf-clear { border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; color: var(--ink-2); text-decoration: underline; cursor: pointer; }
+.mf-clear[hidden] { display: none; }
+.metro { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; user-select: none; }
+.metro.dragging { cursor: grabbing; }
+
+.metro .row-title { font: 800 12px var(--font); letter-spacing: 0.14em; text-transform: uppercase; fill: var(--ink-3); }
+.metro .trunk, .metro .branch { fill: none; stroke: var(--c); stroke-width: 7; stroke-linecap: round; }
+.metro .trunk.transfer { stroke: var(--line-2); stroke-width: 3; }
+.metro .ribbon { fill: none; stroke: var(--ink-3); stroke-width: 2.5; stroke-dasharray: 2 8; stroke-linecap: round; }
+.metro .ribbon-label { font: 600 12px var(--font); fill: var(--ink-3); }
+.metro .hub rect { fill: var(--c); stroke: var(--bg); stroke-width: 3; }
+.metro .hub text { font: 800 12px var(--font); fill: var(--bg); text-anchor: middle; }
+.metro .part-title { font: 700 13.5px var(--font); fill: var(--ink); }
+
+.metro .st { cursor: pointer; outline: none; transition: transform 0.9s var(--ease), opacity 0.5s; }
+.metro .st text { transition: transform 0.9s var(--ease); }
+.metro .st.dim { opacity: 0.13; }
+.metro .st.out { opacity: 0; pointer-events: none; }
+.metro .st .dot { fill: var(--surface); stroke: var(--c); stroke-width: 3; transition: r 0.2s var(--spring), fill 0.2s, stroke-width 0.2s; }
+.metro .st.algorithm .dot { stroke-width: 3.5; }
+.metro .st text { font: 500 12.5px var(--font); fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+.metro .st.algorithm text { font-weight: 700; }
+.metro .st.planned .dot { stroke-opacity: 0.35; }
+.metro .st.planned text { fill: var(--ink-3); font-weight: 500; }
+.metro .st.visited .dot { fill: var(--c); }
+.metro .st .halo { fill: var(--c); opacity: 0; transition: opacity 0.2s; transform-box: fill-box; transform-origin: center; }
+.metro .st:hover .halo, .metro .st:focus-visible .halo, .metro .st.hot .halo { opacity: 0.18; }
+.metro .st:hover .dot, .metro .st.hot .dot { r: 9; }
+.metro .st.rel .halo { opacity: 0.14; }
+.metro .st.rel .dot { stroke-width: 5; }
+.metro .st.next .halo { animation: station-pulse 1.8s ease-out infinite; }
+.metro .st.arrived .halo { animation: station-pulse 0.9s ease-out 2; }
+@keyframes station-pulse { from { opacity: 0.4; transform: scale(0.5); } to { opacity: 0; transform: scale(2); } }
+.metro .links path { fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-dasharray: 5 5; animation: links-flow 0.6s linear infinite; }
+@keyframes links-flow { to { stroke-dashoffset: -10; } }
+
+/* the first visit: lines draw themselves, then the stations appear */
+.metro.intro .trunk, .metro.intro .branch { stroke-dasharray: 1; animation: line-in 0.9s var(--ease) calc(var(--d) * 70ms) both; }
+.metro.intro .st, .metro.intro .hub, .metro.intro .part-title { animation: fade-in 0.4s ease calc(350ms + var(--d) * 70ms) both; }
+.metro.intro .st .dot { animation: dot-in 0.5s var(--spring) calc(350ms + var(--d) * 70ms) both; }
+@keyframes dot-in { from { r: 0; } }
+
+.map-legend { position: absolute; right: 16px; bottom: 16px; z-index: 2; padding: 12px 14px; font-size: 12.5px; min-width: 230px; animation: rise-in 0.5s var(--ease) 0.3s both; }
+.map-legend .lg { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.map-legend .lg i { width: 22px; height: 6px; border-radius: 3px; background: var(--c); }
+.map-legend .lg b { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 600; }
+.map-legend .lg-note { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--ink-3); display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.dot-written, .dot-planned { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2.5px solid var(--ink-2); }
+.dot-planned { opacity: 0.4; margin-left: 6px; }
+.map-zoom { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.map-zoom .icon-btn { width: 30px; height: 30px; font-size: 17px; font-weight: 600; line-height: 1; box-shadow: inset 0 0 0 1px var(--line-2); }
+.map-zoom span { margin-left: 6px; font-size: 11.5px; line-height: 1.3; }
+
+.map-view:not([data-lens="map"]) .map-legend :is(.lg, .lg-note) { display: none; }
+.map-view:not([data-lens="map"]) .map-zoom { margin: 0; padding: 0; border: 0; }
+
+/* the views: each one shows its own drawing; the stations are shared and glide between them */
+.metro .deco { transition: opacity 0.6s; }
+.metro:not([data-lens="map"]) .deco-map, .metro:not([data-lens="tree"]) .deco-tree, .metro:not([data-lens="unified"]) .deco-unified { opacity: 0; pointer-events: none; }
+.metro .edge { fill: none; stroke: var(--c); stroke-width: 3; stroke-linecap: round; opacity: 0.75; transition: stroke-width 0.2s, opacity 0.2s; }
+.metro .edge.hot { stroke-width: 5.5; opacity: 1; }
+.metro.redraw[data-lens="tree"] .edge { stroke-dasharray: 1; animation: line-in 0.9s var(--ease) 0.3s both; }
+.metro .plane { fill: color-mix(in oklab, var(--surface) 55%, transparent); stroke: var(--line-2); stroke-width: 1.5; stroke-dasharray: 6 6; }
+.metro .axis-title { font: 800 12px var(--font); letter-spacing: 0.14em; text-transform: uppercase; fill: var(--ink-3); }
+.metro .axis-end { font: 500 12.5px var(--font); fill: var(--ink-2); }
+.metro .corner { font: 700 14px var(--font); fill: var(--ink); }
+.metro .region { font: italic 500 12.5px var(--font); fill: var(--ink-3); }
+.metro .credit { font: 500 11px var(--font); fill: var(--ink-3); }
+
+@media (max-width: 760px) {
+  .map-banner .muted, .map-legend, .mf-count { display: none; }
+  .map-banner .btn { margin-left: auto; padding: 8px 12px; font-size: 13px; }
+  .mf-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .lenses button { padding: 6px 9px; }
+  .map-banner .mb-row:first-child { flex-wrap: wrap; gap: 8px; }
+}

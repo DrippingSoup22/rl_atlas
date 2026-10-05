@@ -1,0 +1,112 @@
+# The symbols page: what each color means, and the notation used everywhere.
+# Formulas use the color macros of app/js/math.js: \val \rew \pol \err, and \alp \gam \eps \lam \del.
+
+[[quantity]]
+key = "val"
+name = "Value"
+tex = '\val{V(s)},\ \val{Q(s,a)}'
+text = "How good a state, or a move in a state, is: the reward you can expect from there on."
+
+[[quantity]]
+key = "rew"
+name = "Reward and return"
+tex = '\rew{R},\ \rew{G}'
+text = "What the world pays after each move, and the discounted sum of those payments."
+
+[[quantity]]
+key = "pol"
+name = "Policy"
+tex = '\pol{\pi(a \mid s)}'
+text = "How the agent chooses: a probability for each move in each state."
+
+[[quantity]]
+key = "err"
+name = "Surprise"
+tex = '\err{\delta},\ \err{A}'
+text = "How much better or worse things went than expected: the TD error and the advantage."
+
+[[quantity]]
+key = "knob"
+name = "Knobs"
+tex = '\alp,\ \gam,\ \eps,\ \lam'
+text = "Settings you choose: step size, discount, exploration rate and trace decay. They stay in ink."
+
+[[symbol]]
+tex = 'S,\ S_t'
+text = "the state the agent is in (at time step t)"
+station = "state-action-reward"
+
+[[symbol]]
+tex = 'A,\ A_t'
+text = "the action (move) the agent takes"
+station = "state-action-reward"
+
+[[symbol]]
+tex = '\rew{R},\ \rew{R_{t+1}}'
+text = "the reward that follows the action"
+station = "state-action-reward"
+
+[[symbol]]
+tex = "S',\\ A'"
+text = "the next state and the next action"
+station = "state-action-reward"
+
+[[symbol]]
+tex = '\rew{G_t}'
+text = "the return: the discounted sum of rewards from time t on"
+station = "return"
+
+[[symbol]]
+tex = '\pol{\pi}'
+text = "the policy"
+station = "policy"
+
+[[symbol]]
+tex = '\val{V(s)}'
+text = "the value of state s: the return expected from s"
+station = "value-functions"
+
+[[symbol]]
+tex = '\val{Q(s,a)}'
+text = "the value of taking action a in state s"
+station = "value-functions"
+
+[[symbol]]
+tex = '\max_a'
+text = "the largest value over all actions a"
+station = "optimality"
+
+[[symbol]]
+tex = '\del'
+text = "the TD error: target minus current estimate"
+station = "td-error"
+
+[[symbol]]
+tex = '\alp'
+text = "step size: how far each update moves the estimate"
+station = "step-size"
+
+[[symbol]]
+tex = '\gam'
+text = "discount factor: how much later rewards count"
+station = "discount"
+
+[[symbol]]
+tex = '\eps'
+text = "exploration rate of ε-greedy"
+station = "epsilon-greedy"
+
+[[symbol]]
+tex = '\lam'
+text = "trace decay: how far back credit flows"
+station = "lambda-return"
+
+[[symbol]]
+tex = '\theta,\ \mathbf{w}'
+text = "the weights of a policy or of a value function"
+station = "features"
+
+[[symbol]]
+tex = '\mathbb{E}'
+text = "expected value: the average over all the randomness"
+station = "value-functions"

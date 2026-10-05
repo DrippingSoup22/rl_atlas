@@ -1,0 +1,323 @@
+/* The Lab, and the views it shares with the stories: grid, arms (bandits), chain (random walk), cards (Blackjack),
+   graph (maximization bias), the charts, the filmstrip and the sandbox. */
+
+.lab { max-width: 1400px; margin: 0 auto; padding: 22px 24px 60px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.lab-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; animation: rise-in 0.6s var(--ease) both; }
+.lab-title h1 { font-size: clamp(24px, 3vw, 34px); letter-spacing: -0.02em; margin: 6px 0 4px; }
+.lab-title .intro { margin: 0; max-width: 64ch; color: var(--ink-2); }
+.knobs { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 10px 16px; min-width: 0; max-width: 100%; }
+.knob { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.knob .sym { font: italic 600 17px var(--font); }
+.knob .name { color: var(--ink-3); }
+.knob input[type="range"] { width: 92px; accent-color: var(--ink); }
+.knob output { min-width: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.knob select, .transport select, .sandbox select { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.pill.seed svg { width: 16px; height: 16px; }
+
+.lab-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.stages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.stage { margin: 0; padding: 12px 14px 10px; cursor: pointer; transition: box-shadow 0.2s, border-color 0.2s; animation: rise-in 0.5s var(--ease) both; min-width: 0; }
+.stage:nth-child(2) { animation-delay: 0.08s; }
+.stage:nth-child(3) { animation-delay: 0.16s; }
+.stage.focus { border-color: var(--ink-3); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 9%, transparent), var(--shadow); }
+.stage figcaption { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 14px; flex-wrap: wrap; }
+.stage .stat { margin-left: auto; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.key { display: inline-block; width: 16px; height: 4px; border-radius: 2px; background: var(--k); flex: none; }
+
+.lab-side { display: grid; gap: 16px; position: sticky; top: 72px; }
+.panel { padding: 14px 16px; }
+.panel h3, .chart-head h3, .chart-box h3, .film h3 { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 8px; }
+.as-is { text-transform: none; letter-spacing: 0.02em; } /* names like "ε = 0.1": uppercase would turn ε into Ε */
+.panel .pseudo { font-size: 13px; padding: 8px 0; }
+.panel .pseudo li { padding-left: calc(34px + var(--indent) * 15px); }
+.panel .pseudo li::before { left: 10px; }
+.live-sym, .live-num { min-height: 30px; font-size: 0.86em; overflow-x: auto; overflow-y: hidden; }
+.live-num:empty { display: none; }
+.live-note { margin: 6px 0 0; font-size: 13px; }
+.panel .seg { margin-bottom: 4px; }
+.check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13.5px; cursor: pointer; }
+.check input { accent-color: var(--ink); }
+.swatch { display: inline-block; width: 16px; height: 4px; margin-left: auto; border-radius: 2px; }
+.swatch.pol { background: var(--pol); }
+.swatch.trail { background: color-mix(in oklab, var(--ink) 35%, transparent); }
+.panel .scale { margin-top: 12px; }
+.arms-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 10px 0 0; font-size: 12px; color: var(--ink-3); }
+.arms-legend i { display: inline-block; width: 14px; height: 5px; border-radius: 3px; }
+.lg-est { background: var(--val); }
+.lg-truth { height: 2px !important; background: var(--ink-2); }
+.lg-pi { background: var(--pol); }
+.lg-hit { background: color-mix(in oklab, var(--pol) 72%, var(--surface)); height: 10px !important; }
+.lg-stick { background: color-mix(in oklab, var(--pol) 10%, var(--surface)); height: 10px !important; box-shadow: inset 0 0 0 1px var(--line-2); }
+
+.transport { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.transport .big { width: 44px; height: 44px; background: var(--ink); color: var(--bg); }
+.transport .big svg { width: 20px; height: 20px; }
+.scrub { flex: 1; min-width: 120px; accent-color: var(--ink); }
+.pos { min-width: 190px; text-align: right; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* ---- filmstrip ---- */
+.film { padding: 12px 16px 14px; }
+.film-head { display: flex; align-items: baseline; gap: 12px; }
+.film-head h3 { margin: 0; }
+.film-head .faint { font-size: 12.5px; }
+.filmstrip { display: flex; gap: 12px; margin: 10px 0 0; padding: 0; list-style: none; overflow-x: auto; }
+.filmstrip li { flex: none; display: grid; gap: 6px; justify-items: center; padding: 8px; border-radius: 12px; cursor: pointer; border: 1px solid var(--line); background: var(--surface-2); font-size: 12px; color: var(--ink-2); transition: border-color 0.2s, background-color 0.2s, transform 0.2s var(--ease); animation: rise-in 0.45s var(--ease) calc(var(--i) * 60ms) both; }
+.filmstrip li:hover { transform: translateY(-2px); }
+.filmstrip li.on { border-color: var(--ink-2); background: var(--surface); color: var(--ink); font-weight: 600; }
+.thumb svg { display: block; height: 86px; width: auto; max-width: 240px; }
+.thumb .t-arrow { stroke: var(--pol); stroke-width: 1.6; stroke-linecap: round; }
+.thumb .t-truth { stroke: var(--ink-2); stroke-width: 1.5; }
+.thumb .t-zero { stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 2 2; }
+.thumb .t-est { fill: var(--val); }
+.thumb .t-pi { fill: var(--pol); opacity: 0.8; }
+.thumb .t-line { fill: none; stroke: var(--val); stroke-width: 1.6; }
+.thumb .t-dot { fill: var(--val); }
+
+/* ---- charts ---- */
+.chart-card { padding: 14px 16px; }
+.chart-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.chart-mode { margin-left: auto; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-grid { display: grid; gap: 10px 22px; margin-top: 10px; }
+.chart-grid.n2 { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
+.chart-box { min-width: 0; }
+.chart-box h3 { margin: 0 0 2px; }
+.chart-note { margin: 6px 0 0; font-size: 12.5px; }
+.lab .summary { margin: 8px 0 0; font-size: 14px; }
+.lab-missing { max-width: 520px; margin: 60px auto; padding: 24px; }
+
+.linechart { display: block; overflow: visible; }
+.linechart .grid line { stroke: var(--line); stroke-width: 1; }
+.linechart .grid .ref { stroke: var(--ink-3); stroke-dasharray: 5 4; }
+.linechart .ref-label { font: 11px var(--font); fill: var(--ink-3); }
+.linechart .tick { font: 11px var(--font); fill: var(--ink-3); font-variant-numeric: tabular-nums; }
+.linechart .future, .linechart .past { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.linechart .future { opacity: 0.2; }
+.linechart .faint { stroke-width: 1; }
+.linechart .past.faint { opacity: 0.32; }
+.linechart .future.faint { opacity: 0.1; }
+.linechart .playhead { stroke: var(--ink-2); stroke-width: 1.5; }
+.linechart .dot { stroke: var(--surface); stroke-width: 2; }
+.linechart .cross { stroke: var(--ink-3); stroke-width: 1; opacity: 0; pointer-events: none; }
+.linechart .hit { fill: transparent; cursor: pointer; }
+
+/* ---- sandbox ---- */
+.sandbox { display: grid; gap: 10px; padding: 12px 16px; animation: rise-in 0.5s var(--ease) both; }
+.sb-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; font-size: 13px; }
+.sb-tools { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface-3); }
+.sb-tools button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 0; border-radius: 9px; background: transparent; font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.sb-tools button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--line-2); background: var(--surface-2); }
+.sw.k-wall { background: var(--ink-2); }
+.sw.k-cliff { background: var(--chasm); }
+.sw.k-hole { background: radial-gradient(ellipse 60% 45% at 50% 55%, var(--hole) 90%, var(--ice) 100%); }
+.sw.k-gem { background: var(--rew); }
+.sw.k-start { background: var(--ink); border-radius: 50%; }
+.sb-size { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); }
+.sb-size b { min-width: 16px; text-align: center; color: var(--ink); font-variant-numeric: tabular-nums; }
+.sb-size button { width: 24px; height: 24px; border: 0; border-radius: 50%; background: var(--surface-3); cursor: pointer; font-weight: 700; }
+.sb-hint { font-size: 12.5px; }
+.stages.drawable .gridview { cursor: crosshair; touch-action: none; }
+
+/* ---- grid view ---- */
+.gridview { display: block; width: 100%; height: auto; max-height: 72vh; margin: 0 auto; overflow: visible; }
+.gridview .bg { fill: var(--surface-2); transition: fill 0.45s var(--ease); }
+.gridview.ice .k-free .bg, .gridview.ice .k-S .bg { fill: var(--ice); }
+.gridview .tri { fill: var(--v-mid); stroke: var(--surface); stroke-width: 1.5; stroke-linejoin: round; transition: fill 0.45s var(--ease); }
+.gridview[data-tiles="v"] .tri, .gridview[data-tiles="none"] .tri { fill: transparent; stroke: transparent; }
+.gridview .k-C .bg { fill: var(--chasm); }
+.gridview .rocks { fill: none; stroke: rgb(255 255 255 / 0.14); stroke-width: 2; stroke-linejoin: round; }
+.gridview .k-wall .bg { fill: var(--ink-2); }
+.gridview .bricks { fill: none; stroke: color-mix(in oklab, var(--surface) 30%, transparent); stroke-width: 2; }
+.gridview .k-hole .bg { fill: var(--ice); }
+.gridview .hole { fill: var(--hole); }
+.gridview .crack { fill: none; stroke: color-mix(in oklab, var(--hole) 45%, transparent); stroke-width: 1.5; stroke-linecap: round; }
+.gridview .k-exit .bg { fill: var(--surface-3); }
+.gridview .exit-mark { font: 600 12px var(--font); text-anchor: middle; fill: var(--ink-3); }
+.gridview .k-G .bg { fill: color-mix(in oklab, var(--rew) 16%, var(--surface-2)); }
+.gridview .gem { animation: gem-float 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.gridview .gem polygon { fill: var(--rew); }
+.gridview .gem .shine { fill: #fff; opacity: 0.45; }
+@keyframes gem-float { 50% { transform: translateY(-2.5px) rotate(4deg); } }
+.gridview .mark { font: 800 11px var(--font); fill: var(--ink-3); }
+.gridview .num { font: 700 11px var(--font); text-anchor: middle; fill: var(--ink); pointer-events: none; }
+.gridview[data-arrows][data-numbers] .num { transform: translateY(21px); font-size: 10.5px; }
+.gridview .arrows, .gridview .agent-layer, .gridview .fx, .gridview .trail-layer, .gridview .path-layer { pointer-events: none; }
+.gridview:not([data-arrows]) .arrows { display: none; }
+.gridview .arrow { transition: opacity 0.3s; }
+.gridview .arrow .halo { fill: none; stroke: var(--surface); stroke-width: 5.5; stroke-linecap: round; stroke-linejoin: round; }
+.gridview .arrow .shaft { fill: none; stroke: var(--pol); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.gridview .trail { fill: none; stroke: var(--ink); stroke-opacity: 0.35; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.gridview .greedy { fill: none; stroke: var(--pol); stroke-opacity: 0.85; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.gridview .trail.draw, .gridview .greedy.draw { stroke-dasharray: 1; animation: line-in 1.1s var(--ease) both; }
+.gridview .bot { transition: transform 0.2s var(--ease), opacity 0.3s; }
+.gridview .bot.gone, .gridview .bot.sunk { opacity: 0; }
+.gridview .bot.instant { transition: none; }
+.gridview .bot-head { fill: var(--ink); stroke: var(--surface); stroke-width: 3; }
+.gridview .bot-eyes { transition: transform 0.15s ease; }
+.gridview .bot-eyes circle { fill: var(--surface); }
+.gridview .bot-shadow { fill: rgb(0 0 0 / 0.18); }
+.pop { font: 800 13px var(--font); text-anchor: middle; fill: var(--rew-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; pointer-events: none; }
+.pop.k-ret { fill: var(--rew-ink); font-size: 12px; }
+.pop.k-skip { fill: var(--ink-3); font-size: 11px; font-weight: 600; }
+.pop.k-cut, .pop.k-slip { fill: var(--err-ink); font-size: 12px; }
+.pop.k-explore { fill: var(--ink-2); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+.pop.neg { fill: var(--bad-ink); }
+.gridview .spark, .armsview .spark, .chainview .spark { fill: none; stroke: var(--err); stroke-width: 3; transform-box: fill-box; transform-origin: center; }
+.gridview .tri.glow { stroke: var(--ink); stroke-width: 3; animation: tri-glow 1.3s ease-in-out infinite; }
+@keyframes tri-glow { 50% { stroke-width: 5; } }
+.gridview .tri.hinted { animation: tri-hint 0.5s ease-out; }
+@keyframes tri-hint { from { stroke: var(--ink); stroke-width: 4; } }
+.gridview .jumps { pointer-events: none; }
+.gridview .jump { fill: none; stroke: var(--rew); stroke-width: 2.5; stroke-linecap: round; }
+.gridview .jump-tip { fill: var(--rew); }
+.gridview .jump-r { font: 800 13px var(--font); fill: var(--rew-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; }
+.gridview .tile .bg { transition: fill 0.45s var(--ease), stroke-width 0.25s; }
+.gridview .tile.focus .bg { stroke: var(--ink); stroke-width: 3.5; }
+.gridview .tile.next .bg { stroke: var(--ink-2); stroke-width: 2.5; stroke-dasharray: 5 4; }
+.gridview .paint { opacity: 0.85; }
+.gridview .paint.k-free { fill: var(--surface-2); }
+.gridview .paint.k-wall { fill: var(--ink-2); }
+.gridview .paint.k-C { fill: var(--chasm); }
+.gridview .paint.k-hole { fill: var(--hole); }
+.gridview .paint.k-G { fill: var(--rew); }
+.gridview .paint.k-S { fill: var(--ink); }
+
+/* ---- arms view (bandits) ---- */
+.armsview { display: block; width: 100%; height: auto; overflow: visible; }
+.armsview text { font-family: var(--font); }
+.armsview .grid { stroke: var(--line); }
+.armsview .zero { stroke: var(--line-2); stroke-dasharray: 3 3; }
+.armsview .tick, .armsview .axis-name { font-size: 11px; fill: var(--ink-3); }
+.armsview .axis-name { font: italic 600 13px var(--font); }
+.armsview .machine rect:first-child { fill: var(--surface-3); stroke: var(--line-2); stroke-width: 1.2; }
+.armsview .machine .window { fill: var(--surface); stroke: var(--line-2); }
+.armsview .arm-no { font-size: 11px; font-weight: 800; text-anchor: middle; fill: var(--ink-2); }
+.armsview .lever line { stroke: var(--ink-3); stroke-width: 2.5; stroke-linecap: round; }
+.armsview .lever circle { fill: var(--err); }
+.armsview .lever, .armsview .machine { transform-box: fill-box; }
+.armsview .lever { transform-origin: 0 0; }
+.armsview .violin { fill: color-mix(in oklab, var(--ink) 9%, transparent); stroke: color-mix(in oklab, var(--ink) 22%, transparent); stroke-width: 1; transition: opacity 0.3s; }
+.armsview .truth { stroke: var(--ink-2); stroke-width: 2; transition: opacity 0.3s; }
+.armsview:not([data-truth]) :is(.violin, .truth, .star) { opacity: 0; }
+.armsview .star { font-size: 12px; text-anchor: middle; fill: var(--rew); opacity: 0; transition: opacity 0.3s; }
+.armsview[data-truth] .best .star { opacity: 1; }
+.armsview .est { transition: transform 0.35s var(--ease); }
+.armsview .est rect { fill: var(--val); stroke: var(--surface); stroke-width: 1.5; }
+.armsview .est-num { font-size: 10.5px; font-weight: 700; text-anchor: middle; fill: var(--val-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; opacity: 0; }
+.armsview[data-numbers] .est-num { opacity: 1; }
+.armsview .bound { fill: none; stroke: color-mix(in oklab, var(--val) 60%, transparent); stroke-width: 2; stroke-linecap: round; }
+.armsview .pi { fill: var(--pol); opacity: 0.85; transition: y 0.35s var(--ease), height 0.35s var(--ease); }
+.armsview .pi-num { font-size: 10px; font-weight: 700; text-anchor: middle; fill: var(--pol-ink); }
+.armsview .count { font-size: 10.5px; text-anchor: middle; fill: var(--ink-3); font-variant-numeric: tabular-nums; }
+.armsview .baseline line { stroke: var(--rew); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.armsview .baseline text { font-size: 11px; font-weight: 600; fill: var(--rew-ink); transform: translateY(-4px); }
+.armsview .baseline { transition: transform 0.35s var(--ease); }
+.armsview .arm.chosen .machine rect:first-child { stroke: var(--ink); stroke-width: 2.2; }
+.armsview .arm.last .machine rect:first-child { stroke: var(--ink-2); stroke-width: 1.8; }
+.armsview .sample { fill: var(--rew); stroke: var(--surface); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; }
+.armsview .fx { pointer-events: none; }
+.armsview[data-hide-learner] :is(.est, .bound, .pi, .pi-num, .count, .baseline) { opacity: 0; }
+.armsview .arm.focus .machine rect:first-child { stroke: var(--ink); stroke-width: 2.6; }
+.armsview .arm.focus .violin { fill: color-mix(in oklab, var(--rew) 22%, transparent); stroke: var(--rew); }
+
+/* ---- chain view (random walk) ---- */
+.chainview { display: block; width: 100%; max-width: 760px; height: auto; margin: 0 auto; overflow: visible; }
+.chainview text { font-family: var(--font); }
+.chainview .grid { stroke: var(--line); }
+.chainview .tick, .chainview .axis-name { font-size: 11px; fill: var(--ink-3); }
+.chainview .truth { fill: none; stroke: var(--ink-2); stroke-width: 1.8; stroke-dasharray: 5 4; transition: opacity 0.3s; }
+.chainview:not([data-truth]) .truth { opacity: 0; }
+.chainview .est-line { fill: none; stroke: var(--val); stroke-width: 2; opacity: 0.55; }
+.chainview .est { fill: var(--val); stroke: var(--surface); stroke-width: 2; transition: transform 0.35s var(--ease); }
+.chainview .est-num { font-size: 11px; font-weight: 700; text-anchor: middle; fill: var(--val-ink); opacity: 0; transition: y 0.35s var(--ease); }
+.chainview[data-numbers] .est-num { opacity: 1; }
+.chainview .ghost { fill: none; stroke: var(--ink-3); stroke-width: 1.4; opacity: 0.6; }
+.chainview .ghost-name { font-size: 11px; fill: var(--ink-3); }
+.chainview .track { stroke: var(--line-2); stroke-width: 3; }
+.chainview .node circle, .chainview .node rect { fill: var(--surface); stroke: var(--ink); stroke-width: 2.2; transition: stroke-width 0.2s; }
+.chainview .node.exit rect { fill: var(--surface-3); stroke: var(--ink-3); }
+.chainview .node text { font-size: 14px; font-weight: 700; text-anchor: middle; fill: var(--ink); }
+.chainview .node .exit-r { fill: var(--rew-ink); font-size: 13px; }
+.chainview .node.focus circle { stroke-width: 4; }
+.chainview .bot { transition: transform 0.22s var(--ease), opacity 0.3s; }
+.chainview .bot.instant { transition: none; }
+.chainview .bot.gone { opacity: 0; }
+.chainview .bot-head { fill: var(--ink); stroke: var(--surface); stroke-width: 2.5; }
+.chainview .bot-eyes { transition: transform 0.15s; }
+.chainview .bot-eyes circle { fill: var(--surface); }
+.chainview .fx { pointer-events: none; }
+
+/* ---- cards view (Blackjack) ---- */
+.cardsview { display: grid; grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.6fr); gap: 18px; align-items: center; }
+.cardsview .table { display: grid; gap: 12px; padding: 14px; border-radius: 16px; background: color-mix(in oklab, var(--good-ink) 12%, var(--surface-2)); min-height: 214px; align-content: center; }
+.cardsview .hand { display: grid; grid-template-columns: 54px 1fr; align-items: center; gap: 4px 8px; }
+.cardsview .who { font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.cardsview .cards { display: flex; gap: 5px; min-height: 52px; flex-wrap: wrap; }
+.cardsview .sum { grid-column: 2; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pcard { position: relative; display: grid; place-items: center; width: 36px; height: 50px; border-radius: 6px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 0.2); font: 700 15px var(--font); color: var(--ink); animation: deal 0.3s var(--spring) both; }
+.pcard::after { content: attr(data-suit); position: absolute; left: 4px; top: 2px; font-size: 10px; color: var(--ink-3); }
+.pcard[data-suit="♥"]::after, .pcard[data-suit="♦"]::after { color: var(--err-ink); }
+.pcard.ace { color: var(--rew-ink); }
+.pcard.down { background: repeating-linear-gradient(45deg, var(--pol) 0 4px, color-mix(in oklab, var(--pol) 70%, var(--surface)) 4px 8px); }
+.pcard.down::after { content: none; }
+.pcard.blank { color: var(--ink-3); background: var(--surface-3); box-shadow: none; }
+@keyframes deal { from { opacity: 0; transform: translateY(-8px) rotate(-6deg); } }
+.cardsview .verdict { min-height: 22px; font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.cardsview .verdict.win { color: var(--good-ink); }
+.cardsview .verdict.lose { color: var(--bad-ink); }
+.cardsview .verdict.act { color: var(--pol-ink); }
+.cardsview .maps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; }
+.bj-map { margin: 0; min-width: 0; }
+.bj-map figcaption { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; margin-bottom: 2px; }
+.bj-map svg { display: block; width: 100%; height: auto; }
+.bj-map .tick { font: 10px var(--font); fill: var(--ink-3); }
+.bj-map .cell rect { fill: var(--surface-2); stroke: transparent; stroke-width: 2; transition: fill 0.4s var(--ease); }
+.bj-map .cell text { font: 700 9px var(--font); text-anchor: middle; fill: var(--ink-2); pointer-events: none; }
+.bj-map .cell.hit text { fill: #fff; }
+.bj-map .cell.focus rect { stroke: var(--ink); }
+.bj-map .cell.sparked rect { animation: cell-spark 0.6s ease-out; }
+@keyframes cell-spark { from { stroke: var(--err); stroke-width: 3; } }
+
+/* ---- graph view (maximization bias) ---- */
+.graphview { display: block; width: 100%; max-width: 760px; height: auto; margin: 0 auto; overflow: visible; }
+.graphview text { font-family: var(--font); }
+.graphview .edge { fill: none; stroke: var(--ink-3); stroke-width: 1.8; transition: stroke 0.3s, stroke-width 0.3s; }
+.graphview .b-edge { stroke-width: 1.1; }
+.graphview .a-edge.greedy { stroke: var(--pol); stroke-width: 3.5; }
+.graphview .a-edge.chosen { animation: edge-flash 0.7s ease-out; }
+@keyframes edge-flash { from { stroke: var(--ink); stroke-width: 5; } }
+.graphview .tip path { fill: var(--ink-3); }
+.graphview .edge-name { font-size: 12px; fill: var(--ink-3); }
+.graphview .q-label { font-size: 13px; font-weight: 700; fill: var(--val-ink); }
+.graphview .q-label.sparked, .graphview .bbar.sparked { animation: label-spark 0.6s ease-out; }
+@keyframes label-spark { from { fill: var(--err-ink); } }
+.graphview .node circle, .graphview .node rect { fill: var(--surface); stroke: var(--ink); stroke-width: 2.4; }
+.graphview .node.exit rect { fill: var(--surface-3); stroke: var(--ink-3); }
+.graphview .node text { font-size: 15px; font-weight: 800; text-anchor: middle; fill: var(--ink); }
+.graphview .node.exit text { font-size: 12px; font-weight: 600; fill: var(--ink-3); }
+.graphview .bbars .zero { stroke: var(--line-2); }
+.graphview .bbar { fill: var(--val); transition: y 0.35s var(--ease), height 0.35s var(--ease); }
+.graphview .bbar.neg { fill: var(--v-neg); }
+.graphview .bbar.top { stroke: var(--ink); stroke-width: 1.5; }
+.graphview .bars-name, .graphview .max-label { font-size: 11.5px; font-weight: 600; fill: var(--ink-2); }
+.graphview .bot { transition: transform 0.25s var(--ease); }
+.graphview .bot.instant { transition: none; }
+.graphview .bot-head { fill: var(--ink); stroke: var(--surface); stroke-width: 2.5; }
+.graphview .bot-eye { fill: var(--surface); }
+.graphview .fx { pointer-events: none; }
+
+@media (max-width: 1100px) {
+  .lab-main { grid-template-columns: minmax(0, 1fr); }
+  .lab-side { position: static; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+}
+@media (max-width: 760px) {
+  .cardsview { grid-template-columns: 1fr; }
+  .chart-grid.n2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .lab { padding: 14px 12px 40px; }
+  .pos { min-width: 0; font-size: 12px; }
+  .transport { gap: 6px; padding: 8px; }
+}

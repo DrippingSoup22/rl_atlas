@@ -1,0 +1,262 @@
+# The curriculum: every station of the atlas, in reading order.
+# A station becomes "written" when content/<folder>/<id>.md exists; until then it shows as planned.
+# `short` is the label on the map when the title is too long for it.
+# Algorithms also name their `parent` (the algorithm they change in one way: the family tree)
+# and their `labels` (what kind of method they are: the map's filters and the chips on their page).
+
+rows = [[0, 1, 2, 3, 4, 5, 6, 7], [8, 9, 10, 11, 12, 13]]
+row_titles = ["Learning with tables", "Learning at scale"]
+
+[lines]
+foundations = "Foundations"
+tabular = "Tabular methods"
+approximation = "Function approximation"
+policy = "Policy gradients"
+continuous = "Continuous control"
+toolbox = "Toolbox"
+next = "Where next"
+
+# Labels an algorithm can carry. Each one explains itself and points to the station that teaches it.
+[labels]
+tabular = { text = "tabular", station = "why-approximate", tip = "Keeps one number per state, or per state and action, in a table." }
+approximate = { text = "approximate", station = "features", tip = "Computes values or policies from features with shared weights, so it can generalize." }
+prediction = { text = "prediction", station = "prediction-control", tip = "Estimates how good a fixed way of acting is." }
+control = { text = "control", station = "prediction-control", tip = "Improves the way of acting: it learns what to do." }
+on-policy = { text = "on-policy", station = "on-off-policy", tip = "Learns about the policy it follows, exploration included." }
+off-policy = { text = "off-policy", station = "on-off-policy", tip = "Learns about one policy (often the greedy one) while following another." }
+bootstraps = { text = "bootstraps", station = "bootstrapping", tip = "Updates a guess using another guess: the estimate of the next state." }
+full-returns = { text = "full returns", station = "mc-vs-td", tip = "Waits for the real return at the end of the episode instead of guessing." }
+model-free = { text = "model-free", station = "model-based-free", tip = "Learns from experience alone; never needs the rules of the world." }
+model-based = { text = "model-based", station = "model-based-free", tip = "Uses a model of the world to plan ahead." }
+continuous-actions = { text = "continuous actions", station = "policy-parameterization", tip = "Can choose actions from a continuous range, like a steering angle." }
+
+[[part]]
+n = 0
+title = "Start here"
+line = "foundations"
+folder = "00-start"
+stations = [
+  { id = "welcome", title = "How to use the atlas", short = "How to use it" },
+  { id = "be-the-agent", title = "Be the agent" },
+]
+
+[[part]]
+n = 1
+title = "The RL problem"
+line = "foundations"
+folder = "01-problem"
+stations = [
+  { id = "agent-environment", title = "Agent and environment", short = "Agent & environment" },
+  { id = "state-action-reward", title = "State, action, reward" },
+  { id = "episodes", title = "Episodes and continuing tasks", short = "Episodes" },
+  { id = "return", title = "Return" },
+  { id = "discount", title = "Discount factor γ", short = "Discount γ" },
+  { id = "mdp", title = "Markov property and MDPs", short = "MDPs" },
+  { id = "policy", title = "Policy" },
+  { id = "value-functions", title = "Value functions: V, Q and advantage", short = "V, Q and advantage" },
+  { id = "bellman", title = "Bellman equations" },
+  { id = "optimality", title = "Optimal values and policies", short = "Optimality" },
+  { id = "prediction-control", title = "Prediction vs control" },
+  { id = "model-based-free", title = "Model-based vs model-free", short = "Model-based vs -free" },
+  { id = "explore-exploit", title = "Exploration vs exploitation", short = "Explore vs exploit" },
+  { id = "reward-design", title = "Reward design" },
+]
+
+[[part]]
+n = 2
+title = "Bandits"
+line = "tabular"
+folder = "02-bandits"
+stations = [
+  { id = "k-armed-bandit", title = "The k-armed bandit", short = "k-armed bandit" },
+  { id = "incremental-mean", title = "Incremental averages" },
+  { id = "step-size", title = "Step size α" },
+  { id = "epsilon-greedy", title = "ε-greedy", kind = "algorithm", labels = ["tabular", "control", "model-free"] },
+  { id = "optimistic-init", title = "Optimistic initial values", short = "Optimistic starts", kind = "algorithm", parent = "epsilon-greedy", labels = ["tabular", "control", "model-free"] },
+  { id = "ucb", title = "Upper confidence bound (UCB)", short = "UCB", kind = "algorithm", parent = "epsilon-greedy", labels = ["tabular", "control", "model-free"] },
+  { id = "gradient-bandit", title = "Gradient bandit", kind = "algorithm", parent = "epsilon-greedy", labels = ["tabular", "control", "model-free"] },
+  { id = "nonstationary", title = "Nonstationary problems", short = "Nonstationary" },
+]
+
+[[part]]
+n = 3
+title = "Dynamic programming"
+line = "tabular"
+folder = "03-dynamic-programming"
+stations = [
+  { id = "policy-evaluation", title = "Policy evaluation", kind = "algorithm", labels = ["tabular", "prediction", "bootstraps", "model-based"] },
+  { id = "policy-improvement", title = "Policy improvement" },
+  { id = "policy-iteration", title = "Policy iteration", kind = "algorithm", parent = "policy-evaluation", labels = ["tabular", "control", "bootstraps", "model-based"] },
+  { id = "value-iteration", title = "Value iteration", kind = "algorithm", parent = "policy-iteration", labels = ["tabular", "control", "bootstraps", "model-based"] },
+  { id = "gpi", title = "Generalized policy iteration", short = "GPI" },
+  { id = "dp-limits", title = "Why DP doesn't scale", short = "Limits of DP" },
+]
+
+[[part]]
+n = 4
+title = "Monte Carlo"
+line = "tabular"
+folder = "04-monte-carlo"
+stations = [
+  { id = "mc-prediction", title = "Monte Carlo prediction", short = "MC prediction", kind = "algorithm", parent = "policy-evaluation", labels = ["tabular", "prediction", "on-policy", "full-returns", "model-free"] },
+  { id = "exploring-starts", title = "MC with exploring starts", short = "Exploring starts", kind = "algorithm", parent = "mc-prediction", labels = ["tabular", "control", "on-policy", "full-returns", "model-free"] },
+  { id = "mc-control", title = "On-policy MC control", short = "ε-soft MC control", kind = "algorithm", parent = "exploring-starts", labels = ["tabular", "control", "on-policy", "full-returns", "model-free"] },
+  { id = "off-policy-mc", title = "Off-policy Monte Carlo", short = "Off-policy MC", kind = "algorithm", parent = "mc-control", labels = ["tabular", "control", "off-policy", "full-returns", "model-free"] },
+  { id = "importance-sampling", title = "Importance sampling" },
+]
+
+[[part]]
+n = 5
+title = "Temporal difference"
+line = "tabular"
+folder = "05-temporal-difference"
+stations = [
+  { id = "td0", title = "TD(0)", kind = "algorithm", parent = "mc-prediction", labels = ["tabular", "prediction", "on-policy", "bootstraps", "model-free"] },
+  { id = "td-error", title = "TD error δ" },
+  { id = "bootstrapping", title = "Bootstrapping" },
+  { id = "mc-vs-td", title = "MC vs TD" },
+  { id = "sarsa", title = "SARSA", kind = "algorithm", parent = "td0", labels = ["tabular", "control", "on-policy", "bootstraps", "model-free"] },
+  { id = "q-learning", title = "Q-learning", kind = "algorithm", parent = "sarsa", labels = ["tabular", "control", "off-policy", "bootstraps", "model-free"] },
+  { id = "expected-sarsa", title = "Expected SARSA", kind = "algorithm", parent = "sarsa", labels = ["tabular", "control", "on-policy", "off-policy", "bootstraps", "model-free"] },
+  { id = "double-q", title = "Double Q-learning", kind = "algorithm", parent = "q-learning", labels = ["tabular", "control", "off-policy", "bootstraps", "model-free"] },
+]
+
+[[part]]
+n = 6
+title = "n-step and traces"
+line = "tabular"
+folder = "06-n-step"
+stations = [
+  { id = "n-step-td", title = "n-step TD", kind = "algorithm", parent = "td0", labels = ["tabular", "prediction", "on-policy", "bootstraps", "model-free"] },
+  { id = "n-step-sarsa", title = "n-step SARSA", kind = "algorithm", parent = "n-step-td", labels = ["tabular", "control", "on-policy", "bootstraps", "model-free"] },
+  { id = "lambda-return", title = "The λ-return", short = "λ-return" },
+  { id = "td-lambda", title = "TD(λ) and eligibility traces", short = "TD(λ)", kind = "algorithm", parent = "n-step-td", labels = ["tabular", "prediction", "on-policy", "bootstraps", "model-free"] },
+  { id = "sarsa-lambda", title = "SARSA(λ)", kind = "algorithm", parent = "td-lambda", labels = ["tabular", "control", "on-policy", "bootstraps", "model-free"] },
+]
+
+[[part]]
+n = 7
+title = "Planning"
+line = "tabular"
+folder = "07-planning"
+stations = [
+  { id = "models", title = "Models and planning" },
+  { id = "dyna-q", title = "Dyna-Q", kind = "algorithm", parent = "q-learning", labels = ["tabular", "control", "off-policy", "bootstraps", "model-based"] },
+  { id = "dyna-q-plus", title = "Dyna-Q+", kind = "algorithm", parent = "dyna-q", labels = ["tabular", "control", "off-policy", "bootstraps", "model-based"] },
+  { id = "prioritized-sweeping", title = "Prioritized sweeping", kind = "algorithm", parent = "dyna-q", labels = ["tabular", "control", "off-policy", "bootstraps", "model-based"] },
+]
+
+[[part]]
+n = 8
+title = "Function approximation"
+line = "approximation"
+folder = "08-function-approximation"
+stations = [
+  { id = "why-approximate", title = "Why tables break" },
+  { id = "features", title = "Features" },
+  { id = "value-error", title = "Value error and gradient descent", short = "Value error & SGD" },
+  { id = "gradient-mc", title = "Gradient Monte Carlo", short = "Gradient MC", kind = "algorithm", parent = "mc-prediction", labels = ["approximate", "prediction", "on-policy", "full-returns", "model-free"] },
+  { id = "semi-gradient-td", title = "Semi-gradient TD", kind = "algorithm", parent = "gradient-mc", labels = ["approximate", "prediction", "on-policy", "bootstraps", "model-free"] },
+  { id = "semi-gradient-sarsa", title = "Semi-gradient SARSA", kind = "algorithm", parent = "semi-gradient-td", labels = ["approximate", "control", "on-policy", "bootstraps", "model-free"] },
+  { id = "generalization", title = "Generalization vs discrimination", short = "Generalization" },
+  { id = "deadly-triad", title = "The deadly triad", short = "Deadly triad" },
+]
+
+[[part]]
+n = 9
+title = "Deep value-based"
+line = "approximation"
+folder = "09-deep-value"
+stations = [
+  { id = "neural-networks", title = "Neural networks in five minutes", short = "Neural networks" },
+  { id = "dqn", title = "DQN", kind = "algorithm", parent = "q-learning", labels = ["approximate", "control", "off-policy", "bootstraps", "model-free"] },
+  { id = "experience-replay", title = "Experience replay" },
+  { id = "target-network", title = "Target network" },
+  { id = "dqn-extensions", title = "Double, Dueling and prioritized DQN", short = "DQN extensions", kind = "algorithm", parent = "dqn", labels = ["approximate", "control", "off-policy", "bootstraps", "model-free"] },
+]
+
+[[part]]
+n = 10
+title = "Policy gradients"
+line = "policy"
+folder = "10-policy-gradients"
+stations = [
+  { id = "why-policy", title = "Why learn the policy directly", short = "Why policies?" },
+  { id = "policy-parameterization", title = "Softmax and Gaussian policies", short = "Softmax & Gaussian" },
+  { id = "pg-theorem", title = "Policy gradient theorem", short = "PG theorem" },
+  { id = "reinforce", title = "REINFORCE", kind = "algorithm", parent = "gradient-bandit", labels = ["approximate", "control", "on-policy", "full-returns", "model-free", "continuous-actions"] },
+  { id = "baseline", title = "REINFORCE with baseline", short = "Baselines", kind = "algorithm", parent = "reinforce", labels = ["approximate", "control", "on-policy", "full-returns", "model-free", "continuous-actions"] },
+  { id = "actor-critic", title = "Actor–critic", kind = "algorithm", parent = "baseline", labels = ["approximate", "control", "on-policy", "bootstraps", "model-free", "continuous-actions"] },
+  { id = "a2c", title = "A2C and A3C", short = "A2C / A3C", kind = "algorithm", parent = "actor-critic", labels = ["approximate", "control", "on-policy", "bootstraps", "model-free", "continuous-actions"] },
+  { id = "entropy-bonus", title = "Entropy bonus" },
+  { id = "gae", title = "Generalized advantage estimation (GAE)", short = "GAE" },
+  { id = "trpo", title = "TRPO", kind = "algorithm", parent = "actor-critic", labels = ["approximate", "control", "on-policy", "bootstraps", "model-free", "continuous-actions"] },
+  { id = "ppo", title = "PPO", kind = "algorithm", parent = "trpo", labels = ["approximate", "control", "on-policy", "bootstraps", "model-free", "continuous-actions"] },
+]
+
+[[part]]
+n = 11
+title = "Continuous control"
+line = "continuous"
+folder = "11-continuous"
+stations = [
+  { id = "dpg", title = "Deterministic policy gradient", short = "Deterministic PG" },
+  { id = "ddpg", title = "DDPG", kind = "algorithm", parent = "dqn", labels = ["approximate", "control", "off-policy", "bootstraps", "model-free", "continuous-actions"] },
+  { id = "td3", title = "TD3", kind = "algorithm", parent = "ddpg", labels = ["approximate", "control", "off-policy", "bootstraps", "model-free", "continuous-actions"] },
+  { id = "sac", title = "Soft actor–critic (SAC)", short = "SAC", kind = "algorithm", parent = "td3", labels = ["approximate", "control", "off-policy", "bootstraps", "model-free", "continuous-actions"] },
+]
+
+[[part]]
+n = 12
+title = "Toolbox"
+line = "toolbox"
+folder = "12-toolbox"
+stations = [
+  { id = "bias-variance", title = "Bias vs variance" },
+  { id = "exploration-strategies", title = "Exploration strategies", short = "Exploration" },
+  { id = "on-off-policy", title = "On-policy vs off-policy", short = "On- vs off-policy" },
+  { id = "normalization", title = "Normalization tricks", short = "Normalization" },
+  { id = "hyperparameters", title = "Hyperparameter guide", short = "Hyperparameters" },
+  { id = "learning-curves", title = "Reading learning curves", short = "Learning curves" },
+  { id = "seeds", title = "Seeds and variance" },
+  { id = "debugging", title = "My agent doesn't learn", short = "Debugging" },
+  { id = "which-algorithm", title = "Which algorithm should I use?", short = "Which algorithm?" },
+]
+
+[[part]]
+n = 13
+title = "Where next"
+line = "next"
+folder = "13-where-next"
+stations = [
+  { id = "mcts", title = "MCTS and AlphaZero", short = "MCTS & AlphaZero" },
+  { id = "model-based-deep", title = "Model-based deep RL" },
+  { id = "offline-rl", title = "Offline RL" },
+  { id = "imitation", title = "Imitation learning" },
+  { id = "multi-agent", title = "Multi-agent RL" },
+  { id = "rlhf", title = "RL from human feedback (RLHF)", short = "RLHF" },
+]
+
+# The unified view (after Sutton & Barto, Figure 8.11): where each tabular method sits.
+# [width, depth]: width 0 = sample updates, 1 = expected updates; depth 0 = one step (bootstrapping), 1 = the full return.
+# Methods that share a corner are stacked a little apart so their names stay readable.
+[unified]
+td0 = [0.03, 0.04]
+sarsa = [0.03, 0.09]
+q-learning = [0.03, 0.14]
+double-q = [0.03, 0.19]
+dyna-q = [0.21, 0.04]
+dyna-q-plus = [0.21, 0.09]
+prioritized-sweeping = [0.21, 0.14]
+expected-sarsa = [0.42, 0.09]
+policy-evaluation = [0.8, 0.04]
+policy-iteration = [0.8, 0.09]
+value-iteration = [0.8, 0.14]
+n-step-td = [0.03, 0.38]
+n-step-sarsa = [0.03, 0.43]
+td-lambda = [0.03, 0.6]
+sarsa-lambda = [0.03, 0.65]
+mc-prediction = [0.03, 0.82]
+exploring-starts = [0.03, 0.87]
+mc-control = [0.03, 0.92]
+off-policy-mc = [0.03, 0.97]

@@ -1,0 +1,228 @@
+# Lab presets: a world, the algorithms that race on it, and their starting knobs. Entries link to one with [text](lab:<id>).
+#
+#   env        the world (lab/envs): cliff, gridworld, small-gridworld, frozen-lake, testbed, testbed-4, drifting,
+#              random-walk, blackjack, max-bias, or sandbox (the map you draw)
+#   algorithms the algorithms that race, with the shared knobs; or racers = [{ algorithm, name, <knobs of its own> }]
+#   units      how many episodes, sweeps or steps a run lasts; seed: its randomness
+#   runs       > 1: the charts average that many runs, each with its own seed
+#   charts     what to plot: return, optimal, left, error, match, greedy, delta, steps
+#   measures   numbers computed against the exact answer after each unit: error, match, greedy, optimal-error
+#   film       the moments the filmstrip shows (in units)
+# Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge.
+
+[cliff-race]
+title = "SARSA vs Q-learning on the cliff"
+env = "cliff"
+algorithms = ["sarsa", "q-learning"]
+units = 500
+seed = 7
+alpha = 0.5
+epsilon = 0.1
+gamma = 1.0
+domain = [-100, 0]
+charts = ["return"]
+film = [1, 10, 100, 500]
+intro = "Same world, same randomness, one change in the update. Watch which path each one learns, and which one falls more often while learning."
+
+[cliff-expected]
+title = "Expected SARSA on the cliff"
+env = "cliff"
+algorithms = ["sarsa", "expected-sarsa", "q-learning"]
+units = 500
+seed = 7
+alpha = 0.5
+epsilon = 0.1
+gamma = 1.0
+domain = [-100, 0]
+charts = ["return"]
+film = [1, 10, 100, 500]
+intro = "Expected SARSA averages over the next moves instead of sampling one. It learns a path between SARSA's and Q-learning's, and its rewards wobble less from episode to episode."
+
+[bandit-epsilon]
+title = "Greedy vs ε-greedy"
+env = "testbed"
+racers = [
+  { algorithm = "epsilon-greedy", name = "greedy (ε = 0)", epsilon = 0.0 },
+  { algorithm = "epsilon-greedy", name = "ε = 0.01", epsilon = 0.01 },
+  { algorithm = "epsilon-greedy", name = "ε = 0.1", epsilon = 0.1 },
+]
+units = 1000
+runs = 500
+seed = 1
+alpha = 0.0
+charts = ["return", "optimal"]
+film = [10, 100, 1000]
+intro = "Ten slot machines with hidden payouts. The greedy learner settles on the first arm that looks good; a little exploration finds the best one. The charts average many runs, each on new machines."
+
+[bandit-optimistic]
+title = "Optimistic starts vs ε-greedy"
+env = "testbed"
+racers = [
+  { algorithm = "optimistic-init", name = "optimistic, greedy (Q₁ = 5)", q0 = 5.0, epsilon = 0.0 },
+  { algorithm = "epsilon-greedy", name = "realistic, ε = 0.1 (Q₁ = 0)", q0 = 0.0, epsilon = 0.1 },
+]
+units = 1000
+runs = 500
+seed = 1
+alpha = 0.1
+charts = ["optimal", "return"]
+film = [10, 100, 1000]
+intro = "Starting every estimate far too high makes even a greedy learner try every arm: each pull disappoints, so it moves on. Watch the spike in the first steps."
+
+[bandit-ucb]
+title = "UCB vs ε-greedy"
+env = "testbed"
+racers = [
+  { algorithm = "ucb", name = "UCB (c = 2)" },
+  { algorithm = "epsilon-greedy", name = "ε-greedy (ε = 0.1)", epsilon = 0.1 },
+]
+units = 1000
+runs = 500
+seed = 1
+alpha = 0.0
+c = 2.0
+charts = ["return", "optimal"]
+film = [10, 100, 1000]
+intro = "UCB explores where it is unsure: each arm gets a bonus that shrinks the more it is tried. ε-greedy explores blindly, at the same rate forever."
+
+[bandit-gradient]
+title = "Gradient bandit, with and without a baseline"
+env = "testbed-4"
+racers = [
+  { algorithm = "gradient-bandit", name = "with baseline", baseline = true },
+  { algorithm = "gradient-bandit", name = "without baseline", baseline = false },
+]
+units = 1000
+runs = 500
+seed = 1
+alpha = 0.1
+charts = ["optimal"]
+film = [10, 100, 1000]
+intro = "Every payout here is around +4. Without a baseline every reward looks good and pushes up whatever was pulled; with the average reward as a baseline only better-than-usual rewards do."
+
+[bandit-drift]
+title = "Sample averages vs a constant step size on drifting machines"
+env = "drifting"
+racers = [
+  { algorithm = "epsilon-greedy", name = "sample averages (α = 1/n)", alpha = 0.0 },
+  { algorithm = "epsilon-greedy", name = "constant α = 0.1", alpha = 0.1 },
+]
+units = 10000
+runs = 200
+seed = 1
+epsilon = 0.1
+charts = ["return", "optimal"]
+film = [100, 1000, 10000]
+intro = "The machines slowly change their payouts. Averages weigh a pull from long ago as much as the last one and fall behind; a constant step size keeps up."
+
+[dp-evaluation]
+title = "Policy evaluation, sweep by sweep"
+env = "small-gridworld"
+algorithms = ["policy-evaluation"]
+units = 200
+seed = 1
+gamma = 1.0
+theta = 0.001
+policy = "random"
+charts = ["delta"]
+film = [0, 1, 2, 3, 10, 200]
+intro = "Every move costs 1 until a shaded corner is reached, and the policy moves at random. Each sweep replaces every value by the average over its four moves of the reward plus the value of where the move lands."
+
+[dp-iteration]
+title = "Policy iteration vs value iteration on Frozen Lake"
+env = "frozen-lake"
+algorithms = ["policy-iteration", "value-iteration"]
+units = 120
+seed = 1
+gamma = 0.99
+theta = 0.001
+charts = ["optimal-error", "delta"]
+measures = ["optimal-error"]
+film = [0, 1, 5, 20, 120]
+intro = "Both know the rules of the slippery lake. Policy iteration evaluates a policy until its values settle, then improves it; value iteration improves at every sweep."
+
+[blackjack-prediction]
+title = "Monte Carlo prediction at Blackjack"
+env = "blackjack"
+algorithms = ["mc-prediction"]
+units = 100000
+seed = 1
+gamma = 1.0
+policy = "stick-20"
+charts = ["error"]
+measures = ["error"]
+film = [100, 1000, 10000, 100000]
+intro = "The player sticks only on 20 or 21. After every hand, each state it passed through moves toward the hand's result. The error is measured against the exact values, computed from the rules."
+
+[blackjack-control]
+title = "Learning to play Blackjack"
+env = "blackjack"
+racers = [
+  { algorithm = "exploring-starts", name = "Monte Carlo ES" },
+  { algorithm = "off-policy-mc", name = "off-policy MC, from random play", epsilon = 1.0 },
+]
+units = 100000
+seed = 1
+gamma = 1.0
+charts = ["match"]
+measures = ["match"]
+film = [100, 1000, 10000, 100000]
+intro = "Exploring starts deals random states and plays its own best guess. Off-policy MC only watches a player who chooses at random, and still learns the best strategy."
+
+[frozen-mc]
+title = "Monte Carlo control vs Q-learning on Frozen Lake"
+env = "frozen-lake"
+racers = [
+  { algorithm = "mc-control", name = "on-policy MC (averages)", alpha = 0.0 },
+  { algorithm = "q-learning", name = "Q-learning (α = 0.1)", alpha = 0.1 },
+]
+units = 3000
+seed = 1
+gamma = 0.99
+epsilon = 0.1
+judge = 1.0
+charts = ["greedy"]
+measures = ["greedy"]
+film = [10, 100, 1000, 3000]
+intro = "Only the gem pays, and the ice is slippery. Monte Carlo learns from whole episodes and gets going quickly; Q-learning passes the news back one step at a time."
+
+[random-walk]
+title = "TD(0) vs Monte Carlo on the random walk"
+env = "random-walk"
+algorithms = ["td0", "mc-prediction"]
+units = 100
+runs = 100
+seed = 1
+alpha = 0.1
+gamma = 1.0
+v0 = 0.5
+charts = ["error"]
+measures = ["error"]
+film = [0, 1, 10, 100]
+intro = "Five states between two exits; only the right exit pays +1. Walking at random, the true values are 1/6 to 5/6. Both start at 0.5 and learn from the same walks."
+
+[max-bias]
+title = "Q-learning vs Double Q-learning"
+env = "max-bias"
+algorithms = ["q-learning", "double-q"]
+units = 300
+runs = 1000
+seed = 1
+alpha = 0.1
+epsilon = 0.1
+gamma = 1.0
+charts = ["left"]
+intro = "Going left from A leads to B, whose many actions all lose a little on average, but some will look like winners by luck. Q-learning trusts the luckiest one; Double Q-learning does not."
+
+[sandbox]
+title = "Sandbox"
+env = "sandbox"
+algorithms = ["q-learning"]
+units = 500
+seed = 1
+alpha = 0.5
+epsilon = 0.1
+gamma = 1.0
+charts = ["return"]
+film = [1, 10, 100, 500]
+intro = "Draw a world of your own, choose an algorithm, and watch it learn. Every change runs it again."

@@ -1,0 +1,136 @@
+/* Design tokens: every color, font and motion value lives here.
+   Quantity colors were checked with the dataviz palette validator (all pairs, both themes):
+   marks use --val/--rew/--pol/--err, text uses the -ink steps (>= 4.5:1 contrast). */
+
+:root {
+  color-scheme: light;
+  --bg: #f4f3ef;
+  --dot: #dcdad1;
+  --surface: #fcfcfb;
+  --surface-2: #f3f2ee;
+  --surface-3: #e8e6df;
+  --ink: #1b1b19;
+  --ink-2: #52514e;
+  --ink-3: #898781;
+  --line: #e1e0d9;
+  --line-2: #c3c2b7;
+  --focus: #2a78d6;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 8px 24px rgb(0 0 0 / 0.07);
+  --shadow-lg: 0 2px 6px rgb(0 0 0 / 0.06), 0 24px 60px rgb(0 0 0 / 0.13);
+
+  /* RL quantities */
+  --val: #3e7ece;  --val-ink: #4176b9;
+  --rew: #b9832c;  --rew-ink: #966b27;
+  --pol: #502dc7;  --pol-ink: #4e29c4;
+  --err: #cc272f;  --err-ink: #df202e;
+  --good-ink: #0b7d0b;  --bad-ink: #b52f2f;
+
+  /* value heatmap: diverging, neutral gray at zero */
+  --v-pos: #2a78d6;
+  --v-neg: #eb6834;
+  --v-mid: #f0efec;
+
+  /* chart series, in fixed order (the reference palette's first four slots) */
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #eda100;
+
+  /* map lines */
+  --line-foundations: #1b1b19;
+  --line-tabular: #2a78d6;
+  --line-approximation: #1baf7a;
+  --line-policy: #4a3aa7;
+  --line-continuous: #e87ba4;
+  --line-toolbox: #eda100;
+  --line-next: #898781;
+
+  --chasm: #2d2b28;
+  --ice: #e3eef6;  /* Frozen Lake */
+  --hole: #1e3446;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --serif: KaTeX_Main, "Latin Modern Roman", "Palatino Linotype", Palatino, Georgia, serif; /* the Textbook: KaTeX's own font, so text and math match */
+  --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.2, 0.9, 0.25, 1.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211;
+    --dot: #242422;
+    --surface: #1a1a19;
+    --surface-2: #222220;
+    --surface-3: #2c2c2a;
+    --ink: #f2f1ec;
+    --ink-2: #c3c2b7;
+    --ink-3: #898781;
+    --line: #2c2c2a;
+    --line-2: #383835;
+    --focus: #3987e5;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px rgb(0 0 0 / 0.45);
+    --shadow-lg: 0 2px 6px rgb(0 0 0 / 0.5), 0 24px 60px rgb(0 0 0 / 0.6);
+    --val: #1785fc;  --val-ink: #1483fa;
+    --rew: #bb852e;  --rew-ink: #f4a81c;
+    --pol: #615dab;  --pol-ink: #b5b5fc;
+    --err: #d22d33;  --err-ink: #eb4848;
+    --good-ink: #3fcf3f;  --bad-ink: #f07a7a;
+    --v-pos: #3987e5;
+    --v-neg: #d95926;
+    --v-mid: #383835;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #c98500;
+    --line-foundations: #f2f1ec;
+    --line-tabular: #3987e5;
+    --line-approximation: #199e70;
+    --line-policy: #9085e9;
+    --line-continuous: #d55181;
+    --line-toolbox: #c98500;
+    --line-next: #898781;
+    --chasm: #050505;
+    --ice: #1f2a33;
+    --hole: #04080c;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211;
+  --dot: #242422;
+  --surface: #1a1a19;
+  --surface-2: #222220;
+  --surface-3: #2c2c2a;
+  --ink: #f2f1ec;
+  --ink-2: #c3c2b7;
+  --ink-3: #898781;
+  --line: #2c2c2a;
+  --line-2: #383835;
+  --focus: #3987e5;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 2px 6px rgb(0 0 0 / 0.5), 0 24px 60px rgb(0 0 0 / 0.6);
+  --val: #1785fc;  --val-ink: #1483fa;
+  --rew: #bb852e;  --rew-ink: #f4a81c;
+  --pol: #615dab;  --pol-ink: #b5b5fc;
+  --err: #d22d33;  --err-ink: #eb4848;
+  --good-ink: #3fcf3f;  --bad-ink: #f07a7a;
+  --v-pos: #3987e5;
+  --v-neg: #d95926;
+  --v-mid: #383835;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --line-foundations: #f2f1ec;
+  --line-tabular: #3987e5;
+  --line-approximation: #199e70;
+  --line-policy: #9085e9;
+  --line-continuous: #d55181;
+  --line-toolbox: #c98500;
+  --line-next: #898781;
+  --chasm: #050505;
+  --ice: #1f2a33;
+  --hole: #04080c;
+}

@@ -1,0 +1,67 @@
+# RL Atlas: the plan
+
+## Goal
+
+A guide for someone who knows a little about reinforcement learning and wants a clear, complete view of
+it. The algorithms are the main course; everything that works alongside them (γ, bias vs variance, GAE,
+exploration…) is explained too. It must be complete, clean, fun to use and appealing at first sight:
+you learn by watching things happen, not only by reading.
+
+## How it teaches
+
+- Almost every update is *old guess + step size × (target − old guess)*; algorithms differ mainly in the target.
+- Each algorithm is its parent plus one change; perks and flaws follow from that change.
+- Every algorithm is read three ways, in this order: **Story** (get the idea), **Textbook** (the theory, like a book
+  chapter: complete, dry, section by section, building on the stations before it on its line), **Card** (the summary,
+  for a quick look). Then the **Lab** shows it learning. Concepts use the same views where they help.
+- The tabular / function-approximation split is a visible line on the map ("Learning with tables" / "Learning at scale").
+- Sources: Sutton & Barto (2018), OpenAI Spinning Up and the original papers, in our own words.
+
+The full curriculum, 95 stations in 14 parts, lives in [content/map.toml](content/map.toml).
+
+## Look and feel
+
+- One color per quantity, everywhere: value blue, reward gold, policy violet, surprise (δ, advantage) red; knobs stay in ink.
+  The palette was checked with a color validator in both themes (marks and text separately).
+- Values on tiles use a diverging scale: orange below zero, gray at zero, blue above.
+- Motion explains cause: zoom into what you click, formulas that build themselves, values that ripple back
+  from the goal, sparks where an update happens, an agent that hops, falls and respawns.
+- Light and dark themes; reduced motion follows the operating system setting.
+
+## The Lab
+
+- Tabular and linear methods, and policy gradients with a per-tile softmax policy, run live in the browser:
+  a whole run is computed at once (milliseconds), then played like a video and replayable line by line.
+- Neural-network methods (DQN, A2C, PPO, TRPO, DDPG, TD3, SAC) will be **recorded runs** made by a standalone Python
+  recorder (numpy, PyTorch, Gymnasium; none of RL_lib or Centipede) and played back with the same player,
+  with a few pre-recorded variants per knob.
+- Worlds are picked so that values and policies stay pictures: grids, random walks, Blackjack, Mountain Car,
+  Pendulum, the short corridor, CartPole with value and probability bars.
+
+## Technology (decided)
+
+| Part | Choice | Why |
+| --- | --- | --- |
+| The guide | one offline HTML file, plain JavaScript, SVG and canvas | animation, hover-linking and scrubbing need to run in the browser at 60 fps; opens with a double-click |
+| Math | KaTeX, vendored | standard, fast, offline, supports the color and link macros |
+| 3D (M4) | three.js, copied from memory_viz | already used in this workspace |
+| Content | Markdown + TOML front matter, built by `build.py` | readable and editable; Python standard library only |
+| Tests | `node --test`, one file | checks the Lab against the book's results |
+| Deep RL runs (M6) | Python recorder → data files played in the page | training is heavy and offline; playback is light |
+
+Not a Python app (Streamlit and similar): they redraw on the server for every interaction, so the
+animations and hover effects this guide relies on would not be smooth.
+
+## Milestones
+
+- [x] **M0 · Look and feel**: the shell, the metro map, SARSA and Q-learning (story, card), the cliff-walking race in the Lab.
+  After review: the Textbook view, with live figures computed by the Lab.
+- [x] **M1 · Foundations**: Parts 0–1 (16 entries; every Part 1 concept has a Textbook, seven have a Story) with
+  the "be the agent" game, the discount slider, the loop, timeline and MDP scenes, and the gridworld and robot computed
+  exactly; the map's family-tree and unified views and its filters. Parents and labels now live in `map.toml`.
+- [ ] **M2 · Tabular core**: Bandits, DP, Monte Carlo, the rest of TD; Lab worlds (gridworld, Frozen Lake, random walk, Blackjack), filmstrip, seeds, sandbox.
+- [ ] **M3 · Traces and planning**: n-step, TD(λ) with glowing traces, Dyna.
+- [ ] **M4 · Function approximation**: features, the "touch a tile" demo, Mountain Car in 3D, the deadly triad.
+- [ ] **M5 · Policy gradients, live**: gradient bandit, short corridor, REINFORCE, actor–critic, A2C; GAE and PPO demos.
+- [ ] **M6 · Recorded runs**: the recorder; DQN, A2C, TRPO and PPO on CartPole, Mountain Car and Pendulum.
+- [ ] **M7 · The rest**: continuous control, toolbox, where next, quizzes everywhere, polish.
