@@ -174,8 +174,9 @@
           this._drawPath();
           this.readout.textContent = `step ${ev.k + 1} · angle ${sgn(deg(ev.s2[2]))}°`;
           if (ev.end) {
-            const fell = Math.abs(ev.s2[2]) > this.env.thetaMax || Math.abs(ev.s2[0]) > this.env.xMax;
-            this.pop(fell ? (Math.abs(ev.s2[0]) > this.env.xMax ? "off the track" : "the pole fell") : "500 steps: balanced!");
+            // judged by length: a recording clamps its states to the track and to 12°, so the limits are never passed
+            const lasted = ev.k + 1 >= this.env.maxSteps, edge = Math.abs(ev.s2[0]) >= this.env.xMax - 0.05;
+            this.pop(lasted ? "500 steps: balanced!" : edge ? "off the track" : "the pole fell");
             return 600;
           }
           return 0;
