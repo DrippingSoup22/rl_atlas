@@ -59,7 +59,11 @@ animations and hover effects this guide relies on would not be smooth.
 - [x] **M1 · Foundations**: Parts 0–1 (16 entries; every Part 1 concept has a Textbook, seven have a Story) with
   the "be the agent" game, the discount slider, the loop, timeline and MDP scenes, and the gridworld and robot computed
   exactly; the map's family-tree and unified views and its filters. Parents and labels now live in `map.toml`.
-- [ ] **M2 · Tabular core**: Bandits, DP, Monte Carlo, the rest of TD; Lab worlds (gridworld, Frozen Lake, random walk, Blackjack), filmstrip, seeds, sandbox.
+- [x] **M2 · Tabular core**: Bandits, DP, Monte Carlo, the rest of TD; Lab worlds (gridworld, Frozen Lake, random walk, Blackjack), filmstrip, seeds, sandbox.
+  Parts 2–5 are written: 25 new entries, each with a Textbook and a Card, 18 with a Story whose numbers come from
+  Lab runs. The book's figures are recomputed live by the Lab (the testbed, Figure 4.1, policy iteration on Frozen
+  Lake, the Blackjack maps, importance sampling, the random walk, step sizes on the cliff, maximization bias), and
+  a final pass retold the passages that still followed the book's wording too closely.
 - [ ] **M3 · Traces and planning**: n-step, TD(λ) with glowing traces, Dyna.
 - [ ] **M4 · Function approximation**: features, the "touch a tile" demo, Mountain Car in 3D, the deadly triad.
 - [ ] **M5 · Policy gradients, live**: gradient bandit, short corridor, REINFORCE, actor–critic, A2C; GAE and PPO demos.
