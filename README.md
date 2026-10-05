@@ -41,6 +41,7 @@ directly, which is handier while editing.
 | `lab/` | worlds, features, algorithms, runs and dynamic programming (no DOM, also used by the tests), and their views |
 | `vendor/` | KaTeX 0.19 (MIT license) |
 | `tests/` | `lab.test.js` |
+| `recorder/` | the recorder of the runs with neural networks (NumPy and Gymnasium): `python recorder/record.py [name …]` writes `content/recordings/<name>.json`, which `build.py` bundles |
 
 ## Writing an entry
 

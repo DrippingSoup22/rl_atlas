@@ -33,8 +33,9 @@ The full curriculum, 95 stations in 14 parts, lives in [content/map.toml](conten
 - Tabular and linear methods, and policy gradients (softmax and Gaussian policies, from REINFORCE to PPO), run live in the browser:
   a whole run is computed at once (milliseconds), then played like a video and replayable line by line.
 - Neural-network methods (DQN, A2C, PPO, TRPO, DDPG, TD3, SAC) will be **recorded runs** made by a standalone Python
-  recorder (numpy, PyTorch, Gymnasium; none of RL_lib or Centipede) and played back with the same player,
-  with a few pre-recorded variants per knob.
+  recorder (NumPy and Gymnasium; none of RL_lib or Centipede) and played back with the same player,
+  with a few pre-recorded variants per knob. The networks are small (two hidden layers of 64 units), so they are
+  written in NumPy, gradients by hand: no PyTorch to install, and every recording reproducible bit for bit from its seed.
 - Worlds are picked so that values and policies stay pictures: grids, random walks, Blackjack, Mountain Car,
   Pendulum, the short corridor, the throw, CartPole with value and probability bars.
 
@@ -92,4 +93,9 @@ animations and hover effects this guide relies on would not be smooth.
   step size, the entropy bonus, GAE's weights and λ, and TRPO's trust region and PPO's clip on the corridor. Stories
   gained chart legends and partial replays.
 - [ ] **M6 · Recorded runs**: the recorder; DQN, A2C, TRPO and PPO on CartPole, Mountain Car and Pendulum.
+  In progress. Done: the recorder (`recorder/`: NumPy networks checked against numerical gradients, DQN with switchable
+  replay, target network, double, dueling and prioritized replay; A2C, PPO and TRPO with exact Fisher-vector products),
+  tuned settings (DQN balances CartPole with a squared loss and lr 5·10⁻⁴; A2C, PPO and TRPO in 20–40% of their
+  runs; PPO on Pendulum), the first two recordings, their decoder and a CartPole view. Next: the Lab's player for
+  recorded presets, the Pendulum view, Mountain Car (DQN still to tune), the remaining recordings, and Part 9.
 - [ ] **M7 · The rest**: continuous control, toolbox, where next, quizzes everywhere, polish.
