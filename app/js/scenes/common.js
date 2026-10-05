@@ -48,14 +48,16 @@
     return e;
   }
 
-  // Named runs a story shows and replays, from its config: [story.runs] name = { algorithm, units, seed, <knobs> }.
-  // The world, the shared knobs and the seed come from the story config unless a run says otherwise.
+  // Named runs a story shows and replays, from its config: [story.runs] name = { algorithm, units, seed, <knobs> }, or
+  // name = { recording } for a run trained offline (recorder/record.py). The world, the shared knobs and the seed come
+  // from the story config unless a run says otherwise.
   function runs(cfg) {
     const made = {};
     return (name) => {
       if (made[name]) return made[name];
       const spec = cfg.runs?.[name];
       if (!spec) throw new Error(`story: no run named '${name}'`);
+      if (spec.recording) return (made[name] = RL.lab.recordedRun(RL.recordings[spec.recording]));
       const { algorithm, units, seed, world, measures, name: _label, ...params } = spec;
       return (made[name] = RL.lab.simulate({
         world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params },
@@ -91,7 +93,7 @@
   // Averages are kept, so scrolling back and forth does not compute them again.
   const METRIC = {
     optimal: { label: "How often the best arm is pulled", percent: true },
-    return: { label: (noun) => (noun[0] === "step" ? "Reward per step" : noun[0] === "round" ? "Total reward per episode (average of each round)" : `Total reward per ${noun[0]}`) },
+    return: { label: (noun) => (noun[0] === "step" ? "Reward per step" : noun[0] === "round" ? "Total reward per episode (average of each round)" : noun[0] === "block" ? "Training episodes: their average return in each block" : `Total reward per ${noun[0]}`) },
     left: { label: "How often the agent goes left from A", percent: true },
     error: { label: "Error: distance from the true values (RMS)", zero: true },
     match: { label: "States where the greedy action is optimal", percent: true },
@@ -102,6 +104,7 @@
     "policy-value": { label: "Value of the policy from the start, J(θ)" },
     right: { label: "Chance of stepping right, π(right)", percent: true },
     aim: { label: "Where the policy aims: its mean angle (degrees)" },
+    test: { label: "Test episode after each block: its return" },
   };
   function curves(host, cfg, runOf) {
     const cache = new Map();
@@ -114,7 +117,7 @@
       clearTimeout(timer);
       chart?.destroy();
       const first = runOf(names[0]), unit = first.env.unitName || first.algorithm.unit;
-      const noun = unit === "pull" || unit === "step" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : unit === "round" ? ["round", "rounds"] : unit === "throw" ? ["throw", "throws"] : ["episode", "episodes"];
+      const noun = unit === "pull" || unit === "step" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : unit === "round" ? ["round", "rounds"] : unit === "throw" ? ["throw", "throws"] : unit === "block" ? ["block", "blocks"] : ["episode", "episodes"];
       const label = typeof METRIC[metric].label === "function" ? METRIC[metric].label(noun) : METRIC[metric].label;
       const legend = names.length > 1 ? `<div class="scene-chart-legend">${names.map((n, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${RL.esc(cfg.runs[n].name || n)}</span>`).join("")}</div>` : "";
       host.innerHTML = `<div class="scene-chart-title">${label}<span class="faint"></span></div>${legend}<div class="scene-chart-host"></div>`;
@@ -127,6 +130,13 @@
         chart.playhead(first.units);
         status.textContent = acc.done < total ? ` · averaging ${acc.done} of ${total} runs…` : ` · average of ${total} runs`;
       };
+      if (names.every((n) => cfg.runs[n].recording)) { // trained offline: every seed's curve is in the recording
+        const seeds = names.map((n) => RL.lab.recordedCurves(RL.recordings[cfg.runs[n].recording]));
+        chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: metric === "return" ? seeds[i].mean : runOf(n).metrics[metric] })));
+        chart.playhead(first.units);
+        status.textContent = metric === "return" ? ` · average of ${seeds[0].seeds.length} seeds` : "";
+        return;
+      }
       const more = () => {
         if (!host.isConnected) return;
         const t0 = performance.now();
