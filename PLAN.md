@@ -101,8 +101,8 @@ animations and hover effects this guide relies on would not be smooth.
   almost never reaches the flag, so a network has nothing to learn from.
   Next: a sweep of each deep algorithm's main knob over 5 seeds before recording it, then the Lab's player, the
   remaining recordings and Part 9.
-  Done: Mountain Car without optimism (a Lab, linked from Part 8: with γ = 0.99 no run gets out when the values start
-  at or below −100, the value of paying 1 forever; just above it the push to explore is feeble, and from −80 up every
+  Done: Mountain Car without optimism (a Lab, linked from Part 8: with γ = 0.99 no run ends up getting out when the values
+  start at or below −100, the value of paying 1 forever; just above it the push to explore is feeble, and from −80 up every
   run gets out); the odds in the Lab (success rules on 26 presets, calibrated over 30 to 100 seeds; a tally of the runs that end
   well; a sweep of any knob, charting the share of runs that end well and their score against its values); fixes
   from profiling every preset over many seeds (Frozen Lake's shown seed, two intros, the odds of the failures the
