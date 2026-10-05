@@ -1,14 +1,18 @@
 # Lab presets: a world, the algorithms that race on it, and their starting knobs. Entries link to one with [text](lab:<id>).
 #
-#   env        the world (lab/envs): cliff, gridworld, small-gridworld, frozen-lake, testbed, testbed-4, drifting,
-#              random-walk, blackjack, max-bias, or sandbox (the map you draw)
+#   env        the world (lab/envs): cliff, gridworld, small-gridworld, frozen-lake, dyna-maze, blocking-maze,
+#              shortcut-maze, testbed, testbed-4, drifting, random-walk, random-walk-19, blackjack, max-bias,
+#              walk-1000, mountain-car, baird, or sandbox (the map you draw)
 #   algorithms the algorithms that race, with the shared knobs; or racers = [{ algorithm, name, <knobs of its own> }]
 #   units      how many episodes, sweeps or steps a run lasts; seed: its randomness
 #   runs       > 1: the charts average that many runs, each with its own seed
-#   charts     what to plot: return, optimal, left, error, match, greedy, delta, steps
-#   measures   numbers computed against the exact answer after each unit: error, match, greedy, optimal-error
+#   charts     what to plot: return, optimal, left, error, match, greedy, delta, steps, ve, weights
+#   measures   numbers computed against the exact answer after each unit: error, match, greedy, optimal-error, ve
 #   film       the moments the filmstrip shows (in units)
-# Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge.
+# Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge,
+# n (n-step methods), lambda and trace ("accumulating" or "replacing"), planning and kappa (Dyna),
+# features ("groups", "tiles", "poly", "fourier", "table" or "own") with cells, tilings and order, and behavior (the
+# policy an off-policy method follows; policy is then the one it learns about).
 
 [cliff-race]
 title = "SARSA vs Q-learning on the cliff"
@@ -214,6 +218,237 @@ gamma = 1.0
 charts = ["left"]
 intro = "Going left from A leads to B, whose many actions all lose a little on average, but some will look like winners by luck. Q-learning trusts the luckiest one; Double Q-learning does not."
 
+[n-step-walk]
+title = "n-step TD on the 19-state random walk"
+env = "random-walk-19"
+racers = [
+  { algorithm = "n-step-td", name = "n = 1 (TD(0))", n = 1 },
+  { algorithm = "n-step-td", name = "n = 4", n = 4 },
+  { algorithm = "n-step-td", name = "n = 32", n = 32 },
+]
+units = 20
+runs = 100
+seed = 1
+alpha = 0.4
+gamma = 1.0
+charts = ["error"]
+measures = ["error"]
+film = [0, 1, 5, 20]
+intro = "Nineteen states between an exit that pays −1 and one that pays +1. One-step TD passes the news back one state per walk; a long n waits for many real rewards and inherits their noise. In between learns fastest at first; later, with this step size, the steadier one-step targets catch up."
+
+[n-step-sarsa]
+title = "n-step SARSA in the maze"
+env = "dyna-maze"
+racers = [
+  { algorithm = "n-step-sarsa", name = "n = 1 (SARSA)", n = 1 },
+  { algorithm = "n-step-sarsa", name = "n = 4", n = 4 },
+  { algorithm = "n-step-sarsa", name = "n = 16", n = 16 },
+]
+units = 50
+runs = 30
+seed = 1
+alpha = 0.1
+epsilon = 0.1
+gamma = 0.95
+charts = ["steps"]
+film = [1, 2, 5, 50]
+intro = "Only the gem pays. When the first episode finally reaches it, one-step SARSA strengthens one move, the last; n-step SARSA strengthens the last n moves at once, so the way home is found in fewer episodes."
+
+[td-lambda-walk]
+title = "TD(λ) on the 19-state random walk"
+env = "random-walk-19"
+racers = [
+  { algorithm = "td-lambda", name = "λ = 0 (TD(0))", lambda = 0.0 },
+  { algorithm = "td-lambda", name = "λ = 0.6", lambda = 0.6 },
+  { algorithm = "td-lambda", name = "λ = 0.9", lambda = 0.9 },
+]
+units = 20
+runs = 100
+seed = 1
+alpha = 0.2
+gamma = 1.0
+charts = ["error"]
+measures = ["error"]
+film = [0, 1, 5, 20]
+intro = "Every state the walk passes leaves a glowing trace that fades with each step. Each surprise is shared by all the glowing states at once, the brightest getting the most. With λ = 0 the trace vanishes at once, and TD(λ) is TD(0)."
+
+[sarsa-lambda]
+title = "SARSA(λ) in the maze"
+env = "dyna-maze"
+racers = [
+  { algorithm = "sarsa-lambda", name = "λ = 0 (SARSA)", lambda = 0.0 },
+  { algorithm = "sarsa-lambda", name = "λ = 0.9, accumulating", lambda = 0.9 },
+  { algorithm = "sarsa-lambda", name = "λ = 0.9, replacing", lambda = 0.9, trace = "replacing" },
+]
+units = 50
+runs = 30
+seed = 1
+alpha = 0.1
+epsilon = 0.1
+gamma = 0.95
+charts = ["steps"]
+film = [1, 2, 5, 50]
+intro = "The trace marks every move of the episode, fading with time. When the gem is reached, the whole glowing trail learns at once. Accumulating traces grow on moves made again and again, replacing traces stop at 1."
+
+[dyna-maze]
+title = "Dyna-Q: planning in the maze"
+env = "dyna-maze"
+racers = [
+  { algorithm = "dyna-q", name = "no planning (Q-learning)", planning = 0 },
+  { algorithm = "dyna-q", name = "5 planning steps", planning = 5 },
+  { algorithm = "dyna-q", name = "50 planning steps", planning = 50 },
+]
+units = 50
+runs = 30
+seed = 1
+alpha = 0.1
+epsilon = 0.1
+gamma = 0.95
+charts = ["steps"]
+film = [1, 2, 3, 50]
+intro = "After every real step, Dyna-Q replays remembered moves to itself: the dashed sparks. The first episode is a long random search for all three; after it, the planners find the way home almost at once."
+
+[dyna-blocking]
+title = "Dyna-Q vs Dyna-Q+ when the way is blocked"
+env = "blocking-maze"
+racers = [
+  { algorithm = "dyna-q", name = "Dyna-Q" },
+  { algorithm = "dyna-q-plus", name = "Dyna-Q+ (κ = 0.001)" },
+]
+units = 200
+seed = 1
+alpha = 1.0
+epsilon = 0.1
+gamma = 0.95
+planning = 10
+kappa = 0.001
+charts = ["steps"]
+film = [10, 60, 100, 200]
+intro = "After 1000 steps the gap in the wall moves from the right end to the left. Both agents bump into the new wall; the way through is a move neither has ever made. Dyna-Q+ gives a bonus to moves it has not tried in a while, so it goes and finds the new gap much sooner."
+
+[dyna-shortcut]
+title = "Dyna-Q vs Dyna-Q+ when a shortcut opens"
+env = "shortcut-maze"
+racers = [
+  { algorithm = "dyna-q", name = "Dyna-Q" },
+  { algorithm = "dyna-q-plus", name = "Dyna-Q+ (κ = 0.001)" },
+]
+units = 400
+seed = 1
+alpha = 1.0
+epsilon = 0.1
+gamma = 0.95
+planning = 50
+kappa = 0.001
+charts = ["steps"]
+film = [50, 150, 250, 400]
+intro = "After 3000 steps a shortcut opens on the right. Nothing tells Dyna-Q: its model and its plans say the long way is best, and it never looks. Dyna-Q+'s curiosity bonus sends it to check, and it finds the shorter path."
+
+[sweeping]
+title = "Prioritized sweeping vs Dyna-Q"
+env = "dyna-maze"
+racers = [
+  { algorithm = "dyna-q", name = "Dyna-Q, random order" },
+  { algorithm = "prioritized-sweeping", name = "prioritized sweeping" },
+]
+units = 30
+runs = 30
+seed = 1
+alpha = 0.5
+epsilon = 0.1
+gamma = 0.95
+planning = 5
+charts = ["steps"]
+film = [1, 2, 5, 30]
+intro = "Both may make 5 planning updates per step. Dyna-Q picks remembered moves at random, mostly ones where nothing changes; prioritized sweeping works backward from wherever a value just changed, so the news spreads from the gem along the way it came."
+
+[walk-aggregation]
+title = "Gradient Monte Carlo and semi-gradient TD on 1000 states"
+env = "walk-1000"
+racers = [
+  { algorithm = "gradient-mc", name = "Gradient Monte Carlo", alpha = 0.0005 },
+  { algorithm = "semi-gradient-td", name = "Semi-gradient TD(0)", alpha = 0.002 },
+]
+units = 2000
+seed = 3
+gamma = 1.0
+features = "groups"
+cells = 10
+charts = ["ve"]
+measures = ["ve"]
+film = [0, 10, 100, 500, 2000]
+intro = "A thousand states, ten weights: each weight is shared by a group of 100 states. Every update moves a whole group, the box in the strip under the plot. Monte Carlo settles on each group's average true value; TD settles on something flatter."
+
+[walk-features]
+title = "Four ways to describe 1000 states"
+env = "walk-1000"
+racers = [
+  { algorithm = "gradient-mc", name = "5 groups", features = "groups", cells = 5, alpha = 0.0005 },
+  { algorithm = "gradient-mc", name = "Tile coding, 50 tilings", features = "tiles", tilings = 50, cells = 5, alpha = 0.00001 },
+  { algorithm = "gradient-mc", name = "Polynomials up to x⁵", features = "poly", order = 5, alpha = 0.0002 },
+  { algorithm = "gradient-mc", name = "Fourier cosines up to 5", features = "fourier", order = 5, alpha = 0.0001 },
+]
+units = 2000
+seed = 2
+gamma = 1.0
+charts = ["ve"]
+measures = ["ve"]
+film = [0, 10, 100, 2000]
+intro = "Same learner, same walks, four sets of features. Watch the footprint strip: a box for groups, a tent for tile coding, waves across all states for polynomials and cosines. What an update touches is what the learner generalizes to."
+
+[mountain-car]
+title = "Semi-gradient SARSA climbs Mountain Car"
+env = "mountain-car"
+algorithms = ["semi-gradient-sarsa"]
+units = 500
+seed = 1
+alpha = 0.06
+epsilon = 0.0
+gamma = 1.0
+features = "tiles"
+tilings = 8
+cells = 8
+charts = ["steps"]
+film = [1, 12, 100, 500]
+intro = "Every step costs 1, and the engine is too weak to drive straight up. The landscape on the right is what the learner expects to pay from each position and speed: it starts flat and hopeful (all estimates 0), and every disappointment digs in, until the car learns to rock back first."
+
+[mountain-car-n]
+title = "One step or eight on Mountain Car"
+env = "mountain-car"
+racers = [
+  { algorithm = "semi-gradient-sarsa", name = "n = 1", n = 1, alpha = 0.06 },
+  { algorithm = "semi-gradient-sarsa", name = "n = 8", n = 8, alpha = 0.04 },
+]
+units = 300
+runs = 20
+seed = 1
+epsilon = 0.0
+gamma = 1.0
+features = "tiles"
+tilings = 8
+cells = 8
+charts = ["steps"]
+film = [1, 10, 100, 300]
+intro = "The n-step return reaches eight steps ahead, so each disappointment travels back faster: the landscape fills in sooner, and the first episodes are shorter."
+
+[deadly-triad]
+title = "The deadly triad on Baird's counterexample"
+env = "baird"
+racers = [
+  { algorithm = "semi-gradient-td", name = "All three: off-policy, shared features, bootstrapping", features = "own", behavior = "behavior" },
+  { algorithm = "semi-gradient-td", name = "A table instead of shared features", features = "table", behavior = "behavior" },
+  { algorithm = "semi-gradient-td", name = "On-policy instead of off-policy", features = "own" },
+]
+units = 1000
+seed = 1
+alpha = 0.01
+gamma = 0.99
+policy = "target"
+charts = ["weights", "error"]
+measures = ["error"]
+film = [0, 100, 300, 1000]
+intro = "Every true value is 0, and nothing random can mislead the learner: rewards are always 0. Yet off-policy semi-gradient TD with these features walks its weights away to infinity. Take away any one of the three ingredients and the weights stay bounded."
+
 [sandbox]
 title = "Sandbox"
 env = "sandbox"
@@ -226,3 +461,175 @@ gamma = 1.0
 charts = ["return"]
 film = [1, 10, 100, 500]
 intro = "Draw a world of your own, choose an algorithm, and watch it learn. Every change runs it again."
+
+[corridor-reinforce]
+title = "REINFORCE on the short corridor"
+env = "corridor"
+racers = [
+  { algorithm = "reinforce", name = "α = 2⁻¹²", alpha = 0.000244140625 },
+  { algorithm = "reinforce", name = "α = 2⁻¹³", alpha = 0.0001220703125 },
+  { algorithm = "reinforce", name = "α = 2⁻¹⁴", alpha = 0.00006103515625 },
+]
+units = 1000
+runs = 100
+seed = 1
+gamma = 1.0
+features = "own"
+maxSteps = 1000
+charts = ["return", "right"]
+measures = ["right"]
+film = [0, 50, 200, 1000]
+intro = "Every cell looks the same to the agent, and the middle one swaps left and right. No fixed choice ever reaches the goal; the best is to step right about 59% of the time. REINFORCE starts at 5% and climbs the landscape below the corridor, one episode at a time. The biggest step size is the fastest, until a run is thrown off the landscape."
+
+[corridor-baseline]
+title = "REINFORCE with and without a baseline"
+env = "corridor"
+racers = [
+  { algorithm = "reinforce", name = "REINFORCE (α = 2⁻¹³)", alpha = 0.0001220703125 },
+  { algorithm = "baseline", name = "with a baseline (α = 2⁻⁹, αw = 2⁻⁶)", alpha = 0.001953125, alphaW = 0.015625 },
+]
+units = 1000
+runs = 100
+seed = 1
+gamma = 1.0
+features = "own"
+maxSteps = 1000
+charts = ["return", "right"]
+measures = ["right"]
+film = [0, 50, 200, 1000]
+intro = "Every return here is negative, so without a baseline every action taken is made less likely, the good ones only a little less. Subtracting a learned estimate of the return leaves the direction of each update the same on average, and removes most of its noise: the step size can be sixteen times larger."
+
+[throw]
+title = "A Gaussian policy learns to throw"
+env = "throw"
+racers = [
+  { algorithm = "baseline", name = "with a learned baseline (α = 0.003)", alpha = 0.003, alphaW = 0.1 },
+  { algorithm = "reinforce", name = "without a baseline (α = 0.0003)", alpha = 0.0003 },
+]
+units = 1000
+seed = 1
+gamma = 1.0
+features = "own"
+charts = ["return", "aim"]
+measures = ["aim"]
+film = [0, 50, 200, 1000]
+intro = "The action is an angle, a real number: the policy is a bell curve around its aim. Each throw is drawn from the bell; a throw that flies farther than expected pulls the aim toward its angle, and the bell narrows as the policy grows sure. The best angle is 45°, but the learner is never told."
+
+[cliff-actor-critic]
+title = "Actor–critic on the cliff"
+env = "cliff"
+algorithms = ["actor-critic"]
+units = 500
+seed = 1
+alpha = 0.1
+alphaW = 0.1
+lambda = 0.0
+gamma = 1.0
+domain = [-100, 0]
+charts = ["return", "policy-value"]
+measures = ["policy-value"]
+film = [1, 10, 100, 500]
+intro = "The critic colors the tiles with what it expects from each; the actor's arrows are its policy, thicker for likelier moves. After every step, the critic's surprise δ judges the move just made: better than expected, it becomes likelier. Like SARSA, it learns from its own wandering, and the edge of the cliff costs it dearly."
+
+[a2c-maze]
+title = "A2C: four workers in the maze"
+env = "dyna-maze"
+racers = [
+  { algorithm = "a2c", name = "update every step (n = 1)", n = 1 },
+  { algorithm = "a2c", name = "every 5 steps (n = 5)", n = 5 },
+  { algorithm = "a2c", name = "every 20 steps (n = 20)", n = 20 },
+]
+units = 60
+runs = 12
+seed = 1
+alpha = 2.0
+alphaW = 0.3
+workers = 4
+beta = 0.0
+gamma = 0.95
+maxSteps = 1000
+charts = ["steps"]
+film = [1, 5, 20, 60]
+intro = "Four workers explore copies of the maze at once, all with the same policy. Every n steps, all their experience makes one update. Each step is judged by the rewards of the steps after it, up to the update, and the critic's estimate beyond: the longer the stretch, the sooner the gem's news reaches the start."
+
+[entropy-gems]
+title = "The entropy bonus: two gems"
+env = "two-gems"
+racers = [
+  { algorithm = "a2c", name = "no entropy bonus", beta = 0.0 },
+  { algorithm = "a2c", name = "entropy bonus β = 0.1", beta = 0.1 },
+]
+units = 200
+runs = 20
+seed = 1
+alpha = 2.0
+alphaW = 0.3
+workers = 4
+n = 5
+gamma = 0.95
+maxSteps = 500
+charts = ["return"]
+film = [1, 20, 60, 200]
+intro = "A small gem two steps away pays 0.3; a big one seven steps away pays 1. A learner that settles on the first thing that works never finds the big gem. The entropy bonus rewards the policy for staying uncertain, so it keeps wandering long enough to find the better way."
+
+[trpo-cliff]
+title = "TRPO: how big a trust region?"
+env = "cliff"
+racers = [
+  { algorithm = "trpo", name = "δ = 0.01", delta = 0.01 },
+  { algorithm = "trpo", name = "δ = 0.05", delta = 0.05 },
+  { algorithm = "trpo", name = "δ = 0.2", delta = 0.2 },
+]
+units = 60
+runs = 12
+seed = 1
+alphaW = 0.1
+workers = 4
+lambda = 0.9
+gamma = 1.0
+maxSteps = 1000
+charts = ["steps", "kl"]
+film = [1, 5, 20, 60]
+intro = "After each round, TRPO takes the largest step that keeps the policy within a distance δ of the one that collected the experience, measured by the KL divergence. A small region learns steadily; a large one trusts each round's noisy estimates too far, and some runs walk into a corner they never leave."
+
+[ppo-maze]
+title = "PPO: ten passes over each batch, with and without the clip"
+env = "dyna-maze"
+racers = [
+  { algorithm = "ppo", name = "PPO (clip ε = 0.2)", clip = 0.2 },
+  { algorithm = "ppo", name = "the same passes, no clip", clip = 0.0 },
+]
+units = 40
+runs = 12
+seed = 1
+alpha = 0.3
+alphaW = 0.1
+workers = 4
+epochs = 10
+lambda = 0.9
+beta = 0.0
+gamma = 0.95
+maxSteps = 1000
+charts = ["steps", "kl"]
+film = [1, 5, 10, 40]
+intro = "PPO squeezes each round's experience: ten passes over it instead of one. Without the clip, every pass pushes the lucky actions further and the policy overfits its batch. With it, an action stops being pushed once its probability has moved 20% from where it was when the batch was collected."
+
+[gae-cliff]
+title = "GAE: how far should advantages look?"
+env = "cliff"
+racers = [
+  { algorithm = "trpo", name = "λ = 0: one step, then trust the critic", lambda = 0.0 },
+  { algorithm = "trpo", name = "λ = 0.9", lambda = 0.9 },
+  { algorithm = "trpo", name = "λ = 1: the whole episode", lambda = 1.0 },
+]
+units = 60
+runs = 12
+seed = 1
+alphaW = 0.1
+workers = 4
+delta = 0.02
+gamma = 1.0
+maxSteps = 1000
+charts = ["steps"]
+film = [1, 5, 20, 60]
+intro = "Each step's advantage is a weighted sum of the TD errors after it, with weights that fade by γλ per step. With λ = 0 it is the one-step TD error, steady but only as good as the critic; with λ = 1 it is the whole return minus the critic, honest but noisy. In between does best."

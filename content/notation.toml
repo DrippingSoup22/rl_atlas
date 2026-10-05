@@ -107,6 +107,76 @@ text = "the weights of a policy or of a value function"
 station = "features"
 
 [[symbol]]
+tex = '\mathbf{x}(s)'
+text = "the feature vector of state s: a few numbers that describe it"
+station = "features"
+
+[[symbol]]
+tex = '\val{\hat v(s, \mathbf w)},\ \val{\hat q(s, a, \mathbf w)}'
+text = "estimated values computed from weights, instead of read from a table"
+station = "why-approximate"
+
+[[symbol]]
+tex = '\mu(s)'
+text = "the share of its time the agent spends in state s"
+station = "value-error"
+
+[[symbol]]
+tex = '\overline{\text{VE}}(\mathbf w)'
+text = "the value error: squared errors weighted by μ"
+station = "value-error"
+
+[[symbol]]
 tex = '\mathbb{E}'
 text = "expected value: the average over all the randomness"
 station = "value-functions"
+
+[[symbol]]
+tex = '\pol{\pi(a \mid s, \boldsymbol\theta)}'
+text = "a policy with weights of its own: the probability of action a in state s"
+station = "why-policy"
+
+[[symbol]]
+tex = 'J(\boldsymbol\theta)'
+text = "the performance of the policy: the value of the start, or the average reward per step"
+station = "pg-theorem"
+
+[[symbol]]
+tex = '\nabla \ln \pol{\pi(A \mid S, \boldsymbol\theta)}'
+text = "the score: the direction that makes action A in S more likely, divided by its probability"
+station = "policy-parameterization"
+
+[[symbol]]
+tex = '\pol{h(s, a, \boldsymbol\theta)}'
+text = "the preference for action a in state s; a softmax turns preferences into probabilities"
+station = "policy-parameterization"
+
+[[symbol]]
+tex = '\pol{\mu(s)},\ \pol{\sigma(s)}'
+text = "the mean and the spread of a Gaussian policy over a real-valued action (not the state distribution μ)"
+station = "policy-parameterization"
+
+[[symbol]]
+tex = '\err{a_\pi(s, a)},\ \err{\hat A_t}'
+text = "the advantage, how much better action a is than the policy's average in s, and its estimate"
+station = "pg-theorem"
+
+[[symbol]]
+tex = '\alp^{\boldsymbol\theta},\ \alp^{\mathbf w}'
+text = "the step sizes of the actor (the policy) and of the critic (the values)"
+station = "actor-critic"
+
+[[symbol]]
+tex = '\pol{H\big(\pi(\cdot \mid s)\big)},\ \beta'
+text = "the entropy of the policy in state s, how undecided it is, and the weight of the entropy bonus"
+station = "entropy-bonus"
+
+[[symbol]]
+tex = 'D_{\mathrm{KL}}\big(\pol{\pi} \,\|\, \pol{\pi^\prime}\big),\ \delta'
+text = "the KL divergence, how differently two policies choose, and TRPO's bound on it (an ink δ, not the TD error)"
+station = "trpo"
+
+[[symbol]]
+tex = 'r_t(\boldsymbol\theta),\ \epsilon'
+text = "the probability ratio of a sampled action under the new and the old policy, and PPO's clip range 1 ± ε"
+station = "ppo"

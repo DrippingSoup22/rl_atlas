@@ -72,11 +72,14 @@ a.lab-link {
 }
 a.lab-link::after { content: "▸"; font-size: 10px; }
 a.lab-link:hover { box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 18%, transparent); }
+/* on a phone, a long link wraps inside its pill rather than pushing the page wider */
+@media (max-width: 640px) { a.lab-link { white-space: normal; max-width: 100%; border-radius: 12px; } }
 
 /* ---- RL quantities in formulas and text ---- */
 .q-val { color: var(--val-ink); }
 .q-rew { color: var(--rew-ink); }
 .q-pol { color: var(--pol-ink); }
+.q-trc { color: var(--trc-ink); }
 .q-err { color: var(--err-ink); }
 .q-val, .q-rew, .q-pol, .q-err, .q-knob { border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; }
 body[data-hot="val"] .q-val, body[data-hot="val"] [data-q="val"] { background: color-mix(in oklab, var(--val) 17%, transparent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--val) 17%, transparent); }

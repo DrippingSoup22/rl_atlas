@@ -47,7 +47,7 @@ The **advantage** $\err{A_\pi(s,a)} = \val{q_\pi(s,a)} - \val{v_\pi(s)}$ says ho
 :::
 
 ::: step {q = "advantage", policy = "improved", agent = "none", formula = 3, range = 2}
-Taking the best triangle in every cell gives a new policy, already far better than wandering. "Evaluate, then improve, then evaluate again" is the plan of [[policy-iteration]]; where it ends is the subject of [[optimality]].
+Taking the best triangle in every cell gives a new policy, already far better than wandering. “Evaluate, then improve, then evaluate again” is the plan of [[policy-iteration]]; where it ends is the subject of [[optimality]].
 :::
 
 ## Textbook

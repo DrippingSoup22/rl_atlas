@@ -12,7 +12,8 @@
     { tile: "H", name: "Hole", tip: "−100, and the episode ends" },
   ];
   // Grid algorithms you can pick; a race needs two of the same kind (episodes, or sweeps of the states).
-  const CHOICES = ["q-learning", "sarsa", "expected-sarsa", "double-q", "mc-control", "off-policy-mc", "value-iteration", "policy-iteration"];
+  const CHOICES = ["q-learning", "sarsa", "expected-sarsa", "double-q", "n-step-sarsa", "sarsa-lambda", "dyna-q", "dyna-q-plus", "prioritized-sweeping",
+    "mc-control", "off-policy-mc", "value-iteration", "policy-iteration"];
   const LIMITS = { rows: [3, 10], cols: [3, 14] };
 
   RL.sandbox = function (lab_) {

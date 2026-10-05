@@ -1,6 +1,7 @@
 /* Grid view: one SVG for a grid world, shared by the Lab and the stories.
    Tiles show values (four triangles for Q, or one color for V), arrows show the policy,
-   and the agent walks, slides, falls and sparks so you can see each update happen. */
+   and the agent walks, slides, falls and sparks so you can see each update happen. Methods that learn from several
+   workers at once (A2C, PPO) have one agent per worker, each with its number and its trail. */
 (function (RL) {
   "use strict";
   const lab = RL.lab;
@@ -9,7 +10,7 @@
   const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // screen direction of up, right, down, left
   const ARROW_TEXT = ["↑", "→", "↓", "←"];
   const MARKS = { S: "S", A: "A", B: "B", a: "A′", b: "B′" };
-  const KINDS = { ".": "free", "#": "wall", C: "C", G: "G", T: "exit", H: "hole" };
+  const KINDS = { ".": "free", "#": "wall", C: "C", G: "G", g: "g", T: "exit", H: "hole" };
   let uid = 0;
   const TRIANGLES = [
     [[2, 2], [T - 2, 2]],
@@ -49,17 +50,22 @@
       this.hasQ = true; // false when an algorithm only knows state values
       this.V = null; // state values to show instead of the best Q
       this.P = null; // a policy to draw instead of ε-greedy on Q
+      this.Z = null; // eligibility traces (per tile, or per move), when the algorithm keeps them
+      this.model = null; // a learned model: where each move led (−1: never tried)
       this.path_ = [];
       const W = env.cols * T, H = env.rows * T;
       this.svg = el("svg", { class: `gridview${env.ice ? " ice" : ""}`, viewBox: `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`, role: "img", "aria-label": env.title });
-      this.svg.style.maxWidth = `${env.cols * 100}px`; // small worlds stay a comfortable size instead of filling the page
+      this.svg.style.maxWidth = `${env.cols * (env.cols <= 5 ? 125 : 100)}px`; // small worlds stay a comfortable size instead of filling the page
       host.appendChild(this.svg);
       const layer = (cls) => el("g", { class: cls }, this.svg);
       this.gTiles = layer("tiles");
+      this.gTrace = layer("trace-layer"); // eligibility traces, glowing where credit will flow
+      this.gFog = layer("fog-layer"); // tiles the agent's model has never seen
       this.gJumps = layer("jumps");
       this.gTrail = layer("trail-layer");
       this.gPath = layer("path-layer");
       this.gArrows = layer("arrows");
+      this.gNums = layer("nums"); // numbers above the arrows and paths, so they always read
       this.gAgent = layer("agent-layer");
       this.gFx = layer("fx");
       this.tiles = [];
@@ -91,6 +97,7 @@
     _tile(s) {
       const kind = this.env.tile(s), [x, y] = this.origin(s);
       const g = el("g", { class: `tile k-${KINDS[kind] || kind}`, transform: `translate(${x} ${y})` }, this.gTiles);
+      g.dataset.kind = kind;
       this.tiles[s] = g;
       g.bg = el("rect", { class: "bg", x: 1.5, y: 1.5, width: T - 3, height: T - 3, rx: 7 }, g);
       if (kind === "C") {
@@ -106,10 +113,13 @@
         el("path", { class: "crack", d: "M10 12 l8 6 l-3 7 M50 48 l-7 -4 l2 -8" }, g);
         return;
       }
-      if (kind === "G") {
-        const gem = el("g", { class: "gem" }, g);
-        el("polygon", { points: `${HALF},${HALF - 15} ${HALF + 14},${HALF - 3} ${HALF},${HALF + 16} ${HALF - 14},${HALF - 3}` }, gem);
-        el("polygon", { class: "shine", points: `${HALF},${HALF - 15} ${HALF + 6},${HALF - 3} ${HALF},${HALF + 2} ${HALF - 6},${HALF - 3}` }, gem);
+      if (kind === "G" || kind === "g") {
+        const k = kind === "g" ? 0.62 : 1, gem = el("g", { class: `gem${kind === "g" ? " small" : ""}` }, g);
+        el("polygon", { points: `${HALF},${HALF - 15 * k} ${HALF + 14 * k},${HALF - 3 * k} ${HALF},${HALF + 16 * k} ${HALF - 14 * k},${HALF - 3 * k}` }, gem);
+        el("polygon", { class: "shine", points: `${HALF},${HALF - 15 * k} ${HALF + 6 * k},${HALF - 3 * k} ${HALF},${HALF + 2 * k} ${HALF - 6 * k},${HALF - 3 * k}` }, gem);
+        // a world with gems of two sizes says what each pays
+        const r = this.env.rewards;
+        if (r?.small !== undefined) el("text", { class: "gem-r", x: T - 6, y: T - 6 }, g).textContent = `+${kind === "g" ? r.small : r.goal}`;
         return;
       }
       if (kind === "T") {
@@ -118,7 +128,7 @@
       }
       this.tris[s] = TRIANGLES.map(([p, q]) => el("polygon", { class: "tri", points: `${p} ${q} ${HALF},${HALF}` }, g));
       if (MARKS[kind]) el("text", { class: "mark", x: 7, y: 15 }, g).textContent = MARKS[kind];
-      this.nums[s] = el("text", { class: "num", x: HALF, y: HALF + 4 }, g);
+      this.nums[s] = el("text", { class: "num", x: x + HALF, y: y + HALF + 4 }, this.gNums);
       const set = el("g", { class: "arrow-set", transform: `translate(${x + HALF} ${y + HALF})` }, this.gArrows);
       this.arrows[s] = DIRS.map(() => {
         const a = el("g", { class: "arrow" }, set);
@@ -172,9 +182,46 @@
       else this.Q.fill(0);
       this.V = d.V ? Float64Array.from(d.V) : null;
       this.P = d.P ? Float64Array.from(d.P) : null;
+      this.Z = d.Z ? Float64Array.from(d.Z) : null;
+      this.model = d.model ? Float64Array.from(d.model) : null;
       this.o.epsilon = d.greedy ? 0 : p.epsilon ?? this.o.epsilon;
+      if (d.t !== undefined && this.env.setTime) { this.env.setTime(d.t); this.retile(); }
       this.svg.dataset.tiles = this._mode();
       this._paintAll();
+    }
+
+    // A batch's advantages, at rest: each move's triangle colored by its average advantage over the batch (blue: better
+    // than expected, orange: worse), on a scale of ±range. The moves the batch never took stay neutral. null: back to
+    // what the algorithm knows (call show again).
+    showAdvantages(list, range) {
+      const { nA } = this.env, sum = new Float64Array(this.env.nS * nA), n = new Float64Array(this.env.nS * nA);
+      for (const u of list || []) { const k = u.s * nA + (u.a ?? 0); sum[k] += u.adv; n[k]++; }
+      let top = 0;
+      for (let k = 0; k < sum.length; k++) if (n[k]) { sum[k] /= n[k]; top = Math.max(top, Math.abs(sum[k])); }
+      this.Q.set(sum);
+      this.hasQ = true;
+      this.o.tiles = "q";
+      this.o.range = range || top || 1;
+      this.svg.dataset.tiles = "q";
+      this._paintAll();
+    }
+
+    // A world whose walls moved: draw the tiles that changed again.
+    retile() {
+      for (let s = 0; s < this.env.nS; s++) {
+        if (this.tiles[s].dataset.kind === this.env.tile(s)) continue;
+        this.tiles[s].remove();
+        this.nums[s]?.remove();
+        this.arrows[s]?.[0].parentNode.remove();
+        this.traces?.[s]?.remove();
+        this.fogs?.[s]?.remove();
+        this.tris[s] = this.nums[s] = this.arrows[s] = undefined;
+        if (this.traces) this.traces[s] = undefined;
+        if (this.fogs) this.fogs[s] = undefined;
+        this._tile(s);
+        this.tiles[s].bg.animate?.([{ opacity: 0.2 }, { opacity: 1 }], { duration: 500, easing: "ease-out" });
+      }
+      this._dist = null;
     }
 
     setQ(Q, { ripple = false } = {}) {
@@ -223,27 +270,60 @@
       const v = this._value(s);
       for (let a = 0; a < nA; a++) tris[a].style.fill = mode === "q" ? valueColor(Q[s * nA + a], range) : "";
       this.tiles[s].bg.style.fill = mode === "v" ? valueColor(v, range) : "";
+      this._trace(s);
+      this._fog(s);
       const num = this.nums[s];
       num.textContent = this.o.numbers ? fmt(v, this.o.digits) : "";
-      num.style.fill = mode !== "none" && Math.abs(v / range) > 0.6 ? "#fff" : "";
       if (!this.o.arrows) return;
-      const p = this._probs(s), short = this.o.numbers; // with numbers on, the arrows stay clear of the number below them
+      // With numbers on, the number owns the middle of the tile and the arrows become chevrons by its edges.
+      const p = this._probs(s), edge = this.o.numbers;
       for (let a = 0; a < nA; a++) {
         const arrow = this.arrows[s][a], [dx, dy] = DIRS[a];
         if (p[a] < 0.06) { arrow.style.opacity = 0; continue; }
-        const r0 = 6, r1 = short ? 7 + 10 * p[a] : 8 + 18 * p[a], hs = short ? 3.5 + 2 * p[a] : 4 + 2.5 * p[a];
+        const r0 = 6, r1 = edge ? 27 : 8 + 18 * p[a], hs = edge ? 2.6 + 3.4 * p[a] : 4 + 2.5 * p[a];
         const bx = dx * (r1 - hs), by = dy * (r1 - hs), nx = -dy * hs * 0.85, ny = dx * hs * 0.85;
-        const d = `M${dx * r0} ${dy * r0}L${dx * r1} ${dy * r1}M${bx + nx} ${by + ny}L${dx * r1} ${dy * r1}L${bx - nx} ${by - ny}`;
+        const head = `M${bx + nx} ${by + ny}L${dx * r1} ${dy * r1}L${bx - nx} ${by - ny}`;
+        const d = edge ? head : `M${dx * r0} ${dy * r0}L${dx * r1} ${dy * r1}${head}`;
         arrow.halo.setAttribute("d", d);
         arrow.shaft.setAttribute("d", d);
         arrow.style.opacity = 1;
       }
     }
 
+    // The glow of a trace: one shape per tile (traces of states) or per move (traces of state–action pairs).
+    // Brightness grows with the trace and saturates at 1, so a fading trail stays visible for a while.
+    _trace(s) {
+      const Z = this.o.traces !== false ? this.Z : null, nA = this.env.nA;
+      if (!Z && !this.traces?.[s]) return;
+      this.traces ||= [];
+      let g = this.traces[s];
+      if (!g) {
+        const [x, y] = this.origin(s), perMove = Z.length === this.env.nS * nA;
+        g = this.traces[s] = el("g", { class: "trace", transform: `translate(${x} ${y})` }, this.gTrace);
+        g.parts = perMove ? TRIANGLES.map(([p, q]) => el("polygon", { points: `${p} ${q} ${HALF},${HALF}` }, g)) : [el("rect", { x: 3, y: 3, width: T - 6, height: T - 6, rx: 7 }, g)];
+      }
+      g.parts.forEach((part, a) => {
+        const z = Z ? (g.parts.length > 1 ? Z[s * nA + a] : Z[s]) : 0;
+        part.style.opacity = z > 0.005 ? (0.18 + 0.8 * Math.min(1, z) ** 0.7).toFixed(3) : 0;
+      });
+    }
+
+    // Fog over the tiles the model knows nothing about yet: planning can only use what the agent has seen.
+    _fog(s) {
+      const M = this.o.fog !== false ? this.model : null, nA = this.env.nA;
+      if (!M && !this.fogs?.[s]) return;
+      this.fogs ||= [];
+      if (!this.fogs[s]) { const [x, y] = this.origin(s); this.fogs[s] = el("rect", { class: "fog", x: x + 1.5, y: y + 1.5, width: T - 3, height: T - 3, rx: 7 }, this.gFog); }
+      let known = false;
+      if (M) for (let a = 0; a < nA; a++) if (M[s * nA + a] >= 0) { known = true; break; }
+      this.fogs[s].style.opacity = M && !known && this.env.tile(s) !== "G" ? 1 : 0;
+    }
+
     // ---- the Lab: one event of a run, and the picture at rest after a jump ----
     // Returns how long to pause after the event, in milliseconds.
     event(ev, { line = false } = {}) {
       const env = this.env;
+      if (ev.w) return this._workerEvent(ev);
       switch (ev.type) {
         case "start":
           this.mark([], "focus");
@@ -282,8 +362,36 @@
           return wait;
         }
         case "update":
+          if (ev.list) { this._sparks(ev.list); return 0; } // a batch update: every step it learned from
           this.spark(ev.s, ev.a ?? -1);
+          if (ev.states && line) this.mark([], "next");
           return 0;
+        case "error": // a TD error that judges the move just made (actor–critic): shown when walking line by line
+          if (!line) return 0;
+          this.pop(ev.s, `δ ${signed(ev.delta, 1)}`, "err");
+          return 350;
+        case "advantage": // a batch's advantages: where each action did better (blue) or worse (orange) than expected
+          this._sparks(ev.list, true);
+          return line ? 700 : 0;
+        case "tick":
+          return 0;
+        case "window": // n-step: the stretch of the episode whose rewards make the target
+          this.mark([ev.s], "focus");
+          this.mark(ev.states.slice(1), "next");
+          return 0;
+        case "trace":
+          this.spark(ev.s, ev.a ?? -1, "trc");
+          return 0;
+        case "plan": { // planning: remembered moves replayed and learned from, in the order they were replayed
+          const list = ev.list.slice(0, 60), gap = ev.ordered ? 45 : 600 / Math.max(10, list.length);
+          list.forEach((u, k) => this.spark(u.s, u.a, "dream", k * gap));
+          if (line && ev.list.length) this.pop(ev.s, `${ev.list.length} planning ${ev.list.length === 1 ? "update" : "updates"}`, "plan");
+          return ev.ordered ? Math.min(900, list.length * gap) : 0;
+        }
+        case "world":
+          this.retile();
+          this.pop(ev.s, "the walls moved!", "plan");
+          return 900;
         case "sweep":
           this.mark([ev.s], "focus");
           this.mark(line ? this._successors(ev.s) : [], "next");
@@ -307,18 +415,99 @@
     }
 
     // After a jump to the start of a unit: the path of the unit before it, and the agent where it ended.
+    // With several workers, each one's path and place.
     rest(events, draw = false) {
       this.mark([], "focus");
       this.mark([], "next");
-      const path = [];
+      const paths = [[]];
       for (const ev of events) {
+        const path = (paths[ev.w || 0] ||= []);
         if (ev.type === "start") path.push(ev.s);
         else if (ev.type === "move") { if (ev.fell !== undefined) path.push(ev.fell, -1, ev.s2); else if (this.env.jumps.some((j) => j.from === ev.s)) path.push(-1, ev.s2); else path.push(ev.s2); }
       }
+      this._workersAt(paths, draw);
+      const path = paths[0];
       this.trail(this.o.trail && path.length ? path : null, draw);
       this.bot.classList.remove("sunk");
       if (path.length) this.place(path[path.length - 1], -1, true);
       else this.place(this.env.start, -1, true);
+    }
+
+    // ---- several workers: one agent each beyond the first, with its number and its trail ----
+    _worker(k) {
+      this.workers ||= [];
+      let w = this.workers[k];
+      if (w) return w;
+      w = this.workers[k] = { path: [] };
+      w.trailEl = el("path", { class: "trail worker" }, this.gTrail);
+      w.bot = el("g", { class: "bot worker" }, this.gAgent);
+      w.body = el("g", { class: "bot-body" }, w.bot);
+      el("circle", { class: "bot-head", r: 11 }, w.body);
+      w.eyes = el("g", { class: "bot-eyes" }, w.body);
+      el("circle", { cx: -4, cy: -1.5, r: 2.2 }, w.eyes);
+      el("circle", { cx: 4, cy: -1.5, r: 2.2 }, w.eyes);
+      el("circle", { class: "badge", cx: 10, cy: -10, r: 7 }, w.bot);
+      el("text", { class: "badge-n", x: 10, y: -7 }, w.bot).textContent = k + 1;
+      return w;
+    }
+    _workerPut(w, s, instant) {
+      const [x, y] = this.center(s);
+      if (instant) w.bot.classList.add("instant");
+      w.bot.style.transform = `translate(${x}px, ${y}px)`;
+      if (instant) { w.bot.getBoundingClientRect(); w.bot.classList.remove("instant"); }
+    }
+    _workerEvent(ev) {
+      const w = this._worker(ev.w);
+      w.bot.classList.remove("gone", "sunk");
+      if (ev.type === "start") {
+        w.path = [ev.s];
+        this._workerPut(w, ev.s, true);
+      } else if (ev.type === "choose" && ev.a >= 0) {
+        const [dx, dy] = DIRS[ev.a];
+        w.eyes.style.transform = `translate(${dx * 2.5}px, ${dy * 2.5}px)`;
+      } else if (ev.type === "move") {
+        if (ev.fell !== undefined) {
+          w.path.push(ev.fell, -1, ev.s2);
+          this.spark(ev.fell, -1);
+          this.pop(ev.fell, signed(ev.r));
+          this._workerPut(w, ev.s2, true);
+          if (!RL.reducedMotion()) w.body.animate(RESPAWN, { duration: 300, easing: "cubic-bezier(.2,.9,.25,1.25)" });
+        } else {
+          w.path.push(ev.s2);
+          this._workerPut(w, ev.s2, false);
+          if (!RL.reducedMotion()) w.body.animate(HOP, { duration: 200, easing: "ease-out" });
+          const k = this.env.tile(ev.s2);
+          if (k === "H") w.bot.classList.add("sunk");
+          else if ((k === "G" || k === "g") && ev.r) this.pop(ev.s2, signed(ev.r, Number.isInteger(ev.r) ? 0 : 1));
+        }
+      } else return 0;
+      w.trailEl.setAttribute("d", this.o.trail ? this._line(w.path) : "");
+      return 0;
+    }
+    // At rest: each worker beyond the first where its last episode ended; workers a run does not have are hidden.
+    _workersAt(paths, draw) {
+      for (let k = 1; k < Math.max(paths.length, this.workers?.length || 0); k++) {
+        const path = paths[k];
+        if (!path?.length) { if (this.workers?.[k]) { this.workers[k].bot.classList.add("gone"); this.workers[k].trailEl.setAttribute("d", ""); } continue; }
+        const w = this._worker(k);
+        w.path = path;
+        w.bot.classList.remove("gone", "sunk");
+        this._workerPut(w, path[path.length - 1], true);
+        this._draw(w.trailEl, this.o.trail ? path : null, draw);
+      }
+    }
+
+    // Sparks on the moves a batch update learned from, at most 60 of them; with `signed`, colored by the sign of each
+    // move's advantage (averaged over its visits), the strongest first.
+    _sparks(list, signed) {
+      const moves = new Map();
+      for (const u of list) {
+        const key = u.s * this.env.nA + (u.a ?? 0), m = moves.get(key) || moves.set(key, { s: u.s, a: u.a ?? -1, sum: 0, n: 0 }).get(key);
+        m.sum += u.adv ?? 0;
+        m.n++;
+      }
+      const all = [...moves.values()].sort((x, y) => Math.abs(y.sum / y.n) - Math.abs(x.sum / x.n)).slice(0, 60);
+      all.forEach((m, i) => this.spark(m.s, m.a, signed ? (m.sum >= 0 ? "adv-pos" : "adv-neg") : "", Math.min(500, i * 9)));
     }
 
     _successors(s) {
@@ -412,11 +601,12 @@
     }
 
     // A ring where an update just happened: on the triangle of action a, or on the whole tile when a < 0.
-    spark(s, a) {
+    // kind: "trc" for a trace being laid down, "dream" for a planning update; delay in milliseconds.
+    spark(s, a, kind = "", delay = 0) {
       let [x, y] = this.center(s);
       if (a >= 0) { x += DIRS[a][0] * 17; y += DIRS[a][1] * 17; }
-      const c = el("circle", { class: "spark", cx: x, cy: y, r: a >= 0 ? 9 : 20 }, this.gFx);
-      c.animate([{ opacity: 1, transform: "scale(0.3)" }, { opacity: 0, transform: "scale(1.7)" }], { duration: 600, easing: "ease-out" })
+      const c = el("circle", { class: `spark${kind ? ` k-${kind}` : ""}`, cx: x, cy: y, r: a >= 0 ? 9 : 20, opacity: 0 }, this.gFx);
+      c.animate([{ opacity: 1, transform: "scale(0.3)" }, { opacity: 0, transform: "scale(1.7)" }], { duration: 600, delay, easing: "ease-out" })
         .onfinish = () => c.remove();
     }
 
@@ -443,6 +633,7 @@
 
     _draw(pathEl, states, animate) {
       pathEl.setAttribute("d", states ? this._line(states) : "");
+      pathEl.classList.toggle("long", !!states && states.length > 150); // a long wander is drawn fainter, to keep the tiles readable
       pathEl.classList.remove("draw");
       if (states && animate && !RL.reducedMotion()) { pathEl.getBoundingClientRect(); pathEl.classList.add("draw"); }
     }
@@ -462,7 +653,7 @@
     _distances() {
       if (this._dist) return this._dist;
       const { env } = this, dist = new Array(env.nS).fill(Infinity), queue = [];
-      for (let s = 0; s < env.nS; s++) if ("GT".includes(env.tile(s))) { dist[s] = 0; queue.push(s); }
+      for (let s = 0; s < env.nS; s++) if ("GgT".includes(env.tile(s))) { dist[s] = 0; queue.push(s); }
       while (queue.length) {
         const s = queue.shift(), [r, c] = env.rc(s);
         for (const [dc, dr] of DIRS) {
@@ -483,16 +674,18 @@
       const head = `<div class="head">Tile row ${r + 1}, column ${c + 1}</div>`;
       if (this.V || !this.hasQ) {
         RL.tip.show(e.clientX, e.clientY, `${head}<div class="row"><b>${fmt(this._value(s), d)}</b><span>V, the value of this tile</span></div>` +
+          (this.Z?.length === this.env.nS ? `<div class="row"><b>${this.Z[s].toFixed(2)}</b><span>z, its eligibility trace</span></div>` : "") +
           probs.map((p, a) => (p ? `<div class="row"><span>${ARROW_TEXT[a]}</span><span class="faint">π ${Math.round(p * 100)}%</span></div>` : "")).join(""));
         return;
       }
-      const rows = Q.subarray(s * nA, s * nA + nA);
+      const rows = Q.subarray(s * nA, s * nA + nA), Z = this.Z?.length === Q.length ? this.Z : null;
       RL.tip.show(e.clientX, e.clientY, `${head}<div class="row"><b>${fmt(lab.maxQ(Q, s, this.env), d)}</b><span>V = best Q</span></div>` +
-        Array.from(rows, (q, a) => `<div class="row"><span>${ARROW_TEXT[a]}</span><b>${fmt(q, d)}</b><span class="faint">π ${Math.round(probs[a] * 100)}%</span></div>`).join(""));
+        Array.from(rows, (q, a) => `<div class="row"><span>${ARROW_TEXT[a]}</span><b>${fmt(q, d)}</b><span class="faint">π ${Math.round(probs[a] * 100)}%${Z && Z[s * nA + a] > 0.005 ? ` · trace ${Z[s * nA + a].toFixed(2)}` : ""}</span></div>`).join(""));
     }
 
     destroy() {
       this._stopFall();
+      this.workers = null;
       clearTimeout(this._rippleTimer);
       RL.tip.hide();
       this.svg.remove();
@@ -501,12 +694,15 @@
     // ---- for the Lab: the choices in its "Show" panel, a legend, and a small drawing for the filmstrip ----
     static options(env, displays) {
       const hasQ = displays.some((d) => d.Q), episodes = displays.some((d) => !d.sweeps);
+      const traces = displays.some((d) => d.Z), model = displays.some((d) => d.model);
       return [
         { key: "tiles", type: "seg", label: "Color the tiles by", value: hasQ ? "q" : "v",
           choices: hasQ ? [["q", "Q per move"], ["v", "V per tile"], ["none", "Off"]] : [["v", "V per tile"], ["none", "Off"]] },
         { key: "arrows", type: "check", label: "Policy arrows", swatch: "pol", value: true },
         ...(episodes ? [{ key: "trail", type: "check", label: "Path of the episode", swatch: "trail", value: true }] : []),
         { key: "numbers", type: "check", label: "Numbers on tiles", value: env.nS <= 16 },
+        ...(traces ? [{ key: "traces", type: "check", label: "Eligibility traces", swatch: "trc", value: true }] : []),
+        ...(model ? [{ key: "fog", type: "check", label: "Fog where the model knows nothing", swatch: "fog", value: true }] : []),
       ];
     }
 
@@ -517,10 +713,11 @@
     static thumb(env, d, p = {}) {
       const S = Math.max(9, Math.min(16, Math.floor(176 / env.cols))), range = env.valueRange, nA = env.nA;
       const eps = d.greedy ? 0 : p.epsilon ?? 0;
+      if (d.t !== undefined) env.setTime?.(d.t); // a maze whose walls move: draw them as they were then
       let g = "";
       for (let s = 0; s < env.nS; s++) {
         const [r, c] = env.rc(s), k = env.tile(s), x = c * S, y = r * S;
-        const fill = k === "#" ? "var(--ink-3)" : k === "C" || k === "H" ? "var(--chasm)" : k === "G" ? "var(--rew)" : k === "T" ? "var(--surface-3)"
+        const fill = k === "#" ? "var(--ink-3)" : k === "C" || k === "H" ? "var(--chasm)" : k === "G" ? "var(--rew)" : k === "g" ? "color-mix(in oklab, var(--rew) 55%, var(--surface))" : k === "T" ? "var(--surface-3)"
           : valueColor(d.V ? d.V[s] : d.Q ? lab.maxQ(d.Q, s, env) : 0, range);
         g += `<rect x="${x + 0.5}" y="${y + 0.5}" width="${S - 1}" height="${S - 1}" rx="2" style="fill:${fill}"/>`;
         if (env.terminal(s) || env.blocked(s) || (!d.Q && !d.P)) continue;

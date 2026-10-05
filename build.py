@@ -35,8 +35,12 @@ REQUIRED = {
 FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story"}
 # The keys of a Lab preset (content/lab.toml); any other key is a knob, and what its charts may plot.
 PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro"}
-CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy"}
-MEASURES = {"error", "optimal-error", "match", "greedy"}
+CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights",
+          "policy-value", "right", "aim", "kl", "clipped"}
+# What a preset of recorded runs (racers that name a recording) can chart: from the recordings, nothing is recomputed.
+RECORDED_CHARTS = {"return", "test", "steps", "loss", "td", "q", "eps", "kl", "clipped"}
+RECORDINGS = CONTENT / "recordings"
+MEASURES = {"error", "optimal-error", "match", "greedy", "ve", "policy-value", "right", "aim"}
 # Stations the math macros of app/js/math.js link to.
 MACRO_TERMS = ("step-size", "discount", "epsilon-greedy", "lambda-return", "td-error")
 # What the Textbook numbers, and how a \ref{label} to each one reads.
@@ -410,14 +414,24 @@ def compile_entry(path: Path, site: dict, problems: Problems) -> dict | None:
     }
 
 
-def compile_preset(pid: str, raw: dict, stations: dict, problems: Problems) -> dict:
-    """A Lab preset in one shape: its racers (each an algorithm, a name and knobs of its own) and the shared knobs."""
+def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, problems: Problems) -> dict:
+    """A Lab preset in one shape: its racers (each an algorithm, a name and knobs of its own, or a recorded run) and the
+    shared knobs."""
     where = f"content/lab.toml [{pid}]"
     for key in ("title", "env"):
         if key not in raw:
             problems.error(where, f"no '{key}'")
     racers = []
     for r in raw.get("racers") or [{"algorithm": a} for a in raw.get("algorithms", [])]:
+        if "recording" in r:  # a run recorded offline by recorder/record.py: its algorithm is the recording's station
+            rec = recordings.get(r["recording"])
+            if not rec:
+                problems.error(where, f"races recording '{r['recording']}', which is not in content/recordings/")
+            elif rec["world"] != raw.get("env"):
+                problems.error(where, f"recording '{r['recording']}' is on '{rec['world']}', not on '{raw.get('env')}'")
+            else:
+                racers.append({"recording": r["recording"], "algorithm": rec["station"], "name": r.get("name") or rec["title"], "params": {}})
+            continue
         algo = r.get("algorithm", "")
         if stations.get(algo, {}).get("kind") != "algorithm":
             problems.error(where, f"runs '{algo}', which is not an algorithm station")
@@ -427,8 +441,14 @@ def compile_preset(pid: str, raw: dict, stations: dict, problems: Problems) -> d
     if not racers:
         problems.error(where, "runs no algorithm")
     charts, measures = raw.get("charts", ["return"]), raw.get("measures", [])
+    recorded = any("recording" in r for r in racers)
+    if recorded and not all("recording" in r for r in racers):
+        problems.error(where, "races recorded and live runs together")
     for chart in charts:
-        if chart not in CHARTS:
+        if recorded:
+            if chart not in RECORDED_CHARTS:
+                problems.error(where, f"cannot chart '{chart}' from recordings (one of: {', '.join(sorted(RECORDED_CHARTS))})")
+        elif chart not in CHARTS:
             problems.error(where, f"cannot chart '{chart}' (one of: {', '.join(sorted(CHARTS))})")
         elif chart in MEASURES and chart not in measures:
             problems.error(where, f"charts '{chart}' but does not measure it (add it to measures)")
@@ -475,7 +495,14 @@ def compile_content(problems: Problems) -> dict:
     for sid in MACRO_TERMS:
         if sid not in stations:
             problems.error("app/js/math.js", f"a math macro links to unknown station '{sid}'")
-    presets = {pid: compile_preset(pid, raw, stations, problems) for pid, raw in presets.items()}
+    recordings = {path.stem: json.loads(path.read_text(encoding="utf-8")) for path in sorted(RECORDINGS.glob("*.json"))}
+    for name, rec in recordings.items():
+        missing = [k for k in ("world", "station", "learner", "snapshots", "curves", "grid", "block") if k not in rec]
+        if missing:
+            problems.error(f"content/recordings/{name}.json", f"lacks {', '.join(missing)}")
+        elif rec["station"] not in stations:
+            problems.error(f"content/recordings/{name}.json", f"follows unknown station '{rec['station']}'")
+    presets = {pid: compile_preset(pid, raw, stations, recordings, problems) for pid, raw in presets.items()}
     for sym in notation.get("symbol", []):
         if sym.get("station") and sym["station"] not in stations:
             problems.error("content/notation.toml", f"symbol {sym['tex']} points to unknown station '{sym['station']}'")
@@ -501,7 +528,7 @@ def compile_content(problems: Problems) -> dict:
         "entries": entries,
         "presets": presets,
         "notation": notation,
-    }
+    }, recordings
 
 
 def bundle() -> int:
@@ -533,7 +560,7 @@ def bundle() -> int:
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     problems = Problems()
-    data = compile_content(problems)
+    data, recordings = compile_content(problems)
     if problems.errors:
         log.error("%d error(s); nothing was written", problems.errors)
         return 1
@@ -542,6 +569,11 @@ def main() -> int:
     (APP / "content.js").write_text(
         "// Generated by build.py from content/. Do not edit.\n"
         f"(globalThis.RL = globalThis.RL || {{}}).content = {script};\n",
+        encoding="utf-8",
+    )
+    (APP / "recordings.js").write_text(
+        "// Generated by build.py from content/recordings/, which recorder/record.py writes. Do not edit.\n"
+        f"(globalThis.RL = globalThis.RL || {{}}).recordings = {json.dumps(recordings, separators=(',', ':'))};\n",
         encoding="utf-8",
     )
     size = bundle()

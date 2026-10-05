@@ -69,7 +69,7 @@
       A.pi = el("rect", { class: "pi", x: -11, width: 22, rx: 3 }, g);
       A.piText = el("text", { class: "pi-num", x: 0 }, g);
       A.count = el("text", { class: "count", x: 0, y: H - 8 }, g);
-      A.star = el("text", { class: "star", x: 0, y: TOP + PH + 14 }, g);
+      A.star = el("text", { class: "star", x: -22, y: 16 }, g); // by the machine, clear of the bars and their labels
       A.star.textContent = "★";
       this.arms[a] = A;
     }

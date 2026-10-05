@@ -30,13 +30,14 @@ The full curriculum, 95 stations in 14 parts, lives in [content/map.toml](conten
 
 ## The Lab
 
-- Tabular and linear methods, and policy gradients with a per-tile softmax policy, run live in the browser:
+- Tabular and linear methods, and policy gradients (softmax and Gaussian policies, from REINFORCE to PPO), run live in the browser:
   a whole run is computed at once (milliseconds), then played like a video and replayable line by line.
 - Neural-network methods (DQN, A2C, PPO, TRPO, DDPG, TD3, SAC) will be **recorded runs** made by a standalone Python
-  recorder (numpy, PyTorch, Gymnasium; none of RL_lib or Centipede) and played back with the same player,
-  with a few pre-recorded variants per knob.
+  recorder (NumPy and Gymnasium; none of RL_lib or Centipede) and played back with the same player,
+  with a few pre-recorded variants per knob. The networks are small (two hidden layers of 64 units), so they are
+  written in NumPy, gradients by hand: no PyTorch to install, and every recording reproducible bit for bit from its seed.
 - Worlds are picked so that values and policies stay pictures: grids, random walks, Blackjack, Mountain Car,
-  Pendulum, the short corridor, CartPole with value and probability bars.
+  Pendulum, the short corridor, the throw, CartPole with value and probability bars.
 
 ## Technology (decided)
 
@@ -44,7 +45,7 @@ The full curriculum, 95 stations in 14 parts, lives in [content/map.toml](conten
 | --- | --- | --- |
 | The guide | one offline HTML file, plain JavaScript, SVG and canvas | animation, hover-linking and scrubbing need to run in the browser at 60 fps; opens with a double-click |
 | Math | KaTeX, vendored | standard, fast, offline, supports the color and link macros |
-| 3D (M4) | three.js, copied from memory_viz | already used in this workspace |
+| 3D (M4) | a small canvas surface renderer of our own | one surface of a few hundred tiles needs no library; keeps the file small and offline |
 | Content | Markdown + TOML front matter, built by `build.py` | readable and editable; Python standard library only |
 | Tests | `node --test`, one file | checks the Lab against the book's results |
 | Deep RL runs (M6) | Python recorder → data files played in the page | training is heavy and offline; playback is light |
@@ -59,9 +60,42 @@ animations and hover effects this guide relies on would not be smooth.
 - [x] **M1 · Foundations**: Parts 0–1 (16 entries; every Part 1 concept has a Textbook, seven have a Story) with
   the "be the agent" game, the discount slider, the loop, timeline and MDP scenes, and the gridworld and robot computed
   exactly; the map's family-tree and unified views and its filters. Parents and labels now live in `map.toml`.
-- [ ] **M2 · Tabular core**: Bandits, DP, Monte Carlo, the rest of TD; Lab worlds (gridworld, Frozen Lake, random walk, Blackjack), filmstrip, seeds, sandbox.
-- [ ] **M3 · Traces and planning**: n-step, TD(λ) with glowing traces, Dyna.
-- [ ] **M4 · Function approximation**: features, the "touch a tile" demo, Mountain Car in 3D, the deadly triad.
-- [ ] **M5 · Policy gradients, live**: gradient bandit, short corridor, REINFORCE, actor–critic, A2C; GAE and PPO demos.
+- [x] **M2 · Tabular core**: Bandits, DP, Monte Carlo, the rest of TD; Lab worlds (gridworld, Frozen Lake, random walk, Blackjack), filmstrip, seeds, sandbox.
+  Parts 2–5 are written: 25 new entries, each with a Textbook and a Card, 18 with a Story whose numbers come from
+  Lab runs. The book's figures are recomputed live by the Lab (the testbed, Figure 4.1, policy iteration on Frozen
+  Lake, the Blackjack maps, importance sampling, the random walk, step sizes on the cliff, maximization bias), and
+  a final pass retold the passages that still followed the book's wording too closely.
+- [x] **M3 · Traces and planning**: n-step, TD(λ) with glowing traces, Dyna.
+  Parts 6–7 are written: 9 new entries (n-step TD and SARSA, the λ-return, TD(λ), SARSA(λ), models and planning,
+  Dyna-Q, Dyna-Q+, prioritized sweeping), each with a Textbook and a Card, 7 with a Story on Lab runs. The Lab runs
+  them all, with replay checked by the tests: eligibility traces glow and fade on the tiles, the n-step window shows as
+  a bracket, planning updates as dashed sparks (in queue order for prioritized sweeping), fog hides what a model has
+  never seen, and maze walls move mid-run. Eight new Lab presets; new worlds: the 19-state random walk, the Dyna,
+  blocking and shortcut mazes. Figures recomputed live: Sutton & Barto's 7.2, 7.4, 8.2–8.5, 8.7, 12.3 and 12.6.
+- [x] **M4 · Function approximation**: features, the "touch a tile" demo, Mountain Car in 3D, the deadly triad.
+  Part 8 is written: 8 entries (why tables break, features, value error, gradient Monte Carlo, semi-gradient TD and
+  SARSA, generalization, the deadly triad), each with a Textbook and a Card, 7 with a Story on Lab runs. The Lab learns
+  with features (groups, tile coding, polynomials, Fourier cosines, tables, or a world's own) built from scaled
+  coordinates; new worlds: the 1000-state walk with its exact values and visit shares, Mountain Car, Baird's
+  counterexample. New views: the walk as one value line with the footprint of each update, Mountain Car with a
+  cost-to-go landscape you can turn (or a map from above), Baird's star with its weights on a log scale. Five new
+  presets. Figures recomputed live: Sutton & Barto's 9.1, 9.2, 9.5, 9.8, 9.10, 10.1–10.3 and 11.2, plus touch a tile.
+- [x] **M5 · Policy gradients, live**: gradient bandit, short corridor, REINFORCE, actor–critic, A2C; GAE and PPO demos.
+  Part 10 is written: 11 entries (why learn a policy, softmax and Gaussian policies, the policy gradient theorem,
+  REINFORCE, REINFORCE with baseline, actor–critic, A2C and A3C, the entropy bonus, GAE, TRPO, PPO), each with a Textbook
+  and a Card, 10 with a Story on Lab runs. The Lab learns policies directly: softmax and Gaussian policies over its
+  features; REINFORCE with and without a baseline; actor–critic with eligibility traces; and the batch methods A2C, TRPO
+  (closed-form natural gradient and line search) and PPO, with GAE advantages and an entropy bonus, played by several
+  workers at once, with replay checked by the tests. New worlds: the short corridor, its landscape worked out exactly; the
+  throw, a continuous action; two gems. New views: the corridor above its value landscape, the throw with its bell curve;
+  grids show workers, TD errors and a batch's advantages. Figures computed exactly or live: Sutton & Barto's Example 13.1
+  and Figures 13.1 and 13.2, single-episode gradient estimates, softmax and Gaussian scores to play with, the critic's
+  step size, the entropy bonus, GAE's weights and λ, and TRPO's trust region and PPO's clip on the corridor. Stories
+  gained chart legends and partial replays.
 - [ ] **M6 · Recorded runs**: the recorder; DQN, A2C, TRPO and PPO on CartPole, Mountain Car and Pendulum.
+  In progress. Done: the recorder (`recorder/`: NumPy networks checked against numerical gradients, DQN with switchable
+  replay, target network, double, dueling and prioritized replay; A2C, PPO and TRPO with exact Fisher-vector products),
+  tuned settings (DQN balances CartPole with a squared loss and lr 5·10⁻⁴; A2C, PPO and TRPO in 20–40% of their
+  runs; PPO on Pendulum), the first two recordings, their decoder and a CartPole view. Next: the Lab's player for
+  recorded presets, the Pendulum view, Mountain Car (DQN still to tune), the remaining recordings, and Part 9.
 - [ ] **M7 · The rest**: continuous control, toolbox, where next, quizzes everywhere, polish.

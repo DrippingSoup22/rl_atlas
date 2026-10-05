@@ -7,7 +7,9 @@ Local and offline: everything is in one file, `rl_atlas.html`.
 
 Open `rl_atlas.html` in a browser. The home screen is a map: each station is one idea, bright
 stations are written, faded ones are planned. It has three views (the metro map in reading order, the
-family tree of algorithms, and Sutton & Barto's unified view of tabular methods) and filters by label.
+family tree of algorithms, and Sutton & Barto's unified view of tabular methods) and filters by label,
+in a side panel opened by **Views & filters** at the top left (or `V`). Drag to move and Ctrl + scroll
+to zoom; the map always stays in view.
 Each algorithm can be read three ways, in this order, and then watched:
 
 - **Story**: the idea. Scroll the text, and the picture follows it step by step.
@@ -36,25 +38,43 @@ directly, which is handier while editing.
 | --- | --- |
 | `content/` | `map.toml` (every station in reading order, with each algorithm's parent and labels), `lab.toml` (Lab presets), `notation.toml` (symbols page), and one Markdown file per written entry |
 | `app/` | the page: `index.html`, `css/` and `js/` (shell, map, pages, stories and their scenes, textbook, diagrams, figures, demos, math) |
-| `lab/` | worlds, algorithms, runs and dynamic programming (no DOM, also used by the tests), and their views |
+| `lab/` | worlds, features, algorithms, runs and dynamic programming (no DOM, also used by the tests), and their views |
 | `vendor/` | KaTeX 0.19 (MIT license) |
 | `tests/` | `lab.test.js` |
+| `recorder/` | the recorder of the runs with neural networks (NumPy and Gymnasium): `python recorder/record.py [name …]` writes `content/recordings/<name>.json`, which `build.py` bundles |
 
 ## Writing an entry
 
 An entry is `content/<part folder>/<id>.md`, where `<id>` is a station in `map.toml`. It starts with TOML
 front matter between `+++` lines: `summary`, `change` (what changed from the parent), `prereqs`, `lab`, `sources`,
-and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline` or `mdp`), the scene's settings, and a
-formula whose pieces are wrapped in `\step{n}{…}`. [q-learning.md](content/05-temporal-difference/q-learning.md)
-is a complete algorithm, [bellman.md](content/01-problem/bellman.md) a complete concept.
+and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline`, `mdp`, or one of the Lab's views: `bandit`,
+`chain`, `cards`, `graph`, `line`, `car`, `star`, `corridor`, `throw`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
+a Lab view, and grid stories that replay dynamic programming or Monte Carlo, name their runs in a `[story.runs]`
+table (`name = { algorithm, <knobs> }`); a step then picks a run and a moment (`run`, `at`), can replay some units
+(`play`, `pace`), or only the first few updates of one (`updates`), and can chart runs averaged over many seeds (`curves`,
+`metric`, and `domain` to fix the range). Grid steps can paint a batch's advantages on the move triangles (`advantages`),
+and a `[story.numbers]` table names lines of numbers that steps show under the formula (`numbers = "name"`).
+[q-learning.md](content/05-temporal-difference/q-learning.md) is a complete algorithm,
+[bellman.md](content/01-problem/bellman.md) a complete concept, and [epsilon-greedy.md](content/02-bandits/epsilon-greedy.md)
+a story on Lab runs.
 
 The body has up to three parts: a `## Story` made of `::: step {…}` blocks (the braces say what the picture
 shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of plain Markdown you can use:
 
 - `[[station]]` or `[[station|text]]` for links that explain themselves on hover, and `[text](lab:preset)` for Lab links;
 - `$…$` and `$$…$$` math with the color macros `\val \rew \pol \err` and `\alp \gam \eps \lam \del`;
-- `{{demo arg}}` for a diagram, figure or demo: `backup` (sarsa, q-learning, v-pi, q-pi, v-star, q-star),
-  `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `loop`, `mdp-graph`, `discount`, `be-the-agent`;
+- `{{demo arg}}` for a diagram, figure or demo: `backup` (bandit, mc, mc-q, td0, sarsa, q-learning, expected-sarsa,
+  double-q, n-step-td, n-step-sarsa, lambda, lambda-q, v-pi, q-pi, v-star, q-star, reinforce, baseline, actor-critic, a2c, gae), `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `cliff-alpha`,
+  `loop`, `mdp-graph`, `discount`, `be-the-agent`, `testbed`, `sample-average`, `step-weights`, `step-sizes`,
+  `bandit-curves` (epsilon, optimistic, ucb, gradient, drift), `bandit-study`, `dp-sweeps`, `frozen` (pi, optimal),
+  `dp-race`, `gpi`, `blackjack-values`, `blackjack-policy`, `blackjack-match`, `frozen-mc`, `is-blackjack`,
+  `is-infinite`, `random-walk` (values, error, batch), `max-bias`, `n-step-study`, `lambda-study` (offline, online),
+  `lambda-weights`, `trace-shapes`, `n-step-paths` (lambda), `dyna-architecture`, `dyna-curves`, `dyna-midway`,
+  `changing-maze` (blocking, shortcut), `expected-vs-sample`, `sweeping-curves`, `touch-tiles`, `feature-shapes`,
+  `coarse-widths`, `walk-fit` (mc), `walk-alpha`, `walk-n-study`, `basis-study`, `tiling-study`, `car-surfaces`, `car-curves` (n),
+  `baird-weights`, `corridor-values`, `softmax-play`, `gaussian-play`, `pg-estimates`, `reinforce-alpha`, `baseline-curves`,
+  `critic-speed`, `entropy-study`, `gae-weights`, `gae-study`, `trust-region` (clip), `ppo-clip`. A backup label breaks into lines at `\n`, and
+  a display formula too wide for its column shrinks a little, then stacks the parts written side by side with `\qquad`;
 - `::: pseudocode` (end a line with `{#id}` to link it to the Lab's step-by-step mode), `::: question` (answer after `---`) and `::: analogy`.
 
 The Textbook numbers its sections, figures and statements, and any display equation with a `\label{name}`;

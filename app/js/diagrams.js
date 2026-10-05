@@ -1,11 +1,40 @@
-/* Backup diagrams, in the style of Sutton & Barto: open circles are states, dots are actions.
-   A diagram shows which values an update looks at. Each one draws itself when it scrolls into view. */
+/* Backup diagrams, in the style of Sutton & Barto: open circles are states, dots are actions, a gray square is the
+   end of an episode. A diagram shows which values an update looks at. Each one draws itself when it scrolls into view. */
 (function (RL) {
   "use strict";
 
   // Levels from top to bottom. Every node of a level has `fan` children on the next level (default 1).
+  // kind: "state", "action", "end" (the terminal state) or "more" (and so on, until the end of the episode);
   // label: the level's name; edge: the label of the edges into it; max: an arc across each fan, meaning "take the best".
+  // A diagram is a list of levels, or { gap, levels } when its levels sit closer than usual (long chains).
   const DIAGRAMS = {
+    // A bandit method: the arm pulled and the reward it paid. Nothing follows, so the target is the reward itself.
+    bandit: [
+      { kind: "action", label: "A" },
+      { kind: "end", label: "", edge: "R" },
+    ],
+    // Monte Carlo: one whole sampled episode, from the state (or pair) being updated to the end.
+    mc: { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "more" },
+      { kind: "end", label: "end of the episode", edge: "R" },
+    ] },
+    "mc-q": { gap: 50, levels: [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "more" },
+      { kind: "end", label: "end of the episode", edge: "R" },
+    ] },
+    // TD(0): one sampled step, then the estimate of where it led.
+    td0: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+    ],
     sarsa: [
       { kind: "action", label: "S, A" },
       { kind: "state", label: "S′", edge: "R" },
@@ -16,6 +45,97 @@
       { kind: "state", label: "S′", edge: "R" },
       { kind: "action", label: "every a", fan: 3, max: true },
     ],
+    // Expected SARSA: every next action, each weighted by the policy's probability of taking it (no max).
+    "expected-sarsa": [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "every a,\nweighted by π", fan: 3, edge: "π" },
+    ],
+    // Double Q-learning: one table picks the best next action, the other says what it is worth.
+    "double-q": [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "best by Q₁,\nvalued by Q₂", fan: 3, max: true },
+    ],
+    // n-step methods: n sampled steps, then the estimate of where they led.
+    "n-step-td": { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "more" },
+      { kind: "state", label: "S after n steps", edge: "R" },
+    ] },
+    "n-step-sarsa": { gap: 50, levels: [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "more" },
+      { kind: "state", label: "S after n steps", edge: "R" },
+      { kind: "action", label: "A after n steps" },
+    ] },
+    // The λ-return: every n-step return at once, the n-step one weighted (1 − λ)λⁿ⁻¹, down to the end of the episode.
+    "lambda": { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A", edge: "π" },
+      { kind: "state", label: "S′: weight 1 − λ", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "state", label: "S″: weight (1 − λ)λ", edge: "R" },
+      { kind: "more" },
+      { kind: "end", label: "end: what is left, λ^(T−t−1)", edge: "R" },
+    ] },
+    "lambda-q": { gap: 50, levels: [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′: weight 1 − λ" },
+      { kind: "state", label: "S″", edge: "R" },
+      { kind: "action", label: "A″: weight (1 − λ)λ" },
+      { kind: "more" },
+      { kind: "end", label: "end: what is left", edge: "R" },
+    ] },
+    // Policy gradients: the action is drawn from π, and the update writes to the policy. REINFORCE waits for the return;
+    // with a baseline, the return is compared with the critic's estimate of where the step started.
+    reinforce: { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′", edge: "π" },
+      { kind: "more" },
+      { kind: "end", label: "end: the return G", edge: "R" },
+    ] },
+    baseline: { gap: 50, levels: [
+      { kind: "state", label: "S: baseline v̂(S)" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′", edge: "π" },
+      { kind: "more" },
+      { kind: "end", label: "end: G − v̂(S)", edge: "R" },
+    ] },
+    // Actor–critic: one step, then the critic's estimate of where it led; the TD error judges the action.
+    "actor-critic": [
+      { kind: "state", label: "S: v̂(S)" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′: v̂(S′)", edge: "R" },
+    ],
+    // A2C: n steps of each worker, then the critic's estimate.
+    a2c: { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′", edge: "π" },
+      { kind: "more" },
+      { kind: "state", label: "n steps later: v̂", edge: "R" },
+    ] },
+    // GAE (TRPO, PPO): every TD error along the episode, the k-th weighted (γλ)ᵏ.
+    gae: { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′: δ, weight 1", edge: "R" },
+      { kind: "action", label: "A′", edge: "π" },
+      { kind: "state", label: "S″: δ, weight γλ", edge: "R" },
+      { kind: "more" },
+      { kind: "end", label: "end of the episode", edge: "R" },
+    ] },
     "v-pi": [
       { kind: "state", label: "s" },
       { kind: "action", label: "a", fan: 3, edge: "π" },
@@ -40,13 +160,15 @@
   const EDGE_CLASS = { R: "q-rew", r: "q-rew", "π": "q-pol" };
 
   RL.demos.backup = function (host, id) {
-    const levels = DIAGRAMS[id];
-    if (!levels) { RL.warn(`no backup diagram for '${id}'`); return; }
+    const diagram = DIAGRAMS[id];
+    if (!diagram) { RL.warn(`no backup diagram for '${id}'`); return; }
+    const levels = diagram.levels || diagram;
     // Place the bottom row evenly, then every parent above the middle of its children.
     const counts = [];
     levels.forEach((lv, k) => counts.push((counts[k - 1] || 1) * (k ? lv.fan || 1 : 1)));
-    const last = counts[counts.length - 1], spread = last > 3 ? 34 : 56, gap = 80, top = 22;
-    const W = Math.max(240, (last - 1) * spread + 150), cx = (W - 70) / 2;
+    const last = counts[counts.length - 1], spread = last > 3 ? 34 : 56, gap = diagram.gap || 80, top = 22;
+    let W = Math.max(240, (last - 1) * spread + 150);
+    const cx = (W - 70) / 2;
     const xs = levels.map(() => []);
     xs[levels.length - 1] = Array.from({ length: last }, (_, i) => cx + (i - (last - 1) / 2) * spread);
     for (let k = levels.length - 2; k >= 0; k--) {
@@ -54,13 +176,17 @@
       xs[k] = Array.from({ length: counts[k] }, (_, i) => xs[k + 1].slice(i * fan, (i + 1) * fan).reduce((a, b) => a + b, 0) / fan);
     }
     const H = top + gap * (levels.length - 1) + 24;
+    // Labels sit right of each row's last node, a line per "\n"; widen the drawing to fit the longest.
+    const labelX = (lv, k) => xs[k][xs[k].length - 1] + (lv.kind === "action" ? 14 : 20);
+    levels.forEach((lv, k) => { if (lv.label) W = Math.max(W, labelX(lv, k) + 7.6 * Math.max(...lv.label.split("\n").map((t) => t.length)) + 6); });
     let svg = `<svg class="backup" viewBox="0 0 ${W} ${H}" role="img" aria-label="Backup diagram">`, d = 0;
     levels.forEach((lv, k) => {
       const y = top + k * gap;
       if (k > 0) {
         const py = y - gap, fan = lv.fan || 1;
+        const dotted = lv.kind === "more" || levels[k - 1].kind === "more";
         xs[k].forEach((x, i) => {
-          svg += `<line class="edge" pathLength="1" style="--d:${d}" x1="${xs[k - 1][Math.floor(i / fan)]}" y1="${py}" x2="${x}" y2="${y}"/>`;
+          svg += `<line class="edge${dotted ? " dotted" : ""}" pathLength="1" style="--d:${d}" x1="${xs[k - 1][Math.floor(i / fan)]}" y1="${py}" x2="${x}" y2="${y}"/>`;
         });
         if (lv.edge) {
           const px = xs[k - 1][xs[k - 1].length - 1], x = xs[k][xs[k].length - 1];
@@ -78,11 +204,15 @@
         d += 1;
       }
       for (const x of xs[k]) {
-        svg += lv.kind === "state"
-          ? `<circle class="node state" style="--d:${d}" cx="${x}" cy="${y}" r="12"/>`
-          : `<circle class="node action" style="--d:${d}" cx="${x}" cy="${y}" r="6.5"/>`;
+        if (lv.kind === "state") svg += `<circle class="node state" style="--d:${d}" cx="${x}" cy="${y}" r="12"/>`;
+        else if (lv.kind === "end") svg += `<rect class="node end" style="--d:${d}" x="${x - 9}" y="${y - 9}" width="18" height="18" rx="1.5"/>`;
+        else if (lv.kind === "more") svg += `<g class="node more" style="--d:${d}">${[-9, 0, 9].map((dy) => `<circle cx="${x}" cy="${y + dy}" r="2"/>`).join("")}</g>`;
+        else svg += `<circle class="node action" style="--d:${d}" cx="${x}" cy="${y}" r="6.5"/>`;
       }
-      svg += `<text class="node-label" x="${xs[k][xs[k].length - 1] + (lv.kind === "state" ? 20 : 14)}" y="${y + 5}">${lv.label}</text>`;
+      if (lv.label) {
+        const rows = lv.label.split("\n"), lx = labelX(lv, k);
+        svg += `<text class="node-label" x="${lx}" y="${y + 5 - 7.5 * (rows.length - 1)}">${rows.map((t, i) => `<tspan x="${lx}"${i ? ' dy="15"' : ""}>${t}</tspan>`).join("")}</text>`;
+      }
       d += 1;
     });
     host.innerHTML = `${svg}</svg>`;

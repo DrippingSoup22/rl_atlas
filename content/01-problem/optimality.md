@@ -160,7 +160,7 @@ $$\val{q_*(s,a)} = \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\rew{r} + \gam \m
 
 {{backup q-star}}
 
-The arcs mean "take the best": a maximum instead of an average.
+The arcs mean “take the best”: a maximum instead of an average.
 
 ### Why it matters {#why}
 

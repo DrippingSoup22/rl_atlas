@@ -62,7 +62,7 @@
   function metroDrawing(L) {
     const C = RL.content;
     let svg = "";
-    for (const row of L.rows) svg += `<text class="row-title" x="${LEFT}" y="${row.y - 56}">${esc(row.title)}</text>`;
+    for (const row of L.rows) svg += `<text class="row-title" x="${LEFT}" y="${row.y - 70}">${esc(row.title)}</text>`;
     // The trunk of each row: same family = its color, a change of family = a thin transfer.
     for (const row of L.rows) {
       row.parts.slice(0, -1).forEach((p, i) => {
@@ -76,14 +76,19 @@
       const [r1, r2] = L.rows;
       const a = L.pos.get(`part-${r1.parts[r1.parts.length - 1].n}`), b = L.pos.get(`part-${r2.parts[0].n}`);
       const right = L.width - 8, mid = r1.bottom + 58;
-      svg += `<path class="ribbon" d="M${a.x + 18} ${a.y} H${right - 24} Q${right} ${a.y} ${right} ${a.y + 24} V${mid - 24} Q${right} ${mid} ${right - 24} ${mid} H${b.x + 24} Q${b.x} ${mid} ${b.x} ${mid + 24} V${b.y - 14}"/>`;
+      // It ends where the second row's title begins, so the dotted line runs into that title.
+      const titleEnd = LEFT + r2.title.length * 9.6 + 14;
+      svg += `<path class="ribbon" d="M${a.x + 18} ${a.y} H${right - 24} Q${right} ${a.y} ${right} ${a.y + 24} V${mid - 24} Q${right} ${mid} ${right - 24} ${mid} H${titleEnd}"/>`;
       svg += `<text class="ribbon-label" x="${right - 30}" y="${mid - 9}" text-anchor="end">When tables are not enough, the journey continues</text>`;
     }
     for (const p of C.parts) {
       const hub = L.pos.get(`part-${p.n}`), last = L.pos.get(p.stations[p.stations.length - 1].id);
       svg += `<line class="branch" pathLength="1" style="--c:${lineColor(p.line)};--d:${p.n}" x1="${hub.x}" y1="${hub.y}" x2="${last.x}" y2="${last.y}"/>`;
       svg += `<g class="hub" style="--c:${lineColor(p.line)};--d:${p.n}" transform="translate(${hub.x} ${hub.y})"><rect x="-15" y="-11" width="30" height="22" rx="11"/><text y="4.5">${p.n}</text></g>`;
-      svg += `<text class="part-title" style="--d:${p.n}" x="${hub.x - 15}" y="${hub.y - 21}">${esc(p.title)}</text>`;
+      // A long title takes two lines, so it never runs into the next part's title.
+      const words = p.title.split(" "), cut = p.title.length > 18 && words.length > 1 ? Math.ceil(words.length / 2) : words.length;
+      const lines = [words.slice(0, cut).join(" "), words.slice(cut).join(" ")].filter(Boolean);
+      svg += `<text class="part-title" style="--d:${p.n}" x="${hub.x - 15}" y="${hub.y - 21 - 16 * (lines.length - 1)}">${lines.map((t, i) => `<tspan x="${hub.x - 15}"${i ? ' dy="16"' : ""}>${esc(t)}</tspan>`).join("")}</text>`;
     }
     return svg;
   }
@@ -143,22 +148,37 @@
       const ids = C.parts.filter((p) => !line || p.line === line).flatMap((p) => p.stations.map((s) => s.id));
       return `${ids.filter((id) => entry(id)).length}/${ids.length}`;
     };
+    const panelOpen = store.get("mapPanel", false);
     host.innerHTML = `
-      <section class="map-view">
-        <div class="map-banner">
-          <div class="mb-row">
-            <div class="seg lenses" role="tablist" aria-label="How to look at the atlas">
-              ${Object.entries(LENSES).map(([id, l]) => `<button type="button" role="tab" data-lens="${id}">${l.name}</button>`).join("")}
+      <section class="map-view" data-panel="${panelOpen ? "open" : "closed"}">
+        <button class="panel-toggle" type="button" aria-controls="map-panel" aria-expanded="${panelOpen}" title="Views and filters (V)">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h9M3 15h5"/><circle cx="15" cy="10" r="2"/><circle cx="11" cy="15" r="2"/></svg>
+          <span>Views &amp; filters</span><b class="pt-badge" hidden></b>
+        </button>
+        <aside class="map-panel" id="map-panel" aria-label="Views and filters">
+          <div class="mp-head">
+            <span class="eyebrow">Explore the atlas</span>
+            <button class="icon-btn mp-close" type="button" aria-label="Close the panel" title="Close (Esc)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+          </div>
+          <section class="mp-sec">
+            <h2 class="mp-title">View</h2>
+            <div class="lenses" role="tablist" aria-label="How to look at the atlas">
+              ${Object.entries(LENSES).map(([id, l]) => `<button type="button" role="tab" data-lens="${id}"><b>${l.name}</b><span>${l.caption}</span></button>`).join("")}
             </div>
-            <span class="muted lens-caption"></span>
-            ${next ? `<a class="btn" href="#/e/${next.id}">${store.visited(next.id) ? "Continue with" : "Start with"} ${esc(next.title)} ▸</a>` : ""}
-          </div>
-          <div class="mb-row map-filters">
-            <span class="eyebrow">Show only</span>
+          </section>
+          <section class="mp-sec map-filters">
+            <h2 class="mp-title">Show only <button class="mf-clear" type="button">clear</button></h2>
             <div class="mf-chips">${Object.entries(C.labels).map(([id, l]) => `<button class="chip" type="button" data-label="${id}" aria-pressed="false" data-tip="${esc(l.tip)}" data-term="${l.station}">${esc(l.text)}</button>`).join("")}</div>
-            <span class="mf-count faint"></span><button class="mf-clear" type="button">clear</button>
-          </div>
-        </div>
+            <p class="mf-count faint"></p>
+          </section>
+          <section class="mp-sec mp-lines">
+            <h2 class="mp-title">Lines</h2>
+            ${Object.entries(C.lines).map(([id, name]) => `<div class="lg" style="--c:${lineColor(id)}"><i></i><span>${esc(name)}</span><b>${count(id)}</b></div>`).join("")}
+            <div class="lg-note"><span class="dot-written"></span>written <span class="dot-planned"></span>planned · ${count()} written</div>
+          </section>
+          <p class="mp-hint faint">Drag or scroll to move, Ctrl + scroll or pinch to zoom, click a station to open it.</p>
+        </aside>
+        ${next ? `<a class="btn map-cta" href="#/e/${next.id}">${store.visited(next.id) ? "Continue with" : "Start with"} ${esc(next.title)} ▸</a>` : ""}
         <svg class="metro${drawn ? "" : " intro"}" aria-label="Map of the atlas"><g class="cam">
           <g class="deco deco-map">${metroDrawing(layouts.map)}</g>
           <g class="deco deco-tree">${treeDrawing(layouts.tree)}</g>
@@ -166,15 +186,10 @@
           <g class="links"></g>
           ${stations(next)}
         </g></svg>
-        <div class="map-legend card">
-          <div class="map-zoom">
-            <button class="icon-btn" type="button" data-zoom="in" aria-label="Zoom in">+</button>
-            <button class="icon-btn" type="button" data-zoom="out" aria-label="Zoom out">−</button>
-            <button class="icon-btn" type="button" data-zoom="fit" aria-label="Fit the map to the screen">⤢</button>
-            <span class="faint">Drag or scroll to move<br>Ctrl + scroll to zoom</span>
-          </div>
-          ${Object.entries(C.lines).map(([id, name]) => `<div class="lg" style="--c:${lineColor(id)}"><i></i><span>${esc(name)}</span><b>${count(id)}</b></div>`).join("")}
-          <div class="lg-note"><span class="dot-written"></span>written <span class="dot-planned"></span>planned · ${count()} written</div>
+        <div class="map-zoom" role="group" aria-label="Zoom">
+          <button class="icon-btn" type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+          <button class="icon-btn" type="button" data-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
+          <button class="icon-btn" type="button" data-zoom="fit" aria-label="Fit the map to the screen" title="Fit to the screen"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5"/></svg></button>
         </div>
       </section>`;
     drawn = true;
@@ -201,17 +216,44 @@
       }
       svg.dataset.lens = lens;
       host.querySelector(".map-view").dataset.lens = lens;
-      host.querySelector(".lens-caption").textContent = LENSES[lens].caption;
       host.querySelectorAll("[data-lens]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.lens === lens)));
+    }
+    // The part of the screen the map may use: below the floating buttons, and right of the panel when it is open
+    // beside the map (on a narrow screen it covers the map instead, so the map keeps the whole width).
+    const view$ = host.querySelector(".map-view");
+    const wide = () => svg.clientWidth > 1200; // narrower, the panel covers the map instead of shrinking it
+    function insets() {
+      const open = view$.dataset.panel === "open" && wide();
+      return { left: open ? host.querySelector(".map-panel").offsetWidth + 24 : 12, top: 64, right: 12, bottom: 12 };
+    }
+    // The zoom that shows the whole view in that area.
+    function wholeK() {
+      const W = svg.clientWidth, H = svg.clientHeight, I = insets(), { width, height } = L();
+      return Math.min((W - I.left - I.right) / width, (H - I.top - I.bottom) / height);
+    }
+    // Zoom stays between a little less than the whole view and close enough to read comfortably.
+    const kRange = () => { const w = wholeK(); return [Math.min(0.85 * w, 0.6), Math.max(1.8, w)]; };
+    // Keep the map in view: along an axis where it is smaller than the screen it stays centered; where it is
+    // larger, it may move only until its edge reaches the edge of the screen (plus a small margin).
+    function clamp(v) {
+      const W = svg.clientWidth, H = svg.clientHeight;
+      if (!W || !H) return v;
+      const I = insets(), { width, height } = L(), [k0, k1] = kRange(), M = 48;
+      const k = Math.max(k0, Math.min(k1, v.k));
+      const axis = (pos, size, lo, hi) => {
+        const room = hi - lo;
+        if (size <= room) return lo + (room - size) / 2;
+        return Math.max(hi - size - M, Math.min(lo + M, pos));
+      };
+      return { ...v, k, x: axis(v.x, width * k, I.left, W - I.right), y: axis(v.y, height * k, I.top, H - I.bottom) };
     }
     // The whole view when it stays readable; on small screens fit the width instead (the rest is a scroll away).
     function fitted() {
-      const W = svg.clientWidth, H = svg.clientHeight, { width, height } = L();
-      const top = host.querySelector(".map-banner").offsetHeight + 20; // the banner floats over the top of the map
-      if (!W || H <= top) return null;
-      const whole = Math.min((W - 24) / width, (H - top - 16) / height);
-      const k = Math.max(0.3, Math.min(1.25, whole >= 0.8 ? whole : (W - 24) / width));
-      return { k, x: (W - width * k) / 2, y: top + (whole >= 0.8 ? (H - top - height * k) / 2 : 6) };
+      const W = svg.clientWidth, H = svg.clientHeight, I = insets(), { width, height } = L();
+      if (!W || H <= I.top) return null;
+      const whole = wholeK();
+      const k = Math.max(0.3, Math.min(1.25, whole >= 0.8 ? whole : (W - I.left - I.right) / width));
+      return clamp({ k, x: I.left + (W - I.left - I.right - width * k) / 2, y: I.top + (whole >= 0.8 ? (H - I.top - I.bottom - height * k) / 2 : 6) });
     }
     function fit() {
       const v = fitted();
@@ -220,11 +262,15 @@
       apply();
       keep();
     }
-    const resized = new ResizeObserver(() => { if (!cameras[lens]?.moved) fit(); });
+    const resized = new ResizeObserver(() => {
+      if (!view) return;
+      if (!cameras[lens]?.moved) fit();
+      else { view = clamp(view); apply(); keep(); }
+    });
     resized.observe(svg);
     function zoomAt(px, py, f) {
-      const k = Math.max(0.3, Math.min(3, view.k * f));
-      view = { k, x: px - ((px - view.x) * k) / view.k, y: py - ((py - view.y) * k) / view.k, moved: true };
+      const [k0, k1] = kRange(), k = Math.max(k0, Math.min(k1, view.k * f));
+      view = clamp({ k, x: px - ((px - view.x) * k) / view.k, y: py - ((py - view.y) * k) / view.k, moved: true });
       apply();
       keep();
     }
@@ -269,12 +315,12 @@
       svg.classList.remove("redraw");
       void svg.getBoundingClientRect();
       svg.classList.add("redraw"); // the family tree's branches draw themselves again
-      const to = cameras[lens] || fitted();
+      const to = cameras[lens] ? clamp(cameras[lens]) : fitted();
       if (to) tween(to, 650, keep);
     }
 
     arrange();
-    view = cameras[lens] ? { ...cameras[lens] } : null;
+    view = cameras[lens] ? clamp({ ...cameras[lens] }) : null;
     if (view) apply();
     else fit();
     // Coming back from a page: that page shrinks back into its station, which pulses once.
@@ -298,6 +344,9 @@
       host.querySelectorAll("[data-label]").forEach((b) => b.setAttribute("aria-pressed", String(filters.has(b.dataset.label))));
       host.querySelector(".mf-count").textContent = chosen.length ? `${matches} of ${algorithms.length} algorithms` : `${algorithms.length} algorithms, ${RL.order.length - algorithms.length} concepts`;
       host.querySelector(".mf-clear").hidden = !chosen.length;
+      const badge = host.querySelector(".pt-badge");
+      badge.hidden = !chosen.length;
+      badge.textContent = chosen.length;
       svg.classList.toggle("filtered", chosen.length > 0);
     }
     host.querySelector(".mf-chips").addEventListener("click", (e) => {
@@ -311,9 +360,33 @@
     filter();
     host.querySelector(".lenses").addEventListener("click", (e) => { const b = e.target.closest("[data-lens]"); if (b) switchTo(b.dataset.lens); });
 
+    // ---- the panel: views, filters and the legend, opened and closed by the button at the top left ----
+    const toggle = host.querySelector(".panel-toggle"), panel = host.querySelector(".map-panel");
+    function setPanel(open, focus = false) {
+      if ((view$.dataset.panel === "open") === open) return;
+      const before = insets().left;
+      view$.dataset.panel = open ? "open" : "closed";
+      toggle.setAttribute("aria-expanded", String(open));
+      store.set("mapPanel", open);
+      // The map makes room for the panel: an untouched camera refits, a moved one shifts by half the room taken.
+      const to = cameras[lens]?.moved ? clamp({ ...view, x: view.x + (insets().left - before) / 2 }) : fitted();
+      if (to) tween(to, 350, keep);
+      if (focus) (open ? panel.querySelector('[aria-selected="true"]') : toggle)?.focus({ preventScroll: true });
+    }
+    // Focus follows the panel only for the keyboard (a click has a detail count; Enter and Space do not).
+    toggle.addEventListener("click", (e) => setPanel(true, e.detail === 0));
+    host.querySelector(".mp-close").addEventListener("click", (e) => setPanel(false, e.detail === 0));
+    function onKey(e) {
+      if (e.target.closest?.("input, textarea, select, [contenteditable]") || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "Escape" && view$.dataset.panel === "open") setPanel(false, true);
+      else if (e.key === "v" || e.key === "V") setPanel(view$.dataset.panel !== "open", true);
+    }
+    document.addEventListener("keydown", onKey);
+
     // ---- pan, zoom, click ----
     let drag = null;
     svg.addEventListener("pointerdown", (e) => {
+      if (!wide() && view$.dataset.panel === "open") setPanel(false); // on a small screen the panel covers the map
       drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false, target: e.target.closest(".st:not(.out)") };
       svg.setPointerCapture(e.pointerId);
     });
@@ -324,7 +397,7 @@
       drag.moved = true;
       svg.classList.add("dragging");
       RL.hideCard();
-      view = { ...view, x: drag.vx + dx, y: drag.vy + dy, moved: true };
+      view = clamp({ ...view, x: drag.vx + dx, y: drag.vy + dy, moved: true });
       apply();
     });
     svg.addEventListener("pointerup", () => {
@@ -343,7 +416,7 @@
         zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.004));
         return;
       }
-      view = { ...view, x: view.x - (e.shiftKey ? e.deltaY : e.deltaX), y: view.y - (e.shiftKey ? 0 : e.deltaY), moved: true };
+      view = clamp({ ...view, x: view.x - (e.shiftKey ? e.deltaY : e.deltaX), y: view.y - (e.shiftKey ? 0 : e.deltaY), moved: true });
       apply();
       keep();
     }, { passive: false });
@@ -383,6 +456,6 @@
       svg.querySelectorAll(".st.hot, .st.rel, .edge.hot").forEach((s) => s.classList.remove("hot", "rel"));
     }
 
-    return { destroy() { cancelAnimationFrame(raf); resized.disconnect(); } };
+    return { destroy() { cancelAnimationFrame(raf); resized.disconnect(); document.removeEventListener("keydown", onKey); } };
   };
 })(globalThis.RL = globalThis.RL || {});

@@ -40,7 +40,7 @@ Where does the agent end? Anything it cannot change at will belongs to the envir
 :::
 
 ::: step {phase = "loop", trajectory = true, tally = true}
-The goal is not the next reward but the **total** over time. Every step right costs $\rew{-1}$ now and brings the $\rew{+10}$ closer. Accepting small costs now for a bigger gain later is the heart of reinforcement learning; [[return]] makes "the total" precise.
+The goal is not the next reward but the **total** over time. Every step right costs $\rew{-1}$ now and brings the $\rew{+10}$ closer. Accepting small costs now for a bigger gain later is the heart of reinforcement learning; [[return]] makes “the total” precise.
 :::
 
 ## Textbook
@@ -74,7 +74,7 @@ The boundary is also a choice of the designer. One physical system can contain s
 
 The agent's purpose is expressed through the reward alone. At each step the reward is a single number, and the agent's aim is to maximize the reward it receives **in total over time**, not at the next step. Sutton and Barto call the claim that this is enough the *reward hypothesis*: whatever we mean by a goal can be expressed as the maximization of the expected cumulative sum of a scalar signal. The hypothesis is a modeling choice, a strong one, and much of the art of applying reinforcement learning lies in choosing rewards that express the intended goal ([[reward-design]]).
 
-"Total over time" is made precise by the return ([[return]], [[discount]]), and "expected" by value functions ([[value-functions]]).
+“Total over time” is made precise by the return ([[return]], [[discount]]), and “expected” by value functions ([[value-functions]]).
 
 ### What makes the problem hard {#hard}
 

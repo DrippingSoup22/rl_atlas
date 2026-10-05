@@ -35,8 +35,8 @@
       this.right = el("path", { class: "edge a-edge", d: `M${POS.A + 24} ${Y} H${POS.endR - 26}`, "marker-end": tip }, this.svg);
       el("text", { class: "edge-name", x: (POS.A + POS.B) / 2, y: Y - 10, "text-anchor": "middle" }, this.svg).textContent = "left · 0";
       el("text", { class: "edge-name", x: (POS.A + POS.endR) / 2, y: Y - 10, "text-anchor": "middle" }, this.svg).textContent = "right · 0";
-      this.qLeft = el("text", { class: "q-label", x: (POS.A + POS.B) / 2, y: Y + 22, "text-anchor": "middle" }, this.svg);
-      this.qRight = el("text", { class: "q-label", x: (POS.A + POS.endR) / 2, y: Y + 22, "text-anchor": "middle" }, this.svg);
+      this.qLeft = el("text", { class: "q-label", x: (POS.A + POS.B) / 2, y: Y + 46, "text-anchor": "middle" }, this.svg);
+      this.qRight = el("text", { class: "q-label", x: (POS.A + POS.endR) / 2, y: Y + 46, "text-anchor": "middle" }, this.svg);
       const node = (x, name, cls) => {
         const g = el("g", { class: `node ${cls}`, transform: `translate(${x} ${Y})` }, this.svg);
         if (cls === "exit") el("rect", { x: -22, y: -18, width: 44, height: 36, rx: 8 }, g);

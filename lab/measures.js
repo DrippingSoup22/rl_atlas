@@ -31,6 +31,17 @@
       const truth = lab.truth(env, p);
       return (d, stats) => { stats.error = lab.rms(d.V, truth, env); };
     },
+    // √VE: the root of the value error, each state's squared error weighted by the share of time spent there (μ), the
+    // objective linear methods minimize. (Without μ, every state counts the same.)
+    ve(env, p) {
+      const truth = lab.truth(env, p), mu = env.mu ? env.mu() : null;
+      return (d, stats) => {
+        if (!mu) { stats.ve = lab.rms(d.V, truth, env); return; }
+        let sum = 0;
+        for (let s = 0; s < env.nS; s++) if (mu[s]) sum += mu[s] * (d.V[s] - truth[s]) ** 2;
+        stats.ve = Math.sqrt(sum);
+      };
+    },
     // Root-mean-square distance of the state values from the optimal values v*.
     "optimal-error"(env, p) {
       const best = lab.optimalValues(env, p);
@@ -58,6 +69,25 @@
         if (!V || t % every === 0 || t === units - 1) V = lab.evaluate(env, lab.greedyFromQ(env, d.Q, P), gamma, { theta: 1e-6, sweeps: 5000, start: V });
         stats.greedy = V[env.start];
       };
+    },
+    // The exact value of the start under the learner's current policy, J(θ) = v_π(start), the objective of a
+    // policy-gradient method, worked out from the rules instead of estimated from noisy episodes. As for `greedy`,
+    // each evaluation starts from the last one's values, and long runs measure only every few units.
+    "policy-value"(env, p, units) {
+      const every = Math.max(1, Math.round(units / 400)), gamma = p.judge ?? p.gamma;
+      let V = null;
+      return (d, stats, t) => {
+        if (!V || t % every === 0 || t === units - 1) V = lab.evaluate(env, d.P, gamma, { theta: 1e-6, sweeps: 5000, start: V });
+        stats["policy-value"] = V[env.start];
+      };
+    },
+    // The short corridor: the chance of stepping right, the same in every cell.
+    right(env) {
+      return (d, stats) => { stats.right = d.P[env.start * env.nA + 1]; };
+    },
+    // The throw: where the Gaussian policy aims, its mean angle.
+    aim() {
+      return (d, stats) => { stats.aim = d.mu; };
     },
   };
   lab.measureNames = Object.keys(MEASURES);

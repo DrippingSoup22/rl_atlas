@@ -11,7 +11,7 @@ sources = [
 
 ### States {#states}
 
-The state $S_t \in \mathcal{S}$ is the information on which the agent bases its decision at time $t$. It can be almost anything: the position of the pieces on a board, a vector of sensor readings, a summary of what has happened so far, or a symbolic description such as "battery low". The set $\mathcal{S}$ may be finite (the 25 cells of a small gridworld) or continuous (positions and velocities, a vector in $\mathbb{R}^d$).
+The state $S_t \in \mathcal{S}$ is the information on which the agent bases its decision at time $t$. It can be almost anything: the position of the pieces on a board, a vector of sensor readings, a summary of what has happened so far, or a symbolic description such as “battery low”. The set $\mathcal{S}$ may be finite (the 25 cells of a small gridworld) or continuous (positions and velocities, a vector in $\mathbb{R}^d$).
 
 A good state contains everything that matters for the decision and for predicting what happens next. When it does, the past adds nothing once the present state is known; this is the Markov property, made precise in [[mdp]]. When it does not, the agent must make up for the missing information, typically by remembering recent history. The classic example is a single video frame, which shows where a ball is but not where it is going; DQN therefore used the last four frames together as its state (Mnih et al., 2015).
 

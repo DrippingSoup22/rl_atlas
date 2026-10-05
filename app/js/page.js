@@ -34,10 +34,21 @@
 
   const badge = (st) => `<a class="part-badge" href="#/"><i>${st.part}</i>${esc(st.partTitle)}</a>`;
 
+  // Sections that take the whole width of a card; the others pair up two by two.
+  const FULL = new Set(["idea", "knobs", "check"]);
+
   function card(e) {
     const sources = e.sources.map((s) => `<li>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.text)}</a>` : esc(s.text)}</li>`).join("");
+    // A half-width section left without a partner (the next one is full-width, or there is none) takes the whole row.
+    const wide = new Set();
+    let open = -1;
+    e.card.forEach((s, i) => {
+      if (FULL.has(s.id)) { if (open >= 0) wide.add(open); open = -1; }
+      else open = open >= 0 ? -1 : i;
+    });
+    if (open >= 0) wide.add(open);
     return `<div class="card-grid">
-      ${e.card.map((s, i) => `<section class="sec sec-${s.id}" style="--i:${i}"><h2>${s.title}</h2>${s.html}</section>`).join("")}
+      ${e.card.map((s, i) => `<section class="sec sec-${s.id}${wide.has(i) ? " wide" : ""}" style="--i:${i}"><h2>${s.title}</h2>${s.html}</section>`).join("")}
       <section class="sec sec-sources" style="--i:${e.card.length}"><h2>Sources</h2><ul>${sources}</ul></section>
     </div>`;
   }
@@ -60,7 +71,7 @@
           <h1>${esc(st.title)}</h1>
           <p class="summary">${esc(e.summary)}</p>
           <div class="labels">${labels}</div>
-          ${parent ? `<p class="change"><span class="eyebrow">One change from <a class="term" data-term="${parent.id}" href="#/e/${parent.id}">${esc(parent.title)}</a></span>${esc(e.change)}</p>` : ""}
+          ${parent ? `<p class="change"><span class="eyebrow">One change from <a class="term as-is" data-term="${parent.id}" href="#/e/${parent.id}">${esc(parent.title)}</a></span>${esc(e.change)}</p>` : ""}
           <nav class="modes">
             ${modes.length > 1 ? `<div class="seg big" role="tablist" aria-label="Ways to read this entry">
               ${modes.map((m) => `<button type="button" role="tab" data-mode="${m.id}"><b>${m.name}</b><small>${m.sub}</small></button>`).join("")}
@@ -103,14 +114,16 @@
       if (location.hash.startsWith(`#/e/${id}`)) history.replaceState(null, "", `#/e/${id}/${m}`);
       store.set("mode", m);
     }
-    host.addEventListener("click", (ev) => {
+    // The host outlives this page (the next view mounts into it), so the listener goes when the page does.
+    function onClick(ev) {
       const b = ev.target.closest("button[data-mode]");
       if (!b || b.getAttribute("aria-selected") === "true") return;
       show(b.dataset.mode);
       if (body.getBoundingClientRect().top < 0) body.scrollIntoView({ behavior: RL.reducedMotion() ? "auto" : "smooth" });
-    });
+    }
+    host.addEventListener("click", onClick);
     show(mode || (firstVisit ? "story" : store.get("mode", "story"))); // a first visit starts with the first way of reading
-    return { destroy() { current?.destroy?.(); } };
+    return { destroy() { host.removeEventListener("click", onClick); current?.destroy?.(); } };
   };
 
   function planned(host, st) {

@@ -34,9 +34,16 @@
     for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9 * step; v += step) out.push(Math.abs(v) < step * 1e-9 ? 0 : v);
     return out;
   }
+  // Ticks on a log axis: the powers of ten in range, with 2 and 5 times them when the range is short, and both ends.
+  function logTicks(lo, hi) {
+    const short = Math.log10(hi / lo) <= 2.5, out = new Set(short ? [lo, hi] : []), mults = short ? [1, 2, 5] : [1];
+    for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) for (const m of mults) { const v = m * 10 ** e; if (v >= lo * (1 - 1e-9) && v <= hi * (1 + 1e-9)) out.add(v); }
+    return [...out].sort((a, b) => a - b);
+  }
+  const trim = (t) => (t.includes(".") ? t.replace(/0+$/, "").replace(/\.$/, "") : t); // 2.50 → 2.5, but 100 stays 100
   const num = (v) => {
     const a = Math.abs(v), d = a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : a >= 0.01 ? 3 : 4;
-    return (v < 0 ? "−" : "") + (a === 0 ? "0" : a < 1e-4 ? a.toExponential(0) : a.toFixed(d).replace(/\.?0+$/, ""));
+    return (v < 0 ? "−" : "") + (a === 0 ? "0" : a < 1e-4 ? a.toExponential(0) : trim(a.toFixed(d)));
   };
 
   class LineChart {
@@ -75,7 +82,15 @@
       if (!Number.isFinite(lo)) return this.log ? [1e-3, 1] : [0, 1];
       if (this.log) {
         lo = Math.max(lo, hi * 1e-6, 1e-9);
-        return [10 ** Math.floor(Math.log10(lo)), 10 ** Math.ceil(Math.log10(Math.max(hi, lo * 10)))];
+        // Round to 1, 2 or 5 times a power of ten, so the scale ends close to the data instead of a whole decade away.
+        const round = (v, up) => {
+          const mag = 10 ** Math.floor(Math.log10(v)), steps = [1, 2, 5, 10];
+          return mag * (up ? steps.find((m) => m * mag >= v * (1 - 1e-9)) : [...steps].reverse().find((m) => m * mag <= v * (1 + 1e-9)) || 1);
+        };
+        hi = Math.max(hi, lo * 3);
+        // Over many decades the axis shows powers of ten only, so it ends on one.
+        if (Math.log10(hi / lo) > 2.5) return [10 ** Math.floor(Math.log10(lo)), 10 ** Math.ceil(Math.log10(hi))];
+        return [round(lo, false), round(hi, true)];
       }
       if (this.zero) lo = Math.min(0, lo);
       if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
@@ -94,18 +109,19 @@
       const lx = Math.log10(Math.max(2, n));
       const x = this.logX ? (u) => M.l + (Math.log10(Math.max(1, u)) / lx) * pw : (u) => M.l + (u / n) * pw;
       const unitAt = this.logX ? (px) => 10 ** (((px - M.l) / pw) * lx) : (px) => ((px - M.l) / pw) * n;
-      const yv = this.log ? (v) => (Math.log10(hi) - Math.log10(Math.max(lo, v))) / (Math.log10(hi) - Math.log10(lo)) : (v) => (hi - Math.min(hi, Math.max(lo, v))) / (hi - lo);
-      const y = (v) => M.t + yv(v) * ph;
+      // values beyond the axis, infinite ones included, are drawn at its ends; a missing value (NaN) at the bottom
+      const yv = this.log ? (v) => (Math.log10(hi) - Math.log10(Math.min(hi, Math.max(lo, v)))) / (Math.log10(hi) - Math.log10(lo)) : (v) => (hi - Math.min(hi, Math.max(lo, v))) / (hi - lo);
+      const y = (v) => M.t + (Number.isNaN(v) ? 1 : yv(v)) * ph;
       Object.assign(this, { n, x, y, unitAt, W, H, pw });
 
       // axes and grid
       const grid = el("g", { class: "grid" }, svg);
-      const yt = this.log ? Array.from({ length: Math.round(Math.log10(hi / lo)) + 1 }, (_, k) => lo * 10 ** k) : ticks(lo, hi, 4);
+      const yt = this.log ? logTicks(lo, hi) : ticks(lo, hi, 4);
       for (const v of yt) {
         el("line", { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v) }, grid);
         el("text", { class: "tick", x: M.l - 8, y: y(v) + 4, "text-anchor": "end" }, grid).textContent = this.fmt(v);
       }
-      const xt = this.logX ? Array.from({ length: Math.floor(lx) + 1 }, (_, k) => 10 ** k) : ticks(0, n, 5).filter((u) => u <= n);
+      const xt = this.logX ? Array.from({ length: Math.floor(lx) + 1 }, (_, k) => 10 ** k) : ticks(0, n, W < 520 ? 2 : 5).filter((u) => u <= n); // fewer ticks on narrow charts, so labels never collide
       xt.forEach((u, k) => {
         const last = k === xt.length - 1;
         el("text", { class: "tick", x: x(u), y: H - 8, "text-anchor": k === 0 && !this.logX ? "start" : last ? "end" : "middle" }, grid)
