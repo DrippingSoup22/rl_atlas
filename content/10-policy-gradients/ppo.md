@@ -119,6 +119,10 @@ The PPO paper also tried a penalty instead of the clip: maximize $\hat{\mathbb E
 
 PPO's results depend on more than the clip. Careful studies (Engstrom et al., 2020; Andrychowicz et al., 2021) found that several implementation choices, often unmentioned, matter as much: normalizing advantages and observations, clipping the value loss and the gradient norm, annealing the learning rate, the initialization of the last layers, and the number of epochs and minibatches. Without them PPO's advantage over TRPO largely disappears. The lesson for practice: start from a reference implementation, change one thing at a time, and watch the KL divergence and the share of clipped samples.
 
+### With networks, on Pendulum {#pendulum}
+
+The same knobs matter just as much with networks. On Gymnasium's Pendulum, with networks of 64 + 64 units, four workers and 200,000 steps, each setting was trained from five seeds, everything else as in the recorded run. Without the clip, none of the five learns to swing the pendulum up: its last training episodes still return between $-1220$ and $-1605$, against $-166$ to $-234$ with $\epsilon = 0.2$. The clip has a sweet spot: with $\epsilon = 0.1$ all five learn too, with $0.3$ the returns sink to between $-237$ and $-404$, and with $0.5$ all five end between $-622$ and $-1547$. Passes behave the same way: 4 or 10 per batch work, while 30 overfit each batch and end between $-247$ and $-780$. [The sweeps, in the Lab](lab:ppo-pendulum).
+
 ### Example: ten passes in a maze {#example}
 
 In the Dyna maze ([[dyna-q]]) with four workers, $\gam = 0.95$, GAE with $\lam = 0.9$, $K = 10$ passes and a step size of 0.3 per sample, PPO with $\epsilon = 0.2$ takes the average episode from about 630 steps in the first round to 21 after 10 rounds and 15 after 40, with every one of 12 runs ending between 14 and 17. With the same ten passes and no clip, the policy moves an average KL of about 0.9 from the old one in the first round alone, learning is slower, and one run of twelve collapses into a deterministic loop it never leaves.
