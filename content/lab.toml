@@ -322,7 +322,7 @@ planning = 10
 kappa = 0.001
 charts = ["steps"]
 film = [10, 60, 100, 200]
-intro = "After 1000 steps the gap in the wall moves from the right end to the left. Both agents' models still believe in the old gap. Dyna-Q+ gives a bonus to moves it has not tried in a while, so it goes and checks sooner."
+intro = "After 1000 steps the gap in the wall moves from the right end to the left. Both agents bump into the new wall; the way through is a move neither has ever made. Dyna-Q+ gives a bonus to moves it has not tried in a while, so it goes and finds the new gap much sooner."
 
 [dyna-shortcut]
 title = "Dyna-Q vs Dyna-Q+ when a shortcut opens"

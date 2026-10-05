@@ -5,6 +5,24 @@
   const MAZE = { alpha: 0.1, epsilon: 0.1, gamma: 0.95 };
   const steps = (world, id, params, units, seed) => lab.simulate({ world, algorithm: lab.algorithms[id], params, units, seed, snapshots: false }).metrics.steps;
 
+  // ---- the Dyna architecture: real experience feeds the values directly and through the model ----
+  RL.demos["dyna-architecture"] = function (host) {
+    const W = 560, H = 210, id = RL.fig.uid();
+    const box = (x, y, w, h, text) => `<rect class="arch-box" x="${x}" y="${y}" width="${w}" height="${h}" rx="10"/><text x="${x + w / 2}" y="${y + h / 2 + 5}" text-anchor="middle">${text}</text>`;
+    const arrow = (d, label, lx, ly, anchor = "middle") => `<path class="arch-arrow" d="${d}" marker-end="url(#tip-${id})"/>` +
+      label.split("\n").map((t, i) => `<text class="note" x="${lx}" y="${ly + i * 16}" text-anchor="${anchor}">${t}</text>`).join("");
+    host.innerHTML = `<svg class="fig arch" viewBox="0 0 ${W} ${H}" role="img" aria-label="The Dyna architecture">
+      <defs><marker id="tip-${id}" class="tip-mark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+      ${box(200, 14, 160, 50, "values / policy")}
+      ${box(20, 146, 150, 50, "experience")}
+      ${box(390, 146, 150, 50, "model")}
+      ${arrow("M200 39 C110 39 60 70 62 142", "acting", 98, 52, "end")}
+      ${arrow("M128 146 C138 108 180 80 222 68", "direct RL", 182, 122, "start")}
+      ${arrow("M174 171 H386", "model learning", 280, 163)}
+      ${arrow("M465 146 C465 90 420 42 364 40", "planning\n(simulated experience)", 446, 100, "end")}
+    </svg>`;
+  };
+
   // ---- steps per episode with 0, 5 and 50 planning steps (Sutton & Barto, Figure 8.2) ----
   RL.demos["dyna-curves"] = function (host) {
     const N = [0, 5, 50];
@@ -95,7 +113,7 @@
     const p = RL.fig.plot(host, {
       label: "RMS error after expected and sample updates, against the computation spent, for several branching factors",
       right: 130, x: { min: 0, max: 2, ticks: [0, 0.5, 1, 1.5, 2], format: (v) => (v === 1 ? "1b" : v === 2 ? "2b" : v === 0 ? "0" : `${v}b`), label: "Number of max Q(s′, a′) computations" },
-      y: { min: 0, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], label: "RMS error in the estimate", digits: 3, tickDigits: 2 },
+      y: { min: -0.05, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], label: "RMS error in the estimate", digits: 3, tickDigits: 2 }, // a little room under 0 keeps the names off the axis
       curves: [{ id: "expected", name: "expected update", dash: true, marks: false }, ...B.map((b, i) => ({ id: `b${b}`, name: `sample, b = ${b}`, marks: false, light: i % 2 === 1 }))],
       at: (x) => `${(+x).toFixed(2)} b computations`,
     });

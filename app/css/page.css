@@ -277,6 +277,9 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .fig .bar { fill: color-mix(in oklab, var(--ink) 14%, transparent); stroke: var(--ink-2); stroke-width: 1; }
 .fig .bar.last { fill: color-mix(in oklab, var(--ink) 5%, transparent); stroke-dasharray: 4 3; }
 .fig .agent-dot { fill: var(--ink); }
+.fig .arch-box { fill: var(--surface-2); stroke: var(--ink-2); stroke-width: 1.4; }
+.fig .arch-box.env { fill: none; stroke-dasharray: 5 4; }
+.fig .arch-arrow { fill: none; stroke: var(--ink); stroke-width: 1.6; }
 .fig .maze-mark { font-size: 13px; font-style: italic; font-weight: 700; }
 .fig .wall { stroke: none; }
 .fig.maze .route { stroke-width: 1.5; }
