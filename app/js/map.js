@@ -221,7 +221,7 @@
     // The part of the screen the map may use: below the floating buttons, and right of the panel when it is open
     // beside the map (on a narrow screen it covers the map instead, so the map keeps the whole width).
     const view$ = host.querySelector(".map-view");
-    const wide = () => svg.clientWidth > 900;
+    const wide = () => svg.clientWidth > 1200; // narrower, the panel covers the map instead of shrinking it
     function insets() {
       const open = view$.dataset.panel === "open" && wide();
       return { left: open ? host.querySelector(".map-panel").offsetWidth + 24 : 12, top: 64, right: 12, bottom: 12 };
