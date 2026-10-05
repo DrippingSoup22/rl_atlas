@@ -59,7 +59,7 @@ Done: three policies, the random one and two improvements, and 112 sweeps in all
 
 ### Evaluate, improve, repeat {#loop}
 
-Once a policy $\pol{\pi}$ has been improved using $\val{v_\pi}$ to yield a better policy $\pol{\pi'}$ ([[policy-improvement]]), $\val{v_{\pi'}}$ can be computed and used to improve again, yielding an even better $\pol{\pi''}$. The result is a monotonically improving sequence of policies and value functions:
+One round of greedy improvement turns a policy into a better one ([[policy-improvement]]), and nothing prevents a second round: evaluate the new policy, improve it, evaluate again. Alternating the two steps produces a chain of policies, each at least as good as the one before, along with their value functions:
 
 $$\pol{\pi_0} \xrightarrow{\;E\;} \val{v_{\pi_0}} \xrightarrow{\;I\;} \pol{\pi_1} \xrightarrow{\;E\;} \val{v_{\pi_1}} \xrightarrow{\;I\;} \pol{\pi_2} \xrightarrow{\;E\;} \cdots \xrightarrow{\;I\;} \pol{\pi_*} \xrightarrow{\;E\;} \val{v_*}, \label{sequence}$$
 
@@ -73,12 +73,12 @@ In a finite MDP, policy iteration started from any deterministic policy reaches 
 By the policy improvement theorem, each greedy improvement gives a policy that is strictly better in at least one state, unless the policy is already optimal ([[policy-improvement]]). So no policy can occur twice in the sequence. A finite MDP has only finitely many deterministic policies, $|\mathcal{A}|^{|\mathcal{S}|}$ of them, so the sequence must end, and it can only end at a policy that improvement leaves unchanged, which is optimal.
 :::
 
-The bound $|\mathcal{A}|^{|\mathcal{S}|}$ is astronomically pessimistic. In practice policy iteration often converges in surprisingly few iterations, as the examples below show. Ye (2011) proved that, for a fixed discount rate $\gam < 1$, the number of iterations is bounded by a polynomial in the numbers of states and actions, roughly $\tfrac{|\mathcal{S}|\,|\mathcal{A}|}{1 - \gam} \log \tfrac{|\mathcal{S}|}{1 - \gam}$.
+The bound $|\mathcal{A}|^{|\mathcal{S}|}$ is astronomically pessimistic. Real runs usually need only a handful of improvement steps: Frozen Lake below needs three, and the last of them only confirms that nothing changes. Ye (2011) proved that, for a fixed discount rate $\gam < 1$, the number of iterations is bounded by a polynomial in the numbers of states and actions, roughly $\tfrac{|\mathcal{S}|\,|\mathcal{A}|}{1 - \gam} \log \tfrac{|\mathcal{S}|}{1 - \gam}$.
 
 ### The algorithm {#algorithm}
 
 ::: algorithm {#alg-pi} Policy iteration (using iterative policy evaluation) for estimating $\pol{\pi} \approx \pol{\pi_*}$
-1. Initialization: $\val{V(s)} \in \mathbb{R}$ and $\pol{\pi(s)} \in \mathcal{A}(s)$ arbitrarily for all $s \in \mathcal{S}$; $\val{V(\textit{terminal})} = 0$
+1. Start with any values $\val{V(s)}$ and any actions $\pol{\pi(s)} \in \mathcal{A}(s)$ for every state; $\val{V(\textit{terminal})} = 0$
 2. Policy evaluation
 Loop:
   $\Delta \leftarrow 0$
@@ -86,17 +86,17 @@ Loop:
     $v \leftarrow \val{V(s)}$
     $\val{V(s)} \leftarrow \sum_{s',r} p(s', r \mid s, \pol{\pi(s)})\,[\rew{r} + \gam\,\val{V(s')}]$
     $\Delta \leftarrow \max(\Delta, |v - \val{V(s)}|)$
-until $\Delta < \theta$ (a small positive number determining the accuracy of estimation)
+until $\Delta < \theta$, the tolerance
 3. Policy improvement
 $\textit{policy-stable} \leftarrow \textit{true}$
 For each $s \in \mathcal{S}$:
   $\textit{old-action} \leftarrow \pol{\pi(s)}$
   $\pol{\pi(s)} \leftarrow \operatorname*{arg\,max}_a \sum_{s',r} p(s', r \mid s, a)\,[\rew{r} + \gam\,\val{V(s')}]$
   If $\textit{old-action} \ne \pol{\pi(s)}$, then $\textit{policy-stable} \leftarrow \textit{false}$
-If $\textit{policy-stable}$, then stop and return $\val{V} \approx \val{v_*}$ and $\pol{\pi} \approx \pol{\pi_*}$; else go to 2
+If $\textit{policy-stable}$: return $\pol{\pi}$, an optimal policy, and $\val{V} \approx \val{v_*}$. Otherwise back to step 2
 :::
 
-Each evaluation starts from the value function of the previous policy, which typically speeds it up a great deal, because the value function changes little from one policy to the next.
+The evaluation of each new policy starts not from scratch but from the values of the policy before it: a good first guess, since consecutive policies usually differ in only a few states.
 
 The stopping test has a subtle bug (Sutton & Barto, Exercise 4.4). If several actions are equally good in some state, the arg max may switch between them from one improvement to the next, and the policy never becomes “stable”, although every policy in the cycle is optimal. Two fixes: change the action only when the new one is *strictly* better, or test whether the values, rather than the actions, stopped changing. The Lab's version keeps all tied actions, with equal probability, and stops when that set no longer changes.
 

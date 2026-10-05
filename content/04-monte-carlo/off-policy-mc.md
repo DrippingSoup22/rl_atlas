@@ -53,9 +53,9 @@ Averaged over 10 runs, learning from random play is slower than Monte Carlo ES, 
 
 ### Two policies {#two}
 
-All learning control methods face a dilemma: they seek to learn action values conditional on subsequent *optimal* behavior, but they need to behave non-optimally in order to explore all actions ([[explore-exploit]]). The on-policy approach compromises: it learns values not for the optimal policy but for a near-optimal policy that still explores ([[mc-control]]). A more straightforward approach uses two policies: one that is learned about and becomes the optimal policy, the **target policy** $\pol{\pi}$, and one that is more exploratory and generates behavior, the **behavior policy** $\pol{b}$. Learning is then from data “off” the target policy, and the overall process is called **off-policy** learning ([[on-off-policy]]).
+Control has a built-in tension. The values worth learning are those of the best behavior, which never wastes a move, yet the only way to find that behavior is to waste moves on exploration ([[explore-exploit]]). On-policy control settles for a compromise: it learns the values of a policy that keeps exploring, a little worse than the best ([[mc-control]]). Off-policy control gives the two roles to two policies. A **behavior policy** $\pol{b}$ does the exploring and generates the episodes. A **target policy** $\pol{\pi}$ is the one whose values are learned, and it can be the greedy, eventually optimal policy, because it never has to act. The data come from off the target policy, hence the name **off-policy** learning ([[on-off-policy]]).
 
-To use episodes from $\pol{b}$ to estimate values for $\pol{\pi}$, every action taken under $\pol{\pi}$ must be taken, at least occasionally, under $\pol{b}$: $\pol{\pi(a \mid s)} > 0$ implies $\pol{b(a \mid s)} > 0$. This is the assumption of **coverage**. The behavior policy must be stochastic in states where it differs from the target policy; the target policy may be deterministic, and in control it typically is: greedy with respect to the current action values.
+Episodes from $\pol{b}$ can only teach about actions that $\pol{b}$ actually takes. Whatever $\pol{\pi}$ might do, $\pol{b}$ must therefore sometimes do too: $\pol{\pi(a \mid s)} > 0$ requires $\pol{b(a \mid s)} > 0$. This is the **coverage** assumption. It forces the behavior to be random wherever it disagrees with the target, while the target itself may be deterministic, as the greedy policy of control is.
 
 ### Importance sampling {#is}
 
@@ -65,7 +65,7 @@ $$\rho_{t:T-1} = \frac{\prod_{k=t}^{T-1} \pol{\pi(A_k \mid S_k)}\, p(S_{k+1} \mi
 
 The ratio depends only on the two policies and the sequence, not on the MDP, so it can be computed without a model, and $\mathbb{E}_b[\rho_{t:T-1}\,\rew{G_t} \mid S_t = s] = \val{v_\pi(s)}$. For action values the first action is given, so the ratio starts one step later, at $t + 1$.
 
-Averaging the weighted returns directly is **ordinary** importance sampling. Dividing instead by the sum of the weights is **weighted** importance sampling, which is biased but has dramatically lower variance, and is usually preferred ([[importance-sampling]]). With weights $W_k$, the weighted average of returns $G_k$ can be kept incrementally with a running sum of the weights $C$:
+Averaging the weighted returns directly is **ordinary** importance sampling. Dividing instead by the sum of the weights is **weighted** importance sampling, which is biased but far less variable, and is the usual choice ([[importance-sampling]]). With weights $W_k$, the weighted average of returns $G_k$ can be kept incrementally with a running sum of the weights $C$:
 
 $$\val{V} \leftarrow \val{V} + \frac{W}{C}\,\big[\,\rew{G} - \val{V}\,\big], \qquad C \leftarrow C + W \text{ (before the update)}. \label{weighted}$$
 
@@ -74,18 +74,17 @@ $$\val{V} \leftarrow \val{V} + \frac{W}{C}\,\big[\,\rew{G} - \val{V}\,\big], \qq
 Off-policy Monte Carlo control follows the behavior policy while learning about and improving the target policy. Let the target policy be greedy with respect to $\val{Q}$, a deterministic policy, so that $\pol{\pi(A_k \mid S_k)}$ is 1 if $A_k$ is the greedy action and 0 otherwise. Walking backward through an episode, the weight of each return is then the product of $1 / \pol{b(A_k \mid S_k)}$ over the later actions, as long as they were all greedy. The first time the behavior took a non-greedy action, the weight of every earlier step is 0, and the backward walk can stop.
 
 ::: algorithm {#alg-off} Off-policy Monte Carlo control, for estimating $\pol{\pi} \approx \pol{\pi_*}$
-Initialize, for all $s \in \mathcal{S}$, $a \in \mathcal{A}(s)$: $\val{Q(s,a)} \in \mathbb{R}$ arbitrarily; $C(s,a) \leftarrow 0$; $\pol{\pi(s)} \leftarrow \operatorname*{arg\,max}_a \val{Q(s,a)}$, with ties broken consistently
-Loop forever (for each episode):
-  $\pol{b} \leftarrow$ any soft policy
-  Generate an episode using $\pol{b}$: $S_0, A_0, \rew{R_1}, \ldots, S_{T-1}, A_{T-1}, \rew{R_T}$
+For every state and action: any value $\val{Q(s,a)}$, and $C(s,a) = 0$; $\pol{\pi(s)}$ is a greedy action for $\val{Q}$, ties broken by a fixed rule
+Repeat for each episode:
+  Pick a soft behavior policy $\pol{b}$, and play one episode with it: $S_0, A_0, \rew{R_1}, \ldots, S_{T-1}, A_{T-1}, \rew{R_T}$
   $\rew{G} \leftarrow 0$; $W \leftarrow 1$
-  Loop for each step of the episode, $t = T-1, T-2, \ldots, 0$:
+  For $t = T-1$ down to $0$:
     $\rew{G} \leftarrow \gam\,\rew{G} + \rew{R_{t+1}}$
     $C(S_t, A_t) \leftarrow C(S_t, A_t) + W$
     $\val{Q(S_t, A_t)} \leftarrow \val{Q(S_t, A_t)} + \frac{W}{C(S_t, A_t)}\,[\rew{G} - \val{Q(S_t, A_t)}]$
-    $\pol{\pi(S_t)} \leftarrow \operatorname*{arg\,max}_a \val{Q(S_t, a)}$, with ties broken consistently
-    If $A_t \ne \pol{\pi(S_t)}$, then exit the inner loop (proceed to the next episode)
-    $W \leftarrow W \cdot \frac{1}{\pol{b(A_t \mid S_t)}}$
+    $\pol{\pi(S_t)} \leftarrow$ a greedy action for $\val{Q(S_t, \cdot)}$, by the same tie rule
+    If $A_t \ne \pol{\pi(S_t)}$: stop this episode's walk, since every earlier step would get weight 0
+    $W \leftarrow W / \pol{b(A_t \mid S_t)}$
 :::
 
 The return of the last step is always used with weight 1, because a pair's own action carries no ratio. Ties in the arg max must be broken consistently, otherwise the test $A_t \ne \pol{\pi(S_t)}$ is meaningless. The behavior policy can be anything soft: uniformly random, or ε-greedy with respect to the current estimates, which keeps more of each episode.
@@ -96,7 +95,7 @@ For a fixed target policy, the weighted estimates are consistent: as the sum of 
 
 ### The cost: learning from tails {#tails}
 
-A potential problem is that the method learns only from the **tails** of episodes, after the last non-greedy action. If non-greedy actions are common, as with a random behavior policy, learning is slow, particularly for states that appear early in long episodes: with two actions chosen at random, a tail of $k$ steps agrees with a deterministic target policy with probability $2^{-k}$. Blackjack hands are short, so the method works there; in tasks with long episodes it can be greatly slowed down. Temporal-difference methods address this by needing no ratio at all for one-step targets ([[q-learning]]), and per-decision importance sampling and eligibility traces reduce the problem for multi-step returns (Precup, Sutton & Singh, 2000).
+Every update in the backward walk needs all the later actions to agree with the greedy target, so the method learns only from the **tails** of episodes: the stretch after the behavior's last non-greedy move. With a random behavior that stretch is short. With two actions chosen at random, a $k$-step tail agrees with a deterministic target with probability $2^{-k}$, so states early in long episodes are almost never updated. Blackjack hands are short, so the method works there; in tasks with long episodes it can be greatly slowed down. Temporal-difference methods address this by needing no ratio at all for one-step targets ([[q-learning]]), and per-decision importance sampling and eligibility traces reduce the problem for multi-step returns (Precup, Sutton & Singh, 2000).
 
 ### Example: learning Blackjack from random play {#example}
 

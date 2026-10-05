@@ -51,17 +51,17 @@ The share of situations whose greedy move is optimal, averaged over 10 runs. Mon
 
 ### Values of actions {#action-values}
 
-With a model, state values are enough to act: one step of lookahead with $p$ shows which action leads to the best combination of reward and next state ([[policy-improvement]]). Without a model they are not, because that lookahead is impossible. One must explicitly estimate the value of each action, $\val{q_\pi(s,a)}$, the expected return when starting in state $s$, taking action $a$, and following $\pol{\pi}$ afterwards. The Monte Carlo methods for this are essentially the same as for state values ([[mc-prediction]]): a *visit* to the pair $(s, a)$ is an occasion in an episode where $a$ was taken in $s$, and the estimate is the average of the returns following the first visits to the pair. These methods converge quadratically, as before, to the true expected values as the number of visits to each pair approaches infinity.
+State values are enough to act only with a model to look one step ahead: from $\val{v}$ and $p$, the best action is the one that leads to the best mix of reward and next-state value ([[policy-improvement]]). Without a model, knowing which next states are good does not say which action gets there. The values must be attached to the actions themselves: $\val{q_\pi(s,a)}$, the expected return after taking $a$ in $s$ and following $\pol{\pi}$ from then on. Estimating them needs nothing new ([[mc-prediction]]). Count a *visit* to the pair $(s, a)$ whenever $a$ is taken in $s$, and average the returns that follow first visits. As every pair is visited more and more, the averages converge to the true action values, with errors shrinking like one over the square root of the number of visits.
 
-The complication is that many pairs may never be visited. If $\pol{\pi}$ is deterministic, following it observes returns for only one action in each state; the estimates of the other actions never improve, so the comparison that improvement needs is impossible. This is the general problem of **maintaining exploration** ([[explore-exploit]]).
+The catch is coverage. A deterministic policy takes the same action every time it passes through a state, so only that action's returns are ever observed. The other actions keep their initial estimates forever, and comparing them, the whole point of action values, never becomes possible. Some way of **maintaining exploration** is needed ([[explore-exploit]]).
 
 ### Exploring starts {#es}
 
-One way to keep every pair visited is to specify that episodes *start in a state–action pair*, and that every pair has a nonzero probability of being selected as the start. This guarantees that all pairs are visited infinitely often in the limit of infinitely many episodes. This is the assumption of **exploring starts**. It is sometimes useful, when episodes come from a simulator that can be started anywhere, but it cannot be relied upon in general, particularly when learning directly from actual interaction with an environment, where the starting conditions are not under the agent's control. The alternatives, policies that keep exploring by themselves, are the subject of [[mc-control]] and [[off-policy-mc]].
+The bluntest fix is to control how episodes begin. Choose the first state *and the first action* at random, giving every pair some chance of being the start; then, over infinitely many episodes, every pair is tried infinitely often, whatever the policy does afterwards. This is the assumption of **exploring starts**. It costs nothing in a simulator that can be reset to any situation. In the real world it is usually out of reach: neither a robot nor a patient can be placed in an arbitrary situation and made to try an arbitrary action. The alternatives, policies that keep exploring on their own, are the subject of [[mc-control]] and [[off-policy-mc]].
 
 ### Monte Carlo control {#control}
 
-Monte Carlo estimation can be used in control following the pattern of generalized policy iteration ([[gpi]]): maintain an approximate policy and an approximate action-value function, drive the values toward those of the policy, and the policy toward greedy with respect to the values:
+Control follows the loop of generalized policy iteration ([[gpi]]), with Monte Carlo doing the evaluation: keep a policy and a table of action values, let averages of returns pull the table toward the policy's values, and let the policy turn greedy for the table:
 
 $$\pol{\pi_0} \xrightarrow{\;E\;} \val{q_{\pi_0}} \xrightarrow{\;I\;} \pol{\pi_1} \xrightarrow{\;E\;} \val{q_{\pi_1}} \xrightarrow{\;I\;} \pol{\pi_2} \xrightarrow{\;E\;} \cdots \xrightarrow{\;I\;} \pol{\pi_*} \xrightarrow{\;E\;} \val{q_*}. \label{sequence}$$
 
@@ -69,21 +69,20 @@ Improvement makes the policy greedy with respect to the current action values, $
 
 $$\val{q_{\pi_k}(s, \pol{\pi_{k+1}(s)})} = \val{q_{\pi_k}(s, \operatorname*{arg\,max}_a q_{\pi_k}(s,a))} = \max_a \val{q_{\pi_k}(s,a)} \ge \val{q_{\pi_k}(s, \pol{\pi_k(s)})} \ge \val{v_{\pi_k}(s)}. \label{improve}$$
 
-So each $\pol{\pi_{k+1}}$ is at least as good as $\pol{\pi_k}$, or both are optimal. With exploring starts and an infinite number of episodes for each evaluation, Monte Carlo methods can find optimal policies from sample episodes alone. The second assumption is easy to remove, in the same way that value iteration removes full evaluations ([[value-iteration]]): do not complete the evaluation before improving. For Monte Carlo it is natural to alternate episode by episode. After each episode, the observed returns update the action values, and the policy is improved at all the states visited in the episode.
+Each new policy is therefore at least as good as the last, and if it is no better, both are optimal. Taken literally, the loop needs two things that never happen: exploring starts, and infinitely many episodes for each evaluation. The second is easy to drop, just as [[value-iteration]] drops complete evaluations: improve before the evaluation is finished. The natural unit for Monte Carlo is the episode, so the two steps take turns once per episode. The finished episode's returns go into the averages, and the policy is made greedy again in every state the episode passed through.
 
 ### The algorithm {#algorithm}
 
 ::: algorithm {#alg-es} Monte Carlo ES (Exploring Starts), for estimating $\pol{\pi} \approx \pol{\pi_*}$
-Initialize: $\pol{\pi(s)} \in \mathcal{A}(s)$ arbitrarily, for all $s \in \mathcal{S}$; $\val{Q(s,a)} \in \mathbb{R}$ arbitrarily, for all $s, a$; $\textit{Returns}(s,a) \leftarrow$ an empty list, for all $s, a$
-Loop forever (for each episode):
-  Choose $S_0 \in \mathcal{S}$, $A_0 \in \mathcal{A}(S_0)$ randomly such that all pairs have probability $> 0$
-  Generate an episode from $S_0, A_0$, following $\pol{\pi}$: $S_0, A_0, \rew{R_1}, \ldots, S_{T-1}, A_{T-1}, \rew{R_T}$
+For every state and action: pick any action $\pol{\pi(s)}$, any value $\val{Q(s,a)}$, and start an empty list $\textit{Returns}(s,a)$
+Repeat for each episode:
+  Draw a starting pair $S_0, A_0$ at random, every pair with a chance above 0
+  Play the episode from there, following $\pol{\pi}$ after the first action: $S_0, A_0, \rew{R_1}, \ldots, S_{T-1}, A_{T-1}, \rew{R_T}$
   $\rew{G} \leftarrow 0$
-  Loop for each step of the episode, $t = T-1, T-2, \ldots, 0$:
+  For $t = T-1$ down to $0$:
     $\rew{G} \leftarrow \gam\,\rew{G} + \rew{R_{t+1}}$
-    Unless the pair $S_t, A_t$ appears in $S_0, A_0, S_1, A_1, \ldots, S_{t-1}, A_{t-1}$:
-      Append $\rew{G}$ to $\textit{Returns}(S_t, A_t)$
-      $\val{Q(S_t, A_t)} \leftarrow \text{average}(\textit{Returns}(S_t, A_t))$
+    If this is the first visit to the pair $S_t, A_t$ in the episode:
+      Add $\rew{G}$ to $\textit{Returns}(S_t, A_t)$, and set $\val{Q(S_t, A_t)}$ to their mean
       $\pol{\pi(S_t)} \leftarrow \operatorname*{arg\,max}_a \val{Q(S_t, a)}$
 :::
 
@@ -91,7 +90,7 @@ As in [[mc-prediction]], the averages can be kept incrementally with counts. Tie
 
 ### Convergence {#convergence}
 
-In Monte Carlo ES, all the returns for each pair are accumulated and averaged, irrespective of which policy was in force when they were observed. It is easy to see that Monte Carlo ES cannot converge to any suboptimal policy: if it did, the value function would eventually converge to the value function of that policy, and that in turn would cause the policy to change ([[policy-improvement]]). Stability is achieved only when both the policy and the value function are optimal. Convergence to this optimal fixed point seems inevitable as the changes to the action-value function decrease over time, but a general proof is still an open problem. Tsitsiklis (2002) proved convergence for a closely related, synchronous version of the algorithm.
+Monte Carlo ES pools every return a pair has ever produced, under whichever policy was in force at the time. Why should that settle on an optimal policy? Suppose it settled on a worse one. From then on all new returns would come from that policy, the averages would drift toward its action values, and greedy improvement on those values would change the policy after all ([[policy-improvement]]). So the only place the algorithm can come to rest is where both the policy and the values are optimal. That it always gets there is a different claim: the argument rules out suboptimal resting points, not endless wandering. Proofs exist only for special cases and for closely related variants, such as the synchronous version analyzed by Tsitsiklis (2002); the general case is still open.
 
 ### Example: solving Blackjack {#example}
 
@@ -114,7 +113,7 @@ The optimal strategy is Thorp's *basic strategy* for this version of the game (T
 
 ### Historical remarks {#history}
 
-Monte Carlo ES is from Sutton and Barto (§5.3), who also suggested Blackjack as an example. The strategy it learns is the basic strategy derived by Thorp (1966) from careful computation of the odds. The convergence of Monte Carlo ES remains open in general; Tsitsiklis (2002) proved it for a version with synchronous updates.
+Monte Carlo ES was introduced by Sutton and Barto (§5.3); their Blackjack example builds on one by Widrow, Gupta and Maitra (1973). The strategy it learns is the basic strategy derived by Thorp (1966) from careful computation of the odds. The convergence of Monte Carlo ES remains open in general; Tsitsiklis (2002) proved it for a version with synchronous updates.
 
 ## Card
 

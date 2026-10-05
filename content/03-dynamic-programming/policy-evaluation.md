@@ -50,17 +50,17 @@ After a few hundred sweeps nothing changes any more. A random walk from a cell n
 
 ### Prediction with a model {#problem}
 
-Dynamic programming (DP) is the collection of algorithms that compute optimal policies given a perfect model of the environment as a finite Markov decision process ([[mdp]]): the states, the actions, and the dynamics $p(s', r \mid s, a)$. Its methods are of limited direct use in reinforcement learning, because they need the model and a great deal of computation ([[dp-limits]]), but every method that follows can be seen as an attempt to achieve the same effect with less computation and without a perfect model ([[model-based-free]]).
+Suppose the agent were handed the rules of its world: the states, the actions and the full dynamics $p(s', r \mid s, a)$ of a finite Markov decision process ([[mdp]]). Finding good behavior would then be a matter of computation rather than experience, and **dynamic programming** (DP) is the family of algorithms that carry out that computation. Real agents rarely get such a model, and even with one the work grows with the number of states ([[dp-limits]]), so DP is seldom what runs in practice. It is the foundation all the same: the learning methods later in the atlas read best as ways to approximate what DP computes, from samples instead of a model and with far less work per step ([[model-based-free]]).
 
 The first problem is **prediction**, or policy evaluation ([[prediction-control]]): given a policy $\pol{\pi}$, compute its state-value function $\val{v_\pi}$. By the Bellman equation ([[bellman]]), for every state $s$,
 
 $$\val{v_\pi(s)} = \sum_a \pol{\pi(a \mid s)} \sum_{s',\,r} p(s', r \mid s, a)\,\big[\,\rew{r} + \gam\,\val{v_\pi(s')}\,\big]. \label{bellman-v}$$
 
-If the dynamics are known, this is a system of $|\mathcal{S}|$ linear equations in $|\mathcal{S}|$ unknowns, and it could be solved directly. Iterative methods are usually more practical, and they are the ones that extend to the rest of the atlas.
+With the dynamics known, these are linear equations, one per state, in as many unknown values, and a linear solver could produce the answer in one go, at a cost that grows with the cube of the number of states. Repeating a cheap update until the values settle scales better, and it is the version whose ideas carry over to learning.
 
 ### Iterative policy evaluation {#iteration}
 
-Start from an arbitrary approximation $v_0$, with value 0 at the terminal state, and produce a sequence $v_1, v_2, \ldots$ by using the Bellman equation as an update rule:
+Turn the equation into an assignment. Begin with any guess $v_0$ (a terminal state, if there is one, starts and stays at 0), and compute each new guess from the previous one by evaluating the right-hand side of the Bellman equation:
 
 $$v_{k+1}(s) = \sum_a \pol{\pi(a \mid s)} \sum_{s',\,r} p(s', r \mid s, a)\,\big[\,\rew{r} + \gam\,v_k(s')\,\big] \quad \text{for all } s \in \mathcal{S}. \label{update-rule}$$
 
@@ -78,7 +78,7 @@ When $v_0 = 0$ the iterates have a direct meaning: $v_k(s)$ is the expected sum 
 
 ### Expected updates {#expected}
 
-Each application of \ref{update-rule} to a state replaces its old value with a new one computed from the old values of the states that can follow it and the expected immediate rewards, along all the one-step transitions possible under the policy. Updates of this kind are called **expected updates**, because they are based on an expectation over all possible next states rather than on a sample of one. The backup diagram is that of $\val{v_\pi}$: from the state, through every action the policy may take, to every next state (\ref{fig-backup}).
+Look at what one application of \ref{update-rule} does to a single state. It considers every action the policy might take there and every reward and next state each action might produce, weighs each outcome by its probability, and sets the state's value to the weighted average of reward plus discounted successor value. Nothing is sampled: the whole distribution of one step is averaged at once, which is why this is called an **expected update**. Its backup diagram is that of $\val{v_\pi}$: from the state, through every action the policy may take, to every next state (\ref{fig-backup}).
 
 ::: figure {#fig-backup}
 {{backup v-pi}}
@@ -89,11 +89,11 @@ The contrast with what comes later is the whole point. Monte Carlo methods repla
 
 ### In place or two arrays {#in-place}
 
-A sweep can be organized in two ways. The **two-array** version computes all the new values $v_{k+1}(s)$ from the old values $v_k$, kept in a separate array. The **in-place** version uses one array and overwrites each value as soon as it is computed, so states later in the sweep already use the new values of the states before them. In-place sweeps also converge to $\val{v_\pi}$, and usually faster, because they use new information as soon as it is available. On the 4 × 4 gridworld below, they settle to a tolerance of $10^{-4}$ in 114 sweeps instead of 173. The order in which states are visited then matters too. In numerical analysis the two versions are the Jacobi and Gauss–Seidel iterations.
+A sweep can be organized in two ways. The **two-array** version computes all the new values $v_{k+1}(s)$ from the old values $v_k$, kept in a separate array. The **in-place** version uses one array and overwrites each value as soon as it is computed, so states later in the sweep already use the new values of the states before them. In-place sweeps converge to $\val{v_\pi}$ as well, and usually in fewer sweeps: a value improved early in a sweep immediately improves every later update that depends on it, instead of waiting for the next sweep. On the 4 × 4 gridworld below, they settle to a tolerance of $10^{-4}$ in 114 sweeps instead of 173. Visiting the states in a good order, for instance outward from the terminal states, can speed things up further. Numerical analysts know the two versions as the Jacobi and Gauss–Seidel iterations.
 
 ### When to stop {#stopping}
 
-Convergence is formally reached only in the limit, so the iteration stops when the values barely change: when the largest change in a sweep, $\Delta = \max_s |v_{k+1}(s) - v_k(s)|$, falls below a small threshold $\theta$. For $\gam < 1$ this bounds the remaining error.
+The values reach $\val{v_\pi}$ exactly only after infinitely many sweeps, so in practice the loop ends once a sweep changes nothing by much: when the largest change, $\Delta = \max_s |v_{k+1}(s) - v_k(s)|$, drops below a small threshold $\theta$. For $\gam < 1$ a small last change also means a small remaining error.
 
 ::: lemma {#lem-stop} A stopping rule with a guarantee
 If $\gam < 1$ and $\lVert v_{k+1} - v_k \rVert_\infty < \theta$ for two-array sweeps, then $\lVert v_{k+1} - \val{v_\pi} \rVert_\infty \le \dfrac{\gam\,\theta}{1 - \gam}$.
@@ -121,9 +121,8 @@ After one sweep every nonterminal value is $-1$: one step costs 1 whatever happe
 ### The algorithm {#algorithm}
 
 ::: algorithm {#alg-pe} Iterative policy evaluation, for estimating $V \approx \val{v_\pi}$
-Input: $\pol{\pi}$, the policy to be evaluated
-Parameter: a small threshold $\theta > 0$ determining the accuracy of estimation
-Initialize $\val{V(s)}$ arbitrarily for all $s \in \mathcal{S}^+$, except that $\val{V(\textit{terminal})} = 0$
+Input: the policy $\pol{\pi}$ to evaluate, and a tolerance $\theta > 0$ (smaller is more accurate)
+Set $\val{V(s)}$ to any value for every nonterminal state, and $\val{V(\textit{terminal})} = 0$
 Loop:
   $\Delta \leftarrow 0$
   Loop for each $s \in \mathcal{S}$:

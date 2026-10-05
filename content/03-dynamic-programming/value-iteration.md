@@ -52,7 +52,7 @@ Policy iteration took 112 sweeps on this lake; value iteration needed 84. Its gr
 
 ### One sweep of evaluation is enough {#truncate}
 
-Each iteration of policy iteration waits for a full policy evaluation, which may take many sweeps ([[policy-iteration]]). The evaluation step can be truncated without losing the guarantee of convergence. The extreme case stops it after a single sweep, one update of each state, and improves immediately. The two steps then combine into one simple update:
+Each round of policy iteration waits for a full evaluation, which may take many sweeps ([[policy-iteration]]). That patience is unnecessary. Improvement only needs values good enough to rank the actions, and convergence survives even when evaluation is cut short. Cut it as short as it goes, to a single sweep that updates each state once, and fold the improvement into that sweep by taking the best action instead of averaging over the policy's. What remains is one update:
 
 $$v_{k+1}(s) = \max_a \sum_{s',\,r} p(s', r \mid s, a)\,\big[\,\rew{r} + \gam\,v_k(s')\,\big] \quad \text{for all } s \in \mathcal{S}. \label{vi-update}$$
 
@@ -85,7 +85,7 @@ $\val{v_*}$ satisfies the Bellman optimality equation, so it is a fixed point of
 
 ### Stopping, and extracting a policy {#stopping}
 
-Value iteration converges only in the limit, so in practice it stops when a sweep changes no value by more than a small threshold $\theta$. Its output is then a policy, the greedy one with respect to the final values:
+As with policy evaluation, exact convergence would take forever, so the loop ends once a whole sweep moves no value by more than a small threshold $\theta$. What it hands back is a policy, the greedy one with respect to the final values:
 
 $$\pol{\pi(s)} = \operatorname*{arg\,max}_a \sum_{s',\,r} p(s', r \mid s, a)\,\big[\,\rew{r} + \gam\,\val{V(s')}\,\big]. \label{extract}$$
 
@@ -100,8 +100,8 @@ In practice the greedy policy often becomes optimal long before the values conve
 ### The algorithm {#algorithm}
 
 ::: algorithm {#alg-vi} Value iteration, for estimating $\pol{\pi} \approx \pol{\pi_*}$
-Parameter: a small threshold $\theta > 0$ determining the accuracy of estimation
-Initialize $\val{V(s)}$ for all $s \in \mathcal{S}^+$ arbitrarily, except that $\val{V(\textit{terminal})} = 0$
+Input: a tolerance $\theta > 0$ (smaller is more accurate)
+Set $\val{V(s)}$ to any value for every nonterminal state, and $\val{V(\textit{terminal})} = 0$
 Loop:
   $\Delta \leftarrow 0$
   Loop for each $s \in \mathcal{S}$:
@@ -109,7 +109,7 @@ Loop:
     $\val{V(s)} \leftarrow \max_a \sum_{s',r} p(s', r \mid s, a)\,[\rew{r} + \gam\,\val{V(s')}]$
     $\Delta \leftarrow \max(\Delta, |v - \val{V(s)}|)$
 until $\Delta < \theta$
-Output a deterministic policy, $\pol{\pi} \approx \pol{\pi_*}$, such that $\pol{\pi(s)} = \operatorname*{arg\,max}_a \sum_{s',r} p(s', r \mid s, a)\,[\rew{r} + \gam\,\val{V(s')}]$
+Return the greedy policy $\pol{\pi(s)} = \operatorname*{arg\,max}_a \sum_{s',r} p(s', r \mid s, a)\,[\rew{r} + \gam\,\val{V(s')}]$, close to optimal
 :::
 
 A sweep costs the same as a sweep of policy evaluation, with the max replacing the policy's weights: $O(|\mathcal{S}|^2 |\mathcal{A}|)$ in the worst case. Like policy evaluation, the in-place version shown here usually converges faster than one with two arrays.

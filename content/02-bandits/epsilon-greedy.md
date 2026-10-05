@@ -69,13 +69,13 @@ In a $k$-armed bandit ([[k-armed-bandit]]), the agent keeps an estimate $\val{Q_
 
 $$A_t = \operatorname*{arg\,max}_a \val{Q_t(a)}, \label{greedy-rule}$$
 
-with ties broken at random. This **greedy** rule exploits its current knowledge to maximize the immediate reward, and spends no time at all trying actions that look worse.
+with ties broken at random. This **greedy** rule cashes in on what it currently believes, and never spends a single pull on an action that looks worse.
 
 That is its flaw. An estimate changes only when its action is chosen. If the estimate of the best action is ever below that of another action, perhaps because its first reward was unlucky or because it was never tried, the greedy rule may never choose it again, and the error is never corrected. In the story, an arm with value 0.38 pays 1.29 on its first pull; from then on its average stays above the default estimate 0 of the untried arms, and the greedy player never tries the best arm, worth 1.57. The failure does not wear off with time: it is permanent.
 
 ### ε-greedy {#rule}
 
-A simple remedy is to behave greedily most of the time and, every once in a while, choose an action at random.
+The cheapest fix is to break the rule at random: be greedy on most steps, and on a small fraction of them ignore the estimates and pick any action.
 
 ::: definition {#def-eps} ε-greedy action selection
 Let $0 \le \eps \le 1$. At each step, with probability $1 - \eps$ choose a greedy action, $\operatorname*{arg\,max}_a \val{Q_t(a)}$, breaking ties at random; otherwise, with probability $\eps$, choose an action uniformly at random from all $k$ actions.

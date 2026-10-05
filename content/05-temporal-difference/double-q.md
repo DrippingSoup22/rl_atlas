@@ -53,7 +53,7 @@ Averaged over 1000 runs: early on, Q-learning goes left from A far more often th
 
 ### Maximization bias {#bias}
 
-All the control algorithms seen so far involve a maximization in the construction of their target policies: [[q-learning]] takes the max over the next action values, and [[sarsa]] usually follows an ε-greedy policy, which also involves a max. Using the maximum of *estimated* values as an estimate of the maximum *value* introduces a positive bias. Suppose that in some state every action has true value 0, but the estimates are uncertain, some above 0 and some below. The maximum of the true values is 0, yet the maximum of the estimates is positive. This is **maximization bias**. It follows from Jensen's inequality, since the max is a convex function:
+Every control method so far builds its targets around a max. [[q-learning]] takes the largest next action value outright, and [[sarsa]] usually follows an ε-greedy policy, which picks the largest most of the time. But a max over *estimates* is a biased estimate of the max over *values*, and the bias points up. Picture a state whose actions are all worth exactly 0, estimated with some noise: a few estimates land above 0, a few below. The best action is worth 0, yet the best estimate is positive. This upward drift is **maximization bias**, and Jensen's inequality states it in general, the max being a convex function:
 
 $$\mathbb{E}\Big[\max_a \val{Q(s,a)}\Big] \;\ge\; \max_a\, \mathbb{E}\big[\val{Q(s,a)}\big]. \label{jensen}$$
 
@@ -63,11 +63,11 @@ With bootstrapping, the bias travels: the inflated max becomes part of the targe
 An episode starts in state A, with two actions. *Right* ends the episode immediately with reward 0. *Left* leads, with reward 0, to state B, which has many actions, here ten, each ending the episode with a reward drawn from a normal distribution with mean $-0.1$ and variance 1. The expected return of *left* is $-0.1$, so *right* is better; with $\gam = 1$ and ε-greedy exploration at $\eps = 0.1$, the best behavior goes left $\eps/2 = 5\%$ of the time.
 :::
 
-Q-learning initially learns to take *left* much more often than *right*, and still does so more than optimal after hundreds of episodes (\ref{fig-bias}). Early on, the largest of B's ten estimates is almost always positive, so the target for *left* in A is too.
+Q-learning falls for it. In its first episodes it goes left far more often than right, and after 300 episodes it still goes left more than twice as often as the 5% that exploration forces (\ref{fig-bias}). Early on, the largest of B's ten estimates is almost always positive, and so, through the max, is the target for *left* in A.
 
 ### Two estimates {#two}
 
-The problem is that the same samples are used both to determine the maximizing action and to estimate its value. Divide the experience into two sets and learn two independent estimates, $\val{Q_1}$ and $\val{Q_2}$, of the true values $\val{q(a)}$. Use one to *choose*, $A^* = \operatorname*{arg\,max}_a \val{Q_1(a)}$, and the other to *evaluate*: $\val{Q_2(A^*)} = \val{Q_2(\operatorname*{arg\,max}_a Q_1(a))}$.
+The bias comes from asking one set of noisy estimates two questions: which action is best, and how good it is. The action that wins the comparison is disproportionately one whose estimate got lucky, and that same lucky estimate is then reported as its value. Ask the two questions of different estimates and the luck no longer carries over. Split the experience in two and learn two independent estimates, $\val{Q_1}$ and $\val{Q_2}$, of the true values $\val{q(a)}$. Let one *choose*, $A^* = \operatorname*{arg\,max}_a \val{Q_1(a)}$, and the other *evaluate*: $\val{Q_2(A^*)}$.
 
 ::: lemma {#lem-unbiased} Choosing with one estimate, valuing with another
 If $\val{Q_2}$ is independent of $\val{Q_1}$ and unbiased, $\mathbb{E}[\val{Q_2(a)}] = \val{q(a)}$ for every $a$, then $\mathbb{E}\big[\val{Q_2(A^*)}\big] = \mathbb{E}\big[\val{q(A^*)}\big] \le \max_a \val{q(a)}$, where $A^* = \operatorname*{arg\,max}_a \val{Q_1(a)}$.
@@ -77,7 +77,7 @@ If $\val{Q_2}$ is independent of $\val{Q_1}$ and unbiased, $\mathbb{E}[\val{Q_2(
 Condition on $\val{Q_1}$: it fixes $A^*$, and by independence $\val{Q_2(A^*)}$ then has mean $\val{q(A^*)}$. Averaging over $\val{Q_1}$ gives $\mathbb{E}[\val{q(A^*)}]$, the true value of an action, which is at most the best true value.
 :::
 
-So the double estimate is never optimistic in expectation; if anything it is pessimistic, since $\val{q(A^*)}$ falls short of the maximum whenever $\val{Q_1}$ picks the wrong action. Swapping the roles gives a second estimate, $\val{Q_1(\operatorname*{arg\,max}_a Q_2(a))}$. This is **double learning**. Two estimates are learned, but each is updated with only half of the experience, so the memory doubles while the computation per step does not.
+So the double estimate is never optimistic in expectation; if anything it is pessimistic, since $\val{q(A^*)}$ falls short of the maximum whenever $\val{Q_1}$ picks the wrong action. Swapping the roles gives a second such estimate, $\val{Q_1(\operatorname*{arg\,max}_a Q_2(a))}$, and using both is **double learning**. It keeps two tables, so it needs twice the memory; but each step updates only one of them, so the work per step stays the same.
 
 ### The update {#update}
 
@@ -85,21 +85,21 @@ So the double estimate is never optimistic in expectation; if anything it is pes
 
 $$\begin{gathered} \val{Q_1(S_t,A_t)} \leftarrow \val{Q_1(S_t,A_t)} + \alp\,\big[\,\rew{R_{t+1}} + \gam\,\val{Q_2(S_{t+1}, A^*)} - \val{Q_1(S_t,A_t)}\,\big], \\ \text{where } A^* = \operatorname*{arg\,max}_a \val{Q_1(S_{t+1},a)}, \end{gathered} \label{update-rule}$$
 
-and otherwise the same update with $\val{Q_1}$ and $\val{Q_2}$ swapped. The two tables are treated completely symmetrically. The behavior policy can use both, for instance ε-greedy with respect to their sum or average.
+and otherwise the same update with $\val{Q_1}$ and $\val{Q_2}$ swapped. Neither table has a special role: each serves as the other's evaluator. To act, the agent combines them, for instance by being ε-greedy with respect to their sum.
 
 ### The algorithm {#algorithm}
 
 ::: algorithm {#alg-dq} Double Q-learning, for estimating $\val{Q_1} \approx \val{Q_2} \approx \val{q_*}$
-Parameters: step size $\alp \in (0, 1]$, small $\eps > 0$
-Initialize $\val{Q_1(s,a)}$ and $\val{Q_2(s,a)}$, for all $s \in \mathcal{S}^+$, $a \in \mathcal{A}(s)$, such that $\val{Q(\textit{terminal}, \cdot)} = 0$
-Loop for each episode:
-  Initialize $S$
-  Loop for each step of the episode, until $S$ is terminal:
-    Choose $A$ from $S$ using the policy ε-greedy in $\val{Q_1} + \val{Q_2}$
-    Take action $A$, observe $\rew{R}$, $S'$
-    With probability 0.5:
+Parameters: step size $\alp \in (0, 1]$, a small $\eps > 0$
+Set $\val{Q_1(s,a)}$ and $\val{Q_2(s,a)}$ to any values for every nonterminal state and action, and both to 0 at terminal states
+Repeat for each episode:
+  Start in a state $S$
+  Until $S$ is terminal:
+    Choose $A$ in $S$ ε-greedily with respect to $\val{Q_1} + \val{Q_2}$
+    Take $A$, and observe $\rew{R}$ and $S'$
+    With probability ½:
       $\val{Q_1(S,A)} \leftarrow \val{Q_1(S,A)} + \alp\,\big[\rew{R} + \gam\,\val{Q_2(S', \operatorname*{arg\,max}_a Q_1(S',a))} - \val{Q_1(S,A)}\big]$
-    else:
+    Otherwise:
       $\val{Q_2(S,A)} \leftarrow \val{Q_2(S,A)} + \alp\,\big[\rew{R} + \gam\,\val{Q_1(S', \operatorname*{arg\,max}_a Q_2(S',a))} - \val{Q_2(S,A)}\big]$
     $S \leftarrow S'$
 :::
@@ -113,7 +113,7 @@ Van Hasselt (2010) proved that Double Q-learning converges to the optimal action
 The fraction of episodes in which each method goes left from A, the worse action, in the maximization-bias example, with $\alp = 0.1$, $\eps = 0.1$ and $\gam = 1$. Each curve averages 1000 runs; the line marks the best possible behavior with $\eps = 0.1$. The Lab computes the runs when the figure comes into view. After Sutton & Barto, Figure 6.5.
 :::
 
-In the runs above, Q-learning goes left in more than 90% of the episodes around episode 20, and still in about 12% after 300 episodes. Double Q-learning starts at the even split that ties produce, goes left less and less, and is close to the optimal 5% after a few hundred episodes (\ref{fig-bias}). It is essentially unaffected by maximization bias.
+In the runs above, Q-learning goes left in more than 90% of the episodes around episode 20, and still in about 12% after 300 episodes. Double Q-learning starts at the even split that ties produce, goes left less and less, and is close to the optimal 5% after a few hundred episodes (\ref{fig-bias}). The bias that trapped Q-learning barely touches it.
 
 ### Beyond tables {#beyond}
 

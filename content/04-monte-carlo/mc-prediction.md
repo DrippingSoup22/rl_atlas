@@ -56,17 +56,17 @@ The error against the exact values, averaged over 20 runs, falls like one over t
 
 ### Learning from episodes {#idea}
 
-Dynamic programming computes values from a model ([[policy-evaluation]]). **Monte Carlo methods** need no model, only experience: sample sequences of states, actions and rewards from actual or simulated interaction with the environment. Learning from actual experience requires no prior knowledge of the environment's dynamics, yet can still find optimal behavior. Learning from simulated experience requires a model only to generate sample transitions, not the complete probability distributions dynamic programming needs. In surprisingly many cases it is easy to generate experience sampled according to the desired probabilities, but infeasible to obtain the distributions in explicit form.
+Dynamic programming computes values from a model ([[policy-evaluation]]). **Monte Carlo methods** compute them from experience instead: whole episodes of states, actions and rewards, collected by interacting with the world or with a simulator of it. Real interaction needs no knowledge of the dynamics at all. A simulator only has to *produce* outcomes, one at a time, which is often far easier than writing down their probabilities: a few lines of code can deal a hand of cards, while the probability of every way the hand can end is a long calculation (the Blackjack example below).
 
 The idea is the definition of value itself. The value of a state is the expected return from it ([[value-functions]]),
 
 $$\val{v_\pi(s)} = \mathbb{E}_\pi\big[\,\rew{G_t} \mid S_t = s\,\big], \qquad \rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{R_{t+2}} + \cdots + \gam^{T-t-1}\,\rew{R_T}, \label{value}$$
 
-so an obvious way to estimate it from experience is to average the returns observed after visits to the state. As more returns are observed, the average converges to the expected value. To make sure that well-defined returns are available, Monte Carlo methods are defined here only for episodic tasks ([[episodes]]): experience is divided into episodes that all eventually terminate, and estimates and policies change only when an episode is completed.
+so the natural estimate is an average: collect the returns that followed the state in many episodes and average them, and the law of large numbers does the rest. A return is complete only when its episode ends, so the Monte Carlo methods here are for episodic tasks ([[episodes]]), in which every episode eventually terminates, and they change their estimates and policies between episodes, never during one.
 
 ### First visits and every visit {#visits}
 
-Each occurrence of a state $s$ in an episode is called a *visit* to $s$; a state may be visited several times in one episode. The **first-visit** MC method estimates $\val{v_\pi(s)}$ as the average of the returns following first visits to $s$; the **every-visit** MC method averages the returns following all visits.
+An episode may pass through the same state several times; each pass is a *visit*. **First-visit** MC takes one return per episode for each state, the one that follows its first visit. **Every-visit** MC takes the returns after all the visits.
 
 ::: theorem {#thm-mc} Convergence of Monte Carlo prediction
 Both first-visit and every-visit Monte Carlo prediction converge to $\val{v_\pi(s)}$ as the number of visits to $s$ goes to infinity. For first-visit MC each return is an independent, identically distributed estimate of $\val{v_\pi(s)}$ with finite variance, so the average is unbiased and its standard deviation falls as $1/\sqrt{n}$, where $n$ is the number of returns averaged.
@@ -76,21 +76,20 @@ Both first-visit and every-visit Monte Carlo prediction converge to $\val{v_\pi(
 Returns following first visits in different episodes are independent, because episodes are, and each has expectation $\val{v_\pi(s)}$ by \ref{value}. The strong law of large numbers gives convergence, and the variance of an average of $n$ independent samples is $\sigma^2 / n$ ([[incremental-mean]]). Returns following several visits within one episode are not independent, so every-visit estimates are biased for a finite number of episodes; they still converge, and the bias vanishes as the number of episodes grows (Singh & Sutton, 1996).
 :::
 
-The two methods are very similar but have slightly different theoretical properties. First-visit MC has been studied most and is the one used here; every-visit MC extends more naturally to function approximation and eligibility traces.
+In practice the two give similar estimates. The atlas uses first-visit MC, whose returns are independent and therefore easiest to analyze; every-visit MC uses more of the data, and it is the version that later carries over to function approximation and eligibility traces.
 
 ### The algorithm {#algorithm}
 
 ::: algorithm {#alg-mc} First-visit Monte Carlo prediction, for estimating $V \approx \val{v_\pi}$
-Input: a policy $\pol{\pi}$ to be evaluated
-Initialize: $\val{V(s)} \in \mathbb{R}$, arbitrarily, for all $s \in \mathcal{S}$; $\textit{Returns}(s) \leftarrow$ an empty list, for all $s \in \mathcal{S}$
-Loop forever (for each episode):
-  Generate an episode following $\pol{\pi}$: $S_0, A_0, \rew{R_1}, S_1, A_1, \rew{R_2}, \ldots, S_{T-1}, A_{T-1}, \rew{R_T}$
+Input: the policy $\pol{\pi}$ to evaluate
+For every state $s$: set $\val{V(s)}$ to any value, and start an empty list $\textit{Returns}(s)$
+Repeat for each episode:
+  Play one episode with $\pol{\pi}$, recording $S_0, A_0, \rew{R_1}, S_1, \ldots, S_{T-1}, A_{T-1}, \rew{R_T}$
   $\rew{G} \leftarrow 0$
-  Loop for each step of the episode, $t = T-1, T-2, \ldots, 0$:
+  For $t = T-1$ down to $0$:
     $\rew{G} \leftarrow \gam\,\rew{G} + \rew{R_{t+1}}$
-    Unless $S_t$ appears in $S_0, S_1, \ldots, S_{t-1}$:
-      Append $\rew{G}$ to $\textit{Returns}(S_t)$
-      $\val{V(S_t)} \leftarrow \text{average}(\textit{Returns}(S_t))$
+    If this is the first visit to $S_t$ (it is none of $S_0, \ldots, S_{t-1}$):
+      Add $\rew{G}$ to $\textit{Returns}(S_t)$, and set $\val{V(S_t)}$ to the mean of $\textit{Returns}(S_t)$
 :::
 
 Walking backward through the episode lets the return be accumulated with one multiplication and one addition per step, $\rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{G_{t+1}}$ ([[return]]). The list of returns is not needed: the average can be kept incrementally, with a count $N(s)$ ([[incremental-mean]]):
@@ -101,14 +100,14 @@ Replacing $1/N(S_t)$ by a constant step size $\alp$ gives **constant-α MC**, wh
 
 ### Backup diagram {#backup}
 
-The backup diagram of Monte Carlo prediction shows the whole trajectory of one episode, from the state being updated to the terminal state (\ref{fig-backup}). Two contrasts with dynamic programming stand out. The DP diagram shows all possible transitions but only one step; the Monte Carlo diagram shows only the transitions sampled in one episode, but goes all the way to the end. And Monte Carlo estimates do not **bootstrap**: the estimate for each state is built from returns alone, never from the estimates of other states ([[bootstrapping]]).
+The backup diagram of Monte Carlo prediction is the path of one episode, from the state being updated down to the terminal state (\ref{fig-backup}). Beside the diagram of dynamic programming it looks like its opposite. Dynamic programming is wide and shallow: every possible transition, one step deep. Monte Carlo is narrow and deep: one sampled path, followed to the end. Its targets also contain no estimates. Each state's value is an average of returns alone, so the method does not **bootstrap** ([[bootstrapping]]).
 
 ::: figure {#fig-backup}
 {{backup mc}}
 The backup diagram of Monte Carlo prediction: one sampled episode, from the state being updated to the end. Compare the one-step, full-width diagram of dynamic programming in [[policy-evaluation]].
 :::
 
-Because the estimates are independent, the computational cost of estimating the value of a single state does not depend on the number of states. One can generate episodes starting from a state of interest and average their returns, ignoring all other states: a position in a game, a patient's condition, a configuration of a robot. This is one reason Monte Carlo methods are attractive when only a few states matter.
+Since no state's estimate leans on another's, one state can be evaluated on its own: start many episodes there, average their returns, and ignore everything else. The cost depends on how long the episodes are, not on how many states the world has. That makes Monte Carlo attractive when only a few states matter: a position in a game, a patient's condition, a configuration of a robot.
 
 ### Example: Blackjack {#example}
 

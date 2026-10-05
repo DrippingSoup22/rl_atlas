@@ -1,5 +1,5 @@
 +++
-summary = "Two processes, interleaved at any grain: make the values agree with the policy, and make the policy greedy with respect to the values. Almost every reinforcement learning method is built this way."
+summary = "Two jobs, interleaved at any grain: bring the values up to date with the policy, and make the policy greedy for the values. Most reinforcement learning methods are built on this loop."
 prereqs = ["policy-iteration", "value-iteration"]
 lab = "dp-iteration"
 sources = [
@@ -11,15 +11,15 @@ sources = [
 
 ## Textbook
 
-### Two processes {#processes}
+### Two jobs {#processes}
 
-Policy iteration consists of two simultaneous, interacting processes ([[policy-iteration]]). **Policy evaluation** makes the value function consistent with the current policy. **Policy improvement** makes the policy greedy with respect to the current value function. In policy iteration they alternate, each completing before the other begins. In value iteration only a single sweep of evaluation happens between improvements ([[value-iteration]]). In asynchronous dynamic programming the two are interleaved at an even finer grain, sometimes a single state at a time ([[dp-limits]]).
+Every method of dynamic programming does two jobs. One, **policy evaluation**, adjusts the values until they describe the current policy. The other, **policy improvement**, adjusts the policy until it is greedy with respect to the current values. The methods differ only in how they schedule the jobs. [[policy-iteration]] finishes each one before starting the other; [[value-iteration]] gives evaluation a single sweep before each improvement; asynchronous methods switch between them state by state ([[dp-limits]]).
 
-As long as both processes keep updating all states, the end result is the same: convergence to the optimal value function and an optimal policy. **Generalized policy iteration** (GPI) is the name for this general idea of letting evaluation and improvement interact, independent of the granularity and other details of the two. Almost every reinforcement learning method is well described as GPI: it has an identifiable policy and value function, the policy is always being improved with respect to the value function, and the value function is always being driven toward the value function of the policy.
+The schedule turns out to matter little. However the two jobs take turns, as long as neither stops visiting any state, they end in the same place: optimal values and an optimal policy. **Generalized policy iteration** (GPI) names this shared pattern, evaluation and improvement working on each other, without fixing how finely they alternate or how either one is done. The pattern reaches far beyond dynamic programming. Open up a learning method and you will usually find a policy and an estimate of its values, with the estimate chasing the values of the policy and the policy leaning toward whatever the estimate favors.
 
-### Competing and cooperating {#dynamics}
+### Undoing each other, then agreeing {#dynamics}
 
-The two processes compete in one sense and cooperate in another. They pull in opposite directions: making the policy greedy with respect to the values typically makes the values incorrect for the changed policy, and making the values consistent with the policy typically makes the policy no longer greedy. In the long run, however, they find a single joint solution. \ref{fig-gpi} pictures each process as driving toward one of two goals, represented as lines in the space of value functions and policies. Driving toward one goal moves away from the other, yet the zigzag of steps closes in on the point where the lines meet.
+Each job undoes part of the other's work. Once the policy changes, the values that justified the change describe a policy that no longer exists. Once the values are brought up to date, the policy may no longer be greedy with respect to them. Yet the undoing shrinks each time, and the two settle on a pair that both accept. \ref{fig-gpi} draws this as two lines: values that match their policy, and policies that are greedy for their values. Each job steps onto its own line and off the other, and the zigzag closes in on the point where the lines cross.
 
 ::: figure {#fig-gpi}
 {{gpi}}

@@ -60,7 +60,7 @@ The return is an **unbiased** sample of $\val{v_\pi(S_t)}$, but its **variance**
 
 ### Which learns faster? {#speed}
 
-If both TD and Monte Carlo methods converge asymptotically to the correct predictions, which gets there first? At the current time this is an open question, in the sense that no one has been able to prove mathematically that one method converges faster than the other. In practice, TD methods have usually been found to converge faster than constant-α Monte Carlo methods on stochastic tasks. The random walk is an example (\ref{fig-error}).
+Both methods reach the true values in the limit, so the practical question is speed. No theorem settles it in general, and even stating the question precisely is not obvious, since the answer depends on which step sizes are compared and on how the error is measured. Experiments on stochastic tasks usually favor TD, and the random walk is a typical case (\ref{fig-error}).
 
 ::: figure {#fig-error}
 {{random-walk error}}
@@ -69,16 +69,16 @@ The root-mean-square error of TD(0) and constant-α Monte Carlo on the random wa
 
 ### Batch updating {#batch}
 
-Suppose only a finite amount of experience is available, say 10 episodes or 100 time steps. A common approach with incremental learning methods is to present the experience repeatedly until the method converges. Given an approximate value function, the increments are computed for every time step at which a nonterminal state is visited, but the value function is changed only once, by the sum of all the increments; then all the available experience is processed again with the new value function, and so on, until it converges. This is **batch updating**, because updates are made only after processing each complete batch of training data.
+Now take a fixed, finite pile of experience, say ten episodes, and squeeze everything out of it. Go through all the episodes and work out the increment each method would make at every step, but do not apply the increments yet: add them up, change the values once by the total, and go through the same episodes again with the new values. Repeat until the values stop moving. This is **batch updating**: the values change only between complete passes over the batch.
 
-Under batch updating, TD(0) converges deterministically to a single answer, independent of the step size, as long as the step size is sufficiently small. Constant-α Monte Carlo also converges deterministically under the same conditions, but to a *different* answer. Understanding the two answers explains the difference between the methods.
+With a small enough step size, each method then settles on a fixed point that no longer depends on the step size, nor on chance, since the data are fixed. The two fixed points are *different*, and what each one is says a great deal about the two methods.
 
 ::: figure {#fig-batch}
 {{random-walk batch}}
 Batch training on the random walk: after each new episode, all episodes seen so far are replayed until the estimates converge. The root-mean-square error of the converged estimates, averaged over 100 runs. Computed by the Lab when the figure comes into view. After Sutton & Barto, Figure 6.2.
 :::
 
-Batch TD is consistently better than batch Monte Carlo on the random walk (\ref{fig-batch}), even though batch Monte Carlo is optimal in a limited sense: it minimizes the mean squared error with respect to the returns actually observed in the training set. How can batch TD do better against the *true* values? Because it is optimal in a way that is more relevant to predicting returns.
+On the random walk, once a few episodes are in, batch TD always ends closer to the true values than batch Monte Carlo (\ref{fig-batch}). That is surprising at first, because batch Monte Carlo is optimal on its own terms: no other values fit the returns in the training set better, in the squared-error sense. Batch TD fits something else, and the next example shows what.
 
 ### Example: you are the predictor {#predictor}
 
@@ -94,13 +94,13 @@ You observe the following eight episodes of an unknown Markov reward process, wi
 What are the best predictions for $\val{V(A)}$ and $\val{V(B)}$?
 :::
 
-Everyone agrees on $\val{V(B)} = \tfrac34$: six of the eight times the process was in B, it immediately terminated with a return of 1. For A there are two reasonable answers. One observes that 100% of the times the process was in A, it went next to B, with a reward of 0; since B is worth $\tfrac34$, A must be worth $\tfrac34$ too. This is the answer batch TD(0) gives. The other observes that A was seen once and the return that followed it was 0; batch Monte Carlo therefore estimates $\val{V(A)} = 0$. This answer gives the minimum squared error on the training data, zero in fact. Yet if the process is Markov, the first answer can be expected to give lower error on *future* data: it uses all eight episodes to estimate B, while the Monte Carlo answer for A rests on one return.
+B is the easy one. The process was in B eight times and earned 1 straight away in six of them, so $\val{V(B)} = \tfrac34$ by any reasonable account. A is where the methods part ways. Batch Monte Carlo looks only at what followed A: one visit, return 0, so $\val{V(A)} = 0$, an answer that fits the training data perfectly. Batch TD(0) reasons through B: the one time A was seen, it moved to B with no reward, and B is worth $\tfrac34$, so A is worth $\tfrac34$ as well. If the process really is Markov, A's future is B's future, and the TD answer should predict *new* episodes better: it estimates that future from all eight visits to B, while the Monte Carlo answer for A rests on a single return.
 
 ### Certainty equivalence {#certainty}
 
-The example generalizes. Given batch data, the **maximum-likelihood model** of a Markov process estimates each transition probability as the fraction of observed transitions from the state that went to each successor, and each expected reward as the average of the observed rewards. Batch TD(0) converges to the value function that would be exactly correct *if this model were exactly correct*: the **certainty-equivalence estimate**, so called because it is equivalent to assuming that the estimate of the underlying process is known with certainty rather than being approximated. Batch Monte Carlo instead converges to the averages of the observed returns, which ignore the Markov structure.
+The example generalizes. From batch data one can fit the model that makes the data most probable, the **maximum-likelihood model**: the probability of moving from one state to another is the fraction of the observed departures from the first that went to the second, and each transition's reward is the average of the rewards seen on it. Batch TD(0) converges to the exact values *of that model*. It behaves as if the fitted model were the truth, which is why its answer is called the **certainty-equivalence estimate**. Batch Monte Carlo converges to the plain averages of the observed returns, and never uses the fact that the process is Markov.
 
-This also explains why nonbatch TD methods tend to learn faster than Monte Carlo methods: they move, roughly, in the direction of the certainty-equivalence estimate. Computing that estimate directly is expensive: forming the model takes memory proportional to $|\mathcal{S}|^2$, and solving for its values on the order of $|\mathcal{S}|^3$ operations. TD methods approximate the same solution with memory proportional to $|\mathcal{S}|$ and repeated cheap updates.
+The same picture suggests why ordinary TD, one update at a time, tends to beat constant-α Monte Carlo: each update nudges the values roughly toward the certainty-equivalence estimate, a better target than the averages of returns, even if TD never gets all the way there. Computing that estimate outright is costly. Storing the fitted model takes memory on the order of $|\mathcal{S}|^2$, and solving it on the order of $|\mathcal{S}|^3$ operations; TD heads for the same answer with one number per state and a stream of cheap updates.
 
 ### When Monte Carlo is the better choice {#mc-wins}
 

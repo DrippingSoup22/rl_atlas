@@ -58,7 +58,7 @@ Averaged over 200 problems, the baseline makes all the difference here. It does 
 
 ### Preferences instead of values {#preferences}
 
-The methods so far estimate action values and choose actions from the estimates ([[epsilon-greedy]], [[ucb]]). Another approach learns a numerical **preference** $\pol{H_t(a)}$ for each action, which has no interpretation as a reward, and turns the preferences into probabilities with the **softmax** distribution (also called Gibbs or Boltzmann distribution):
+The methods so far estimate action values and choose actions from the estimates ([[epsilon-greedy]], [[ucb]]). A different approach skips the estimates. It keeps a **preference** $\pol{H_t(a)}$ for each action, a number that only matters relative to the other preferences and is not a prediction of any reward, and turns the preferences into probabilities with the **softmax** distribution (also called the Gibbs or Boltzmann distribution):
 
 $$\pol{\pi_t(a)} = \Pr(A_t = a) = \frac{e^{\pol{H_t(a)}}}{\sum_{b=1}^{k} e^{\pol{H_t(b)}}}. \label{softmax}$$
 

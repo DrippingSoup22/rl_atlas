@@ -56,13 +56,13 @@ Averaged over 20 runs, Monte Carlo gets going sooner: one successful episode cre
 
 ### Exploring without exploring starts {#soft}
 
-Exploring starts are an unlikely assumption ([[exploring-starts]]). The only general way to ensure that all actions are selected infinitely often is for the agent to continue to select them. There are two approaches. **On-policy** methods evaluate or improve the policy that is used to make decisions; **off-policy** methods evaluate or improve a policy different from the one used to generate the data ([[on-off-policy]], [[off-policy-mc]]). Monte Carlo ES is an on-policy method. This station shows how to design an on-policy Monte Carlo control method that does not need exploring starts.
+Exploring starts hand exploration to whoever sets up the episodes ([[exploring-starts]]). When nobody can, the agent must explore by itself: for every action to be tried again and again, the agent has to keep choosing every action now and then, forever. That leaves a choice of which policy to learn about. The agent can learn about the very policy it follows, exploration included, which is **on-policy** learning; or it can follow one policy and learn about another, which is **off-policy** learning ([[on-off-policy]], [[off-policy-mc]]). Monte Carlo ES was on-policy too. This station builds an on-policy Monte Carlo control method that needs no exploring starts.
 
-In on-policy control the policy is generally **soft**: $\pol{\pi(a \mid s)} > 0$ for all states and actions, but gradually shifted closer to a deterministic optimal policy. The methods here use ε-greedy policies ([[epsilon-greedy]]): most of the time they choose an action with maximal estimated value, but with probability $\eps$ they choose an action at random. All non-greedy actions get the minimal probability $\eps / |\mathcal{A}(s)|$, and the greedy action gets the rest, $1 - \eps + \eps / |\mathcal{A}(s)|$. A policy is **ε-soft** if $\pol{\pi(a \mid s)} \ge \eps / |\mathcal{A}(s)|$ for all states and actions; among ε-soft policies, ε-greedy policies are in a sense the closest to greedy.
+A policy that explores must give every action a chance, $\pol{\pi(a \mid s)} > 0$ everywhere; such a policy is called **soft**. The simplest soft policy that still exploits what it has learned is ε-greedy ([[epsilon-greedy]]): with probability $1 - \eps$ it takes the action with the highest estimate, and with probability $\eps$ it picks an action uniformly at random, possibly the best one again. In a state with $m$ actions, each non-greedy action is then chosen with probability $\eps / m$ and the greedy one with $1 - \eps + \eps / m$. More generally, a policy is **ε-soft** if every action has probability at least $\eps / m$. Of all ε-soft policies, the ε-greedy ones put as much probability on the best action as that rule allows.
 
 ### Improvement among ε-soft policies {#improvement}
 
-The overall idea of on-policy Monte Carlo control is still generalized policy iteration ([[gpi]]): estimate the action values of the current policy from its episodes, and improve the policy. Without exploring starts, the policy cannot simply be made greedy, because that would stop the exploration of non-greedy actions. Fortunately, GPI does not require the policy to be taken all the way to greedy, only *toward* it.
+The loop is still generalized policy iteration ([[gpi]]): estimate the current policy's action values from its own episodes, then improve the policy. Only the improvement step changes. Making the policy fully greedy would end exploration, so it is made ε-greedy for the estimates instead, as greedy as an ε-soft policy may be. GPI only asks that each step move the policy *toward* greedy, and the next theorem shows that this step does.
 
 ::: theorem {#thm-soft} Policy improvement for ε-soft policies
 Let $\pol{\pi}$ be any ε-soft policy, and let $\pol{\pi'}$ be the ε-greedy policy with respect to $\val{q_\pi}$. Then $\val{v_{\pi'}(s)} \ge \val{v_\pi(s)}$ for all $s$. Equality holds for all states only when $\pol{\pi}$ is optimal among the ε-soft policies.
@@ -74,23 +74,22 @@ $$\begin{aligned} q_\pi(s, \pi'(s)) &= \sum_a \pi'(a \mid s)\, q_\pi(s,a) = \fra
 The inequality holds because the weights $(\pi(a \mid s) - \varepsilon/m)/(1 - \varepsilon)$ are nonnegative, since $\pi$ is ε-soft, and sum to 1, so their weighted average of $q_\pi(s, \cdot)$ is at most the maximum. The policy improvement theorem then gives $v_{\pi'} \ge v_\pi$. For the equality case, consider a new environment that behaves like the original, except that with probability $\varepsilon$ it replaces the agent's action by a random one; the best ε-soft policies in the original environment are exactly the best policies in the new one, and equality means that $v_\pi$ satisfies the new environment's Bellman optimality equation.
 :::
 
-So policy iteration works for ε-soft policies: each improvement step is guaranteed to give a better ε-soft policy, until the best ε-soft policy is reached. The only cost is that the method achieves the best policy among the ε-soft ones, not the best policy overall; but exploring starts are no longer needed.
+Policy iteration therefore still works inside the class of ε-soft policies: every improvement step helps until the best ε-soft policy is reached. The price of dropping exploring starts is the target itself, which is now the best policy that keeps exploring rather than the best policy outright.
 
 ### The algorithm {#algorithm}
 
 ::: algorithm {#alg-mcc} On-policy first-visit Monte Carlo control (for ε-soft policies), for estimating $\pol{\pi} \approx \pol{\pi_*}$
-Algorithm parameter: small $\eps > 0$
-Initialize: $\pol{\pi} \leftarrow$ an arbitrary ε-soft policy; $\val{Q(s,a)} \in \mathbb{R}$ arbitrarily, for all $s, a$; $\textit{Returns}(s,a) \leftarrow$ an empty list, for all $s, a$
-Repeat forever (for each episode):
-  Generate an episode following $\pol{\pi}$: $S_0, A_0, \rew{R_1}, \ldots, S_{T-1}, A_{T-1}, \rew{R_T}$
+Parameter: a small $\eps > 0$
+For every state and action: any value $\val{Q(s,a)}$ and an empty list $\textit{Returns}(s,a)$; $\pol{\pi}$ is any ε-soft policy
+Repeat for each episode:
+  Play one episode with $\pol{\pi}$: $S_0, A_0, \rew{R_1}, \ldots, S_{T-1}, A_{T-1}, \rew{R_T}$
   $\rew{G} \leftarrow 0$
-  Loop for each step of the episode, $t = T-1, T-2, \ldots, 0$:
+  For $t = T-1$ down to $0$:
     $\rew{G} \leftarrow \gam\,\rew{G} + \rew{R_{t+1}}$
-    Unless the pair $S_t, A_t$ appears in $S_0, A_0, S_1, A_1, \ldots, S_{t-1}, A_{t-1}$:
-      Append $\rew{G}$ to $\textit{Returns}(S_t, A_t)$
-      $\val{Q(S_t, A_t)} \leftarrow \text{average}(\textit{Returns}(S_t, A_t))$
-      $A^* \leftarrow \operatorname*{arg\,max}_a \val{Q(S_t, a)}$, with ties broken arbitrarily
-      For all $a \in \mathcal{A}(S_t)$: $\pol{\pi(a \mid S_t)} \leftarrow 1 - \eps + \eps/|\mathcal{A}(S_t)|$ if $a = A^*$, else $\eps/|\mathcal{A}(S_t)|$
+    If this is the first visit to the pair $S_t, A_t$ in the episode:
+      Add $\rew{G}$ to $\textit{Returns}(S_t, A_t)$, and set $\val{Q(S_t, A_t)}$ to their mean
+      $A^* \leftarrow$ an action with the largest $\val{Q(S_t, a)}$
+      Make $\pol{\pi}$ ε-greedy in $S_t$: $1 - \eps + \eps/|\mathcal{A}(S_t)|$ for $A^*$, $\eps/|\mathcal{A}(S_t)|$ for every other action
 :::
 
 In practice the policy need not be stored: acting ε-greedily with respect to the current $\val{Q}$ is the same thing.

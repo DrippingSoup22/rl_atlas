@@ -57,7 +57,7 @@ Averaged over 200 problems, UCB earns more per step than ε-greedy once its firs
 
 ### Exploring where it is needed {#idea}
 
-Exploration is needed because the estimates are uncertain ([[explore-exploit]]). ε-greedy explores without regard to that uncertainty: its random choices fall on an arm that has been tried a thousand times and is clearly bad as often as on an arm tried twice whose estimate could be far off ([[epsilon-greedy]]). It would be better to choose among the non-greedy actions according to their potential for actually being optimal, taking into account both how close their estimates are to the maximum and how uncertain those estimates are.
+Exploration is needed because the estimates are uncertain ([[explore-exploit]]). ε-greedy explores without regard to that uncertainty: its random choices fall on an arm that has been tried a thousand times and is clearly bad as often as on an arm tried twice whose estimate could be far off ([[epsilon-greedy]]). An exploratory pull is better spent on an arm that might really be the best: one whose estimate is not far below the leader's, or one known so poorly that its true value could be well above its estimate. A single score can reward both.
 
 ### The rule {#rule}
 
@@ -65,9 +65,9 @@ Exploration is needed because the estimates are uncertain ([[explore-exploit]]).
 
 $$A_t = \operatorname*{arg\,max}_a \Big[\,\val{Q_t(a)} + c\,\sqrt{\frac{\ln t}{N_t(a)}}\;\Big], \label{ucb-rule}$$
 
-where $N_t(a)$ is the number of times $a$ was chosen before step $t$, $c > 0$ sets how much to explore, and an action with $N_t(a) = 0$ counts as maximizing, so every action is tried once first. The square-root term measures the uncertainty in the estimate of $a$. The bracket is thus a kind of upper bound on the possible true value of $a$, with $c$ setting the confidence level.
+where $N_t(a)$ is the number of times $a$ was chosen before step $t$, $c > 0$ sets how much to explore, and an action with $N_t(a) = 0$ counts as maximizing, so every action is tried once first. The square root is a bonus, large for an arm tried rarely and small for one tried often: a measure of how little is known about $a$. Estimate plus bonus is then an optimistic guess at the true value of $a$, the highest value the evidence still makes plausible, and $c$ decides how optimistic to be.
 
-The two parts of the bonus move in opposite directions. Each time $a$ is chosen, $N_t(a)$ grows and its bonus shrinks. Each time another action is chosen, $t$ grows while $N_t(a)$ does not, so the bonus of $a$ rises, slowly, since $\ln t$ is unbounded but grows ever more slowly. Every action is therefore chosen again eventually, but an action with a low estimate, or one that has already been tried often, is chosen less and less frequently as time goes on. This is the principle of optimism in the face of uncertainty ([[optimistic-init]]) made systematic: the optimism of each arm is tailored to how much is known about it, and it never runs out.
+The bonus responds to every step. Choosing $a$ raises $N_t(a)$ and lowers its bonus, since something was learned about $a$. Choosing anything else raises only $t$, and with it, very slowly, the bonus of $a$: the longer an arm waits, the more its neglect counts in its favor. Because $\ln t$ has no ceiling, no arm is abandoned for good; because it grows so slowly, arms with poor estimates or many pulls behind them come back more and more rarely. Optimism in the face of uncertainty ([[optimistic-init]]) becomes a rule here: each arm's optimism matches how little is known about it, and it never runs out.
 
 ### Where the bonus comes from {#hoeffding}
 
@@ -95,13 +95,13 @@ Regret that grows like $\ln T$ is the best possible rate (Lai & Robbins, 1985). 
 Average reward per step of UCB with $c = 2$ and of ε-greedy with $\eps = 0.1$, both with sample averages, on the 10-armed testbed. Each curve averages 1000 runs; the Lab computes them when the figure comes into view. After Sutton & Barto, Figure 2.4.
 :::
 
-UCB does better than ε-greedy except during the first $k$ steps, when it is still trying each action once (\ref{fig-curves}). Over the last hundred steps of the runs above it earns about 1.52 per step, against 1.39 for ε-greedy, close to the 1.54 a player knowing the values would get. The spike at step 11 has a simple cause (Sutton & Barto, Exercise 2.8). After ten steps every arm has been tried once, so every bonus is the same, $c\sqrt{\ln 11}$, and the choice at step 11 goes to the arm with the best single reward, which is the best arm more often than not. Then its count doubles, its bonus drops below the bonuses of the arms tried once, and the next steps return to them.
+Apart from its first ten steps, spent trying each arm once, UCB earns more than ε-greedy throughout (\ref{fig-curves}). Over the last hundred steps of the runs above it earns about 1.52 per step, against 1.39 for ε-greedy, close to the 1.54 a player knowing the values would get. The spike at step 11 has a simple cause (Sutton & Barto, Exercise 2.8). After ten steps every arm has been tried once, so every bonus is the same, $c\sqrt{\ln 11}$, and the choice at step 11 goes to the arm with the best single reward, which is the best arm more often than not. Then its count doubles, its bonus drops below the bonuses of the arms tried once, and the next steps return to them.
 
 The value of $c$ matters. Too small, and UCB is nearly greedy; too large, and it keeps testing arms long after the evidence is clear. The parameter study in [[gradient-bandit]] compares UCB across values of $c$ with the other bandit methods.
 
 ### Limits {#limits}
 
-UCB is more difficult than ε-greedy to extend beyond bandits.
+Outside the bandit setting, the assumptions behind the bonus start to fail one by one:
 
 - **Changing values.** The counts $N_t(a)$ measure how much is known about an arm only if what was learned stays true. If values drift, old pulls overstate the knowledge. Variants discount old pulls or keep only a recent window (Garivier & Moulines, 2011), but the plain rule is built for stationary problems ([[nonstationary]]).
 - **Large state spaces.** With states, the bonus needs a count for every state–action pair. When states are rarely or never revisited, as with images, counts are useless, and they must be replaced by *pseudo-counts* or other measures of novelty (Bellemare et al., 2016; [[exploration-strategies]]).

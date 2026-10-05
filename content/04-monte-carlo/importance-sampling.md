@@ -16,7 +16,7 @@ sources = [
 
 ### Expectations under the wrong distribution {#problem}
 
-Importance sampling is a general technique for estimating expected values under one distribution given samples from another. Let $X$ be drawn from a distribution $b$, and suppose we want the expectation of $f(X)$ under a different distribution $\pi$, which gives positive probability only where $b$ does. Then
+Sometimes the samples at hand come from one distribution while the average wanted is under another. **Importance sampling** reweights the samples to make up the difference. Let $X$ be drawn from $b$, and suppose we want the expectation of $f(X)$ under $\pi$, a distribution that is positive only where $b$ is. Then
 
 $$\mathbb{E}_\pi\big[f(X)\big] = \sum_x \pi(x)\, f(x) = \sum_x b(x)\,\frac{\pi(x)}{b(x)}\, f(x) = \mathbb{E}_b\Big[\frac{\pi(X)}{b(X)}\, f(X)\Big]. \label{identity}$$
 
@@ -52,7 +52,7 @@ The difference shows most clearly with a single return. In the weighted estimate
 | --- | --- | --- |
 | bias (first-visit) | none | yes, vanishing as returns accumulate |
 | variance | can be unbounded, since ratios can be | bounded: no single return weighs more than 1 |
-| in practice | rarely used alone | strongly preferred |
+| in practice | rarely used alone | the usual choice |
 
 Every-visit versions of both estimators are biased, with bias that falls to zero as the number of samples grows. Both have incremental implementations: the weighted one keeps a running sum of the weights for each state, $C \leftarrow C + W$ and $V \leftarrow V + \tfrac{W}{C}(G - V)$ ([[off-policy-mc]]).
 
@@ -71,7 +71,7 @@ Both errors approach zero as episodes accumulate (\ref{fig-bj}), but the weighte
 
 ### Infinite variance {#infinite}
 
-The variance of ordinary importance sampling is typically infinite whenever the ratios are unbounded, and that happens easily with loops in a trajectory.
+Unbounded ratios can do worse than slow learning down. When trajectories can loop, the ratio has no ceiling, and the variance of the ordinary estimator can be infinite, as a one-state example shows.
 
 ::: example {#ex-loop} Infinite variance (Sutton & Barto, Example 5.5)
 A single nonterminal state $s$ has two actions. *Right* ends the episode with reward 0. *Left* returns to $s$ with probability 0.9 and ends the episode with reward $+1$ with probability 0.1. The target policy always goes left, so $\val{v_\pi(s)} = 1$. The behavior policy goes left or right with equal probability, and $\gam = 1$.

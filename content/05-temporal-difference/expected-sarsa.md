@@ -57,7 +57,7 @@ SARSA's target uses the action $A_{t+1}$ the agent actually takes next, a sample
 
 $$\val{Q(S_t,A_t)} \leftarrow \val{Q(S_t,A_t)} + \alp\,\Big[\,\rew{R_{t+1}} + \gam \sum_a \pol{\pi(a \mid S_{t+1})}\,\val{Q(S_{t+1},a)} - \val{Q(S_t,A_t)}\,\Big]. \label{update-rule}$$
 
-Given the next state $S_{t+1}$, this algorithm moves deterministically in the same direction as SARSA moves *in expectation*, which is where its name comes from. If $S_{t+1}$ is terminal, the sum is 0. Its backup diagram has the next state branching into every action, each weighted by the policy, without the arc of a max (\ref{fig-backup}).
+Once the next state is known, this target is what SARSA's target would be *on average*: the random draw of the next action is replaced by its expectation, which gives the method its name. If $S_{t+1}$ is terminal, the sum is 0. Its backup diagram has the next state branching into every action, each weighted by the policy, without the arc of a max (\ref{fig-backup}).
 
 ::: figure {#fig-backup}
 {{backup expected-sarsa}}
@@ -66,7 +66,7 @@ The backup diagram of Expected SARSA: from the pair, through the reward and the 
 
 ### Less variance {#variance}
 
-Expected SARSA is more complex computationally than SARSA: each update sums over the actions, $O(|\mathcal{A}|)$, the same order as Q-learning's max. In return, it eliminates the variance due to the random selection of $A_{t+1}$. Conditioned on the transition, the SARSA target is a random variable whose mean is the Expected SARSA target:
+Each update now sums over the actions, $O(|\mathcal{A}|)$ instead of SARSA's single lookup, the same order of work as Q-learning's max. What the sum buys is a target that no longer depends on which next action happened to be drawn. Conditioned on the transition, the SARSA target is a random variable whose mean is the Expected SARSA target:
 
 $$\mathbb{E}\big[\,\rew{R_{t+1}} + \gam\,\val{Q(S_{t+1}, A_{t+1})} \;\big|\; S_t, A_t, \rew{R_{t+1}}, S_{t+1}\big] = \rew{R_{t+1}} + \gam \sum_a \pol{\pi(a \mid S_{t+1})}\,\val{Q(S_{t+1},a)}, \label{mean}$$
 
@@ -74,18 +74,18 @@ so by the law of total variance, the Expected SARSA target has less variance, by
 
 ### On-policy, off-policy, and Q-learning {#policies}
 
-Nothing forces the policy in the expectation to be the policy that generates the behavior. With $\pol{\pi}$ equal to the behavior policy, for instance ε-greedy, Expected SARSA is an on-policy method like SARSA. With a different target policy it is an off-policy method, and it needs no importance sampling, because the next action is averaged over, not sampled ([[importance-sampling]]). In particular, if the target policy is greedy with respect to $\val{Q}$, the expectation is the max, and Expected SARSA *is* Q-learning ([[q-learning]]). In this sense Expected SARSA subsumes and generalizes Q-learning while reliably improving over SARSA. Except for the small additional computational cost, it may completely dominate both of the other well-known TD control algorithms.
+Nothing forces the policy in the expectation to be the policy that generates the behavior. With $\pol{\pi}$ equal to the behavior policy, for instance ε-greedy, Expected SARSA is an on-policy method like SARSA. With a different target policy it is an off-policy method, and it needs no importance sampling, because the next action is averaged over, not sampled ([[importance-sampling]]). In particular, if the target policy is greedy with respect to $\val{Q}$, the expectation is the max, and Expected SARSA *is* Q-learning ([[q-learning]]). Q-learning is thus the special case of Expected SARSA with a greedy target policy, and SARSA is its noisier, sampled cousin. For the price of a sum over the actions, Expected SARSA is usually at least as good as either, as on the cliff below.
 
 ### The algorithm {#algorithm}
 
 ::: algorithm {#alg-es} Expected SARSA (on-policy, with an ε-greedy target policy)
-Parameters: step size $\alp \in (0, 1]$, small $\eps > 0$
-Initialize $\val{Q(s,a)}$ for all $s \in \mathcal{S}^+$, $a \in \mathcal{A}(s)$, arbitrarily, except that $\val{Q(\textit{terminal}, \cdot)} = 0$
-Loop for each episode:
-  Initialize $S$
-  Loop for each step of the episode, until $S$ is terminal:
-    Choose $A$ from $S$ using the policy derived from $\val{Q}$ (e.g. ε-greedy)
-    Take action $A$, observe $\rew{R}$, $S'$
+Parameters: step size $\alp \in (0, 1]$, a small $\eps > 0$
+Set $\val{Q(s,a)}$ to any value for every nonterminal state and action, and $\val{Q(\textit{terminal}, \cdot)} = 0$
+Repeat for each episode:
+  Start in a state $S$
+  Until $S$ is terminal:
+    Choose $A$ in $S$ ε-greedily with respect to $\val{Q}$
+    Take $A$, and observe $\rew{R}$ and $S'$
     $\val{Q(S,A)} \leftarrow \val{Q(S,A)} + \alp\,[\rew{R} + \gam \sum_a \pol{\pi(a \mid S')}\,\val{Q(S',a)} - \val{Q(S,A)}]$
     $S \leftarrow S'$
 :::
@@ -101,7 +101,7 @@ On the cliff ([[sarsa]]) with $\eps = 0.1$ and $\alp = 0.5$, Expected SARSA's gr
 Average reward per episode on the cliff as a function of the step size, over the first 100 episodes (light) and over episodes 401 to 500 (dark), for SARSA, Expected SARSA and Q-learning with $\eps = 0.1$. The Lab computes the runs when the figure comes into view. After Sutton & Barto, Figure 6.3.
 :::
 
-\ref{fig-alpha} shows how the three methods depend on the step size. Expected SARSA improves steadily as $\alp$ grows, all the way to $\alp = 1$, while SARSA does best at an intermediate step size and deteriorates beyond it. The reason is that in cliff walking all the state transitions are deterministic and all the randomness comes from the policy. Expected SARSA removes the randomness of the policy from its target, so a large step size costs it nothing, while SARSA's sampled targets make large steps follow the noise.
+\ref{fig-alpha} shows how the three methods depend on the step size. Over the first hundred episodes Expected SARSA does better the larger $\alp$ is, all the way to $\alp = 1$, and late in learning a large step size costs it nothing. SARSA does best at an intermediate step size and falls apart beyond it, dramatically so late in learning. The cliff explains why. Its moves are deterministic, so the only randomness in an agent's target comes from the agent's own policy. Expected SARSA averages that randomness away, leaving targets with no noise for a large step size to chase; SARSA keeps it, and with large steps its estimates jump at every exploratory draw.
 
 ### Relatives {#relatives}
 

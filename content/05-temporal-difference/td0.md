@@ -55,49 +55,47 @@ Averaged over 100 runs, TD(0) gets closer to the true values than Monte Carlo, w
 
 ### Learning a guess from a guess {#idea}
 
-Temporal-difference (TD) learning is a combination of Monte Carlo ideas and dynamic programming ideas. Like Monte Carlo methods, TD methods learn directly from raw experience without a model of the environment's dynamics ([[mc-prediction]]). Like dynamic programming, they update estimates based in part on other learned estimates, without waiting for a final outcome: they **bootstrap** ([[policy-evaluation]], [[bootstrapping]]). This station is about the prediction problem: estimating $\val{v_\pi}$ for a given policy. Control methods built on the same idea are [[sarsa]] and [[q-learning]].
+Monte Carlo learns from experience but waits for the end of each episode; dynamic programming updates from neighboring estimates but needs a model. **Temporal-difference** (TD) learning takes one half of each. Like Monte Carlo, it learns from raw experience with no model of the dynamics ([[mc-prediction]]). Like dynamic programming, it updates an estimate from the estimates of the states that follow, without waiting for the outcome ([[policy-evaluation]]): it **bootstraps** ([[bootstrapping]]). This station is about prediction, estimating $\val{v_\pi}$ for a given policy; the control methods built on the same idea are [[sarsa]] and [[q-learning]].
 
 ### The update {#update}
 
-A Monte Carlo method must wait until the end of the episode to determine the increment to $\val{V(S_t)}$, because only then is the return $\rew{G_t}$ known. A simple every-visit Monte Carlo method suitable for nonstationary environments is
+Constant-α Monte Carlo moves an estimate toward the return that followed it ([[mc-prediction]]):
 
 $$\val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\,\rew{G_t} - \val{V(S_t)}\,\big]. \label{mc}$$
 
-TD methods need to wait only until the next time step. At time $t + 1$ they form a target from the observed reward and the estimate of the next state, and update immediately. The simplest TD method makes the update
+The return is known only when the episode is over, so every such update waits for the end. TD replaces the return with something available one step later: the reward just received plus the current estimate of the state just reached. On each transition from $S_t$ to $S_{t+1}$, the simplest TD method makes the update
 
 $$\val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\,\rew{R_{t+1}} + \gam\,\val{V(S_{t+1})} - \val{V(S_t)}\,\big] \label{td}$$
 
-on the transition to $S_{t+1}$. The target for the Monte Carlo update is $\rew{G_t}$; the target for the TD update is $\rew{R_{t+1}} + \gam\,\val{V(S_{t+1})}$. This method is called **TD(0)**, or one-step TD, because it is the special case $\lambda = 0$ of TD(λ) ([[td-lambda]]) and of $n$-step TD with $n = 1$ ([[n-step-td]]). If $S_{t+1}$ is terminal, $\val{V(S_{t+1})} = 0$.
+on the transition to $S_{t+1}$. The target for the Monte Carlo update is $\rew{G_t}$; the target for the TD update is $\rew{R_{t+1}} + \gam\,\val{V(S_{t+1})}$. The name **TD(0)**, or one-step TD, marks it as the simplest member of two families met later: TD(λ) with $\lambda = 0$ ([[td-lambda]]) and $n$-step TD with $n = 1$ ([[n-step-td]]). If $S_{t+1}$ is terminal, $\val{V(S_{t+1})} = 0$.
 
 The relation between the three families of methods shows in three expressions for the same value ([[bellman]]):
 
 $$\val{v_\pi(s)} = \mathbb{E}_\pi\big[\,\rew{G_t} \mid S_t = s\,\big] = \mathbb{E}_\pi\big[\,\rew{R_{t+1}} + \gam\,\rew{G_{t+1}} \mid S_t = s\,\big] = \mathbb{E}_\pi\big[\,\rew{R_{t+1}} + \gam\,\val{v_\pi(S_{t+1})} \mid S_t = s\,\big]. \label{three}$$
 
-Monte Carlo methods use an estimate of the first expression as their target: a sample return, because the expectation is unknown. Dynamic programming uses an estimate of the last: the expectation is computed from the model, but $\val{v_\pi(S_{t+1})}$ is unknown and the current estimate is used instead. The TD target is an estimate for both reasons: it samples the expected value in the last expression, *and* it uses the current estimate $\val{V}$ instead of the true $\val{v_\pi}$. TD combines the sampling of Monte Carlo with the bootstrapping of dynamic programming.
+Each family aims at one of these expressions, and each misses the true value for its own reason. Monte Carlo aims at the first: it cannot compute the expectation, so it uses one sampled return. Dynamic programming aims at the last: it computes the expectation exactly from the model, but has only its current estimate of $\val{v_\pi(S_{t+1})}$ to plug in. TD aims at the last as well and misses on both counts at once: it samples the expectation from one transition, like Monte Carlo, *and* plugs in a current estimate, like dynamic programming.
 
 ### The TD error {#td-error-sec}
 
-The quantity in brackets in \ref{td} is a sort of error, measuring the difference between the estimated value of $S_t$ and the better estimate $\rew{R_{t+1}} + \gam\,\val{V(S_{t+1})}$. It is called the **TD error** ([[td-error]]):
+The bracket in \ref{td} compares two predictions of the same return: the old one, $\val{V(S_t)}$, and a newer one, $\rew{R_{t+1}} + \gam\,\val{V(S_{t+1})}$, that has seen one more reward. Their difference is the **TD error** ([[td-error]]):
 
 $$\del_t = \rew{R_{t+1}} + \gam\,\val{V(S_{t+1})} - \val{V(S_t)}. \label{delta}$$
 
-The TD error at each time is the error in the estimate made at that time; it is available only one step later. If the array $\val{V}$ does not change during the episode, as in Monte Carlo methods, the Monte Carlo error can be written as a sum of TD errors:
+Each TD error grades the estimate made one step earlier, so it always arrives one step late. Over a whole episode the TD errors add up to the Monte Carlo error, provided the estimates stay fixed while the episode runs:
 
 $$\rew{G_t} - \val{V(S_t)} = \del_t + \gam\,\del_{t+1} + \gam^2\,\del_{t+2} + \cdots + \gam^{T-t-1}\,\del_{T-1}. \label{sum}$$
 
-The identity is not exact if $\val{V}$ is updated during the episode, as it is in TD(0), but if the step size is small it may still hold approximately. It is the key to how TD methods relate to Monte Carlo methods ([[td-lambda]]).
+TD(0) does change its estimates mid-episode, so for it the identity is only approximate, the more accurate the smaller the step size. Variants of this sum are what connect TD methods to Monte Carlo in [[td-lambda]].
 
 ### The algorithm {#algorithm}
 
 ::: algorithm {#alg-td} Tabular TD(0) for estimating $\val{v_\pi}$
-Input: the policy $\pol{\pi}$ to be evaluated
-Algorithm parameter: step size $\alp \in (0, 1]$
-Initialize $\val{V(s)}$, for all $s \in \mathcal{S}^+$, arbitrarily except that $\val{V(\textit{terminal})} = 0$
-Loop for each episode:
-  Initialize $S$
-  Loop for each step of the episode, until $S$ is terminal:
-    $A \leftarrow$ action given by $\pol{\pi}$ for $S$
-    Take action $A$, observe $\rew{R}$, $S'$
+Input: the policy $\pol{\pi}$ to evaluate, and a step size $\alp \in (0, 1]$
+Set $\val{V(s)}$ to any value for every nonterminal state, and $\val{V(\textit{terminal})} = 0$
+Repeat for each episode:
+  Start in a state $S$
+  Until $S$ is terminal:
+    Choose $A$ by $\pol{\pi}$ in $S$; take it, and observe $\rew{R}$ and $S'$
     $\val{V(S)} \leftarrow \val{V(S)} + \alp\,[\rew{R} + \gam\,\val{V(S')} - \val{V(S)}]$
     $S \leftarrow S'$
 :::
@@ -111,7 +109,7 @@ The backup diagram of TD(0): one sampled step, from the state through the action
 
 ### Convergence {#convergence}
 
-Is TD(0) sound? For any fixed policy, it has been proved to converge to $\val{v_\pi}$.
+Learning a guess from a guess could, in principle, chase its own tail. For a fixed policy and a table of values it provably does not:
 
 ::: theorem {#thm-td} Convergence of tabular TD(0)
 For a fixed policy in a finite MDP, TD(0) with a table of values converges in the mean to $\val{v_\pi}$ if the step size is constant and sufficiently small, and with probability 1 if every state is visited infinitely often and the step sizes satisfy the stochastic-approximation conditions $\sum_t \alpha_t = \infty$ and $\sum_t \alpha_t^2 < \infty$.
@@ -121,7 +119,7 @@ For a fixed policy in a finite MDP, TD(0) with a table of values converges in th
 In expectation, the TD(0) update of a state is the iterative policy-evaluation update of that state ([[policy-evaluation]]): its expected target is the right-hand side of the Bellman equation evaluated at the current estimates. That operator is a contraction, so TD(0) is a noisy, asynchronous version of a contracting iteration, and results on stochastic approximation apply, as for [[q-learning]] (Sutton, 1988; Dayan, 1992; Jaakkola, Jordan & Singh, 1994).
 :::
 
-Most convergence proofs apply only to the table-based case; some also apply to linear function approximation ([[semi-gradient-td]]).
+Beyond tables the guarantees thin out. They extend to linear function approximation with on-policy training ([[semi-gradient-td]]), and fail in general beyond that ([[deadly-triad]]).
 
 ### Example: the random walk {#example}
 
@@ -145,10 +143,10 @@ With its best step size, TD(0) is better than Monte Carlo with its best step siz
 
 ### Advantages {#advantages}
 
-- **No model.** Unlike dynamic programming, TD methods need neither the rewards nor the transition probabilities.
-- **Online and incremental.** Unlike Monte Carlo methods, they update after every step, and need no memory of the episode. This matters when episodes are very long, and for continuing tasks, which have no episodes at all.
-- **Learning from incomplete episodes.** Some Monte Carlo methods must ignore or discount episodes on which experimental actions are taken; TD methods learn from each transition regardless of what is done afterward.
-- **Often faster.** In practice TD methods have usually been found to converge faster than constant-α Monte Carlo methods on stochastic tasks, as on the random walk; there is no general proof that one is always faster ([[mc-vs-td]]).
+- **No model.** Unlike dynamic programming, TD needs no table of rewards or transition probabilities, only the transitions themselves.
+- **Online and incremental.** Every step brings an update, and nothing about the episode has to be remembered. When episodes are very long, or never end, as in continuing tasks, that is the difference between learning and not learning.
+- **Nothing is thrown away.** Off-policy Monte Carlo can use only the part of an episode after the last exploratory action ([[off-policy-mc]]); a TD update depends on one transition, so exploration later in the episode cannot spoil it.
+- **Often faster.** On stochastic tasks such as the random walk, TD usually learns faster than constant-α Monte Carlo in experiments, though no theorem says it always must ([[mc-vs-td]]).
 
 ### Historical remarks {#history}
 

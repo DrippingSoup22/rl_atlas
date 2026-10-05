@@ -85,9 +85,9 @@ The optimistic method starts worse, because it spends the early steps working th
 
 ### Limits {#limits}
 
-Optimistic initial values are a simple trick that is quite effective on stationary problems, but they are far from a general solution to exploration.
+On a fixed testbed the trick works well. As a general answer to exploration it falls short, for four reasons.
 
-- **The drive to explore is temporary.** It is used up in the first rounds of pulls. If the values later change, nothing makes the agent explore again ([[nonstationary]]). Any method that concentrates its exploration at the beginning is likely to fail in such problems, since the beginning occurs only once.
+- **The drive to explore is temporary.** It is spent in the first rounds of pulls. If the values change later, nothing sends the agent exploring again ([[nonstationary]]): all its curiosity was front-loaded, and a run has only one start.
 - **It needs a sense of scale.** “Far above any plausible value” requires knowing what values are plausible. Too little optimism explores too little; too much wastes many pulls on arms whose estimates must first come down from the sky.
 - **It needs a constant step size**, or some way of counting the initial estimate as evidence. With sample averages the first pull of each arm erases its optimism, and the agent is only greedy.
 - **It does not keep the agent honest later.** Once the optimism has worn off, the agent is greedy, and an unlucky streak on the best arm can still leave it stuck on a worse one.
@@ -98,7 +98,7 @@ The trick is one instance of a principle that runs through the study of explorat
 
 ### Historical remarks {#history}
 
-Sutton and Barto (§2.6) present optimistic initial values as a simple trick and compare it with ε-greedy on the testbed. The principle of optimism in the face of uncertainty goes back at least to Kaelbling's interval estimation (1993), which chooses the action whose confidence interval reaches highest. R-max (Brafman & Tennenholtz, 2002) brought it to Markov decision processes with polynomial guarantees, and Szita and Lőrincz (2008) showed how far a carefully designed optimistic initialization alone can go.
+Sutton and Barto (§2.6) compare optimistic initial values with ε-greedy on the testbed. The principle of optimism in the face of uncertainty goes back at least to Kaelbling's interval estimation (1993), which chooses the action whose confidence interval reaches highest. R-max (Brafman & Tennenholtz, 2002) brought it to Markov decision processes with polynomial guarantees, and Szita and Lőrincz (2008) showed how far a carefully designed optimistic initialization alone can go.
 
 ## Card
 

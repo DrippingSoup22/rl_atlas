@@ -49,11 +49,11 @@ Improve once more, now from these values: nothing changes. When greedy improveme
 
 ### Is there a better policy? {#question}
 
-Suppose the value function $\val{v_\pi}$ of a deterministic policy $\pol{\pi}$ is known ([[policy-evaluation]]). In some state $s$, would it be better to choose an action $a \ne \pol{\pi(s)}$? One way to answer is to choose $a$ once and follow $\pol{\pi}$ afterwards. The value of doing so is the action value
+Policy evaluation says how good a policy is ([[policy-evaluation]]); the next question is how to do better. Take a deterministic policy $\pol{\pi}$ whose values $\val{v_\pi}$ have been computed, and pick a state $s$. Does some action beat $\pol{\pi(s)}$ there? A cheap test is a one-time detour: take some action $a$ in $s$, and return to $\pol{\pi}$ from the next step on. The detour is worth the action value
 
 $$\val{q_\pi(s,a)} = \sum_{s',\,r} p(s', r \mid s, a)\,\big[\,\rew{r} + \gam\,\val{v_\pi(s')}\,\big], \label{q-from-v}$$
 
-computed from $\val{v_\pi}$ and the model. If $\val{q_\pi(s,a)} > \val{v_\pi(s)}$, choosing $a$ once in $s$ and then following $\pol{\pi}$ is better than following $\pol{\pi}$ throughout. It is natural to expect that choosing $a$ *every* time $s$ is visited is better still. The policy improvement theorem says it is.
+computed from $\val{v_\pi}$ and the model. If the detour wins, $\val{q_\pi(s,a)} > \val{v_\pi(s)}$, a single pass through $a$ beats sticking with $\pol{\pi}$. Would making the detour a habit, taking $a$ *every* time $s$ comes up, help as well? Each later visit is another chance at the same gain, so one would hope so, and the policy improvement theorem confirms it, in a more general form.
 
 ### The policy improvement theorem {#theorem}
 
@@ -85,11 +85,11 @@ Suppose the greedy policy $\pol{\pi'}$ is no better than $\pol{\pi}$: $\val{v_{\
 
 $$\val{v_{\pi'}(s)} = \max_a \sum_{s',\,r} p(s', r \mid s, a)\,\big[\,\rew{r} + \gam\,\val{v_{\pi'}(s')}\,\big], \label{optimality}$$
 
-which is the Bellman optimality equation ([[optimality]]). Its only solution is $\val{v_*}$, so $\pol{\pi}$ and $\pol{\pi'}$ are both optimal. In other words, policy improvement gives a strictly better policy unless the original policy is already optimal.
+which is the Bellman optimality equation ([[optimality]]). Its only solution is $\val{v_*}$, so $\pol{\pi}$ and $\pol{\pi'}$ are both optimal. Greedy improvement therefore never stalls by accident: either the new policy is strictly better in some state, or the old one was optimal already.
 
 ### Stochastic policies {#stochastic}
 
-Everything extends to stochastic policies. The condition of the theorem becomes $\sum_a \pol{\pi'(a \mid s)}\,\val{q_\pi(s,a)} \ge \val{v_\pi(s)}$, and the proof is the same. If several actions tie for the maximum in \ref{greedy-policy}, any policy that puts all of its probability on them, split in any way, is a valid improvement. The atlas splits ties evenly, which is why some cells show two arrows. The theorem also holds within restricted classes of policies: an ε-greedy policy with respect to $\val{q_\pi}$ is at least as good as any ε-soft policy $\pol{\pi}$, which is what on-policy control methods rely on ([[mc-control]], [[sarsa]]).
+Nothing here needs the policies to be deterministic. For stochastic ones the condition of the theorem becomes $\sum_a \pol{\pi'(a \mid s)}\,\val{q_\pi(s,a)} \ge \val{v_\pi(s)}$, and the proof is the same. If several actions tie for the maximum in \ref{greedy-policy}, any policy that puts all of its probability on them, split in any way, is a valid improvement. The atlas splits ties evenly, which is why some cells show two arrows. The theorem also holds within restricted classes of policies: an ε-greedy policy with respect to $\val{q_\pi}$ is at least as good as any ε-soft policy $\pol{\pi}$, which is what on-policy control methods rely on ([[mc-control]], [[sarsa]]).
 
 ### Example: the 4 × 4 gridworld {#example}
 
