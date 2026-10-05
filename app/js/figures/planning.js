@@ -86,6 +86,29 @@
     });
   };
 
+  // ---- expected against sample updates (after Figure 8.7), worked out exactly ----
+  // A state–action pair with b equally likely successors whose values are known exactly, and an estimate that starts
+  // off by 1. An expected update fixes it with b computations; t sample updates (sample averages) leave an error of
+  // √((b − 1)/(b t)). The x axis counts computations in units of b.
+  RL.demos["expected-vs-sample"] = function (host) {
+    const B = [2, 10, 100, 1000];
+    const p = RL.fig.plot(host, {
+      label: "RMS error after expected and sample updates, against the computation spent, for several branching factors",
+      right: 130, x: { min: 0, max: 2, ticks: [0, 0.5, 1, 1.5, 2], format: (v) => (v === 1 ? "1b" : v === 2 ? "2b" : v === 0 ? "0" : `${v}b`), label: "Number of max Q(s′, a′) computations" },
+      y: { min: 0, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], label: "RMS error in the estimate", digits: 3, tickDigits: 2 },
+      curves: [{ id: "expected", name: "expected update", dash: true, marks: false }, ...B.map((b, i) => ({ id: `b${b}`, name: `sample, b = ${b}`, marks: false, light: i % 2 === 1 }))],
+      at: (x) => `${(+x).toFixed(2)} b computations`,
+    });
+    const lines = { expected: { xs: [0, 1, 1, 2], ys: [1, 1, 0, 0] } };
+    for (const b of B) {
+      const xs = [0], ys = [1];
+      for (let t = 1; t <= 2 * b; t++) { xs.push(t / b); ys.push(Math.sqrt((b - 1) / (b * t))); }
+      lines[`b${b}`] = { xs, ys };
+    }
+    p.draw(lines);
+    p.status("Worked out exactly, not simulated.");
+  };
+
   // ---- prioritized sweeping against Dyna-Q, same number of planning updates per step ----
   RL.demos["sweeping-curves"] = function (host) {
     RL.fig.average(host, {

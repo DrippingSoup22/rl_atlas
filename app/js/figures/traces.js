@@ -5,9 +5,9 @@
   const { lab } = RL;
 
   // ---- a maze drawn as a dry line figure, shared with Part 7 ----
-  // Returns { svg, cx, cy, W, H }: the grid, its walls (hatched), S and the gem, at tile size T, offset by (X, Y).
+  // Returns { svg, cx, cy, W, H }: the grid, its walls (hatched), S and the gem, at tile size T, its corner at (X, Y).
   RL.fig.maze = function (env, { T = 22, X = 6, Y = 6, id = RL.fig.uid() } = {}) {
-    const W = env.cols * T + 2 * X, H = env.rows * T + 2 * Y;
+    const W = env.cols * T + 12, H = env.rows * T + 12; // the size of the maze itself, wherever (X, Y) puts it
     const cx = (s) => X + (s % env.cols) * T + T / 2, cy = (s) => Y + Math.floor(s / env.cols) * T + T / 2;
     let svg = `<defs><pattern id="hatch-${id}" class="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5"/></pattern>
       <marker id="tip-${id}" class="tip-mark" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>`;
@@ -107,8 +107,28 @@
     draw();
   };
 
+  // ---- the trace of one state, visited at a few moments: accumulating and replacing (after Figure 12.4 and §12.5) ----
+  RL.demos["trace-shapes"] = function (host) {
+    const visits = new Set([2, 4, 5, 6, 14]), fade = 0.8, T = 24, acc = new Float64Array(T + 1), rep = new Float64Array(T + 1);
+    for (let t = 1; t <= T; t++) {
+      acc[t] = fade * acc[t - 1] + (visits.has(t) ? 1 : 0);
+      rep[t] = visits.has(t) ? 1 : fade * rep[t - 1];
+    }
+    const p = RL.fig.plot(host, {
+      label: "The eligibility trace of one state visited at steps 2, 4, 5, 6 and 14, accumulating and replacing, with γλ = 0.8",
+      h: 240, right: 120,
+      x: { min: 0, max: T, from: 0, ticks: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24], label: "Time step (the state is visited at steps 2, 4, 5, 6 and 14)" },
+      y: { min: 0, max: 2.5, ticks: [0, 0.5, 1, 1.5, 2, 2.5], label: "Trace z", digits: 2, tickDigits: 1 },
+      curves: [{ id: "acc", name: "accumulating" }, { id: "rep", name: "replacing", dash: true }],
+      at: (t) => `Step ${t}`,
+    });
+    p.draw({ acc, rep });
+    p.status("Every step the trace fades by γλ = 0.8; a visit adds 1 (accumulating) or resets it to 1 (replacing).");
+  };
+
   // ---- one episode in the maze: the moves that one-step and n-step SARSA strengthen (after Figure 7.4) ----
-  RL.demos["n-step-paths"] = function (host) {
+  // arg "lambda": the third panel shows SARSA(λ) with λ = 0.9 instead, each arrow as dark as the value it gained.
+  RL.demos["n-step-paths"] = function (host, arg) {
     const env = lab.make("dyna-maze"), params = { alpha: 0.1, epsilon: 0.1, gamma: 0.95 };
     // A seed whose first episode is short enough to read: the path is the same for every n (all values are 0 until the gem).
     let seed = 1, path = [];
@@ -116,7 +136,8 @@
       path = lab.simulate({ world: "dyna-maze", algorithm: lab.algorithms["n-step-sarsa"], params: { ...params, n: 1 }, units: 1, seed }).trail(0);
       if (path.length > 22 && path.length < 34) break;
     }
-    const panels = [{ title: "Path taken" }, { title: "One-step SARSA", n: 1 }, { title: "10-step SARSA", n: 10 }];
+    const panels = [{ title: "Path taken" }, { title: "One-step SARSA", n: 1 },
+      arg === "lambda" ? { title: "SARSA(λ), λ = 0.9", lambda: 0.9 } : { title: "10-step SARSA", n: 10 }];
     const id = RL.fig.uid(), parts = [];
     let x0 = 0, W = 0, H = 0;
     for (const panel of panels) {
@@ -124,8 +145,15 @@
       let g = m.svg + `<text class="note" x="${x0 + m.W / 2}" y="16" text-anchor="middle">${panel.title}</text>`;
       if (!panel.n) g += `<path class="route" marker-end="url(#tip-${m.id})" d="M${path.map((s) => `${m.cx(s)} ${m.cy(s)}`).join(" L")}"/>`;
       else {
-        const Q = lab.simulate({ world: "dyna-maze", algorithm: lab.algorithms["n-step-sarsa"], params: { ...params, n: panel.n }, units: 1, seed }).at(1).Q;
-        for (let s = 0; s < env.nS; s++) for (let a = 0; a < 4; a++) if (Q[s * 4 + a] > 0) g += RL.fig.mazeArrow(m, s, a);
+        const Q = panel.lambda
+          ? lab.simulate({ world: "dyna-maze", algorithm: lab.algorithms["sarsa-lambda"], params: { ...params, lambda: panel.lambda }, units: 1, seed }).at(1).Q
+          : lab.simulate({ world: "dyna-maze", algorithm: lab.algorithms["n-step-sarsa"], params: { ...params, n: panel.n }, units: 1, seed }).at(1).Q;
+        const top = Math.max(...Q);
+        for (let s = 0; s < env.nS; s++) for (let a = 0; a < 4; a++) {
+          if (Q[s * 4 + a] <= 1e-4) continue;
+          const arrow = RL.fig.mazeArrow(m, s, a);
+          g += panel.lambda ? arrow.replace("<line ", `<line style="opacity:${(0.25 + 0.75 * Math.sqrt(Q[s * 4 + a] / top)).toFixed(2)}" `) : arrow;
+        }
       }
       parts.push(g);
       x0 += m.W + 22;

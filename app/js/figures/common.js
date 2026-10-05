@@ -75,6 +75,7 @@
       for (const c of spec.curves) {
         const L = lines[c.id];
         if (!L) continue;
+        if (L.xs && !L.xs.length) { svg.querySelector(`.curve-name[data-id="${c.id}"]`).textContent = ""; continue; } // every point off the chart
         let d = "";
         if (L.xs) {
           d = L.xs.map((u, i) => `${i ? "L" : "M"}${x(u).toFixed(1)} ${y(L.ys[i]).toFixed(1)}`).join("");
