@@ -112,6 +112,12 @@
 .cartview .phase-path { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; opacity: 0.75; }
 .cartview .phase-dot { fill: var(--rew); stroke: var(--surface); stroke-width: 2; }
 .cart-thumb { display: block; width: 100%; height: auto; }
+.pendview .guide { fill: none; stroke: var(--line-2); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.pendview .goal { stroke: var(--rew); stroke-width: 2.5; stroke-linecap: round; }
+.pendview .bob { fill: var(--pol); stroke: var(--surface); stroke-width: 2; }
+.pendview .torque { fill: none; stroke: var(--val); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.pendview .band { fill: var(--pol); opacity: 0.25; }
+.pendview .bar-row .zero { stroke: var(--ink-3); stroke-width: 1; }
 .knobs .rec-note { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 52ch; }
 
 /* ---- charts ---- */

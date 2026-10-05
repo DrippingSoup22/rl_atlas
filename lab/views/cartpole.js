@@ -114,7 +114,7 @@
         e.style.opacity = (0.25 + 1.5 * Math.abs(pr - 0.5)).toFixed(2);
       }
       this.box.querySelector(".map-head span").textContent = valueMode
-        ? `color: the value of each angle and spin, from ${num(lo)} (gray) to ${num(hi)} (blue), the cart at rest in the middle; chevrons: the push it prefers`
+        ? `color: the value of each angle and spin, from ${num(lo)} (${lo < 0 ? "orange" : "gray"}) to ${num(hi)} (${hi > 0 ? "blue" : "gray"}), the cart at rest in the middle; chevrons: the push it prefers`
         : "color and chevrons: the push it prefers, paler where it is unsure; the cart at rest in the middle";
     }
 

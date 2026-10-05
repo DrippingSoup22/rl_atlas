@@ -6,3 +6,4 @@ rl_atlas.html linguist-generated
 app/content.js linguist-generated
 app/recordings.js linguist-generated
 content/recordings/*.json linguist-generated
+content/recordings/sweeps/*.json linguist-generated
