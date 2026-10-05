@@ -2889,7 +2889,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 (function (RL) {
   "use strict";
   const lab = RL.lab;
-  const steps = (p) => Math.max(1, Math.round(p.n || 1));
+  const steps = (p) => Math.max(1, Math.round(p.n ?? 4)); // 4 unless a preset says otherwise (the sandbox does not)
 
   // ---- n-step methods, prediction (V) or control (Q) ----
   // The update of time τ happens at time τ + n, once the rewards R_{τ+1} … R_{τ+n} are known; after the episode ends,
@@ -3541,7 +3541,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
         case "plan": { // planning: remembered moves replayed and learned from, in the order they were replayed
           const list = ev.list.slice(0, 60), gap = ev.ordered ? 45 : 600 / Math.max(10, list.length);
           list.forEach((u, k) => this.spark(u.s, u.a, "dream", k * gap));
-          if (line) this.pop(ev.s, `${ev.list.length} planning ${ev.list.length === 1 ? "update" : "updates"}`, "plan");
+          if (line && ev.list.length) this.pop(ev.s, `${ev.list.length} planning ${ev.list.length === 1 ? "update" : "updates"}`, "plan");
           return ev.ordered ? Math.min(900, list.length * gap) : 0;
         }
         case "world":
@@ -4124,7 +4124,11 @@ a.ref:hover { text-decoration-color: var(--ink); }
     }
 
     x(s) { const n = this.env.n; return this.W / 2 + (s - (n + 1) / 2) * this.dx; }
-    y(v) { return PT + ((this.hi - v) / (this.hi - this.lo)) * PH; }
+    // Estimates that run away (TD(λ) with too large a step can diverge) are drawn pinned just past the edge of the plot.
+    y(v) {
+      const span = this.hi - this.lo, c = Number.isFinite(v) ? Math.max(this.lo - 0.15 * span, Math.min(this.hi + 0.15 * span, v)) : this.hi + 0.15 * span;
+      return PT + ((this.hi - c) / span) * PH;
+    }
     _steps(V) {
       let d = "";
       for (let s = 1; s <= this.env.n; s++) d += `${s === 1 ? "M" : "L"}${this.x(s) - this.dx / 2} ${this.y(V[s])}H${this.x(s) + this.dx / 2}`;
@@ -4151,7 +4155,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
       for (let s = 1; s <= this.env.n; s++) {
         this.dots[s].style.transform = `translateY(${this.y(d.V[s])}px)`;
         this.nums[s].setAttribute("y", this.y(d.V[s]) - 11);
-        this.nums[s].textContent = fmt(d.V[s]);
+        this.nums[s].textContent = Math.abs(d.V[s]) < 1e3 ? fmt(d.V[s]) : d.V[s] > 0 ? "huge" : "−huge";
         line += `${s === 1 ? "M" : "L"}${this.x(s)} ${this.y(d.V[s])}`;
       }
       this.line.setAttribute("d", line);
@@ -4257,7 +4261,8 @@ a.ref:hover { text-decoration-color: var(--ink); }
     }
 
     static thumb(env, d) {
-      const n = env.n, S = 20, Hh = 52, lo = Math.min(0, env.exits.left), y = (v) => 4 + ((1 - v) / (1 - lo)) * Hh, truth = env.truth();
+      const n = env.n, S = 20, Hh = 52, lo = Math.min(0, env.exits.left), truth = env.truth();
+      const y = (v) => 4 + ((1 - (Number.isFinite(v) ? Math.max(lo - 0.2, Math.min(1.2, v)) : 1.2)) / (1 - lo)) * Hh; // runaway estimates pinned at the edge
       let g = "", line = "";
       for (let s = 1; s <= n; s++) {
         const x = (s - 0.5) * S;
@@ -4908,7 +4913,8 @@ a.ref:hover { text-decoration-color: var(--ink); }
     { tile: "H", name: "Hole", tip: "−100, and the episode ends" },
   ];
   // Grid algorithms you can pick; a race needs two of the same kind (episodes, or sweeps of the states).
-  const CHOICES = ["q-learning", "sarsa", "expected-sarsa", "double-q", "mc-control", "off-policy-mc", "value-iteration", "policy-iteration"];
+  const CHOICES = ["q-learning", "sarsa", "expected-sarsa", "double-q", "n-step-sarsa", "sarsa-lambda", "dyna-q", "dyna-q-plus", "prioritized-sweeping",
+    "mc-control", "off-policy-mc", "value-iteration", "policy-iteration"];
   const LIMITS = { rows: [3, 10], cols: [3, 14] };
 
   RL.sandbox = function (lab_) {
@@ -5124,7 +5130,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
     const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && racers.some((r) => !(k in r.params)));
     const paramsOf = (r) => ({ ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...r.params });
     const view = { seeds: false, show: {} };
-    const from = RL.app?.from?.name === "entry" ? racers.findIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
+    const from = RL.app?.from?.name === "entry" ? racers.findLastIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
     const P = { e: 0, playing: false, speed: "step", acc: 0, wait: 0, walkers: null, focus: Math.max(0, from >= 0 ? from : racers.length - 1) };
     let runs = [], stages = [], views = [], job = null, film = null, charts = [];
 
@@ -5167,7 +5173,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
               <h3>This step</h3>
               <div class="live-sym"></div>
               <div class="live-num"></div>
-              <p class="live-note faint">Play <b>line by line</b> or <b class="walk-name">step by step</b> to see every update with its numbers.</p>
+              <p class="live-note faint"></p>
             </section>
             <section class="panel card show-panel"><h3>Show</h3><div class="show-host"></div></section>
           </aside>
@@ -5233,7 +5239,9 @@ a.ref:hover { text-decoration-color: var(--ink); }
       const speeds = SPEEDS[unitOf()];
       if (!speeds.some((s) => s.id === P.speed)) P.speed = "step";
       q(".speed").innerHTML = speeds.map((s) => `<option value="${s.id}"${s.id === P.speed ? " selected" : ""}>${s.rate ? `${s.rate} ${noun()[s.rate === 1 ? 0 : 1]} / s` : s.label}</option>`).join("");
-      q(".walk-name").textContent = speeds[1].label.toLowerCase();
+      // The note is rewritten whole: stepping replaces its contents, so its parts cannot be looked up later.
+      liveNote.innerHTML = `Play <b>line by line</b> or <b>${speeds[1].label.toLowerCase()}</b> to see every update with its numbers.`;
+      liveNote.classList.add("faint");
       q(".legend").innerHTML = racers.map((r, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${esc(r.name)}</span>`).join("");
       knobPanel();
       chartsFor();

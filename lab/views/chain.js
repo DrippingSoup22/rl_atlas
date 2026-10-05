@@ -81,7 +81,11 @@
     }
 
     x(s) { const n = this.env.n; return this.W / 2 + (s - (n + 1) / 2) * this.dx; }
-    y(v) { return PT + ((this.hi - v) / (this.hi - this.lo)) * PH; }
+    // Estimates that run away (TD(λ) with too large a step can diverge) are drawn pinned just past the edge of the plot.
+    y(v) {
+      const span = this.hi - this.lo, c = Number.isFinite(v) ? Math.max(this.lo - 0.15 * span, Math.min(this.hi + 0.15 * span, v)) : this.hi + 0.15 * span;
+      return PT + ((this.hi - c) / span) * PH;
+    }
     _steps(V) {
       let d = "";
       for (let s = 1; s <= this.env.n; s++) d += `${s === 1 ? "M" : "L"}${this.x(s) - this.dx / 2} ${this.y(V[s])}H${this.x(s) + this.dx / 2}`;
@@ -108,7 +112,7 @@
       for (let s = 1; s <= this.env.n; s++) {
         this.dots[s].style.transform = `translateY(${this.y(d.V[s])}px)`;
         this.nums[s].setAttribute("y", this.y(d.V[s]) - 11);
-        this.nums[s].textContent = fmt(d.V[s]);
+        this.nums[s].textContent = Math.abs(d.V[s]) < 1e3 ? fmt(d.V[s]) : d.V[s] > 0 ? "huge" : "−huge";
         line += `${s === 1 ? "M" : "L"}${this.x(s)} ${this.y(d.V[s])}`;
       }
       this.line.setAttribute("d", line);
@@ -214,7 +218,8 @@
     }
 
     static thumb(env, d) {
-      const n = env.n, S = 20, Hh = 52, lo = Math.min(0, env.exits.left), y = (v) => 4 + ((1 - v) / (1 - lo)) * Hh, truth = env.truth();
+      const n = env.n, S = 20, Hh = 52, lo = Math.min(0, env.exits.left), truth = env.truth();
+      const y = (v) => 4 + ((1 - (Number.isFinite(v) ? Math.max(lo - 0.2, Math.min(1.2, v)) : 1.2)) / (1 - lo)) * Hh; // runaway estimates pinned at the edge
       let g = "", line = "";
       for (let s = 1; s <= n; s++) {
         const x = (s - 0.5) * S;

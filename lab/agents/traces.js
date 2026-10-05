@@ -5,7 +5,7 @@
 (function (RL) {
   "use strict";
   const lab = RL.lab;
-  const steps = (p) => Math.max(1, Math.round(p.n || 1));
+  const steps = (p) => Math.max(1, Math.round(p.n ?? 4)); // 4 unless a preset says otherwise (the sandbox does not)
 
   // ---- n-step methods, prediction (V) or control (Q) ----
   // The update of time τ happens at time τ + n, once the rewards R_{τ+1} … R_{τ+n} are known; after the episode ends,

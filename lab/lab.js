@@ -73,7 +73,7 @@
     const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && racers.some((r) => !(k in r.params)));
     const paramsOf = (r) => ({ ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...r.params });
     const view = { seeds: false, show: {} };
-    const from = RL.app?.from?.name === "entry" ? racers.findIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
+    const from = RL.app?.from?.name === "entry" ? racers.findLastIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
     const P = { e: 0, playing: false, speed: "step", acc: 0, wait: 0, walkers: null, focus: Math.max(0, from >= 0 ? from : racers.length - 1) };
     let runs = [], stages = [], views = [], job = null, film = null, charts = [];
 
@@ -116,7 +116,7 @@
               <h3>This step</h3>
               <div class="live-sym"></div>
               <div class="live-num"></div>
-              <p class="live-note faint">Play <b>line by line</b> or <b class="walk-name">step by step</b> to see every update with its numbers.</p>
+              <p class="live-note faint"></p>
             </section>
             <section class="panel card show-panel"><h3>Show</h3><div class="show-host"></div></section>
           </aside>
@@ -182,7 +182,9 @@
       const speeds = SPEEDS[unitOf()];
       if (!speeds.some((s) => s.id === P.speed)) P.speed = "step";
       q(".speed").innerHTML = speeds.map((s) => `<option value="${s.id}"${s.id === P.speed ? " selected" : ""}>${s.rate ? `${s.rate} ${noun()[s.rate === 1 ? 0 : 1]} / s` : s.label}</option>`).join("");
-      q(".walk-name").textContent = speeds[1].label.toLowerCase();
+      // The note is rewritten whole: stepping replaces its contents, so its parts cannot be looked up later.
+      liveNote.innerHTML = `Play <b>line by line</b> or <b>${speeds[1].label.toLowerCase()}</b> to see every update with its numbers.`;
+      liveNote.classList.add("faint");
       q(".legend").innerHTML = racers.map((r, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${esc(r.name)}</span>`).join("");
       knobPanel();
       chartsFor();
