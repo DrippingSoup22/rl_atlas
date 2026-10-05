@@ -133,7 +133,8 @@
       };
       if (names.every((n) => cfg.runs[n].recording)) { // trained offline: every seed's curve is in the recording
         const seeds = names.map((n) => RL.lab.recordedCurves(RL.recordings[cfg.runs[n].recording]));
-        // every seed kept its training returns, and DQN's its Q-values; anything else comes from the seed played back
+        // every seed kept its training returns (and in newer recordings its test returns), DQN's and the actor-critics'
+        // their Q-values; anything else comes from the seed played back
         const key = metric === "return" ? "train" : metric, all = names.every((n) => RL.recordings[cfg.runs[n].recording].curves.every((c) => c[key]));
         chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: all ? RL.lab.recordedCurves(RL.recordings[cfg.runs[n].recording], key).mean : runOf(n).metrics[metric] })));
         chart.playhead(first.units);

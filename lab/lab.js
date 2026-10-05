@@ -472,9 +472,9 @@
         notes: res[gi].map((x) => (c === "ok" ? `${x.wins} of ${x.runs} runs${x.stuck ? ` (${x.stuck} stuck)` : ""}` : x.scored ? `average ${sweepCharts[j].fmt(x.sum / x.scored)} over ${x.scored} runs` : "")),
       }))));
       if (recorded) { // trained offline: every value's seeds are in the sweep file
-        const d = sweepData.knobs[k];
-        d.train.forEach((curves, vi) => curves.forEach((c) => {
-          const { ok, score } = lab.success(rule, { return: Float64Array.from(c, (x) => x ?? NaN) }), x = res[0][vi];
+        const d = sweepData.knobs[k], judged = rule.metric === "test" ? d.test : d.train; // the curves the rule judges
+        judged.forEach((curves, vi) => curves.forEach((c) => {
+          const { ok, score } = lab.success(rule, { [rule.metric]: Float64Array.from(c, (x) => x ?? NaN) }), x = res[0][vi];
           x.runs++;
           if (ok) x.wins++;
           if (!Number.isNaN(score)) { x.sum += score; x.scored++; }
