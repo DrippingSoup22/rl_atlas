@@ -179,7 +179,7 @@ def run_dqn(spec: dict, seed: int, snapshots: bool) -> dict:
     obs, _ = env.reset(seed=seed)
     agent = DQN(env.observation_space.shape[0], env.action_space.n, cfg, rng, spec["steps"])
     block, blocks = spec["block"], spec["steps"] // spec["block"]
-    per_block = [[] for _ in range(blocks)]
+    per_block, qs = [[] for _ in range(blocks)], []
     shots = [snapshot_dqn(agent, world, np.random.default_rng(seed + 10_000))] if snapshots else []
     ret = 0.0
     for t in range(spec["steps"]):
@@ -193,6 +193,7 @@ def run_dqn(spec: dict, seed: int, snapshots: bool) -> dict:
             obs, _ = env.reset(seed=int(rng.integers(1 << 30)))
         if (t + 1) % block == 0:
             k = (t + 1) // block
+            qs.append(round(float(np.mean(agent.log["q"])), 2) if agent.log["q"] else None)  # every seed: overestimation shows here
             if snapshots:
                 shot = snapshot_dqn(agent, world, np.random.default_rng(seed + 10_000 + k))
                 L = agent.log
@@ -201,7 +202,7 @@ def run_dqn(spec: dict, seed: int, snapshots: bool) -> dict:
                 shots.append(shot)
             agent.log = {"loss": [], "td": [], "q": []}
     return {"seed": seed, "train": [round(float(np.mean(b)), 2) if b else None for b in per_block],
-            "episodes": [len(b) for b in per_block], "snapshots": shots}
+            "episodes": [len(b) for b in per_block], "q": qs, "snapshots": shots}
 
 
 def snapshot_pg(agent: PG, world: dict, rng: np.random.Generator) -> dict:
@@ -287,7 +288,7 @@ def record(name: str, spec: dict) -> None:
         "config": {k: v for k, v in spec["cfg"].items()},
         "steps": spec["steps"], "block": spec["block"], "seeds": seeds, "shown": shown,
         "grid": {"x": [world["x"][0], world["x"][1], world["x"][2], GRID], "y": [world["y"][0], world["y"][1], world["y"][2], GRID]},
-        "curves": [{"seed": r["seed"], "train": r["train"], "episodes": r["episodes"]} for r in results],
+        "curves": [{"seed": r["seed"], "train": r["train"], "episodes": r["episodes"], **({"q": r["q"]} if "q" in r else {})} for r in results],
         "snapshots": main["snapshots"],
     }
     OUT.mkdir(parents=True, exist_ok=True)

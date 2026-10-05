@@ -8783,9 +8783,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     // A recording keeps the training curve of every seed: the average, the thin lines and the odds come at once.
     function averageRecorded() {
-      const per = recRuns.map((r) => lab.recordedCurves(r.rec)), n = Math.min(...per.map((c) => c.seeds.length));
-      const sums = per.map((c) => ({ return: c.mean.map((v) => v * n) })), lines = per.map((c) => c.seeds.map((v) => ({ return: v })));
-      const wins = per.map((c) => (preset.success ? c.seeds.filter((v) => lab.success(preset.success, { return: v }).ok).length : 0));
+      // the training returns of every seed, and any other curve every seed kept (DQN's Q-values)
+      const keyOf = (k) => (k === "return" ? "train" : k), kept = [...new Set([...preset.charts, preset.success?.metric].filter(Boolean))].filter((k) => recRuns.every((r) => r.rec.curves.every((c) => c[keyOf(k)])));
+      const per = recRuns.map((r) => Object.fromEntries(kept.map((k) => [k, lab.recordedCurves(r.rec, keyOf(k))]))), n = Math.min(...recRuns.map((r) => r.rec.curves.length));
+      const sums = per.map((c) => Object.fromEntries(kept.map((k) => [k, c[k].mean.map((v) => v * n)])));
+      const lines = per.map((c) => Array.from({ length: n }, (_, j) => Object.fromEntries(kept.map((k) => [k, c[k].seeds[j]]))));
+      const wins = per.map((c) => (preset.success ? c[preset.success.metric].seeds.filter((v) => lab.success(preset.success, { [preset.success.metric]: v }).ok).length : 0));
       avg = { sums, lines, wins, done: n, n };
       if (knobs.runs > 1 || view.seeds) { drawCharts(avg); q(".chart-note").textContent = chartNote(n); }
       tally();

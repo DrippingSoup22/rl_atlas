@@ -54,9 +54,9 @@ deleted.
 An entry is `content/<part folder>/<id>.md`, where `<id>` is a station in `map.toml`. It starts with TOML
 front matter between `+++` lines: `summary`, `change` (what changed from the parent), `prereqs`, `lab`, `sources`,
 and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline`, `mdp`, or one of the Lab's views: `bandit`,
-`chain`, `cards`, `graph`, `line`, `car`, `star`, `corridor`, `throw`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
+`chain`, `cards`, `graph`, `line`, `car`, `star`, `corridor`, `throw`, `cartpole`, `pendulum`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
 a Lab view, and grid stories that replay dynamic programming or Monte Carlo, name their runs in a `[story.runs]`
-table (`name = { algorithm, <knobs> }`); a step then picks a run and a moment (`run`, `at`), can replay some units
+table (`name = { algorithm, <knobs> }`, or `name = { recording }` for a run trained offline); a step then picks a run and a moment (`run`, `at`), can replay some units
 (`play`, `pace`), or only the first few updates of one (`updates`), and can chart runs averaged over many seeds (`curves`,
 `metric`, and `domain` to fix the range). Grid steps can paint a batch's advantages on the move triangles (`advantages`),
 and a `[story.numbers]` table names lines of numbers that steps show under the formula (`numbers = "name"`).

@@ -3,7 +3,8 @@
 #   env        the world (lab/envs): cliff, gridworld, small-gridworld, frozen-lake, dyna-maze, blocking-maze,
 #              shortcut-maze, testbed, testbed-4, drifting, random-walk, random-walk-19, blackjack, max-bias,
 #              walk-1000, mountain-car, baird, or sandbox (the map you draw)
-#   algorithms the algorithms that race, with the shared knobs; or racers = [{ algorithm, name, <knobs of its own> }]
+#   algorithms the algorithms that race, with the shared knobs; or racers = [{ algorithm, name, <knobs of its own> }],
+#              or racers = [{ recording }] for a run trained offline (content/recordings/), played back
 #   units      how many episodes, sweeps or steps a run lasts; seed: its randomness
 #   runs       > 1: the charts average that many runs, each with its own seed
 #   charts     what to plot: return, optimal, left, error, match, greedy, delta, steps, ve, weights
@@ -11,6 +12,7 @@
 #   film       the moments the filmstrip shows (in units)
 #   success    what counts as a run that ended well, for the odds the Lab counts over many seeds: { metric, min or
 #              max, window = [first, last] units (the last tenth by default), text }; text finishes "how many …"
+#   sweep      the values the Lab's sweep tries for a knob, where the defaults do not suit the world: { q0 = [...] }
 # Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge,
 # n (n-step methods), lambda and trace ("accumulating" or "replacing"), planning and kappa (Dyna),
 # features ("groups", "tiles", "poly", "fourier", "table" or "own") with cells, tilings and order, and behavior (the
