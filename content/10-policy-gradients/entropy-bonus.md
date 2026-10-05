@@ -53,7 +53,7 @@ Around round 100 the big gem starts to win: its advantage, larger each time it i
 :::
 
 ::: step {run = "bonus", at = 200, curves = ["greedy", "bonus"], metric = "return"}
-Averaged over 20 runs: without the bonus, every run settles on the small gem, $\rew{0.30}$ per episode. With $\beta = 0.1$, every run ends at the big one, $\rew{0.91}$ per episode after 200 rounds. [Change β in the Lab](lab:entropy-gems).
+Averaged over 20 runs: without the bonus, every run settles on the small gem, $\rew{0.30}$ per episode. With $\beta = 0.1$, 18 runs go for the big one after 200 rounds and the last two get there by round 240: $\rew{0.91}$ per episode after 200 rounds. [Change β in the Lab](lab:entropy-gems).
 :::
 
 ## Textbook
@@ -107,7 +107,7 @@ The bonus \ref{eq-objective} rewards uncertainty only in the states the agent vi
 
 ### Example: two gems {#example}
 
-In a 5 × 8 grid, the start is two steps from a small gem worth 0.3 and seven steps from a big gem worth 1; either ends the episode, other steps pay nothing, and $\gam = 0.95$. With four workers, $n = 5$, $\alp^{\boldsymbol\theta} = 2$ and $\alp^{\mathbf w} = 0.3$, A2C without a bonus commits to the small gem in every one of 20 runs, within about 20 rounds; with $\beta = 0.1$, all 20 runs end at the big gem, after a long undecided phase in which the small gem's early lead is held back by the bonus.
+In a 5 × 8 grid, the start is two steps from a small gem worth 0.3 and seven steps from a big gem worth 1; either ends the episode, other steps pay nothing, and $\gam = 0.95$. With four workers, $n = 5$, $\alp^{\boldsymbol\theta} = 2$ and $\alp^{\mathbf w} = 0.3$, A2C without a bonus commits to the small gem in every one of 20 runs, within about 20 rounds; with $\beta = 0.1$, 18 of the 20 runs go for the big gem after 200 rounds, and the other two by round 240, after a long undecided phase in which the small gem's early lead is held back by the bonus.
 
 ### Historical remarks {#history}
 
