@@ -231,7 +231,7 @@
       for (let a = 0; a < nA; a++) {
         const arrow = this.arrows[s][a], [dx, dy] = DIRS[a];
         if (p[a] < 0.06) { arrow.style.opacity = 0; continue; }
-        const r0 = 6, r1 = short ? 7 + 10 * p[a] : 8 + 18 * p[a], hs = short ? 3.5 + 2 * p[a] : 4 + 2.5 * p[a];
+        const r0 = 6, r1 = short ? 6.5 + 8.5 * p[a] : 8 + 18 * p[a], hs = short ? 3.5 + 1.8 * p[a] : 4 + 2.5 * p[a];
         const bx = dx * (r1 - hs), by = dy * (r1 - hs), nx = -dy * hs * 0.85, ny = dx * hs * 0.85;
         const d = `M${dx * r0} ${dy * r0}L${dx * r1} ${dy * r1}M${bx + nx} ${by + ny}L${dx * r1} ${dy * r1}L${bx - nx} ${by - ny}`;
         arrow.halo.setAttribute("d", d);

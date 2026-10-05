@@ -276,6 +276,13 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .fig .mean-line { stroke: var(--ink); stroke-width: 1.8; }
 .fig .bar { fill: color-mix(in oklab, var(--ink) 14%, transparent); stroke: var(--ink-2); stroke-width: 1; }
 .fig-panel + .fig-panel { margin-top: 10px; }
+.fig.dp .cell { fill: transparent; }
+.fig.dp .cell.shade { fill: var(--surface-3); }
+.fig.dp .cell.hole { fill: var(--hole); }
+.fig .num.small { font-size: 12px; }
+.fig .gpi-line { stroke: var(--ink); stroke-width: 2; }
+.fig .gpi-step { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+.fig .gpi-goal { fill: var(--ink); }
 .fig .back { stroke-width: 1.3; stroke-dasharray: 3 3; }
 .fig .wipe { transform: scaleX(0); }
 .fig.on .wipe { transform: none; transition: transform 1.6s var(--ease); }
