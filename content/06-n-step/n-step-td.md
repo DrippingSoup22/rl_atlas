@@ -60,7 +60,7 @@ Bigger is not always better. With $n = 32$ almost every target is the walk's act
 
 TD(0) looks one step ahead and then bootstraps ([[td0]]); Monte Carlo looks all the way to the end of the episode and never bootstraps ([[mc-prediction]]). Neither extreme is best in general. **$n$-step TD** methods fill the space between them: the target is made of the next $n$ rewards and the estimate of the state reached after them. The two familiar methods are the end points of the family, $n = 1$ and $n = \infty$. This station is about prediction, estimating $\val{v_\pi}$ for a fixed policy $\pol{\pi}$; the control method built on the same target is [[n-step-sarsa]].
 
-Looking further ahead before bootstrapping has a second benefit, separate from the choice of target: it frees the time scale of the updates from the time step. In one-step methods the same step decides how often the agent acts and how far its updates look; a task with fast actions but slowly unfolding consequences forces a compromise. With $n$ steps, the two can be chosen separately.
+There is a second reason to want this dial. In a one-step method the length of a time step plays two roles at once: it is how often the agent acts, and it is how far each update looks. A robot arm controlled fifty times a second, whose actions matter over a few seconds, needs fast decisions but slow credit; with one-step updates, a reward takes hundreds of updates to travel back to the decision that earned it. Looking $n$ steps ahead separates the two: act as often as the task needs, and let each update reach as far as its consequences.
 
 ### The n-step return {#return}
 
@@ -93,7 +93,7 @@ $$\max_s \Big|\, \mathbb{E}_\pi\big[\rew{G_{t:t+n}} \mid S_t = s\big] - \val{v_\
 The first $n$ rewards in $\rew{G_{t:t+n}}$ are real, so their expectation agrees with that of the true return; the two differ only in what follows them. The true return continues with $\gamma^n \val{v_\pi(S_{t+n})}$ in expectation, the $n$-step return with $\gamma^n \val{V(S_{t+n})}$. Their expected difference is therefore $\gamma^n$ times an average of errors $\val{V(s')} - \val{v_\pi(s')}$, which is at most $\gamma^n$ times the largest of them.
 :::
 
-This is the same contraction that makes iterative policy evaluation converge ([[policy-evaluation]]), applied $n$ times. It is the basis of the convergence proofs for $n$-step TD in the tabular case, and it holds even for $\gamma = 1$ in the episodic case once the probability of reaching the end within $n$ steps is taken into account.
+In words: however wrong the current estimates are, the $n$-step target is wrong by at most $\gamma^n$ times as much on average, because its first $n$ rewards are real and only what comes after them is guessed. It is the contraction behind iterative policy evaluation ([[policy-evaluation]]), applied $n$ times over, and the basis of the convergence proofs for tabular $n$-step TD. With $\gamma = 1$ the factor is 1 and the bound says nothing by itself; in episodic tasks the target still improves, because every path that ends within $n$ steps contributes a real return with no guess in it.
 
 ### The algorithm {#algorithm}
 
@@ -126,7 +126,7 @@ The backup diagram of $n$-step TD: $n$ sampled steps, then the estimate of the s
 The random walk of [[td0]] with 19 nonterminal states instead of 5. The walk starts in the center state and steps left or right with equal probability; leaving on the left pays $\rew{-1}$, on the right $\rew{+1}$, and every other reward is zero. Undiscounted, the true values rise in equal steps from $-0.9$ to $+0.9$. All estimates start at 0.
 :::
 
-A larger walk shows the effect of $n$ more clearly, because news from the exits has further to travel. In one run of the first episode, the walk takes 104 steps and leaves on the right. One-step TD changes only the last state; four-step TD changes the last four, each of which had the exit within its four steps.
+Nineteen states make the effect of $n$ easy to see, because news from the exits has a long way to travel. In one run, the first walk takes 104 steps and leaves on the right. One-step TD changes one estimate, that of the last state; four-step TD changes four, the last four states visited, each of which had the exit within its four-step window. The same walk taught four times as much.
 
 ::: figure {#fig-study}
 {{n-step-study}}
@@ -147,7 +147,7 @@ The choice of $n$ trades the two sources of error discussed in [[mc-vs-td]]. A s
 
 ### Historical remarks {#history}
 
-Returns truncated after $n$ steps and corrected by an estimate appeared in Watkins's thesis (1989), which also discussed the error reduction property. Sutton (1988) had introduced TD(λ), whose forward view is an average of such returns. Cichosz (1995) studied truncated returns as an efficient way to implement TD(λ). The 19-state random walk was introduced to compare the methods of this part fairly; the larger the walk, the larger the best $n$.
+The idea of cutting a return off after $n$ steps and finishing it with an estimate is due to Watkins (1989), whose thesis also gave the error reduction argument above. It came a year after Sutton (1988) had introduced TD(λ), which, as Watkins showed, averages all such returns ([[lambda-return]]). Cichosz (1995) used truncated returns to implement TD(λ) efficiently. The 19-state random walk used here is simply the random walk of [[td0]] made longer, so that rewards have far to travel and the choice of $n$ shows.
 
 ## Card
 

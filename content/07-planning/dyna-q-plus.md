@@ -45,20 +45,20 @@ Steps per episode, averaged over 10 runs: both settle on the long way at first; 
 
 ### When the model is wrong {#idea}
 
-[[dyna-q]] trusts its model. When the environment is stochastic and few samples have been seen, or when it changes, the model is wrong, and planning then computes a policy that is optimal for the wrong world. How bad this is depends on the direction of the error.
+[[dyna-q]] plans as if its notebook were the truth. The notebook can be wrong: a random outcome seen once is taken as certain, and a world that changes leaves old entries behind. Planning then does its job perfectly, for a world that no longer exists. Whether the agent ever notices depends on which way the notebook is wrong.
 
-- **Optimistic errors correct themselves, eventually.** If the model believes in a path that no longer exists, the agent follows it, discovers the change by acting, updates the model, and replans. Finding the alternative may still take long, as the blocking maze shows below.
-- **Pessimistic errors may never be corrected.** If the environment changes for the better and the model does not know it, the current policy keeps working, and the agent has no reason to go and find out.
+- **Too rosy a notebook gets corrected.** If it promises a path that has been closed, the agent walks into the closure, the new transition overwrites the old entry, and planning recomputes. The mistake is found by acting on it. (Finding the *alternative* can still take long, as the blocking maze shows below.)
+- **Too gloomy a notebook can stay wrong forever.** If a better path opens somewhere the agent has stopped going, nothing it does will reveal it: its plans avoid that area precisely because the notebook says it is worse, and the old route still works well enough.
 
-This is the conflict between exploration and exploitation ([[explore-exploit]]) in a planning setting: to keep its model right, the agent must sometimes act in ways its model says are worse. ε-greedy exploration helps, but too slowly: the better option may require a long sequence of unlikely random moves.
+The second case is the exploration problem of [[explore-exploit]] again, with a twist: what needs exploring is not a single action but the model's knowledge of whole regions. ε-greedy exploration does not solve it in practice. Reaching a distant, abandoned part of the maze takes a long run of exploratory moves in a row, which at ε = 0.1 almost never happens.
 
 ### The exploration bonus {#bonus}
 
-**Dyna-Q+** keeps track, for every state–action pair, of the number of real time steps $\tau$ since it was last tried, and adds a bonus to the reward of that pair when it is used in planning:
+**Dyna-Q+** makes old knowledge look tempting. For every state–action pair it remembers when the pair was last tried for real, and when planning replays the pair it adds a bonus that grows with $\tau$, the number of real steps since then:
 
 $$\val{Q(s, a)} \leftarrow \val{Q(s, a)} + \alp\,\Big[\,\rew{r} + \knob{\kappa}\sqrt{\tau(s, a)} + \gam \max_{a'} \val{Q(s', a')} - \val{Q(s, a)}\,\Big], \label{eq-bonus}$$
 
-for a small constant $\kappa > 0$. The longer a move has gone untested, the more likely its model is out of date, and the more attractive it becomes. Planning spreads that attraction back along the paths that lead to it, so the agent eventually takes a real, possibly long, detour to test it. The real reward is never changed: only the imagined one.
+for a small constant $\kappa > 0$. The reasoning: a notebook entry checked a moment ago is probably still right, one not checked for ten thousand steps may well be stale, so stale entries deserve a visit. The bonus is the agent's way of being curious about them. What makes it work is that planning propagates it like any reward: the stale pair's value rises, then the values of the pairs leading to it, and so on, until the attraction reaches the agent's current position and its greedy policy sets off on a real detour, however long, to check. The real rewards are never touched; only the imagined ones carry a bonus.
 
 Two more details make the bonus effective. Planning may consider actions never tried from a visited state, modeled as leading back to the same state with reward zero, so they too collect bonuses and get tried. And the direct Q-learning update from real experience uses the real reward, so the values always come back to reality when a move is tested.
 
@@ -74,7 +74,7 @@ In each planning step on a remembered $(s, a)$ with $\rew{r}, s' \leftarrow \tex
 ### Example: the blocking maze {#blocking}
 
 ::: example {#ex-blocking} Blocking maze (Sutton & Barto, Example 8.2)
-A 6 × 9 maze with a wall across the middle and a gap at its right end. After 1000 time steps the gap moves to the left end; the path the agent has learned is blocked, and a longer one opens. The reward is $\rew{+1}$ at the goal and 0 otherwise.
+A 6 × 9 grid split by a wall with a single gap, at its right end. The agent starts below the wall and the goal is above it, in the top right corner; reaching it pays $\rew{+1}$, every other move 0. At step 1000 the wall shifts one tile: the right-hand gap closes and a gap opens at the left end, so the learned route is cut and the only way through is the long way round.
 :::
 
 ::: figure {#fig-blocking}
@@ -87,7 +87,7 @@ Both agents find the short path in the first phase, and both stall when it is bl
 ### Example: the shortcut maze {#shortcut}
 
 ::: example {#ex-shortcut} Shortcut maze (Sutton & Barto, Example 8.3)
-The same maze with the gap at the left end. After 3000 time steps a second gap opens at the right end: a shorter path, while the old one stays open.
+The same grid, but the gap starts at the left end, so the learned route is the long one. At step 3000 a second gap opens at the right end, right below the goal; the old route stays open, so nothing the agent is doing stops working.
 :::
 
 ::: figure {#fig-shortcut}

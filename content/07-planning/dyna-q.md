@@ -59,14 +59,14 @@ Averaged over 30 runs: after the first episode, which is a random search for all
 
 ### Learning, planning and acting together {#idea}
 
-An agent that learns a model from experience can use each real transition twice: directly, to improve its values, and indirectly, to improve its model, which then generates simulated experience for more updates ([[models]]). The first use is **direct reinforcement learning**; the second is **model learning** followed by **planning**. **Dyna** is an architecture that does all of these at once, continually, in the background of acting (\ref{fig-dyna}). **Dyna-Q** is its simplest instance: Q-learning for both direct learning and planning, and a table that remembers the last outcome of each state–action pair as the model.
+Every real step tells the agent two things: how good the move turned out to be, and what the move does. Model-free methods keep only the first, folded into a value, and forget the transition itself. An agent that also keeps the second can come back to it later. Each real transition then feeds two paths ([[models]]): **direct reinforcement learning** updates the values from it right away, and **model learning** writes it down so that **planning** can replay it, and every other remembered transition, as many times as there is time for. **Dyna** is the name for an agent built this way, with acting, learning, model learning and planning all running together (\ref{fig-dyna}). **Dyna-Q** is the plainest version: Q-learning is the update for both real and replayed transitions, and the model is a table holding, for each state and action tried, the reward and next state last seen.
 
 ::: figure {#fig-dyna}
 {{dyna-architecture}}
 The Dyna architecture. Real experience improves the values directly (direct RL) and the model (model learning); the model produces simulated experience, which improves the values again (planning). Acting uses the values.
 :::
 
-Direct and indirect methods each have their advantages. Indirect methods make fuller use of limited experience: one transition, replayed many times, keeps teaching as the values around it change. Direct methods are simpler and are not misled by errors in a model. Dyna gets most of both.
+Why replay a transition already learned from? Because what it teaches changes. When the agent first steps next to the goal, the value of the square it lands on is still 0, so the update teaches nothing; replayed after the goal has been found, the same transition passes the goal's value one step back, and replayed again later, further back still. Learning only from fresh experience, an agent must physically walk a path many times to push values along it; replaying lets it do the walking in its head. The price is trust: the replayed transitions are only as good as the model, while direct learning can never be misled that way. Dyna keeps both paths, so its values stay tied to real experience while planning multiplies what each experience is worth.
 
 ### The algorithm {#algorithm}
 
@@ -92,7 +92,7 @@ With $n = 0$ this is Q-learning. Each real step costs $n + 1$ updates; in exchan
 ### Example: the Dyna maze {#example}
 
 ::: example {#ex-maze} Dyna maze (Sutton & Barto, Example 8.1)
-A maze of 6 × 9 tiles with a few walls. Each episode starts at S and ends at the goal G. Every move is deterministic; moves into a wall or off the grid leave the agent in place. The reward is 0 everywhere except $\rew{+1}$ for reaching the goal; $\gamma = 0.95$, $\alpha = 0.1$, $\varepsilon = 0.1$, and all values start at 0.
+A 6 × 9 grid with seven wall tiles. The agent starts each episode at S, on the left, and the episode ends when it reaches the goal G in the top right corner. Moves are deterministic, and a move into a wall or the edge does nothing. Only reaching the goal pays, $\rew{+1}$; future reward is discounted by $\gamma = 0.95$. All values start at 0, and the agent uses $\alpha = 0.1$ and $\varepsilon = 0.1$.
 :::
 
 ::: figure {#fig-curves}
@@ -100,7 +100,7 @@ A maze of 6 × 9 tiles with a few walls. Each episode starts at S and ends at th
 Steps per episode in the Dyna maze for Dyna-Q with 0, 5 and 50 planning steps, averaged over 30 runs. The first episode, a random search of about 1000 steps for all three, is left out. Computed by the Lab. After Sutton & Barto, Figure 8.2.
 :::
 
-Without planning, the agent needs about 25 episodes to settle on a short path; with 5 planning steps, about 5; with 50, about 3 (\ref{fig-curves}). Why the difference is so large shows in the middle of the second episode (\ref{fig-midway}). Without planning, the first episode taught one value, the last move before the goal, and the second episode adds one more per step at best. With planning, the values learned at the end of the first episode are spread by imagined updates while the second episode is under way, so a policy forms back from the goal almost to the start.
+All three agents need about 1000 steps to stumble on the goal the first time; with every value at 0, they are walking at random. After that the curves separate (\ref{fig-curves}): without planning the agent needs some 25 episodes to settle on a short path, with 5 planning steps about 5, with 50 about 3. A snapshot in the middle of the second episode shows why (\ref{fig-midway}). The agent without planning learned exactly one thing from its first episode, the value of the move onto the goal, and in the second episode the good news creeps back at most one square each time the agent passes by. The planning agent has been replaying its whole first episode in the meantime, so the value of the goal has already flowed back along many of the routes it walked, and its greedy moves point the way from much of the maze.
 
 ::: figure {#fig-midway}
 {{dyna-midway}}

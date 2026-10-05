@@ -54,9 +54,9 @@ Steps per episode, averaged over 30 runs, with the same number of planning updat
 
 ### Focusing the updates {#idea}
 
-[[dyna-q]] picks the pairs it replays uniformly at random from its model. Early in learning that is wasteful: values are zero almost everywhere, and an update of a pair whose successor is still worth zero changes nothing. Only around the goal, and later along the paths leading to it, do updates have any effect. As the state space grows, the useful updates become a vanishing fraction of the random ones.
+Watch [[dyna-q]] plan early in learning and most of its effort is wasted. It replays remembered moves at random, and almost all of them lead from a square worth 0 to another square worth 0: the update computes 0 and writes 0. The only replays that teach anything are those next to the goal, and later those next to squares that have just gained a value. In a 54-square maze that is a small fraction of the replays; in a maze of a million squares it would be almost none.
 
-The useful updates are easy to locate. When the value of a state changes, the only values whose updates would now change are those of the pairs that lead *into* that state: their targets contain it. If those change, their own predecessors become useful in turn. Working **backward** from changes, a planner can focus its effort where it does some good. **Prioritized sweeping** organizes this with a priority queue: every pair whose update would change its value by more than a small threshold $\theta$ is queued, with priority equal to the size of that change, and the most urgent update is always done first.
+Yet the useful replays are easy to find, because news travels backward. A pair's target is built from the value of the state it leads to, so its update can change anything only after that state's value has changed. Whenever a value changes, then, the pairs worth updating next are the ones that lead *into* that state, and once they change, the ones that lead into theirs. **Prioritized sweeping** follows this chain with a priority queue. A pair enters the queue when its update would move its value by more than a small threshold $\theta$, ranked by how much, and planning always takes the most urgent pair first. The result looks like a wave: values spread outward from wherever something surprising happened, along every route that leads there, and stop spreading where the changes become negligible.
 
 ### The algorithm {#algorithm}
 
@@ -89,7 +89,7 @@ A pair already in the queue keeps the higher of its two priorities. The predeces
 Steps per episode in the Dyna maze for Dyna-Q and prioritized sweeping, both with 5 planning updates per real step, $\alpha = 0.5$, $\varepsilon = 0.1$ and $\gamma = 0.95$, averaged over 30 runs. The first episode is left out. Computed by the Lab.
 :::
 
-With the same number of planning updates, prioritized sweeping finds a short path in fewer episodes (\ref{fig-curves}). Measured the other way, it needs far fewer updates to reach the optimal policy: on mazes of increasing size, Sutton and Barto report a factor of 5 to 10 in favor of prioritized sweeping over Dyna-Q, growing with the size of the maze. The benefit shows most clearly with $\alpha = 1$, which suits a deterministic world: each popped pair then takes its new value in one update.
+With the same number of planning updates per step, prioritized sweeping finds a short path in fewer episodes (\ref{fig-curves}). Counting updates instead of episodes makes the gap plainer. In 20 runs in the Lab, Dyna-Q needed a median of about 10 500 updates, real and planned, before its greedy path was the shortest one, 14 steps; prioritized sweeping needed about 1100 with $\alpha = 0.5$, and about 175 with $\alpha = 1$. The step size matters here because the world is deterministic: with $\alpha = 1$ each pair taken from the queue gets its final value in a single update, while with smaller steps the same pair has to come back to the queue several times. The bigger the maze, the larger the share of Dyna-Q's random replays that change nothing, so the gap grows with the size of the problem.
 
 ### Stochastic environments {#stochastic}
 

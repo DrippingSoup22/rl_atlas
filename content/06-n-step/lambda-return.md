@@ -14,9 +14,9 @@ sources = [
 
 ### Averaging over n {#idea}
 
-Each $n$-step return is a valid target for an update ([[n-step-td]]): its expectation is closer to the true value than the estimate it bootstraps from. So is any average of them, as long as the weights are positive and add up to 1. An update toward half of a two-step return and half of a four-step return, for instance, still moves the estimate in the right direction on average. Such an average is called a **compound return**, and its backup diagram stacks the diagrams of the returns it averages.
+[[n-step-td]] leaves a question open: which $n$? The study on the random walk showed that the best one depends on the step size and on the stage of learning, and that a wrong choice costs a lot. One way out is not to choose. Every $n$-step return is a sound target, in the sense that its average error is smaller than that of the estimate it ends with, and a weighted average of sound targets is sound too, provided the weights are positive and add up to 1. A target made of two thirds of the one-step return and one third of the ten-step return, for example, leans on the short look but still hears what happened ten steps later. Mixtures like this are called **compound returns**; their backup diagram stacks the diagrams of their parts, each labeled with its weight.
 
-The **λ-return** is one particular average, chosen because it can be learned incrementally ([[td-lambda]]). It includes every $n$-step return, with weights that decay geometrically with $n$, by a factor $\lambda \in [0, 1]$ per step.
+The **λ-return** is the compound return that won out, for a practical reason: of all the possible mixtures, its geometric weights are the ones that can be learned step by step, without storing the episode ([[td-lambda]]). It uses every $n$-step return at once, each weighted $\lambda$ times less than the one before, for a single parameter $\lambda \in [0, 1]$.
 
 ### The definition {#definition}
 
@@ -99,7 +99,11 @@ Asking several advisers how a decision will turn out, from the one who looks one
 
 $$\rew{G^\lambda_t} = (1 - \lam) \sum_{n=1}^{T-t-1} \lam^{n-1}\,\rew{G_{t:t+n}} + \lam^{T-t-1}\,\rew{G_t}$$
 
-The weights add up to 1. Recursively: $\rew{G^\lambda_t} = \rew{R_{t+1}} + \gam\,[(1-\lam)\,\val{V(S_{t+1})} + \lam\,\rew{G^\lambda_{t+1}}]$.
+The weights add up to 1. The same return, one step at a time, computed backward from the end of the episode:
+
+$$\rew{G^\lambda_t} = \rew{R_{t+1}} + \gam\,\big[(1-\lam)\,\val{V(S_{t+1})} + \lam\,\rew{G^\lambda_{t+1}}\big]$$
+
+At each step: trust the estimate with weight $1 - \lambda$, or keep following what happened with weight $\lambda$.
 
 ### Weights {#weights}
 

@@ -59,11 +59,11 @@ The λ-return is a good target ([[lambda-return]]), but as defined it looks forw
 
 ### Eligibility traces {#traces}
 
-The trace is a short-term memory with one entry per state, $\htmlClass{q-trc}{z_t(s)}$, alongside the long-term memory $\val{V(s)}$. It starts at zero at the beginning of each episode. At every step, every trace fades by $\gamma\lambda$, and the trace of the state just visited grows by 1:
+Next to its table of values $\val{V(s)}$, which changes slowly and is kept for good, the agent keeps a second table of the same size, $\htmlClass{q-trc}{z_t(s)}$, which changes every step and is wiped at the start of each episode. The value table records what the agent believes; the trace table records where it has just been, and so who should share the credit or blame for whatever happens next. Each step, every entry fades by the factor $\gamma\lambda$, and the entry of the state just visited grows by 1:
 
 $$\htmlClass{q-trc}{z_t(s)} = \gam\lam\,\htmlClass{q-trc}{z_{t-1}(s)} + \mathbb{1}[S_t = s], \qquad \htmlClass{q-trc}{z_{-1}(s)} = 0. \label{eq-trace}$$
 
-These are **accumulating traces**. A state visited once $k$ steps ago has trace $(\gamma\lambda)^k$; a state visited often has the sum of the fading contributions of all its visits, possibly more than 1. The parameter λ is called the trace-decay parameter for this reason.
+These are **accumulating traces**: a state visited once, $k$ steps ago, has trace $(\gamma\lambda)^k$, and a state visited several times adds up the faded contributions of all its visits, so its trace can exceed 1. This is why λ is called the trace-decay parameter: it sets how quickly the memory of a visit fades, and with it how far back a surprise reaches.
 
 ### The algorithm {#update}
 

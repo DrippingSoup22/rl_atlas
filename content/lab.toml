@@ -232,7 +232,7 @@ gamma = 1.0
 charts = ["error"]
 measures = ["error"]
 film = [0, 1, 5, 20]
-intro = "Nineteen states between an exit that pays −1 and one that pays +1. One-step TD passes the news back one state per walk; a long n waits for many real rewards and inherits their noise. In between learns fastest."
+intro = "Nineteen states between an exit that pays −1 and one that pays +1. One-step TD passes the news back one state per walk; a long n waits for many real rewards and inherits their noise. In between learns fastest at first; later, with this step size, the steadier one-step targets catch up."
 
 [n-step-sarsa]
 title = "n-step SARSA in the maze"

@@ -15,22 +15,24 @@ sources = [
 
 ### What a model is {#idea}
 
-A **model** of the environment is anything an agent can use to predict how the environment will respond to its actions: given a state and an action, it produces a next state and a reward. Models come in two kinds.
+Everything the agent has met so far learns from the world directly: act, see what happens, update. A **model** adds a second source. It is the agent's own version of the environment, a function it can query without acting: *if I were in this state and did this, what would happen next, and what would it pay?* The world answers by happening; the model answers on demand, as often as asked, for situations the agent is not in.
 
-- A **distribution model** gives every possible next state and reward with its probability, $p(s', r \mid s, a)$. Dynamic programming needs this kind ([[policy-evaluation]]).
-- A **sample model** gives one next state and reward, drawn with the right probabilities. A simulator of a game of dice is a sample model: it is easy to roll the dice, and tedious to list every outcome with its probability.
+A model can answer in two ways, and the difference decides which algorithms can use it.
 
-A distribution model can always produce samples; a sample model can only estimate the distribution. A model may be given in advance, like the rules of a game, or **learned** from experience, by recording what happened after each action. Either way, a model lets the agent produce *simulated experience*: transitions that did not happen, but could have.
+- A **distribution model** answers with every possible outcome and its probability, the full $p(s', r \mid s, a)$. This is what dynamic programming assumed it had ([[policy-evaluation]]).
+- A **sample model** answers with one outcome, drawn with the right probabilities, like the real world does. A shuffled deck is a good picture: drawing a card is trivial, while writing down the chance of every five-card hand is a chore.
+
+Samples are easy to get from a distribution model; the reverse requires many samples and gives only an estimate. A model can be handed to the agent (the rules of chess, a physics simulator) or **learned** from experience, by remembering what followed each action. Either way it produces *simulated experience*: transitions that did not happen, but could have, and that the agent can learn from at the price of computation instead of real interaction.
 
 ### Planning {#planning}
 
-**Planning** is any computation that takes a model and produces or improves a policy. In reinforcement learning it usually means *state-space planning*: searching through states and actions for a good policy, by computing value functions as intermediate steps, and computing those values with updates applied to simulated experience. Seen this way, planning and learning are the same activity with different inputs ([[model-based-free]]):
+In this atlas, **planning** means turning a model into a better policy by computation alone, without acting. The kind of planning used here works on states and actions: it estimates value functions, as every method so far did, and computes them with the same kinds of updates, only applied to transitions the model makes up. Planning and learning then differ in a single respect, where their transitions come from ([[model-based-free]]):
 
 $$\text{model} \;\longrightarrow\; \text{simulated experience} \;\xrightarrow{\ \text{updates}\ }\; \text{values} \;\longrightarrow\; \text{policy}. \label{eq-planning}$$
 
-Learning methods use real experience; planning methods use simulated experience. Many ideas transfer between them, and any learning method can be turned into a planning method by feeding it the model's output. The simplest example turns [[q-learning]] into a planner:
+Swap the model for the real environment and the same pipeline is learning. This is a useful way to read the whole subject: almost every learning method of Parts 3 to 6 becomes a planning method by feeding it the model's output, and almost every idea about planning (which states to update, in what order, with which target) has a counterpart in learning. The simplest example takes [[q-learning]] and lets it learn from a model queried at random:
 
-::: algorithm {#alg-qplan} Random-sample one-step tabular Q-planning
+::: algorithm {#alg-qplan} Q-planning on random samples from a model
 Input: a sample model, a step size $\alp$ and a discount $\gam$
 Repeat forever:
   Pick a state $S$ and an action $A$ at random
@@ -38,7 +40,7 @@ Repeat forever:
   $\val{Q(S, A)} \leftarrow \val{Q(S, A)} + \alp\,[\rew{R} + \gam \max_a \val{Q(S', a)} - \val{Q(S, A)}]$
 :::
 
-Under the same conditions as Q-learning, this converges to the optimal values of the model. Planning in small steps like this has two advantages: it can be interrupted at any moment with a useful answer, and it mixes easily with acting and learning, which is the idea of [[dyna-q]].
+If every state–action pair keeps being picked and the step sizes shrink as Q-learning requires, the values converge to the optimal values *of the model*: as good as the model, no better. Planning in such small, independent steps has two practical advantages. It can be stopped at any moment and still leave useful values, and it can be interleaved with acting and learning, a few updates between real steps, which is exactly what [[dyna-q]] does.
 
 ### Expected and sample updates {#updates}
 
@@ -46,33 +48,33 @@ An update can **average** over all possible next states, using a distribution mo
 
 $$\val{Q(s, a)} \leftarrow \sum_{s', r} p(s', r \mid s, a)\,\Big[\rew{r} + \gam \max_{a'} \val{Q(s', a')}\Big] \qquad \text{and} \qquad \val{Q(s, a)} \leftarrow \val{Q(s, a)} + \alp\,\Big[\rew{R} + \gam \max_{a'} \val{Q(S', a')} - \val{Q(s, a)}\Big]. \label{eq-updates}$$
 
-The expected update is exact (given the successors' values) but costs as many computations as there are successors, the **branching factor** $b$. The sample update costs one computation, is noisy, and needs many samples to average the noise away. Which is better for a fixed amount of computation? If the successors' values are already right, an expected update removes the whole error after $b$ computations; $t$ sample updates with step sizes $1/t$ leave an error of $\sqrt{(b-1)/(bt)}$ of the original.
+The expected update leaves no randomness in its target, but it must look at every possible successor: its cost grows with the **branching factor** $b$, the number of next states with nonzero probability. The sample update looks at one successor, so it is $b$ times cheaper, but its target is noisy and only an average of many of them is reliable. The fair comparison is at equal computation. Take one pair whose estimate is off by 1, with $b$ equally likely successors whose values are already correct. One expected update, $b$ computations, removes the error completely. Sample updates with step sizes $1/t$ (each a running average of the targets seen) leave, after $t$ of them, an error of $\sqrt{(b-1)/(bt)}$, the usual square-root shrinking of an average of $t$ draws.
 
 ::: figure {#fig-updates}
 {{expected-vs-sample}}
 Error left in one estimate after expected and sample updates, against the number of computations, for branching factors 2, 10, 100 and 1000; the estimate starts with an error of 1 and the successors' values are exact. Worked out exactly. After Sutton & Barto, Figure 8.7.
 :::
 
-For large $b$, a small fraction of the expected update's computation already removes most of the error with samples (\ref{fig-updates}): with $b = 1000$, a tenth of the computation leaves about 10% of the error. In real problems the successors' values are themselves estimates being improved by other updates, which favors samples further: a sample update spreads computation more evenly and its values are fresher. Expected updates win when $b$ is small or computation is cheap relative to precision.
+The curves (\ref{fig-updates}) fall steeply at first and slowly after: the first few samples do most of the work. With $b = 1000$, a hundred samples, a tenth of the cost of one expected update, already leave only 10% of the error. The rest of the budget is better spent on other pairs. In a real planning problem this effect is stronger still, because the successors' values are not correct yet: an expected update spends its whole budget averaging over values that will soon change, while cheap sample updates spread the same budget over many pairs and keep the successors' values improving too. Expected updates remain the better choice when the branching factor is small, or when an exact answer matters more than speed.
 
 ### Where to spend the updates {#distribution}
 
-Dynamic programming sweeps the whole state space, giving every state the same attention. Most states may never matter: they are unreachable, or reached only by poor policies. Two ways of focusing computation follow.
+Dynamic programming sweeps every state in turn, as if all mattered equally. In a large problem most do not: a chess position with nine queens on the board can be legal and still never arise in a sensible game. Computation spent on such states is wasted, and two ideas steer it elsewhere.
 
-- **Trajectory sampling**: simulate episodes with the current policy, and update the states and actions they visit, so that the updates follow the on-policy distribution. Early in planning this focuses on the states that matter and gives faster progress; in the long run, it can neglect states whose values would still change.
-- **Real-time dynamic programming** (Barto, Bradtke & Singh, 1995) does value-iteration updates only on the states visited in real or simulated trajectories, and for many problems finds an optimal policy on the relevant states while ignoring large parts of the state space.
+- **Trajectory sampling**: instead of sweeping, imagine whole episodes with the model and the current policy, and update the states and actions along them. States then get attention in proportion to how often the current policy actually reaches them. Early on this is a large gain, since effort goes where play goes; later it can starve rarely visited states whose values are still wrong.
+- **Real-time dynamic programming** (Barto, Bradtke & Singh, 1995) applies the same idea to value iteration: full expected updates, but only on the states that real or imagined trajectories pass through. On many problems it reaches a policy that is optimal wherever it matters, without ever touching most of the state space.
 
 Within a fixed set of states, the order of the updates matters too: updates that change nothing waste computation. [[prioritized-sweeping]] works backward from the states whose values just changed.
 
 ### Planning at decision time {#decision-time}
 
-So far planning improves a table of values or a policy in the background, for all states. **Decision-time planning** instead plans for the current state only, when an action must be chosen, and usually discards the result afterward.
+The planning above runs in the background: it improves values for every state, and acting just reads them off. The opposite style waits until an action is actually needed and then thinks hard about **this state only**, usually throwing the result away once the move is made. This is **decision-time planning**, the way a chess player uses the clock.
 
 - **Heuristic search** looks ahead from the current state through a tree of possible continuations, evaluates the leaves with a value function, and backs the values up to choose an action. Deeper search compensates for an imperfect value function.
 - **Rollout algorithms** estimate each action's value by averaging the returns of many simulated episodes that start with that action and then follow a fixed rollout policy; acting greedily on those estimates improves on the rollout policy (Tesauro & Galperin, 1997).
 - **Monte Carlo tree search** grows a search tree selectively, using rollouts to evaluate new nodes and statistics in the tree to decide where to look next. It is at the heart of game-playing programs such as AlphaGo and AlphaZero ([[mcts]]).
 
-Background planning pays off when the same states recur and computation can be spread over time; decision-time planning when fast responses are not needed and the current state deserves all the computation, as in games.
+Which style fits depends on time and repetition. A robot that must react within milliseconds, or that meets the same situations again and again, gains from values prepared in advance. A game program with seconds per move, facing positions it will never see twice, gains from spending all of its effort on the one position in front of it. The strongest systems combine both: values learned in the background guide and cut short the search done at decision time.
 
 ### Historical remarks {#history}
 
