@@ -102,7 +102,7 @@
     const view = { seeds: false, show: {} };
     const from = RL.app?.from?.name === "entry" ? racers.findLastIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
     const P = { e: 0, playing: false, speed: "step", acc: 0, wait: 0, walkers: null, focus: Math.max(0, from >= 0 ? from : racers.length - 1) };
-    let runs = [], stages = [], views = [], job = null, film = null, charts = [], avg = null, sweepJob = null, sweepCharts = [];
+    let runs = [], stages = [], views = [], job = null, film = null, charts = [], avg = null, sweepJob = null, sweepCharts = [], perRun = 0, runsChosen = false;
 
     host.innerHTML = `
       <section class="lab" data-kind="${env.kind}">
@@ -253,7 +253,9 @@
     function simulate() {
       job?.cancel();
       P.walkers = null;
+      const t0 = performance.now();
       runs = racers.map((r, i) => recRuns[i] || lab.simulate({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: knobs.seed, measures: preset.measures }));
+      perRun = (performance.now() - t0) / racers.length; // how long one run takes here, for the sweep's default
       views.forEach((v, i) => { v.env = runs[i].env; }); // each view looks at its own run's world (its bandit's machines, its cards)
       scrub.max = knobs.units;
       filmstrip();
@@ -262,6 +264,7 @@
       seek(Math.min(P.e, knobs.units));
       avg = null;
       clearSweep(sweepCharts.length ? "The settings changed: run the sweep again to see the odds with them." : sweepIdle());
+      autoRuns();
       if (knobs.runs > 1 || view.seeds || preset.success) average();
     }
 
@@ -406,6 +409,7 @@
       q(".odds-card").hidden = !ks.length && !preset.success;
       q(".odds-tally").hidden = !preset.success;
       q(".sweep-bar").hidden = !ks.length;
+      q(".sweep-runs").parentElement.hidden = recorded; // a recording's seeds are fixed
       q(".sweep-knob").innerHTML = ks.map((k) => `<option value="${k}">${esc(knobOf(k).sym)} · ${esc(knobOf(k).name)}</option>`).join("");
       clearSweep(ks.length ? sweepIdle() : "");
     }
@@ -416,6 +420,13 @@
       const { wins, done, n } = avg, pct = (w) => Math.round((100 * w) / Math.max(1, done));
       q(".odds-tally").innerHTML = `Out of ${done} runs with these settings${done < n ? ` (${n - done} still to come)` : ""}, how many ${esc(preset.success.text)}: ` +
         racers.map((r, i) => `<b>${esc(r.name)}</b> ${wins[i]} (${pct(wins[i])}%)`).join(" · ") + ".";
+    }
+
+    // Unless the reader picked a number, as many runs per value as fit in about 20 seconds of computing (at least 10).
+    function autoRuns() {
+      if (runsChosen || recorded) return;
+      const values = sweepValues(q(".sweep-knob").value).length || 1;
+      q(".sweep-runs").value = String([100, 50, 20, 10].find((n) => values * racers.length * n * perRun <= 20000) || 10);
     }
 
     function clearSweep(note) {
@@ -818,6 +829,8 @@
       if (view.seeds || preset.success) average();
     });
     q(".sweep-go").addEventListener("click", sweep);
+    q(".sweep-runs").addEventListener("change", () => { runsChosen = true; });
+    q(".sweep-knob").addEventListener("change", autoRuns);
     playBtn.addEventListener("click", () => (P.playing ? pause() : play()));
     q(".step").addEventListener("click", stepOnce);
     q(".restart").addEventListener("click", () => { pause(); seek(0); });
