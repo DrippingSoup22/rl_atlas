@@ -35,7 +35,7 @@ The value error is not the final goal, a good policy is, and there are reasons t
 
 If the true values were known, the obvious learner would follow the gradient of the error on each state it visits: move the weights a little in the direction that most reduces that state's squared error,
 
-$$\mathbf w_{t+1} = \mathbf w_t - \tfrac12 \alp\, \nabla \big[\val{v_\pi(S_t)} - \val{\hat v(S_t, \mathbf w_t)}\big]^2 = \mathbf w_t + \alp\,\big[\val{v_\pi(S_t)} - \val{\hat v(S_t, \mathbf w_t)}\big]\,\nabla \val{\hat v(S_t, \mathbf w_t)}. \label{eq-sgd}$$
+$$\mathbf w_{t+1} = \mathbf w_t - \tfrac12 \alp\, \nabla \big[\val{v_\pi(S_t)} - \val{\hat v(S_t, \mathbf w_t)}\big]^2 \qquad = \mathbf w_t + \alp\,\big[\val{v_\pi(S_t)} - \val{\hat v(S_t, \mathbf w_t)}\big]\,\nabla \val{\hat v(S_t, \mathbf w_t)}. \label{eq-sgd}$$
 
 This is **stochastic gradient descent** (SGD): stochastic because each step uses one state, drawn by the agent's own experience, and so with frequency $\mu$, which is exactly why the steps descend $\overline{\text{VE}}$ on average. The step is kept small on purpose. Removing one state's error completely would undo what was learned about the states that share its weights; small steps let the errors of many states be balanced. With step sizes that shrink at the usual rate ($\sum_t \alpha_t = \infty$, $\sum_t \alpha_t^2 < \infty$, after Robbins and Monro, 1951), SGD converges to a **local minimum** of the error, which for linear methods (§\ref{linear}) is a global one. For a weighted sum of features the gradient is the feature vector, and \ref{eq-sgd} is the least-mean-square rule of Widrow and Hoff (1960), the "delta rule".
 

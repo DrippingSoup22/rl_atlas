@@ -447,7 +447,7 @@ policy = "target"
 charts = ["weights", "error"]
 measures = ["error"]
 film = [0, 100, 300, 1000]
-intro = "Every true value is 0, and nothing random can mislead the learner: rewards are always 0. Yet off-policy semi-gradient TD with these features walks its weights away to infinity. Take away any one of the three ingredients and it stays put."
+intro = "Every true value is 0, and nothing random can mislead the learner: rewards are always 0. Yet off-policy semi-gradient TD with these features walks its weights away to infinity. Take away any one of the three ingredients and the weights stay bounded."
 
 [sandbox]
 title = "Sandbox"
