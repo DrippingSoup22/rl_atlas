@@ -51,7 +51,7 @@ Round 2 is worse, not better: three of the four episodes run 860 steps or more. 
 :::
 
 ::: step {run = "free", at = 40, values = true}
-After 40 rounds, the four workers bounce between the start and the tile to its right, 500 times each way: right from the start, left from the next tile, both practically certain. The policy overfit one batch and collapsed into a loop it cannot learn its way out of.
+After 40 rounds, the four workers bounce between the start and the tile to its right, 500 times each way: right from the start, left from the next tile, both practically certain. The policy overfit one batch and collapsed into a loop it cannot learn its way out of. Not every run without the clip ends this way: over 40 seeds, 6 collapsed, against 1 with the clip. The drift behind it is the rule, though: on average the first round moves the policy 13 times further without the clip, KL 0.88 against 0.07.
 :::
 
 ::: step {run = "clip", at = 40, values = true}

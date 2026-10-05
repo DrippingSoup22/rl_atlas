@@ -60,7 +60,7 @@ Its 12th episode is long: 426 steps, 404 of them left. The updates go back over 
 :::
 
 ::: step {run = "thrown", at = 20}
-Now it steps right in every cell, and from cell 2 that leads back to cell 1: it never reaches the goal, and every episode is cut after 1000 steps. It is stuck for good. Each update is scaled by the chance of the actions *not* taken, now almost zero, so nothing moves: out there the landscape is flat.
+Now it steps right in every cell, and from cell 2 that leads back to cell 1: it never reaches the goal, and every episode is cut after 1000 steps. It is stuck for good. Each update is scaled by the chance of the actions *not* taken, now almost zero, so nothing moves: out there the landscape is flat. Such a throw is rare: over 200 runs of 1000 episodes with $\alp = 2^{-12}$, 4 ended thrown off like this, and none with $\alp = 2^{-13}$.
 :::
 
 ::: step {run = "learn", at = 1000, curves = ["a12", "a13", "a14"], metric = "steps"}

@@ -190,7 +190,7 @@ racers = [
   { algorithm = "q-learning", name = "Q-learning (α = 0.1)", alpha = 0.1 },
 ]
 units = 3000
-seed = 1
+seed = 30
 gamma = 0.99
 epsilon = 0.1
 judge = 1.0
@@ -375,7 +375,7 @@ gamma = 0.95
 planning = 5
 charts = ["steps"]
 film = [1, 2, 5, 30]
-intro = "Both may make 5 planning updates per step. Dyna-Q picks remembered moves at random, mostly ones where nothing changes; prioritized sweeping works backward from wherever a value just changed, so the news spreads from the gem along the way it came."
+intro = "Both may make 5 planning updates per step. Dyna-Q picks remembered moves at random, mostly ones where nothing changes; prioritized sweeping works backward from wherever a value just changed, so the news spreads from the gem along the way it came. It pays off right after the first success: watch episodes 2 and 3."
 success = { metric = "steps", max = 60, window = [2, 3], text = "already reach the gem in under 60 steps in episodes 2 and 3" }
 
 [walk-aggregation]
@@ -465,7 +465,7 @@ policy = "target"
 charts = ["weights", "error"]
 measures = ["error"]
 film = [0, 100, 300, 1000]
-intro = "Every true value is 0, and nothing random can mislead the learner: rewards are always 0. Yet off-policy semi-gradient TD with these features walks its weights away to infinity. Take away any one of the three ingredients and the weights stay bounded."
+intro = "Every true value is 0, and nothing random can mislead the learner: rewards are always 0. Yet off-policy semi-gradient TD with these features walks its weights away to infinity. Take away any one of the three ingredients and the weights stay bounded: with a table they drift up for a few thousand steps, then come back down."
 success = { metric = "weights", max = 100, text = "keep the size of their weights under 100" }
 
 [sandbox]

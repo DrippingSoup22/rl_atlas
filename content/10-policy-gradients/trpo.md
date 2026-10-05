@@ -52,7 +52,7 @@ The same first round with a trust region four times larger, $\delta = 0.2$. The 
 :::
 
 ::: step {run = "big", at = 20}
-But each round's four episodes are a noisy sample, and a large step trusts them too far. From round 5 on, the policy circles in the top-left corner, bumping against its walls, until each episode is cut off at 1000 steps. It never leaves: no tile there sends it right any more, the way out, and a policy can only learn from the moves it still makes.
+But each round's four episodes are a noisy sample, and a large step trusts them too far. From round 5 on, the policy circles in the top-left corner, bumping against its walls, until each episode is cut off at 1000 steps. It never leaves: no tile there sends it right any more, the way out, and a policy can only learn from the moves it still makes. Not every run is caught: over 40 seeds, 11 runs with $\delta = 0.2$ end stuck like this, against 1 with $\delta = 0.05$ and none with $\delta = 0.01$. The Lab's sweep of $\delta$ draws the whole curve.
 :::
 
 ::: step {run = "mid", at = 60, curves = ["d01", "mid", "big"], metric = "steps"}

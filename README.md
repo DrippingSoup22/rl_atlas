@@ -15,7 +15,8 @@ Each algorithm can be read three ways, in this order, and then watched:
 - **Story**: the idea. Scroll the text, and the picture follows it step by step.
 - **Textbook**: the theory, like a book chapter: definitions, derivations, theorems, figures and references.
 - **Card**: the summary: the formula, pseudocode, perks, flaws, knobs and questions on one sheet.
-- **Lab**: watch it learn, one pseudocode line at a time or 50 episodes per second.
+- **Lab**: watch it learn, one pseudocode line at a time or 50 episodes per second, and see how often its
+  settings end well over many runs, and how those odds move with each knob.
 
 Hover any colored symbol to light up every symbol of its kind; hover any underlined term for a short
 explanation. `Ctrl K` searches the whole atlas.

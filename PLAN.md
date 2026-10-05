@@ -99,12 +99,12 @@ animations and hover effects this guide relies on would not be smooth.
 - [ ] **M6 · Odds and recorded runs**: every experiment shows how often its settings succeed; the recorder; DQN, A2C,
   TRPO and PPO on CartPole and Pendulum. Mountain Car is dropped from the deep runs: with random exploration the car
   almost never reaches the flag, so a network has nothing to learn from.
-  Next, in order: (1) the odds in the Lab: a success rule per preset, a tally over many seeds and a sweep of any knob
-  (success rate against its value); (2) fixes from profiling every preset over many seeds: Frozen Lake's shown seed,
-  prioritized sweeping's chart, the deadly triad's run length, failure rates in the PPO, TRPO and REINFORCE stories;
-  (3) Mountain Car without optimism: how often the car never gets out; (4) a sweep of each deep algorithm's main knob
-  over 5 seeds before recording it, then the Lab's player, the remaining recordings and Part 9.
-  Done: the recorder (`recorder/`: NumPy networks checked against numerical gradients, DQN with switchable
+  Next, in order: (1) Mountain Car without optimism: how often the car never gets out; (2) a sweep of each deep
+  algorithm's main knob over 5 seeds before recording it, then the Lab's player, the remaining recordings and Part 9.
+  Done: the odds in the Lab (success rules on 26 presets, calibrated over 30 to 100 seeds; a tally of the runs that end
+  well; a sweep of any knob, charting the share of runs that end well and their score against its values); fixes
+  from profiling every preset over many seeds (Frozen Lake's shown seed, two intros, the odds of the failures the
+  PPO, TRPO and REINFORCE stories show); the recorder (`recorder/`: NumPy networks checked against numerical gradients, DQN with switchable
   replay, target network, double, dueling and prioritized replay; A2C, PPO and TRPO with exact Fisher-vector products),
   tuned settings (DQN balances CartPole with a squared loss and lr 5·10⁻⁴; A2C, PPO and TRPO balance it within the
   first 20–40% of their training; PPO swings Pendulum up), the first two recordings, their decoder and a CartPole view.
