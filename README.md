@@ -33,8 +33,9 @@ checks the Lab against the textbook results it teaches. After a build, `app/inde
 directly, which is handier while editing.
 
 The three generated files are committed with their sources, so build before committing. `main` is always the guide
-as it stands: work happens on one short-lived branch at a time, which is merged into `main` and then deleted (or just
-deleted, if the work is dropped).
+as it stands, and every commit on it builds with no warnings and passes the tests. Work is committed straight to
+`main` in such steps. A branch, when one is needed, is short-lived: it ends merged into `main` and deleted, or just
+deleted.
 
 ## Folders
 
