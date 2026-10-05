@@ -3,8 +3,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "dp", "run", "measures",
-  "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning"];
+const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "envs/approx", "dp", "run", "measures", "features",
+  "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear"];
 for (const file of FILES) require(`../lab/${file}.js`);
 const { lab } = globalThis.RL;
 const A = lab.algorithms;
@@ -126,6 +126,55 @@ test("Dyna-Q+ finds the shortcut that Dyna-Q never takes (Figure 8.5)", () => {
   }
 });
 
+// The 1000-state walk (Sutton & Barto, Example 9.1): gradient Monte Carlo from seed s, √VE after each episode.
+const longWalk = (id, features, params, units, seed) =>
+  lab.simulate({ world: "walk-1000", algorithm: A[id], params: { gamma: 1, ...features, ...params }, units, seed, measures: ["ve"] });
+// The weights averaged over the second half of a run, every 100 episodes: what they hover around once settled.
+const settled = (r) => {
+  const w = new Float64Array(r.at(0).w.length), marks = [];
+  for (let t = r.units / 2; t <= r.units; t += 100) marks.push(t);
+  for (const t of marks) r.at(t).w.forEach((v, i) => { w[i] += v / marks.length; });
+  return w;
+};
+
+test("1000-state walk: the true values, and gradient Monte Carlo fits each group's average (Sutton & Barto, Figure 9.1)", () => {
+  const env = lab.make("walk-1000"), V = env.truth(), mu = env.mu();
+  assert.ok(Math.abs(V[1] + 0.922) < 0.002 && Math.abs(V[1000] - 0.922) < 0.002, `v(1) = ${V[1]}, v(1000) = ${V[1000]}`);
+  for (let s = 1; s <= 1000; s++) assert.ok(Math.abs(V[s] + V[1001 - s]) < 1e-9, "the values are symmetric");
+  const w = settled(longWalk("gradient-mc", { features: "groups", cells: 10 }, { alpha: 5e-4 }, 10000, 1));
+  for (let g = 0; g < 10; g++) {
+    let num = 0, den = 0;
+    for (let s = 100 * g + 1; s <= 100 * g + 100; s++) { num += mu[s] * V[s]; den += mu[s]; }
+    assert.ok(Math.abs(w[g] - num / den) < 0.04, `group ${g + 1}: weight ${w[g]}, μ-weighted average of its true values ${num / den}`);
+  }
+});
+
+test("1000-state walk: semi-gradient TD settles nearer the middle than Monte Carlo (Figure 9.2), and better features learn faster (Figures 9.5 and 9.10)", () => {
+  const ends = (id, alpha) => { const w = settled(longWalk(id, { features: "groups", cells: 10 }, { alpha }, 10000, 2)); return [w[0], w[9]]; };
+  const [mcLeft, mcRight] = ends("gradient-mc", 5e-4), [tdLeft, tdRight] = ends("semi-gradient-td", 2e-3);
+  assert.ok(tdLeft > mcLeft + 0.05 && tdRight < mcRight - 0.05, `end groups: MC ${mcLeft}, ${mcRight}; TD ${tdLeft}, ${tdRight}`);
+  const curve = (features, alpha) => lab.mean([1, 2, 3].map((seed) => lab.mean(longWalk("gradient-mc", features, { alpha }, 2000, seed).metrics.ve)));
+  const fourier = curve({ features: "fourier", order: 5 }, 5e-5), poly = curve({ features: "poly", order: 5 }, 1e-4);
+  assert.ok(fourier < poly, `average √VE: Fourier ${fourier}, polynomials ${poly}`);
+  const tiles = curve({ features: "tiles", tilings: 50, cells: 5 }, 1e-4 / 50), one = curve({ features: "groups", cells: 5 }, 1e-4);
+  assert.ok(tiles < one, `average √VE: 50 tilings ${tiles}, one tiling ${one}`);
+});
+
+test("Mountain Car: semi-gradient SARSA with tile coding learns to get up the hill (Sutton & Barto, Figure 10.2)", () => {
+  for (const seed of [1, 2, 3]) {
+    const r = lab.simulate({ world: "mountain-car", algorithm: A["semi-gradient-sarsa"], params: { gamma: 1, epsilon: 0, alpha: 0.5 / 8, features: "tiles", tilings: 8, cells: 8 }, units: 300, seed });
+    const first = r.metrics.steps[0], last = lab.mean(r.metrics.steps, 250);
+    assert.ok(first > 400 && last < 200, `seed ${seed}: first episode ${first} steps, last 50 ${last}`);
+  }
+});
+
+test("Baird's counterexample: off-policy semi-gradient TD diverges; without approximation or off-policy it does not (Figure 11.2)", () => {
+  const size = (params) => lab.simulate({ world: "baird", algorithm: A["semi-gradient-td"], params: { gamma: 0.99, alpha: 0.01, policy: "target", ...params }, units: 1000, seed: 1 }).metrics.weights[999];
+  assert.ok(size({ features: "own", behavior: "behavior" }) > 100);
+  assert.ok(size({ features: "table", behavior: "behavior" }) < 30);
+  assert.ok(size({ features: "own" }) < 11);
+});
+
 test("replaying a unit reproduces the run exactly, for every algorithm", () => {
   const cases = [
     ["cliff", "sarsa", cliff, 60], ["cliff", "q-learning", cliff, 60], ["cliff", "expected-sarsa", cliff, 60],
@@ -140,6 +189,10 @@ test("replaying a unit reproduces the run exactly, for every algorithm", () => {
     ["dyna-maze", "dyna-q", { alpha: 0.1, epsilon: 0.1, gamma: 0.95, planning: 5 }, 20],
     ["shortcut-maze", "dyna-q-plus", { alpha: 1, epsilon: 0.1, gamma: 0.95, planning: 10, kappa: 1e-3 }, 300],
     ["dyna-maze", "prioritized-sweeping", { alpha: 0.5, epsilon: 0.1, gamma: 0.95, planning: 5 }, 20],
+    ["walk-1000", "gradient-mc", { alpha: 2e-4, gamma: 1, features: "tiles", tilings: 5, cells: 5 }, 30],
+    ["walk-1000", "semi-gradient-td", { alpha: 2e-3, gamma: 1, features: "groups", cells: 20, n: 4 }, 30],
+    ["mountain-car", "semi-gradient-sarsa", { alpha: 0.06, epsilon: 0, gamma: 1, features: "tiles", tilings: 8, cells: 8 }, 20],
+    ["baird", "semi-gradient-td", { alpha: 0.01, gamma: 0.99, features: "own", policy: "target", behavior: "behavior" }, 200],
   ];
   const flat = (m) => Object.values(m).flatMap((x) => Array.from(x));
   for (const [world, id, params, units] of cases) {

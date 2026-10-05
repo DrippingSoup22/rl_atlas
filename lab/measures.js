@@ -31,6 +31,17 @@
       const truth = lab.truth(env, p);
       return (d, stats) => { stats.error = lab.rms(d.V, truth, env); };
     },
+    // √VE: the root of the value error, each state's squared error weighted by the share of time spent there (μ), the
+    // objective linear methods minimize. (Without μ, every state counts the same.)
+    ve(env, p) {
+      const truth = lab.truth(env, p), mu = env.mu ? env.mu() : null;
+      return (d, stats) => {
+        if (!mu) { stats.ve = lab.rms(d.V, truth, env); return; }
+        let sum = 0;
+        for (let s = 0; s < env.nS; s++) if (mu[s]) sum += mu[s] * (d.V[s] - truth[s]) ** 2;
+        stats.ve = Math.sqrt(sum);
+      };
+    },
     // Root-mean-square distance of the state values from the optimal values v*.
     "optimal-error"(env, p) {
       const best = lab.optimalValues(env, p);

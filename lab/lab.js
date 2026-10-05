@@ -49,6 +49,8 @@
     "optimal-error": { title: () => "Distance from the optimal values (RMS)", log: true },
     match: { title: () => "States where the greedy action is optimal", percent: true },
     greedy: { title: (n, env) => (env.ice ? "Chance the greedy policy reaches the gem" : "Return of the greedy policy"), percent: true },
+    ve: { title: () => "Value error √VE, weighted by time spent in each state", zero: true },
+    weights: { title: () => "Size of the weights ‖w‖", log: true },
   };
   const LADDER = [10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
   const signed = (v, d = 2) => (v < 0 ? "−" : v > 0 ? "+" : "") + Math.abs(v).toFixed(d);

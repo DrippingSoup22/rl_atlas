@@ -35,8 +35,8 @@ REQUIRED = {
 FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story"}
 # The keys of a Lab preset (content/lab.toml); any other key is a knob, and what its charts may plot.
 PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro"}
-CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy"}
-MEASURES = {"error", "optimal-error", "match", "greedy"}
+CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights"}
+MEASURES = {"error", "optimal-error", "match", "greedy", "ve"}
 # Stations the math macros of app/js/math.js link to.
 MACRO_TERMS = ("step-size", "discount", "epsilon-greedy", "lambda-return", "td-error")
 # What the Textbook numbers, and how a \ref{label} to each one reads.
