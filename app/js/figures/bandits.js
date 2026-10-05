@@ -38,7 +38,7 @@
     const p = RL.fig.plot(host, {
       label: "The sample average of an arm's rewards, in three runs",
       x: { max: n, log: true, ticks: [1, 10, 100, 1000], label: "Number of rewards averaged, n" },
-      y: { min: -1, max: 3, ticks: [-1, 0, 1, 2, 3], label: "Estimate Q", digits: 1 },
+      y: { min: -1, max: 3, ticks: [-1, 0, 1, 2, 3], label: "Estimate Q", digits: 1, tickDigits: 0 },
       curves: [
         { id: "a", name: "run 1" }, { id: "b", name: "run 2", dash: true }, { id: "c", name: "run 3", dash: "dotted" },
         { id: "up", name: "q* + 1/√n", light: true }, { id: "down", name: "q* − 1/√n", light: true },
@@ -66,7 +66,7 @@
     const p = RL.fig.plot(host, {
       label: "The weight of each of 20 rewards in the estimate, for three step sizes",
       x: { min: 1, max: n, ticks: [1, 5, 10, 15, 20], label: "Reward number i (20 is the latest)" },
-      y: { min: 0, max: 0.5, ticks: [0, 0.1, 0.2, 0.3, 0.4, 0.5], label: "Weight of reward i", digits: 2 },
+      y: { min: 0, max: 0.5, ticks: [0, 0.1, 0.2, 0.3, 0.4, 0.5], label: "Weight of reward i", digits: 2, tickDigits: 1 },
       curves: [{ id: "avg", name: "α = 1/n" }, { id: "a1", name: "α = 0.1", dash: true }, { id: "a5", name: "α = 0.5", dash: "dotted" }],
       at: (i) => `Reward ${i} of 20`,
     });
@@ -98,7 +98,7 @@
       const p = RL.fig.plot(box, {
         label: title, h: 240,
         x: { min: 1, max: n, ticks: [1, 250, 500, 750, 1000], label: `Rewards · ${title.toLowerCase()}` },
-        y: { min: -1, max: 3, ticks: [-1, 0, 1, 2, 3], label: "Estimate Q", digits: 1 },
+        y: { min: -1, max: 3, ticks: [-1, 0, 1, 2, 3], label: "Estimate Q", digits: 1, tickDigits: 0 },
         curves: [{ id: "truth", name: "true mean q*", light: true }, { id: "avg", name: "α = 1/n" }, { id: "a1", name: "α = 0.1", dash: true }],
         at: (k) => `After ${k} ${k === 1 ? "reward" : "rewards"}`,
       });
@@ -194,7 +194,7 @@
       label: "Average reward over the first 1000 steps for each bandit method and setting of its knob",
       right: 168,
       x: { min: 1 / 128, max: 4, log2: true, ticks: powers(-7, 2), format: fraction, label: "ε, α, c or Q₁ (each method's own knob)" },
-      y: { min: 0.7, max: 1.55, ticks: [0.8, 1, 1.2, 1.4], label: "Average reward, steps 1–1000", digits: 2 },
+      y: { min: 0.7, max: 1.55, ticks: [0.8, 1, 1.2, 1.4], label: "Average reward, steps 1–1000", digits: 2, tickDigits: 1 },
       curves: STUDY.map((s) => ({ id: s.id, name: s.name, dash: s.dash, light: s.light })),
       at: (v) => `Knob = ${fraction(v)}`,
     });

@@ -42,7 +42,7 @@ It goes up and pays $\rew{-1}$.
 :::
 
 ::: step {q = "zero", agent = [2, 0], glow = [2, 0, "best"]}
-Here is the difference. SARSA would now commit to its next move and use that one. Q-learning instead **looks at the best move available from the new tile**, the largest of its four numbers, whether or not it will actually take it. All four are 0 here, so they are all "best".
+Here is the difference. SARSA would now commit to its next move and use that one. Q-learning instead **looks at the best move available from the new tile**, the largest of its four numbers, whether or not it will actually take it. All four are 0 here, so they are all “best”.
 :::
 
 ::: step {q = "zero", agent = [2, 0], formula = 5}
@@ -288,7 +288,7 @@ Not necessarily. It acts with ε-greedy, so sometimes it takes a random move. Th
 ::: question
 Why is Q-learning called off-policy?
 ---
-It learns about one policy (the greedy one) while following another (ε-greedy). The policy it learns about is "off" the policy it uses.
+It learns about one policy (the greedy one) while following another (ε-greedy). The policy it learns about is “off” the policy it uses.
 :::
 
 ::: question

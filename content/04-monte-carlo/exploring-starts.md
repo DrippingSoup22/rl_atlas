@@ -181,7 +181,7 @@ Repeat for each episode:
 ### Pitfalls
 
 - Starting episodes from a fixed state: then exploring starts are not exploring anything.
-- Breaking ties toward one action: early on all values tie, and the "greedy" policy becomes systematic.
+- Breaking ties toward one action: early on all values tie, and the “greedy” policy becomes systematic.
 - Applying it to real interaction, where the starting state and action cannot be chosen.
 
 ### Check yourself {#check}

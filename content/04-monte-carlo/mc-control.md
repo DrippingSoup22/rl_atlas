@@ -193,7 +193,7 @@ Repeat for each episode:
 ### Check yourself {#check}
 
 ::: question
-What does "ε-soft" mean, and why does the policy have to be ε-soft?
+What does “ε-soft” mean, and why does the policy have to be ε-soft?
 ---
 Every action has probability at least $\eps / |\mathcal{A}|$. Without that, actions that look bad would never be tried, and without exploring starts their values could never be corrected.
 :::

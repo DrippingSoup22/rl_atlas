@@ -175,7 +175,7 @@
       label: "Mean squared error of ordinary and weighted importance sampling, estimating one Blackjack state",
       right: 150,
       x: { max: episodes, log: true, ticks: [1, 10, 100, 1000, 10000], label: "Episodes (log scale)" },
-      y: { min: 0, max: 9, ticks: [0, 2, 4, 6, 8], label: "Mean squared error", digits: 2 },
+      y: { min: 0, max: 9, ticks: [0, 2, 4, 6, 8], label: "Mean squared error", digits: 2, tickDigits: 0 },
       curves: [{ id: "ord", name: "ordinary" }, { id: "wei", name: "weighted", dash: true }],
       at: (k) => `After ${k.toLocaleString("en")} episodes`,
     });
@@ -225,7 +225,7 @@
       label: "Ten runs of ordinary importance sampling whose estimates have infinite variance",
       right: 40,
       x: { max: episodes, log: true, ticks: [1, 10, 100, 1000, 10000, 100000, 1000000], label: "Episodes (log scale)", format: (u) => (u >= 1000 ? `10${"⁰¹²³⁴⁵⁶"[Math.round(Math.log10(u))]}` : String(u)) },
-      y: { min: 0, max: 3, ticks: [0, 1, 2, 3], label: "Estimate of v(s)", digits: 2 },
+      y: { min: 0, max: 3, ticks: [0, 1, 2, 3], label: "Estimate of v(s)", digits: 2, tickDigits: 0 },
       curves: Array.from({ length: runs }, (_, i) => ({ id: `r${i}`, name: "", light: i > 0, marks: false })),
       refs: [{ value: 1, label: "true value 1" }],
       at: (k) => `After ${k.toLocaleString("en")} episodes`,

@@ -21,7 +21,7 @@ with $S_T$ terminal. Nothing happens after $S_T$: its value is zero by definitio
 
 ### Continuing tasks {#continuing}
 
-Other problems never end: a thermostat keeps regulating, a process-control system keeps running, a trading agent keeps trading. These **continuing** tasks have $T = \infty$. They raise a difficulty that episodic tasks do not: the total reward over an infinite future can be infinite, so "maximize the total" is no longer a well-defined goal. Discounting solves this ([[discount]]); an alternative, the average reward per step, is used in some continuing problems.
+Other problems never end: a thermostat keeps regulating, a process-control system keeps running, a trading agent keeps trading. These **continuing** tasks have $T = \infty$. They raise a difficulty that episodic tasks do not: the total reward over an infinite future can be infinite, so “maximize the total” is no longer a well-defined goal. Discounting solves this ([[discount]]); an alternative, the average reward per step, is used in some continuing problems.
 
 ### One notation for both {#unified}
 

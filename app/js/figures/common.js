@@ -42,15 +42,17 @@
     const yv = Y.log ? (v) => (Math.log10(Y.max) - Math.log10(Math.max(Y.min, v))) / (Math.log10(Y.max) - Math.log10(Y.min)) : (v) => (Y.max - Math.min(Y.max, Math.max(Y.min, v))) / (Y.max - Y.min);
     const y = (v) => M.t + yv(v) * ph;
     const fy = Y.percent ? (v) => `${Math.round(v * 100)}%` : (v) => num(v, Y.digits);
+    const fyTick = Y.tickDigits != null ? (v) => num(v, Y.tickDigits) : fy; // ticks may be rounder than read-outs
     const svg = el("svg", { class: "fig plot", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": spec.label || "" });
     let g = "";
-    for (const v of Y.ticks) g += `<line class="gridline" x1="${M.l}" x2="${M.l + pw}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${M.l - 8}" y="${y(v) + 4}" text-anchor="end">${fy(v)}</text>`;
+    for (const v of Y.ticks) g += `<line class="gridline" x1="${M.l}" x2="${M.l + pw}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${M.l - 8}" y="${y(v) + 4}" text-anchor="end">${fyTick(v)}</text>`;
     for (const u of X.ticks) g += `<text class="tick" x="${x(u)}" y="${M.t + ph + 20}" text-anchor="middle">${fx(u)}</text>`;
-    for (const r of spec.refs || []) g += `<line class="ref-line" x1="${M.l}" x2="${M.l + pw}" y1="${y(r.value)}" y2="${y(r.value)}"/><text class="note" x="${M.l + pw - 4}" y="${y(r.value) - 6}" text-anchor="end">${r.label}</text>`;
+    // a reference label sits at the right end of its line, or from x = r.at when the curves crowd the right
+    for (const r of spec.refs || []) g += `<line class="ref-line" x1="${M.l}" x2="${M.l + pw}" y1="${y(r.value)}" y2="${y(r.value)}"/><text class="note" x="${r.at != null ? x(r.at) + 4 : M.l + pw - 4}" y="${y(r.value) - 6}" text-anchor="${r.at != null ? "start" : "end"}">${r.label}</text>`;
     g += `<line class="axis" x1="${M.l}" x2="${M.l + pw}" y1="${M.t + ph}" y2="${M.t + ph}"/><line class="axis" x1="${M.l}" x2="${M.l}" y1="${M.t}" y2="${M.t + ph}"/>
       <text class="axis-name" x="${M.l + pw / 2}" y="${H - 6}" text-anchor="middle">${X.label}</text>
       <text class="axis-name" transform="translate(16 ${M.t + ph / 2}) rotate(-90)" text-anchor="middle">${Y.label}</text>`;
-    g += spec.curves.map((c) => `<path class="curve${c.dash ? ` ${c.dash === true ? "dashed" : c.dash}` : ""}${c.light ? " light" : ""}" data-id="${c.id}"/><g class="pts${c.light ? " light" : ""}" data-id="${c.id}"></g><text class="curve-name" data-id="${c.id}" x="${M.l + pw + 8}">${c.name}</text>`).join("");
+    g += spec.curves.map((c) => `<path class="curve${c.dash ? ` ${c.dash === true ? "dashed" : c.dash}` : ""}${c.light ? " light" : ""}" data-id="${c.id}"/><g class="pts${c.light ? " light" : ""}" data-id="${c.id}"></g><text class="curve-name" data-id="${c.id}" x="${M.l + pw + 8}">${c.name}</text><path class="leader" data-id="${c.id}"/>`).join("");
     g += `<line class="cross" y1="${M.t}" y2="${M.t + ph}"/><rect class="hit" x="${M.l}" y="${M.t}" width="${pw}" height="${ph}"/>`;
     svg.innerHTML = g;
     host.replaceChildren(svg);
@@ -88,7 +90,7 @@
               d += `${d ? "L" : "M"}${x(from + i + (k - 1) / 2).toFixed(1)} ${y(sum / k).toFixed(1)}`;
             }
           }
-          ends.push({ id: c.id, y: y(L[n - 1]) + 4 });
+          ends.push({ id: c.id, y: y(L[n - 1]) + 4, y0: y(L[n - 1]) });
         }
         svg.querySelector(`.curve[data-id="${c.id}"]`).setAttribute("d", d);
       }
@@ -108,6 +110,9 @@
         const name = svg.querySelector(`.curve-name[data-id="${e.id}"]`);
         name.setAttribute("y", e.y);
         if (e.x) name.setAttribute("x", e.x);
+        // a name nudged away from its curve's end gets a short leader back to it
+        const far = e.y0 != null && Math.abs(e.y - 4 - e.y0) > 6;
+        svg.querySelector(`.leader[data-id="${e.id}"]`).setAttribute("d", far ? `M${M.l + pw + 1} ${e.y0.toFixed(1)}L${M.l + pw + 6} ${(e.y - 4.5).toFixed(1)}` : "");
       }
     }
 

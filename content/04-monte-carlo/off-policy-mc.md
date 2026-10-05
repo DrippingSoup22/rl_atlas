@@ -53,7 +53,7 @@ Averaged over 10 runs, learning from random play is slower than Monte Carlo ES, 
 
 ### Two policies {#two}
 
-All learning control methods face a dilemma: they seek to learn action values conditional on subsequent *optimal* behavior, but they need to behave non-optimally in order to explore all actions ([[explore-exploit]]). The on-policy approach compromises: it learns values not for the optimal policy but for a near-optimal policy that still explores ([[mc-control]]). A more straightforward approach uses two policies: one that is learned about and becomes the optimal policy, the **target policy** $\pol{\pi}$, and one that is more exploratory and generates behavior, the **behavior policy** $\pol{b}$. Learning is then from data "off" the target policy, and the overall process is called **off-policy** learning ([[on-off-policy]]).
+All learning control methods face a dilemma: they seek to learn action values conditional on subsequent *optimal* behavior, but they need to behave non-optimally in order to explore all actions ([[explore-exploit]]). The on-policy approach compromises: it learns values not for the optimal policy but for a near-optimal policy that still explores ([[mc-control]]). A more straightforward approach uses two policies: one that is learned about and becomes the optimal policy, the **target policy** $\pol{\pi}$, and one that is more exploratory and generates behavior, the **behavior policy** $\pol{b}$. Learning is then from data “off” the target policy, and the overall process is called **off-policy** learning ([[on-off-policy]]).
 
 To use episodes from $\pol{b}$ to estimate values for $\pol{\pi}$, every action taken under $\pol{\pi}$ must be taken, at least occasionally, under $\pol{b}$: $\pol{\pi(a \mid s)} > 0$ implies $\pol{b(a \mid s)} > 0$. This is the assumption of **coverage**. The behavior policy must be stochastic in states where it differs from the target policy; the target policy may be deterministic, and in control it typically is: greedy with respect to the current action values.
 
@@ -184,7 +184,7 @@ Repeat for each episode:
 
 ### Pitfalls
 
-- Breaking ties at random in the greedy policy: the test "was this the greedy action?" then flips at random.
+- Breaking ties at random in the greedy policy: the test “was this the greedy action?” then flips at random.
 - Forgetting that the last action needs no ratio: its return is used with weight 1.
 - A behavior policy that never takes some action the target might: coverage fails, and those values are never learned.
 

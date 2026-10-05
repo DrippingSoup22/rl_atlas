@@ -47,7 +47,7 @@ The first row is the main attraction of models: real experience is often expensi
 
 ### A spectrum, not a split {#spectrum}
 
-The two families shade into each other. Experience replay, as in [[dqn]], keeps past transitions and learns from them again: a memory that acts like a sample model, but one that can only replay what has already happened. Dyna combines direct learning with planning, and decision-time planning such as tree search can be added on top of almost any learned value function. The question is less "with or without a model" than how much of the agent's computation goes into predicting the world and how much into predicting value.
+The two families shade into each other. Experience replay, as in [[dqn]], keeps past transitions and learns from them again: a memory that acts like a sample model, but one that can only replay what has already happened. Dyna combines direct learning with planning, and decision-time planning such as tree search can be added on top of almost any learned value function. The question is less “with or without a model” than how much of the agent's computation goes into predicting the world and how much into predicting value.
 
 ## Card
 

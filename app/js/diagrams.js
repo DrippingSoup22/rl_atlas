@@ -45,6 +45,18 @@
       { kind: "state", label: "S′", edge: "R" },
       { kind: "action", label: "every a", fan: 3, max: true },
     ],
+    // Expected SARSA: every next action, each weighted by the policy's probability of taking it (no max).
+    "expected-sarsa": [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "every a,\nweighted by π", fan: 3, edge: "π" },
+    ],
+    // Double Q-learning: one table picks the best next action, the other says what it is worth.
+    "double-q": [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "best by Q₁,\nvalued by Q₂", fan: 3, max: true },
+    ],
     "v-pi": [
       { kind: "state", label: "s" },
       { kind: "action", label: "a", fan: 3, edge: "π" },
@@ -76,7 +88,8 @@
     const counts = [];
     levels.forEach((lv, k) => counts.push((counts[k - 1] || 1) * (k ? lv.fan || 1 : 1)));
     const last = counts[counts.length - 1], spread = last > 3 ? 34 : 56, gap = diagram.gap || 80, top = 22;
-    const W = Math.max(240, (last - 1) * spread + 150), cx = (W - 70) / 2;
+    let W = Math.max(240, (last - 1) * spread + 150);
+    const cx = (W - 70) / 2;
     const xs = levels.map(() => []);
     xs[levels.length - 1] = Array.from({ length: last }, (_, i) => cx + (i - (last - 1) / 2) * spread);
     for (let k = levels.length - 2; k >= 0; k--) {
@@ -84,6 +97,9 @@
       xs[k] = Array.from({ length: counts[k] }, (_, i) => xs[k + 1].slice(i * fan, (i + 1) * fan).reduce((a, b) => a + b, 0) / fan);
     }
     const H = top + gap * (levels.length - 1) + 24;
+    // Labels sit right of each row's last node, a line per "\n"; widen the drawing to fit the longest.
+    const labelX = (lv, k) => xs[k][xs[k].length - 1] + (lv.kind === "action" ? 14 : 20);
+    levels.forEach((lv, k) => { if (lv.label) W = Math.max(W, labelX(lv, k) + 7.6 * Math.max(...lv.label.split("\n").map((t) => t.length)) + 6); });
     let svg = `<svg class="backup" viewBox="0 0 ${W} ${H}" role="img" aria-label="Backup diagram">`, d = 0;
     levels.forEach((lv, k) => {
       const y = top + k * gap;
@@ -114,7 +130,10 @@
         else if (lv.kind === "more") svg += `<g class="node more" style="--d:${d}">${[-9, 0, 9].map((dy) => `<circle cx="${x}" cy="${y + dy}" r="2"/>`).join("")}</g>`;
         else svg += `<circle class="node action" style="--d:${d}" cx="${x}" cy="${y}" r="6.5"/>`;
       }
-      if (lv.label) svg += `<text class="node-label" x="${xs[k][xs[k].length - 1] + (lv.kind === "action" ? 14 : 20)}" y="${y + 5}">${lv.label}</text>`;
+      if (lv.label) {
+        const rows = lv.label.split("\n"), lx = labelX(lv, k);
+        svg += `<text class="node-label" x="${lx}" y="${y + 5 - 7.5 * (rows.length - 1)}">${rows.map((t, i) => `<tspan x="${lx}"${i ? ' dy="15"' : ""}>${t}</tspan>`).join("")}</text>`;
+      }
       d += 1;
     });
     host.innerHTML = `${svg}</svg>`;

@@ -53,7 +53,7 @@ One last look. Everything after the first reward is itself a return, one step la
 
 ### The return {#definition}
 
-The agent's goal, informally, is to collect as much reward as possible over time. The **return** makes "over time" precise. In an episodic task that ends at time $T$ ([[episodes]]), the return from time $t$ is the sum of the rewards that follow:
+The agent's goal, informally, is to collect as much reward as possible over time. The **return** makes “over time” precise. In an episodic task that ends at time $T$ ([[episodes]]), the return from time $t$ is the sum of the rewards that follow:
 
 $$\rew{G_t} = \rew{R_{t+1}} + \rew{R_{t+2}} + \rew{R_{t+3}} + \cdots + \rew{R_T}. \label{episodic}$$
 

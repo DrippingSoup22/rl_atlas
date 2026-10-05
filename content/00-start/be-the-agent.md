@@ -24,8 +24,8 @@ Before any theory, be an agent yourself. You are somewhere, shown only as a symb
 | ten presses | an **episode** ([[episodes]]) |
 | the sum of the numbers | the **return** ([[return]]) |
 | your rule for pressing | your **policy** ([[policy]]) |
-| your sense that a room was "good" | its **value** ([[value-functions]]) |
-| trying the other button "to see" | **exploration** ([[explore-exploit]]) |
+| your sense that a room was “good” | its **value** ([[value-functions]]) |
+| trying the other button “to see” | **exploration** ([[explore-exploit]]) |
 
 ### What made it hard {#hard}
 
