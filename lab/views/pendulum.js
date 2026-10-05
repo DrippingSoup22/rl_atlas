@@ -173,7 +173,7 @@
     }
 
     pop(text) {
-      const t = el("text", { class: "pop", x: W / 2, y: 40, "text-anchor": "middle" }, this.gFx);
+      const t = el("text", { class: "pop", x: CX, y: CY + R + 21, "text-anchor": "middle" }, this.gFx); // under the swing, clear of the labels
       t.textContent = text;
       t.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0, transform: "translateY(-12px)" }], { duration: 1400, easing: "ease-out" }).onfinish = () => t.remove();
     }

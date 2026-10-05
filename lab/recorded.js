@@ -32,10 +32,19 @@
     const n = rec.grid.x[3] * rec.grid.y[3], t = snap.test, dims = t.s.map(lab.unpack), steps = t.steps;
     // the numbers of each step: one packed column each (older recordings packed them all together, step by step)
     const cols = Array.isArray(t.x) ? t.x.map(lab.unpack) : null, width = cols ? cols.length : lab.unpack(t.x).length / steps;
+    // A critic trained on rewards times reward_scale learns values in those units: shown in the reward's own. The value
+    // is DQN's every column, and the last column of the other learners' numbers.
+    const unscale = 1 / (rec.config?.reward_scale || 1), first = rec.learner === "dqn" ? 0 : width - 1;
+    const v = unscale === 1 ? lab.unpack(snap.v) : Float64Array.from(lab.unpack(snap.v), (x) => x * unscale);
+    const numbers = (k) => {
+      const x = cols ? Float64Array.from(cols, (c) => c[k]) : lab.unpack(t.x).slice(k * width, (k + 1) * width);
+      if (unscale !== 1) for (let j = first; j < width; j++) x[j] *= unscale;
+      return x;
+    };
     return {
-      t: snap, kind: rec.learner === "pg" ? "pg" : rec.learner, grid: rec.grid, v: lab.unpack(snap.v), act: snap.act ? lab.unpack(snap.act) : null, mean: snap.mean ? lab.unpack(snap.mean) : null,
+      t: snap, kind: rec.learner === "pg" ? "pg" : rec.learner, grid: rec.grid, v, act: snap.act ? lab.unpack(snap.act) : null, mean: snap.mean ? lab.unpack(snap.mean) : null,
       n, eps: snap.eps, stats: snap.stats || {}, steps, ret: t.return,
-      state: (k) => dims.map((d) => d[k]), action: (k) => lab.unpack(t.a)[k], numbers: (k) => (cols ? Float64Array.from(cols, (c) => c[k]) : lab.unpack(t.x).subarray(k * width, (k + 1) * width)),
+      state: (k) => dims.map((d) => d[k]), action: (k) => lab.unpack(t.a)[k], numbers,
     };
   }
 
