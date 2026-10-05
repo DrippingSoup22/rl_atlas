@@ -82,7 +82,7 @@ For a finite Markov decision process there is always an optimal policy that is d
 Three non-terminal cells in a row and a goal at the right end; every step pays $\rew{-1}$. The actions move one cell left or right, except that left in the first cell leaves the agent in place, and in the second cell the effects are swapped. The agent's features are the same in all three cells, $\mathbf x(s, \text{right}) = (1, 0)^\top$ and $\mathbf x(s, \text{left}) = (0, 1)^\top$, so any policy it can represent steps right with the same probability $p$ in every cell.
 :::
 
-Writing $v_i$ for the value of cell $i$ under such a policy, the Bellman equations ([[bellman]]) are three linear equations,
+Writing $v_i$ for the value of cell $i$ under such a policy, the [[bellman|Bellman equations]] are three linear equations,
 
 $$\begin{aligned} v_1 &= -1 + p\,v_2 + (1-p)\,v_1, \\ v_2 &= -1 + p\,v_1 + (1-p)\,v_3, \\ v_3 &= -1 + (1-p)\,v_2, \end{aligned} \label{eq-cells}$$
 
@@ -120,7 +120,7 @@ Policy-gradient methods treat the corridor as a landscape: the performance $J(\b
 
 ### Historical remarks {#history}
 
-Learning a stochastic policy directly is as old as reinforcement learning: the learning automata of the 1960s and 1970s adjusted action probabilities directly, and the actor–critic architecture of Barto, Sutton and Anderson (1983) learned a policy alongside a critic. Williams (1992) gave the general family of gradient methods its theory and the name REINFORCE ([[reinforce]]). Sutton, McAllester, Singh and Mansour (2000) proved the policy gradient theorem with function approximation and argued, with the chattering of value-based methods in mind, for learning policies directly. Example 13.1, the short corridor, is from Sutton and Barto (2018).
+Learning a stochastic policy directly is as old as reinforcement learning: the learning automata of the 1960s and 1970s adjusted action probabilities directly, and the actor–critic architecture of Barto, Sutton and Anderson (1983) learned a policy alongside a critic. Williams (1992) gave the general family of gradient methods its theory and the name [[reinforce|REINFORCE]]. Sutton, McAllester, Singh and Mansour (2000) proved the policy gradient theorem with function approximation and argued, with the chattering of value-based methods in mind, for learning policies directly. Example 13.1, the short corridor, is from Sutton and Barto (2018).
 
 ## Card
 

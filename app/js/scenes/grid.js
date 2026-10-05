@@ -143,7 +143,7 @@
         view.mark(focus < 0 || !st.next ? [] : successors(focus), "next");
         showFormula(st);
         note.textContent = st.note || "";
-        if (st.play) play(view, r, t, st.play, { pace: st.pace || 200, fine: !!st.fine, after: (u) => { if (!st.note) note.textContent = `${u} ${r.algorithm.unit}${u === 1 ? "" : "s"} done`; } });
+        if (st.play) play(view, r, t, st.play, { pace: st.pace || 200, fine: !!st.fine, updates: st.updates, after: (u) => { if (!st.note) note.textContent = `${u} ${r.algorithm.unit}${u === 1 ? "" : "s"} done`; } });
       }
 
       return {

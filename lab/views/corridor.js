@@ -14,6 +14,8 @@
     return e;
   }
   const signed = (v, d = 1) => `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(d)}`;
+  const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+  const huge = (v) => { const e = Math.floor(Math.log10(Math.abs(v))); return `−${(Math.abs(v) / 10 ** e).toFixed(1)}·10${String(e).replace(/\d/g, (c) => SUP[c])}`; };
   const HOP = [{ transform: "translateY(0)" }, { transform: "translateY(-10px)" }, { transform: "translateY(0)" }];
   const BUMP = [{ transform: "translateX(0)" }, { transform: "translateX(-9px)" }, { transform: "translateX(0)" }];
 
@@ -126,7 +128,9 @@
       }
       const J = this.env.J(p);
       this.dotG.style.transform = `translate(${this.x(p).toFixed(1)}px, ${this.y(J).toFixed(1)}px)`;
-      this.dotText.textContent = Number.isFinite(J) ? `${Math.round(100 * p)}% right: J = ${signed(J)}` : `${Math.round(100 * p)}% right: never arrives`;
+      // far out on the slopes J runs to millions: the policy almost never arrives
+      const pct = `${Math.round(100 * p)}% right`;
+      this.dotText.textContent = !Number.isFinite(J) ? `${pct}: never arrives` : J < -1e4 ? `${pct}: J ≈ ${huge(J)}, almost never arrives` : `${pct}: J = ${signed(J)}`;
       this.dotText.setAttribute("text-anchor", p > 0.8 ? "end" : p < 0.2 ? "start" : "middle");
       this.dotText.setAttribute("x", p > 0.8 ? 6 : p < 0.2 ? -6 : 0);
       // the trail: the nudges of the updates being played, fading

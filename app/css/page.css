@@ -58,6 +58,8 @@
 .stage-card:has(.scene-chart:not([hidden])) .scene-formula:not(:has(.on)) > div { display: none; }
 .scene-chart-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
 .scene-chart-title .faint { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.scene-chart-legend { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 3px 0 0; font-size: 12.5px; color: var(--ink-2); }
+.scene-chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .scene-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 22px; font-size: 13px; color: var(--ink-2); }
 .scale { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
 .scale i { width: 40px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--v-neg), var(--v-mid)); }

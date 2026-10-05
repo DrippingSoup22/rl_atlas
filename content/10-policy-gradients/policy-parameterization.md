@@ -152,7 +152,7 @@ With several real-valued actions, the usual policy is a **diagonal Gaussian**: o
 Real actions are usually bounded (a steering wheel turns so far), and a Gaussian is not. Three common answers:
 
 1. **Clip** the sampled action at the bounds, and keep the score of the unclipped sample. The throw does this: its angles are clipped to 0°–90°. It is simple, but piles probability on the bounds and makes the gradient blind to them.
-2. **Squash** the sample through a bounded function, such as $\tanh$, and correct the log-probability for the change of variable, as soft actor–critic does ([[sac]]).
+2. **Squash** the sample through a bounded function, such as $\tanh$, and correct the log-probability for the change of variable, as [[sac|soft actor–critic]] does.
 3. **Use a bounded distribution**, such as a Beta distribution rescaled to the action range.
 
 ### Other parameterizations {#other}
@@ -165,7 +165,7 @@ A continuous action range can be cut into bins and treated with a softmax, at th
 One state and one real-valued action, the angle $a$ of a throw, clipped to $[0°, 90°]$. The ball flies $40 \sin 2a$ meters, plus wind, a normal amount with standard deviation 2 m, and the distance is the reward; the episode ends there. The policy is a Gaussian with constant features, $\pol{\mu} = \theta_\mu$ and $\pol{\sigma} = e^{\theta_\sigma}$, measured in tens of degrees; it starts at $\pol{\mu} = 20°$, $\pol{\sigma} = 10°$. The best policy throws at exactly 45° with no spread, for 40 m on average.
 :::
 
-The Story's learner updates both weights after every throw with the score \ref{eq-score-gauss} of the angle thrown, times the difference between the distance and a running average of the distances ([[baseline]]). Its aim climbs from 20° to about 45° in a few hundred throws. Its spread first widens in the Story's run, while throws far above the aim keep paying off, and then narrows to about 2°; averaged over 100 runs, it shrinks steadily from 10° to about 5° after 100 throws and under 2° after 1000. The world is a bandit with a continuous arm: the gradient-bandit idea ([[gradient-bandit]]) with a bell in place of a softmax.
+The Story's learner updates both weights after every throw with the score \ref{eq-score-gauss} of the angle thrown, times the difference between the distance and a running average of the distances ([[baseline]]). Its aim climbs from 20° to about 45° in a few hundred throws. Its spread first widens in the Story's run, while throws far above the aim keep paying off, and then narrows to about 2°; averaged over 100 runs, it shrinks steadily from 10° to about 5° after 100 throws and under 2° after 1000. The world is a bandit with a continuous arm: the [[gradient-bandit|gradient-bandit]] idea with a bell in place of a softmax.
 
 ### Historical remarks {#history}
 

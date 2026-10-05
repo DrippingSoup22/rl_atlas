@@ -65,9 +65,10 @@
   }
 
   // Replay units of a run on a view, event by event, the way the Lab walks: the agent moves, values update.
+  // With updates = n, only the first n updates of the unit are played, and the replay stops there.
   function player(later) {
-    return function play(view, run, from, count, { pace = 240, fine = false, after } = {}) {
-      let t = from, w = null;
+    return function play(view, run, from, count, { pace = 240, fine = false, after, updates = 0 } = {}) {
+      let t = from, w = null, seen = 0;
       const end = Math.min(run.units, from + count);
       const next = () => {
         if (!w) {
@@ -78,6 +79,7 @@
         if (done) { w = null; t++; after?.(t, true); later(next, 700); return; }
         if (SHOWN.has(ev.type)) view.show(run.algorithm.show(w.m, run.env, run.params, t), run.params);
         const wait = view.event(ev, { line: fine, p: run.params }) || 0;
+        if (updates && ev.type === "update" && ++seen >= updates) return;
         const quiet = ev.type === "info" || ev.type === "next" || ev.type === "skip";
         later(next, quiet ? 40 : ev.type === "choose" ? pace / 2 : pace + wait);
       };
@@ -89,7 +91,7 @@
   // Averages are kept, so scrolling back and forth does not compute them again.
   const METRIC = {
     optimal: { label: "How often the best arm is pulled", percent: true },
-    return: { label: "Reward per step" },
+    return: { label: (noun) => (noun[0] === "step" ? "Reward per step" : `Total reward per ${noun[0]}`) },
     left: { label: "How often the agent goes left from A", percent: true },
     error: { label: "Error: distance from the true values (RMS)", zero: true },
     match: { label: "States where the greedy action is optimal", percent: true },
@@ -105,16 +107,18 @@
     const cache = new Map();
     let chart = null, shown = "", timer = 0;
     return function show(st) {
-      const names = st.curves || [], metric = st.metric || "optimal", key = `${names}|${metric}`;
+      const names = st.curves || [], metric = st.metric || "optimal", key = `${names}|${metric}|${st.domain || ""}`;
       host.hidden = !names.length;
       if (!names.length || key === shown) return;
       shown = key;
       clearTimeout(timer);
       chart?.destroy();
-      host.innerHTML = `<div class="scene-chart-title">${METRIC[metric].label}<span class="faint"></span></div><div class="scene-chart-host"></div>`;
       const first = runOf(names[0]), unit = first.env.unitName || first.algorithm.unit;
       const noun = unit === "pull" || unit === "step" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : unit === "round" ? ["round", "rounds"] : unit === "throw" ? ["throw", "throws"] : ["episode", "episodes"];
-      chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, log: METRIC[metric].log, noun });
+      const label = typeof METRIC[metric].label === "function" ? METRIC[metric].label(noun) : METRIC[metric].label;
+      const legend = names.length > 1 ? `<div class="scene-chart-legend">${names.map((n, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${RL.esc(cfg.runs[n].name || n)}</span>`).join("")}</div>` : "";
+      host.innerHTML = `<div class="scene-chart-title">${label}<span class="faint"></span></div>${legend}<div class="scene-chart-host"></div>`;
+      chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, log: METRIC[metric].log, domain: st.domain || null, noun });
       const total = cfg.average || 200, status = host.querySelector(".faint");
       const acc = cache.get(key) || { done: 0, sums: names.map(() => new Float64Array(first.units)) };
       cache.set(key, acc);
@@ -150,7 +154,8 @@
   }
 
   // A scene built on a Lab view. A step names a run (st.run, else the first) and a moment (st.at, in units); it can
-  // replay some units from there (st.play, at st.pace ms an event) and chart averaged runs (st.curves, st.metric).
+  // replay some units from there (st.play, at st.pace ms an event; st.updates stops after that many updates) and chart
+  // averaged runs (st.curves, st.metric).
   // options(st): the view's options for the step; more(st, view, run, t): anything else the scene adds.
   function runScene(View, { options = () => ({}), more = null } = {}) {
     return {
@@ -170,7 +175,7 @@
             more?.(st, view, r, t);
             if (st.play) {
               const noun = r.env.unitName || (r.algorithm.unit === "sweep" ? "sweep" : "episode");
-              play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, after: (u) => { if (!st.note) note.textContent = `${u.toLocaleString("en")} ${noun}${u === 1 ? "" : "s"} played`; } });
+              play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, updates: st.updates, after: (u) => { if (!st.note) note.textContent = `${u.toLocaleString("en")} ${noun}${u === 1 ? "" : "s"} played`; } });
             }
             chart(st);
             showFormula(st);

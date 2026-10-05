@@ -350,6 +350,10 @@
           this.spark(ev.s, ev.a ?? -1);
           if (ev.states && line) this.mark([], "next");
           return 0;
+        case "error": // a TD error that judges the move just made (actor–critic): shown when walking line by line
+          if (!line) return 0;
+          this.pop(ev.s, `δ ${signed(ev.delta, 1)}`, "err");
+          return 350;
         case "advantage": // a batch's advantages: where each action did better (blue) or worse (orange) than expected
           this._sparks(ev.list, true);
           return line ? 700 : 0;
