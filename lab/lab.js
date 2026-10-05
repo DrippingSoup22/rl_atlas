@@ -15,7 +15,7 @@
   };
 
   // What one unit is called, in this world and for this algorithm.
-  const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"] };
+  const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"], round: ["round", "rounds"], throw: ["throw", "throws"] };
   // Walking speeds replay a unit event by event ("step" stops at each update); rates jump between snapshots.
   const walking = (step, every) => [{ id: "line", label: "Line by line", every: every[0] }, { id: "step", label: step, every: every[1] }];
   const rates = (...list) => list.map((rate) => ({ id: `r${rate}`, rate }));
@@ -23,6 +23,7 @@
     episode: [...walking("Step by step", [560, 180]), ...rates(1, 10, 50)],
     sweep: [...walking("State by state", [380, 130]), ...rates(1, 4, 20)],
     step: [...walking("Pull by pull", [480, 300]), ...rates(10, 50, 250)],
+    round: [...walking("Step by step", [520, 200]), ...rates(1, 4, 20)], // every worker steps at once
   };
   // The knobs a preset can show as sliders. alpha = 0 means sample averages (1/n), where an algorithm allows it.
   const KNOBS = {
@@ -36,6 +37,12 @@
     lambda: { sym: "λ", name: "trace decay", min: 0, max: 1, step: 0.01 },
     planning: { sym: "n", name: "planning steps", choices: [0, 1, 5, 10, 20, 50, 100] },
     kappa: { sym: "κ", name: "exploration bonus", choices: [0, 0.0001, 0.001, 0.01] },
+    alphaW: { sym: "αw", name: "critic step size", min: 0.01, max: 1, step: 0.01 },
+    beta: { sym: "β", name: "entropy bonus", choices: [0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1] },
+    workers: { sym: "N", name: "workers", choices: [1, 2, 4, 8, 16] },
+    epochs: { sym: "K", name: "passes over each batch", choices: [1, 2, 4, 10, 20] },
+    clip: { sym: "ε", name: "clip range (0: no clip)", choices: [0, 0.1, 0.2, 0.3, 0.5] },
+    delta: { sym: "δ", name: "trust region (KL)", choices: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2] },
   };
   const ALPHA_LADDER = [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05];
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);
@@ -52,11 +59,16 @@
     greedy: { title: (n, env) => (env.ice ? "Chance the greedy policy reaches the gem" : "Return of the greedy policy"), percent: true },
     ve: { title: () => "Value error √VE, weighted by time spent in each state", zero: true },
     weights: { title: () => "Size of the weights ‖w‖", log: true },
+    "policy-value": { title: (n, env) => (env.kind === "corridor" ? "Value of the start under the current policy, J(θ)" : "Value of the current policy from the start, J(θ)") },
+    right: { title: () => "Chance of stepping right, π(right)", percent: true },
+    aim: { title: () => "Where the policy aims: its mean angle μ (degrees)" },
+    kl: { title: () => "How far each update moved the policy: KL divergence (log scale)", log: true },
+    clipped: { title: () => "Samples the clip left alone in the last pass", percent: true },
   };
   const LADDER = [10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
   const signed = (v, d = 2) => (v < 0 ? "−" : v > 0 ? "+" : "") + Math.abs(v).toFixed(d);
   // Events after which the views redraw what the algorithm knows.
-  const SHOWN = new Set(["update", "improve", "trace", "plan", "world"]);
+  const SHOWN = new Set(["update", "improve", "trace", "plan", "world", "critic"]);
   const fmtBig = (v) => (!Number.isFinite(v) ? "beyond any number" : v >= 1e5 ? v.toExponential(1).replace("e+", " × 10^") : v.toFixed(v >= 100 ? 0 : 1));
   const plural = (n, [one, many]) => `${n.toLocaleString("en")} ${n === 1 ? one : many}`;
 
@@ -135,12 +147,13 @@
     function knobPanel() {
       const box = q(".knobs");
       const slider = (k) => {
-        const d = KNOBS[k], v = knobs[k];
+        // an algorithm can name a knob its own way (A2C's n is the steps between updates, PPO's λ belongs to GAE)
+        const own = racers.find((r) => r.algorithm.knobs?.[k])?.algorithm.knobs[k], d = { ...KNOBS[k], ...own }, v = knobs[k];
         // Linear methods with many features step in tiny amounts: their α is picked from a ladder instead of a slider.
         if (k === "alpha" && preset.params.alpha < 0.01) return `<label class="knob"><span class="sym">${d.sym}</span><span class="name">${d.name}</span>
           <select data-knob="${k}">${[...new Set([...ALPHA_LADDER, v])].sort((a, b) => a - b).map((c) => `<option value="${c}"${c === v ? " selected" : ""}>${c}</option>`).join("")}</select></label>`;
         if (d.choices) return `<label class="knob"><span class="sym">${d.sym}</span><span class="name">${d.name}</span>
-          <select data-knob="${k}">${d.choices.map((c) => `<option value="${c}"${c === v ? " selected" : ""}>${c}</option>`).join("")}</select></label>`;
+          <select data-knob="${k}">${[...new Set([...d.choices, v])].sort((a, b) => a - b).map((c) => `<option value="${c}"${c === v ? " selected" : ""}>${c}</option>`).join("")}</select></label>`;
         const min = k === "alpha" && racers.every((r) => AVERAGING.has(r.algorithm.id)) ? 0 : d.min;
         return `<label class="knob"><span class="sym">${d.sym}</span><span class="name">${d.name}</span>
           <input type="range" data-knob="${k}" min="${min}" max="${d.max}" step="${d.step}" value="${v}"><output>${fmtKnob(k, v)}</output></label>`;
@@ -256,7 +269,7 @@
       grid.className = `chart-grid n${preset.charts.length}`;
       charts = preset.charts.map((k, j) => new RL.LineChart(grid.querySelectorAll(".chart-host")[j], {
         label: METRICS[k].title(noun()[0], env), percent: METRICS[k].percent, log: METRICS[k].log, zero: METRICS[k].zero,
-        domain: k === "return" ? preset.params.domain : null, noun: noun(), logX: knobs.units > 20000,
+        domain: k === "return" || k === "policy-value" ? preset.params.domain : null, noun: noun(), logX: knobs.units > 20000,
         onSeek: (t) => { pause(); seek(t); },
       }));
       const mode = q(".chart-mode");
@@ -293,6 +306,17 @@
     function references(k) {
       const p = paramsOf(racers[0]);
       if (k === "left") return [{ value: p.epsilon / 2, label: `best possible with ε = ${p.epsilon}: ${(50 * p.epsilon).toFixed(0)}%` }];
+      if (env.kind === "corridor" && (k === "return" || k === "policy-value")) return [{ value: env.bestValue, label: `best possible on average: ${signed(env.bestValue, 1)}` }];
+      if (k === "right") return [{ value: env.best, label: `the best policy: ${(100 * env.best).toFixed(0)}% right` }];
+      if (k === "aim") return [{ value: env.continuousActions.best, label: `the best angle: ${env.continuousActions.best}°` }];
+      if (k === "policy-value" && env.model) {
+        const best = lab.optimalValues(env, p)[env.start];
+        return [{ value: best, label: `an optimal policy: ${signed(best, Math.abs(best) < 10 ? 2 : 0)}` }];
+      }
+      if (k === "kl") { // each TRPO racer's own trust region
+        const deltas = [...new Set(racers.filter((r) => r.algorithm.id === "trpo").map((r) => paramsOf(r).delta ?? 0.01))];
+        return deltas.map((d) => ({ value: d, label: `δ = ${d}` }));
+      }
       if (k === "greedy" && env.model) {
         const best = lab.evaluate(env, lab.greedyPolicy(env, lab.optimalValues(env, p), p.gamma, 1e-6), p.judge ?? p.gamma, { theta: 1e-8 })[env.start];
         return [{ value: best, label: `the optimal policy: ${(100 * best).toFixed(0)}%` }];
@@ -324,6 +348,19 @@
             return lab.mean(r.metrics.steps, Math.max(0, knobs.units - 10)) < 200 ? "none, its greedy moves go round in circles" : "none yet"; })}.`);
         }
       }
+      if (env.kind === "corridor") {
+        out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 1))} (the best possible is ${signed(env.bestValue, 1)}).`);
+      }
+      if (env.kind === "throw") {
+        out.push(`Where the policy aims at the end: ${each((r) => { const d = r.algorithm.show(r.at(knobs.units), r.env, r.params); return `${d.mu.toFixed(1)}° ± ${d.sd.toFixed(1)}°`; })}; average distance over the last ${last} throws: ${each((r) => `${lab.mean(r.metrics.return, knobs.units - last).toFixed(1)} m`)} (40 m at best).`);
+      }
+      if (env.kind === "grid" && unitOf() === "round") {
+        out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} ${preset.charts.includes("steps") ? "steps" : "reward"} per episode over the last ${last} rounds: ${each((r) => (preset.charts.includes("steps") ? lab.mean(r.metrics.steps, knobs.units - last).toFixed(1) : lab.mean(r.metrics.return, knobs.units - last).toFixed(2)))}.`);
+      }
+      if (env.kind === "grid" && !env.slip) {
+        const finals = runs.map((r) => r.algorithm.show(r.at(knobs.units), r.env, r.params));
+        if (finals.every((d) => d.P && !d.Q)) out.push(`Most likely path at the end: ${each((r, i) => { const g = likelyPath(env, finals[i].P); return g.reached ? plural(g.steps, ["step", "steps"]) : "none, its most likely moves go round in circles"; })}.`);
+      }
       if (env.kind === "line") out.push(`Value error √VE at the end: ${each((r) => r.metrics.ve ? r.metrics.ve[knobs.units - 1].toFixed(3) : "—")} (0 would be a perfect fit; how close the features allow is in the textbook).`);
       if (env.kind === "car") out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(0))} (the best possible from a typical start is a little over 100).`);
       if (env.kind === "star") out.push(`Size of the weights at the end: ${each((r) => fmtBig(r.metrics.weights[knobs.units - 1]))}, from ${fmtBig(runs[0].metrics.weights[0])} after the first step.`);
@@ -331,10 +368,27 @@
         out.push(`Settled (largest change below θ = ${knobs.theta}) after: ${each((r) => { const t = r.metrics.converged.findIndex((c) => c); return t < 0 ? "not yet" : plural(t + 1, noun()); })}.`);
       }
       for (const k of preset.measures) {
-        const f = METRICS[k].percent ? (v) => `${(100 * v).toFixed(0)}%` : (v) => v.toFixed(3);
+        if (k === "aim" && env.kind === "throw") continue; // said above, with the spread
+        const f = METRICS[k].percent ? (v) => `${(100 * v).toFixed(0)}%` : (v) => `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(Math.abs(v) >= 10 ? 1 : 3)}${k === "aim" ? "°" : ""}`;
         out.push(`${METRICS[k].title(noun()[0], env)}, at the end: ${each((r) => f(r.metrics[k][knobs.units - 1]))}.`);
       }
       q(".summary").innerHTML = out.join("<br>");
+    }
+
+    // Follow the most likely action of a learned policy from the start, as far as it reaches.
+    function likelyPath(world, P) {
+      let s = world.start, steps = 0;
+      const seen = new Set([s]);
+      while (!world.terminal(s) && steps < 200) {
+        let a = 0;
+        for (let b = 1; b < world.nA; b++) if (P[s * world.nA + b] > P[s * world.nA + a]) a = b;
+        const { s2 } = world.step(s, a, lab.rng(1));
+        steps++;
+        if (seen.has(s2) && !world.terminal(s2)) return { reached: false };
+        seen.add(s2);
+        s = s2;
+      }
+      return { reached: world.terminal(s), steps };
     }
 
     // ---- the filmstrip: what the focused racer knew at a few moments ----
@@ -387,10 +441,14 @@
       else if (env.kind === "star") text = `weights ‖w‖ = ${fmtBig(M.weights[t])}`;
       else if (env.kind === "car") text = `${plural(M.steps[t], ["step", "steps"])} to the flag${M.steps[t] >= runs[i].params.maxSteps ? " (cut short)" : ""}`;
       else if (env.kind === "graph") text = `${M.left?.[t] ? "went left" : "went right"} · return ${signed(M.return[t])}`;
+      else if (env.kind === "throw") text = `thrown at ${M.angle[t].toFixed(1)}°: ${M.return[t].toFixed(1)} m`;
+      else if (unitOf() === "round") text = `${plural(paramsOf(racers[i]).workers ?? 4, ["episode", "episodes"])}, ${M.steps[t].toFixed(M.steps[t] < 100 ? 1 : 0)} steps on average · reward ${signed(M.return[t], env.rewards?.small !== undefined ? 2 : 0)}`;
       else text = `${signed(M.return[t], 0)} · ${plural(M.steps[t], ["step", "steps"])}${M.falls[t] ? ` · ${plural(M.falls[t], ["fall", "falls"])}` : ""}`;
       stat.textContent = `${cap(one)} ${P.e}: ${text}`;
     }
-    const live = (w) => (unitOf() === "sweep" ? `state ${w.n}` : env.kind === "bandit" ? "pulling" : env.kind === "star" ? "one step" : env.kind === "car" ? `${plural(w.n, ["step", "steps"])} so far` : `${signed(w.G, env.kind === "grid" ? 0 : 2)} so far · ${plural(w.n, ["step", "steps"])}`);
+    const live = (w) => (unitOf() === "sweep" ? `state ${w.n}` : env.kind === "bandit" ? "pulling" : env.kind === "star" ? "one step" : env.kind === "throw" ? "throwing"
+      : env.kind === "car" ? `${plural(w.n, ["step", "steps"])} so far` : unitOf() === "round" ? `${plural(w.n, ["move", "moves"])} so far, all workers together`
+        : `${signed(w.G, env.kind === "grid" ? 0 : 2)} so far · ${plural(w.n, ["step", "steps"])}`);
 
     // ---- walking through a unit, event by event ----
     function walk(toUpdate) {
@@ -404,7 +462,7 @@
           const { value: ev, done } = w.events.next();
           if (done) { w.done = true; break; }
           wait = Math.max(wait, on(i, w, ev));
-          if (!toUpdate || ev.type === "update" || ev.type === "improve" || ev.type === "plan") break;
+          if (!toUpdate || ev.type === "update" || ev.type === "improve" || ev.type === "plan" || ev.type === "tick" || ev.type === "advantage") break;
         }
       });
       P.wait = wait;
@@ -429,6 +487,7 @@
         mark(ev.line);
         if (ev.type === "update") explain(ev, w.p);
         else if (ev.type === "plan") planned(ev);
+        else if (ev.type === "advantage") batchAdvantages(ev);
       }
       caption(i, w);
       return pauseFor;
@@ -444,11 +503,20 @@
       liveNote.classList.remove("faint");
     }
 
+    // A batch of experience, before the update: how many steps, and how its advantages came out.
+    function batchAdvantages(ev) {
+      let up = 0;
+      for (const u of ev.list) if (u.adv > 0) up++;
+      liveNum.innerHTML = "";
+      liveNote.innerHTML = `The round is over: <b>${ev.samples.toLocaleString("en")}</b> steps, each with its advantage, the GAE estimate of how much better its action did than expected · <b>${Math.round((100 * up) / Math.max(1, ev.samples))}%</b> better (blue sparks), the rest worse (orange)`;
+      liveNote.classList.remove("faint");
+    }
+
     // ---- the live formula ----
     function explain(ev, p) {
       const a = racers[P.focus].algorithm;
       if (!a.numbers) return;
-      liveNum.innerHTML = RL.math.tex(a.numbers(ev, p), true);
+      texInto(liveNum, a.numbers(ev, p));
       const where = env.describe ? env.describe(ev.s, ev.a ?? -1) : "";
       let note;
       if (a.note) note = a.note(ev, where, signed, p);
@@ -459,6 +527,17 @@
       else note = `Target <b>${signed(ev.target)}</b> · surprise <b class="q-err">δ = ${signed(ev.delta)}</b> · ${where}`;
       liveNote.innerHTML = note;
       liveNote.classList.remove("faint");
+    }
+
+    // A display formula in the side panel, fitted to its width: it shrinks a little, then stacks the parts written
+    // side by side (\\qquad), as Textbook formulas do.
+    function texInto(box, src) {
+      box.innerHTML = '<div class="tex tex-display"></div>';
+      const div = box.firstChild;
+      div.dataset.src = src;
+      div.dataset.done = "1";
+      div.innerHTML = RL.math.tex(src, true);
+      RL.math.fit(box);
     }
 
     function mark(line) {
@@ -472,7 +551,7 @@
       const a = racers[i].algorithm, p = paramsOf(racers[i]);
       q(".algo-name").textContent = racers[i].name;
       pseudo.innerHTML = RL.entry(a.id)?.pseudocode || '<p class="faint">The pseudocode of this algorithm is not written yet.</p>';
-      liveSym.innerHTML = RL.math.tex(typeof a.rule === "function" ? a.rule(p) : a.rule, true);
+      texInto(liveSym, typeof a.rule === "function" ? a.rule(p) : a.rule);
       liveNum.innerHTML = "";
       RL.math.render(pseudo);
       if (runs.length) filmstrip();

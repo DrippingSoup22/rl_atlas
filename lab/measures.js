@@ -70,6 +70,25 @@
         stats.greedy = V[env.start];
       };
     },
+    // The exact value of the start under the learner's current policy, J(θ) = v_π(start), the objective of a
+    // policy-gradient method, worked out from the rules instead of estimated from noisy episodes. As for `greedy`,
+    // each evaluation starts from the last one's values, and long runs measure only every few units.
+    "policy-value"(env, p, units) {
+      const every = Math.max(1, Math.round(units / 400)), gamma = p.judge ?? p.gamma;
+      let V = null;
+      return (d, stats, t) => {
+        if (!V || t % every === 0 || t === units - 1) V = lab.evaluate(env, d.P, gamma, { theta: 1e-6, sweeps: 5000, start: V });
+        stats["policy-value"] = V[env.start];
+      };
+    },
+    // The short corridor: the chance of stepping right, the same in every cell.
+    right(env) {
+      return (d, stats) => { stats.right = d.P[env.start * env.nA + 1]; };
+    },
+    // The throw: where the Gaussian policy aims, its mean angle.
+    aim() {
+      return (d, stats) => { stats.aim = d.mu; };
+    },
   };
   lab.measureNames = Object.keys(MEASURES);
 

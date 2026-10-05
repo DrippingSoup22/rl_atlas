@@ -420,6 +420,92 @@
 .thumb-star .t-bar { fill: var(--val); }
 .thumb-star .t-bar.neg { fill: var(--v-neg); }
 
+/* ---- policy gradients: the grid's workers and gems, the short corridor, the throw ---- */
+.gridview .k-g .bg { fill: color-mix(in oklab, var(--rew) 8%, var(--surface-2)); }
+.gridview .gem.small polygon { fill: color-mix(in oklab, var(--rew) 70%, var(--surface)); }
+.gridview .gem.small .shine { fill: #fff; }
+.gridview .gem-r { font: 800 11px var(--font); text-anchor: end; fill: var(--rew-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.gridview .bot.worker .bot-head { fill: var(--ink-2); stroke-width: 2.5; }
+.gridview .bot.worker .badge { fill: var(--pol); stroke: var(--surface); stroke-width: 1.5; }
+.gridview .bot.worker .badge-n { font: 800 9px var(--font); text-anchor: middle; fill: #fff; }
+.gridview .trail.worker { stroke-opacity: 0.22; stroke-width: 2.5; }
+.gridview .spark.k-adv-pos { stroke: var(--v-pos); stroke-width: 2.5; }
+.gridview .spark.k-adv-neg { stroke: var(--v-neg); stroke-width: 2.5; }
+
+.corridorview, .throwview { display: block; width: 100%; max-width: 760px; height: auto; margin: 0 auto; overflow: visible; }
+.corridorview text, .throwview text { font-family: var(--font); }
+.corridorview .tile { fill: var(--surface-2); stroke: var(--line-2); stroke-width: 1.5; transition: stroke-width 0.2s; }
+.corridorview .cell.swapped .tile { fill: color-mix(in oklab, var(--pol) 7%, var(--surface-2)); }
+.corridorview .cell.goal .tile { fill: color-mix(in oklab, var(--rew) 16%, var(--surface-2)); }
+.corridorview .cell.focus .tile { stroke: var(--ink); stroke-width: 3; }
+.corridorview .wall { fill: var(--ink-2); }
+.corridorview .gem polygon { fill: var(--rew); }
+.corridorview .gem .shine { fill: #fff; opacity: 0.45; }
+.corridorview .swap { font-size: 11px; font-weight: 700; text-anchor: middle; fill: var(--pol-ink); }
+.corridorview .cell-name { font-size: 11.5px; text-anchor: middle; fill: var(--ink-3); }
+.corridorview .parrow .halo { fill: none; stroke: var(--surface-2); stroke-linecap: round; stroke-linejoin: round; }
+.corridorview .parrow .shaft { fill: none; stroke: var(--pol); stroke-linecap: round; stroke-linejoin: round; transition: stroke-width 0.3s var(--ease); }
+.corridorview .parrow { transition: opacity 0.3s; }
+.corridorview .parrow.chosen .shaft { stroke: var(--ink); }
+.corridorview .pnum { font-size: 10.5px; font-weight: 700; text-anchor: middle; fill: var(--pol-ink); opacity: 0; transition: opacity 0.3s; }
+.corridorview[data-numbers] .pnum { opacity: 1; }
+.corridorview .grid { stroke: var(--line); }
+.corridorview .grid.zero { stroke: var(--line-2); }
+.corridorview .tick, .corridorview .axis-name { font-size: 11px; fill: var(--ink-3); }
+.corridorview .landscape { fill: none; stroke: var(--val); stroke-width: 2.4; stroke-linejoin: round; }
+.corridorview .mark-pt circle { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.6; }
+.corridorview .mark-pt text { font-size: 11px; fill: var(--ink-2); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.corridorview .baseline line { stroke: var(--val); stroke-width: 1.6; stroke-dasharray: 6 4; }
+.corridorview .baseline text { font-size: 11px; font-weight: 700; fill: var(--val-ink); }
+.corridorview .baseline { transition: transform 0.3s var(--ease); }
+.corridorview .ptrail circle { fill: var(--pol); }
+.corridorview .pdot-g { transition: transform 0.28s var(--ease); }
+.corridorview .pdot { fill: var(--pol); stroke: var(--surface); stroke-width: 2.5; }
+.corridorview .pdot-num { font-size: 12px; font-weight: 800; fill: var(--pol-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; }
+.corridorview .bot { transition: transform 0.22s var(--ease), opacity 0.3s; }
+.corridorview .bot.instant { transition: none; }
+.corridorview .bot.gone { opacity: 0; }
+.corridorview .bot-head { fill: var(--ink); stroke: var(--surface); stroke-width: 2.5; }
+.corridorview .bot-eyes { transition: transform 0.15s; }
+.corridorview .bot-eyes circle { fill: var(--surface); }
+.corridorview .fx, .throwview .fx { pointer-events: none; }
+.corridorview .spark, .throwview .spark { fill: none; stroke: var(--err); stroke-width: 3; transform-box: fill-box; transform-origin: center; }
+.corridorview .spark.k-pol, .throwview .spark.k-pol { stroke: var(--pol); }
+
+.throwview .ground { stroke: var(--ink-2); stroke-width: 2; }
+.throwview .mtick { stroke: var(--ink-3); }
+.throwview .tick, .throwview .axis-name { font-size: 11px; fill: var(--ink-3); }
+.throwview .tick.rew { fill: var(--rew-ink); }
+.throwview .pole { stroke: var(--ink-2); stroke-width: 2; }
+.throwview .flag { fill: var(--rew); }
+.throwview .field-note { font-size: 11px; fill: var(--ink-3); }
+.throwview .thrower .head { fill: var(--ink); }
+.throwview .thrower .body, .throwview .thrower .arm { fill: none; stroke: var(--ink); stroke-width: 3.5; stroke-linecap: round; }
+.throwview .thrower .arm { stroke: var(--pol); transition: x2 0.2s, y2 0.2s; }
+.throwview .angle-text { font-size: 12px; font-weight: 800; fill: var(--pol-ink); }
+.throwview .arc { fill: none; stroke: var(--ink-3); stroke-width: 1.6; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.throwview .ball { fill: var(--ink); stroke: var(--surface); stroke-width: 1.5; }
+.throwview .landed { fill: var(--rew); }
+.throwview .wind { font-size: 11.5px; font-weight: 600; fill: var(--ink-3); }
+.throwview .grid { stroke: var(--line); }
+.throwview .grid.zero { stroke: var(--line-2); }
+.throwview .reach { fill: none; stroke: var(--rew); stroke-width: 2.4; }
+.throwview .reach-name { font-size: 11px; font-weight: 700; fill: var(--rew-ink); }
+.throwview .truth { transition: opacity 0.3s; }
+.throwview:not([data-truth]) .truth { opacity: 0; }
+.throwview .bell { fill: color-mix(in oklab, var(--pol) 22%, transparent); stroke: var(--pol); stroke-width: 2; stroke-linejoin: round; transition: d 0.3s var(--ease); }
+.throwview .mu { stroke: var(--pol); stroke-width: 1.6; stroke-dasharray: 4 3; }
+.throwview .mu-text { font-size: 12px; font-weight: 800; fill: var(--pol-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; }
+.throwview .sd { fill: none; stroke: var(--pol); stroke-width: 1.6; }
+.throwview .atick { stroke: var(--pol); stroke-width: 2; }
+.throwview .atick.last { stroke: var(--ink); stroke-width: 2.5; }
+.throwview .baseline line { stroke: var(--val); stroke-width: 1.6; stroke-dasharray: 6 4; }
+.throwview .baseline text { font-size: 11px; font-weight: 700; fill: var(--val-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.thumb-corridor .t-line { fill: none; stroke: var(--val); stroke-width: 1.8; }
+.thumb-corridor .t-dot { fill: var(--pol); stroke: var(--surface); stroke-width: 1.5; }
+.thumb-throw .t-truth { fill: none; stroke: var(--rew); stroke-width: 1.6; }
+.thumb-throw .t-bell { fill: color-mix(in oklab, var(--pol) 25%, transparent); stroke: var(--pol); stroke-width: 1.4; }
+
 @media (max-width: 1100px) {
   /* One column: the side panel moves up under the stages, before the play bar, the filmstrip and the charts. */
   .lab-main { grid-template-columns: minmax(0, 1fr); }

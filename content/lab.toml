@@ -461,3 +461,175 @@ gamma = 1.0
 charts = ["return"]
 film = [1, 10, 100, 500]
 intro = "Draw a world of your own, choose an algorithm, and watch it learn. Every change runs it again."
+
+[corridor-reinforce]
+title = "REINFORCE on the short corridor"
+env = "corridor"
+racers = [
+  { algorithm = "reinforce", name = "α = 2⁻¹²", alpha = 0.000244140625 },
+  { algorithm = "reinforce", name = "α = 2⁻¹³", alpha = 0.0001220703125 },
+  { algorithm = "reinforce", name = "α = 2⁻¹⁴", alpha = 0.00006103515625 },
+]
+units = 1000
+runs = 100
+seed = 1
+gamma = 1.0
+features = "own"
+maxSteps = 1000
+charts = ["return", "right"]
+measures = ["right"]
+film = [0, 50, 200, 1000]
+intro = "Every cell looks the same to the agent, and the middle one swaps left and right. No fixed choice ever reaches the goal; the best is to step right about 59% of the time. REINFORCE starts at 5% and climbs the landscape below the corridor, one episode at a time. The biggest step size is the fastest, until a run is thrown off the landscape."
+
+[corridor-baseline]
+title = "REINFORCE with and without a baseline"
+env = "corridor"
+racers = [
+  { algorithm = "reinforce", name = "REINFORCE (α = 2⁻¹³)", alpha = 0.0001220703125 },
+  { algorithm = "baseline", name = "with a baseline (α = 2⁻⁹, αw = 2⁻⁶)", alpha = 0.001953125, alphaW = 0.015625 },
+]
+units = 1000
+runs = 100
+seed = 1
+gamma = 1.0
+features = "own"
+maxSteps = 1000
+charts = ["return", "right"]
+measures = ["right"]
+film = [0, 50, 200, 1000]
+intro = "Every return here is negative, so without a baseline every action taken is made less likely, the good ones only a little less. Subtracting a learned estimate of the return leaves the direction of each update the same on average, and removes most of its noise: the step size can be sixteen times larger."
+
+[throw]
+title = "A Gaussian policy learns to throw"
+env = "throw"
+racers = [
+  { algorithm = "baseline", name = "with a learned baseline (α = 0.003)", alpha = 0.003, alphaW = 0.1 },
+  { algorithm = "reinforce", name = "without a baseline (α = 0.0003)", alpha = 0.0003 },
+]
+units = 1000
+seed = 1
+gamma = 1.0
+features = "own"
+charts = ["return", "aim"]
+measures = ["aim"]
+film = [0, 50, 200, 1000]
+intro = "The action is an angle, a real number: the policy is a bell curve around its aim. Each throw is drawn from the bell; a throw that flies farther than expected pulls the aim toward its angle, and the bell narrows as the policy grows sure. The best angle is 45°, but the learner is never told."
+
+[cliff-actor-critic]
+title = "Actor–critic on the cliff"
+env = "cliff"
+algorithms = ["actor-critic"]
+units = 500
+seed = 1
+alpha = 0.1
+alphaW = 0.1
+lambda = 0.0
+gamma = 1.0
+domain = [-100, 0]
+charts = ["return", "policy-value"]
+measures = ["policy-value"]
+film = [1, 10, 100, 500]
+intro = "The critic colors the tiles with what it expects from each; the actor's arrows are its policy, thicker for likelier moves. After every step, the critic's surprise δ judges the move just made: better than expected, it becomes likelier. Like SARSA, it learns from its own wandering, and the edge of the cliff costs it dearly."
+
+[a2c-maze]
+title = "A2C: four workers in the maze"
+env = "dyna-maze"
+racers = [
+  { algorithm = "a2c", name = "update every step (n = 1)", n = 1 },
+  { algorithm = "a2c", name = "every 5 steps (n = 5)", n = 5 },
+  { algorithm = "a2c", name = "every 20 steps (n = 20)", n = 20 },
+]
+units = 60
+runs = 12
+seed = 1
+alpha = 2.0
+alphaW = 0.3
+workers = 4
+beta = 0.0
+gamma = 0.95
+maxSteps = 1000
+charts = ["steps"]
+film = [1, 5, 20, 60]
+intro = "Four workers explore copies of the maze at once, all with the same policy. Every n steps, all their experience makes one update. Each step is judged by the rewards of the steps after it, up to the update, and the critic's estimate beyond: the longer the stretch, the sooner the gem's news reaches the start."
+
+[entropy-gems]
+title = "The entropy bonus: two gems"
+env = "two-gems"
+racers = [
+  { algorithm = "a2c", name = "no entropy bonus", beta = 0.0 },
+  { algorithm = "a2c", name = "entropy bonus β = 0.1", beta = 0.1 },
+]
+units = 200
+runs = 20
+seed = 1
+alpha = 2.0
+alphaW = 0.3
+workers = 4
+n = 5
+gamma = 0.95
+maxSteps = 500
+charts = ["return"]
+film = [1, 20, 60, 200]
+intro = "A small gem two steps away pays 0.3; a big one seven steps away pays 1. A learner that settles on the first thing that works never finds the big gem. The entropy bonus rewards the policy for staying uncertain, so it keeps wandering long enough to find the better way."
+
+[trpo-cliff]
+title = "TRPO: how big a trust region?"
+env = "cliff"
+racers = [
+  { algorithm = "trpo", name = "δ = 0.01", delta = 0.01 },
+  { algorithm = "trpo", name = "δ = 0.05", delta = 0.05 },
+  { algorithm = "trpo", name = "δ = 0.2", delta = 0.2 },
+]
+units = 60
+runs = 12
+seed = 1
+alphaW = 0.1
+workers = 4
+lambda = 0.9
+gamma = 1.0
+maxSteps = 1000
+charts = ["steps", "kl"]
+film = [1, 5, 20, 60]
+intro = "After each round, TRPO takes the largest step that keeps the policy within a distance δ of the one that collected the experience, measured by the KL divergence. A small region learns steadily; a large one trusts each round's noisy estimates too far, and some runs walk into a corner they never leave."
+
+[ppo-maze]
+title = "PPO: ten passes over each batch, with and without the clip"
+env = "dyna-maze"
+racers = [
+  { algorithm = "ppo", name = "PPO (clip ε = 0.2)", clip = 0.2 },
+  { algorithm = "ppo", name = "the same passes, no clip", clip = 0.0 },
+]
+units = 40
+runs = 12
+seed = 1
+alpha = 0.3
+alphaW = 0.1
+workers = 4
+epochs = 10
+lambda = 0.9
+beta = 0.0
+gamma = 0.95
+maxSteps = 1000
+charts = ["steps", "kl"]
+film = [1, 5, 10, 40]
+intro = "PPO squeezes each round's experience: ten passes over it instead of one. Without the clip, every pass pushes the lucky actions further and the policy overfits its batch. With it, an action stops being pushed once its probability has moved 20% from where it was when the batch was collected."
+
+[gae-cliff]
+title = "GAE: how far should advantages look?"
+env = "cliff"
+racers = [
+  { algorithm = "trpo", name = "λ = 0: one step, then trust the critic", lambda = 0.0 },
+  { algorithm = "trpo", name = "λ = 0.9", lambda = 0.9 },
+  { algorithm = "trpo", name = "λ = 1: the whole episode", lambda = 1.0 },
+]
+units = 60
+runs = 12
+seed = 1
+alphaW = 0.1
+workers = 4
+delta = 0.02
+gamma = 1.0
+maxSteps = 1000
+charts = ["steps"]
+film = [1, 5, 20, 60]
+intro = "Each step's advantage is a weighted sum of the TD errors after it, with weights that fade by γλ per step. With λ = 0 it is the one-step TD error, steady but only as good as the critic; with λ = 1 it is the whole return minus the critic, honest but noisy. In between does best."

@@ -1,6 +1,7 @@
-/* Grid worlds. A world is a few lines of text: S start, G goal (a gem), T exit (an ending without a prize), . free,
-   # wall, C cliff (a fall: back to the start), H hole (the episode ends), and letters for tiles that jump
-   elsewhere (A jumps to a, B to b). On slippery ice a move can slide to either side. */
+/* Grid worlds. A world is a few lines of text: S start, G goal (a gem), g a small gem (it pays less, and also ends
+   the episode), T exit (an ending without a prize), . free, # wall, C cliff (a fall: back to the start), H hole (the
+   episode ends), and letters for tiles that jump elsewhere (A jumps to a, B to b). On slippery ice a move can slide
+   to either side. */
 (function (RL) {
   "use strict";
   const lab = (RL.lab = RL.lab || {});
@@ -64,6 +65,14 @@
       reward: { step: 0, goal: 1 },
       valueRange: 1,
     },
+    // A small gem two steps from the start pays 0.3; the big one, seven steps away, pays 1. With γ = 0.95 the big one is
+    // worth more than twice as much from the start, but a learner that stops exploring early never finds out.
+    "two-gems": {
+      title: "Two gems",
+      map: ["........", ".g......", "..S.....", "........", ".......G"],
+      reward: { step: 0, goal: 1, small: 0.3 },
+      valueRange: 1,
+    },
   };
 
   // name: one of the worlds above, or a world spec of your own ({ title, map, reward, slip, … }).
@@ -76,7 +85,7 @@
     const wall = reward.wall ?? reward.step;
     const start = Math.max(0, cells.indexOf("S"));
     const jumps = Object.entries(w.jumps || {}).map(([from, [to, r]]) => ({ from: cells.indexOf(from), to: cells.indexOf(to), reward: r }));
-    const isTerminal = (s) => cells[s] === "G" || cells[s] === "T" || cells[s] === "H";
+    const isTerminal = (s) => cells[s] === "G" || cells[s] === "g" || cells[s] === "T" || cells[s] === "H";
     const all = [0, 1, 2, 3];
 
     // Where a move in direction d from s ends, and what it pays.
@@ -87,6 +96,7 @@
       if (k === "#") return { s2: s, r: wall };
       if (k === "C") return { s2: start, r: reward.cliff, fell: s2 };
       if (k === "G" || k === "T") return { s2, r: reward.goal ?? reward.step };
+      if (k === "g") return { s2, r: reward.small ?? reward.goal ?? reward.step };
       if (k === "H") return { s2, r: reward.hole ?? reward.step };
       return { s2, r: reward.step };
     }
@@ -96,9 +106,9 @@
     const env = {
       name: typeof name === "string" ? name : "custom", key: typeof name === "string" ? name : JSON.stringify(w),
       kind: "grid", title: w.title, rows, cols, nS: rows * cols, nA: 4,
-      start, valueRange: w.valueRange ?? 10, jumps, slip, ice: !!w.ice, map: w.map,
+      start, valueRange: w.valueRange ?? 10, jumps, slip, ice: !!w.ice, map: w.map, rewards: reward,
       // Tiles an episode may start from (for exploring starts): anything that is not a wall, a cliff or an ending.
-      starts: Array.from({ length: rows * cols }, (_, s) => s).filter((s) => !"#CGTH".includes(cells[s])),
+      starts: Array.from({ length: rows * cols }, (_, s) => s).filter((s) => !"#CGgTH".includes(cells[s])),
       tile: (s) => cells[s],
       // A world that changes (a wall that moves) is told the time, in steps; it returns true when its layout changed.
       // `version` counts the changes, so a view knows when to draw the walls again.

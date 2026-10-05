@@ -1,6 +1,7 @@
 /* Grid view: one SVG for a grid world, shared by the Lab and the stories.
    Tiles show values (four triangles for Q, or one color for V), arrows show the policy,
-   and the agent walks, slides, falls and sparks so you can see each update happen. */
+   and the agent walks, slides, falls and sparks so you can see each update happen. Methods that learn from several
+   workers at once (A2C, PPO) have one agent per worker, each with its number and its trail. */
 (function (RL) {
   "use strict";
   const lab = RL.lab;
@@ -9,7 +10,7 @@
   const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // screen direction of up, right, down, left
   const ARROW_TEXT = ["↑", "→", "↓", "←"];
   const MARKS = { S: "S", A: "A", B: "B", a: "A′", b: "B′" };
-  const KINDS = { ".": "free", "#": "wall", C: "C", G: "G", T: "exit", H: "hole" };
+  const KINDS = { ".": "free", "#": "wall", C: "C", G: "G", g: "g", T: "exit", H: "hole" };
   let uid = 0;
   const TRIANGLES = [
     [[2, 2], [T - 2, 2]],
@@ -112,10 +113,13 @@
         el("path", { class: "crack", d: "M10 12 l8 6 l-3 7 M50 48 l-7 -4 l2 -8" }, g);
         return;
       }
-      if (kind === "G") {
-        const gem = el("g", { class: "gem" }, g);
-        el("polygon", { points: `${HALF},${HALF - 15} ${HALF + 14},${HALF - 3} ${HALF},${HALF + 16} ${HALF - 14},${HALF - 3}` }, gem);
-        el("polygon", { class: "shine", points: `${HALF},${HALF - 15} ${HALF + 6},${HALF - 3} ${HALF},${HALF + 2} ${HALF - 6},${HALF - 3}` }, gem);
+      if (kind === "G" || kind === "g") {
+        const k = kind === "g" ? 0.62 : 1, gem = el("g", { class: `gem${kind === "g" ? " small" : ""}` }, g);
+        el("polygon", { points: `${HALF},${HALF - 15 * k} ${HALF + 14 * k},${HALF - 3 * k} ${HALF},${HALF + 16 * k} ${HALF - 14 * k},${HALF - 3 * k}` }, gem);
+        el("polygon", { class: "shine", points: `${HALF},${HALF - 15 * k} ${HALF + 6 * k},${HALF - 3 * k} ${HALF},${HALF + 2 * k} ${HALF - 6 * k},${HALF - 3 * k}` }, gem);
+        // a world with gems of two sizes says what each pays
+        const r = this.env.rewards;
+        if (r?.small !== undefined) el("text", { class: "gem-r", x: T - 6, y: T - 6 }, g).textContent = `+${kind === "g" ? r.small : r.goal}`;
         return;
       }
       if (kind === "T") {
@@ -303,6 +307,7 @@
     // Returns how long to pause after the event, in milliseconds.
     event(ev, { line = false } = {}) {
       const env = this.env;
+      if (ev.w) return this._workerEvent(ev);
       switch (ev.type) {
         case "start":
           this.mark([], "focus");
@@ -341,8 +346,14 @@
           return wait;
         }
         case "update":
+          if (ev.list) { this._sparks(ev.list); return 0; } // a batch update: every step it learned from
           this.spark(ev.s, ev.a ?? -1);
           if (ev.states && line) this.mark([], "next");
+          return 0;
+        case "advantage": // a batch's advantages: where each action did better (blue) or worse (orange) than expected
+          this._sparks(ev.list, true);
+          return line ? 700 : 0;
+        case "tick":
           return 0;
         case "window": // n-step: the stretch of the episode whose rewards make the target
           this.mark([ev.s], "focus");
@@ -384,18 +395,99 @@
     }
 
     // After a jump to the start of a unit: the path of the unit before it, and the agent where it ended.
+    // With several workers, each one's path and place.
     rest(events, draw = false) {
       this.mark([], "focus");
       this.mark([], "next");
-      const path = [];
+      const paths = [[]];
       for (const ev of events) {
+        const path = (paths[ev.w || 0] ||= []);
         if (ev.type === "start") path.push(ev.s);
         else if (ev.type === "move") { if (ev.fell !== undefined) path.push(ev.fell, -1, ev.s2); else if (this.env.jumps.some((j) => j.from === ev.s)) path.push(-1, ev.s2); else path.push(ev.s2); }
       }
+      this._workersAt(paths, draw);
+      const path = paths[0];
       this.trail(this.o.trail && path.length ? path : null, draw);
       this.bot.classList.remove("sunk");
       if (path.length) this.place(path[path.length - 1], -1, true);
       else this.place(this.env.start, -1, true);
+    }
+
+    // ---- several workers: one agent each beyond the first, with its number and its trail ----
+    _worker(k) {
+      this.workers ||= [];
+      let w = this.workers[k];
+      if (w) return w;
+      w = this.workers[k] = { path: [] };
+      w.trailEl = el("path", { class: "trail worker" }, this.gTrail);
+      w.bot = el("g", { class: "bot worker" }, this.gAgent);
+      w.body = el("g", { class: "bot-body" }, w.bot);
+      el("circle", { class: "bot-head", r: 11 }, w.body);
+      w.eyes = el("g", { class: "bot-eyes" }, w.body);
+      el("circle", { cx: -4, cy: -1.5, r: 2.2 }, w.eyes);
+      el("circle", { cx: 4, cy: -1.5, r: 2.2 }, w.eyes);
+      el("circle", { class: "badge", cx: 10, cy: -10, r: 7 }, w.bot);
+      el("text", { class: "badge-n", x: 10, y: -7 }, w.bot).textContent = k + 1;
+      return w;
+    }
+    _workerPut(w, s, instant) {
+      const [x, y] = this.center(s);
+      if (instant) w.bot.classList.add("instant");
+      w.bot.style.transform = `translate(${x}px, ${y}px)`;
+      if (instant) { w.bot.getBoundingClientRect(); w.bot.classList.remove("instant"); }
+    }
+    _workerEvent(ev) {
+      const w = this._worker(ev.w);
+      w.bot.classList.remove("gone", "sunk");
+      if (ev.type === "start") {
+        w.path = [ev.s];
+        this._workerPut(w, ev.s, true);
+      } else if (ev.type === "choose" && ev.a >= 0) {
+        const [dx, dy] = DIRS[ev.a];
+        w.eyes.style.transform = `translate(${dx * 2.5}px, ${dy * 2.5}px)`;
+      } else if (ev.type === "move") {
+        if (ev.fell !== undefined) {
+          w.path.push(ev.fell, -1, ev.s2);
+          this.spark(ev.fell, -1);
+          this.pop(ev.fell, signed(ev.r));
+          this._workerPut(w, ev.s2, true);
+          if (!RL.reducedMotion()) w.body.animate(RESPAWN, { duration: 300, easing: "cubic-bezier(.2,.9,.25,1.25)" });
+        } else {
+          w.path.push(ev.s2);
+          this._workerPut(w, ev.s2, false);
+          if (!RL.reducedMotion()) w.body.animate(HOP, { duration: 200, easing: "ease-out" });
+          const k = this.env.tile(ev.s2);
+          if (k === "H") w.bot.classList.add("sunk");
+          else if ((k === "G" || k === "g") && ev.r) this.pop(ev.s2, signed(ev.r, Number.isInteger(ev.r) ? 0 : 1));
+        }
+      } else return 0;
+      w.trailEl.setAttribute("d", this.o.trail ? this._line(w.path) : "");
+      return 0;
+    }
+    // At rest: each worker beyond the first where its last episode ended; workers a run does not have are hidden.
+    _workersAt(paths, draw) {
+      for (let k = 1; k < Math.max(paths.length, this.workers?.length || 0); k++) {
+        const path = paths[k];
+        if (!path?.length) { if (this.workers?.[k]) { this.workers[k].bot.classList.add("gone"); this.workers[k].trailEl.setAttribute("d", ""); } continue; }
+        const w = this._worker(k);
+        w.path = path;
+        w.bot.classList.remove("gone", "sunk");
+        this._workerPut(w, path[path.length - 1], true);
+        this._draw(w.trailEl, this.o.trail ? path : null, draw);
+      }
+    }
+
+    // Sparks on the moves a batch update learned from, at most 60 of them; with `signed`, colored by the sign of each
+    // move's advantage (averaged over its visits), the strongest first.
+    _sparks(list, signed) {
+      const moves = new Map();
+      for (const u of list) {
+        const key = u.s * this.env.nA + (u.a ?? 0), m = moves.get(key) || moves.set(key, { s: u.s, a: u.a ?? -1, sum: 0, n: 0 }).get(key);
+        m.sum += u.adv ?? 0;
+        m.n++;
+      }
+      const all = [...moves.values()].sort((x, y) => Math.abs(y.sum / y.n) - Math.abs(x.sum / x.n)).slice(0, 60);
+      all.forEach((m, i) => this.spark(m.s, m.a, signed ? (m.sum >= 0 ? "adv-pos" : "adv-neg") : "", Math.min(500, i * 9)));
     }
 
     _successors(s) {
@@ -540,7 +632,7 @@
     _distances() {
       if (this._dist) return this._dist;
       const { env } = this, dist = new Array(env.nS).fill(Infinity), queue = [];
-      for (let s = 0; s < env.nS; s++) if ("GT".includes(env.tile(s))) { dist[s] = 0; queue.push(s); }
+      for (let s = 0; s < env.nS; s++) if ("GgT".includes(env.tile(s))) { dist[s] = 0; queue.push(s); }
       while (queue.length) {
         const s = queue.shift(), [r, c] = env.rc(s);
         for (const [dc, dr] of DIRS) {
@@ -572,6 +664,7 @@
 
     destroy() {
       this._stopFall();
+      this.workers = null;
       clearTimeout(this._rippleTimer);
       RL.tip.hide();
       this.svg.remove();
@@ -603,7 +696,7 @@
       let g = "";
       for (let s = 0; s < env.nS; s++) {
         const [r, c] = env.rc(s), k = env.tile(s), x = c * S, y = r * S;
-        const fill = k === "#" ? "var(--ink-3)" : k === "C" || k === "H" ? "var(--chasm)" : k === "G" ? "var(--rew)" : k === "T" ? "var(--surface-3)"
+        const fill = k === "#" ? "var(--ink-3)" : k === "C" || k === "H" ? "var(--chasm)" : k === "G" ? "var(--rew)" : k === "g" ? "color-mix(in oklab, var(--rew) 55%, var(--surface))" : k === "T" ? "var(--surface-3)"
           : valueColor(d.V ? d.V[s] : d.Q ? lab.maxQ(d.Q, s, env) : 0, range);
         g += `<rect x="${x + 0.5}" y="${y + 0.5}" width="${S - 1}" height="${S - 1}" rx="2" style="fill:${fill}"/>`;
         if (env.terminal(s) || env.blocked(s) || (!d.Q && !d.P)) continue;
