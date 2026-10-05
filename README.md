@@ -86,3 +86,7 @@ The Textbook numbers its sections, figures and statements, and any display equat
 `\ref{name}` links to them (§2, (3), Figure 1, Theorem 1). Its blocks are `::: definition`, `theorem`, `lemma`,
 `example` (all written `::: kind {#name} Title`), `remark`, `proof` (`::: proof Proof idea` renames it),
 `::: figure {#name}` (a `{{demo}}` line, then the caption) and `::: algorithm {#name} Title` (pseudocode lines).
+
+## License
+
+[MIT](LICENSE). KaTeX, in `vendor/katex/`, keeps its own MIT license.
