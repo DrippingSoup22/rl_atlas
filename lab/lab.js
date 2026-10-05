@@ -41,7 +41,7 @@
   // What a chart can plot.
   const METRICS = {
     return: { title: (n) => `Reward per ${n}`, smooth: 10 },
-    steps: { title: (n) => `Steps per ${n}`, smooth: 10 },
+    steps: { title: (n) => `Steps per ${n}`, smooth: 10, log: true }, // a first episode of 1000 steps would flatten the rest
     optimal: { title: () => "How often the best arm is pulled", percent: true },
     left: { title: () => "How often the agent goes left from A", percent: true },
     delta: { title: () => "Largest change in a sweep", log: true },
@@ -89,7 +89,27 @@
         </header>
         ${sandbox ? '<section class="sandbox card"></section>' : ""}
         <div class="lab-main">
-          <div class="stages"></div>
+          <div class="lab-flow">
+            <div class="stages"></div>
+            <div class="transport card">
+              <button class="icon-btn restart" type="button" aria-label="Back to the start">${ICON.restart}</button>
+              <button class="icon-btn big play" type="button" aria-label="Play">${ICON.play}</button>
+              <button class="icon-btn step" type="button" aria-label="One step forward">${ICON.step}</button>
+              <select class="speed" aria-label="Speed"></select>
+              <input class="scrub" type="range" min="0" value="0" aria-label="Position in the run">
+              <span class="pos"></span>
+            </div>
+            <section class="film card" hidden><div class="film-head"><h3>Filmstrip · <span class="film-name as-is"></span></h3><span class="faint">click a frame to jump there</span></div><div class="film-host"></div></section>
+            <section class="chart-card card">
+              <div class="chart-head">
+                <div class="legend"></div>
+                <div class="chart-mode"></div>
+              </div>
+              <div class="chart-grid"></div>
+              <p class="faint chart-note"></p>
+              <p class="summary"></p>
+            </section>
+          </div>
           <aside class="lab-side">
             <section class="panel card"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-host"></div></section>
             <section class="panel card live">
@@ -101,24 +121,6 @@
             <section class="panel card show-panel"><h3>Show</h3><div class="show-host"></div></section>
           </aside>
         </div>
-        <div class="transport card">
-          <button class="icon-btn restart" type="button" aria-label="Back to the start">${ICON.restart}</button>
-          <button class="icon-btn big play" type="button" aria-label="Play">${ICON.play}</button>
-          <button class="icon-btn step" type="button" aria-label="One step forward">${ICON.step}</button>
-          <select class="speed" aria-label="Speed"></select>
-          <input class="scrub" type="range" min="0" value="0" aria-label="Position in the run">
-          <span class="pos"></span>
-        </div>
-        <section class="film card" hidden><div class="film-head"><h3>Filmstrip · <span class="film-name as-is"></span></h3><span class="faint">click a frame to jump there</span></div><div class="film-host"></div></section>
-        <section class="chart-card card">
-          <div class="chart-head">
-            <div class="legend"></div>
-            <div class="chart-mode"></div>
-          </div>
-          <div class="chart-grid"></div>
-          <p class="faint chart-note"></p>
-          <p class="summary"></p>
-        </section>
       </section>`;
 
     const q = (sel) => host.querySelector(sel);
@@ -285,7 +287,7 @@
 
     // One sentence on where each run ended up.
     function summary() {
-      const out = [], last = Math.min(100, knobs.units);
+      const out = [], last = Math.min(100, Math.max(1, Math.floor(knobs.units / 2))); // the second half at most: early episodes are a search
       const each = (f) => runs.map((r, i) => `<b>${esc(racers[i].name)}</b> ${f(r, i)}`).join(" · ");
       const pct = (v) => `${Math.round(100 * v)}%`;
       if (env.kind === "bandit") {
@@ -295,7 +297,7 @@
       if (env.kind === "blackjack" && unitOf() === "episode") out.push(`Hands won in this run: ${each((r) => pct(r.metrics.return.reduce((n, g) => n + (g > 0), 0) / knobs.units))}.`);
       if (env.kind === "grid" && unitOf() === "episode") {
         if (env.ice) out.push(`Reached the gem in the last ${last} episodes: ${each((r) => pct(lab.mean(r.metrics.return, knobs.units - last)))}.`);
-        else if (preset.charts.includes("steps")) out.push(`Average steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(1))}.`);
+        else if (preset.charts.includes("steps")) out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(1))}.`);
         else out.push(`Average reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 0))}.`);
         const finals = runs.map((r) => r.algorithm.show(r.at(knobs.units), r.env, r.params));
         if (finals[0].t !== undefined) env.setTime?.(finals[0].t); // a maze whose walls moved: follow the final layout

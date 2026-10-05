@@ -14,7 +14,10 @@
 .knob select, .transport select, .sandbox select { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); }
 .pill.seed svg { width: 16px; height: 16px; }
 
-.lab-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.lab-main { display: grid; grid-template-columns: minmax(0, 1fr) clamp(330px, 26vw, 380px); gap: 16px; align-items: start; }
+/* Everything that follows the playhead flows down the left column, so it fills itself whatever the stages' height;
+   the side panel stays in view beside it. */
+.lab-flow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .stages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 @media (min-width: 900px) {
   .stages[data-shape="boxy"].n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -69,10 +72,11 @@
 .film-head h3 { margin: 0; }
 .film-head .faint { font-size: 12.5px; }
 .filmstrip { display: flex; gap: 12px; margin: 10px 0 0; padding: 0; list-style: none; overflow-x: auto; }
-.filmstrip li { flex: none; display: grid; gap: 6px; justify-items: center; padding: 8px; border-radius: 12px; cursor: pointer; border: 1px solid var(--line); background: var(--surface-2); font-size: 12px; color: var(--ink-2); transition: border-color 0.2s, background-color 0.2s, transform 0.2s var(--ease); animation: rise-in 0.45s var(--ease) calc(var(--i) * 60ms) both; }
+.filmstrip li { flex: 1 1 0; min-width: 132px; display: grid; gap: 6px; justify-items: center; padding: 8px; border-radius: 12px; cursor: pointer; border: 1px solid var(--line); background: var(--surface-2); font-size: 12px; color: var(--ink-2); transition: border-color 0.2s, background-color 0.2s, transform 0.2s var(--ease); animation: rise-in 0.45s var(--ease) calc(var(--i) * 60ms) both; }
 .filmstrip li:hover { transform: translateY(-2px); }
 .filmstrip li.on { border-color: var(--ink-2); background: var(--surface); color: var(--ink); font-weight: 600; }
-.thumb svg { display: block; height: 86px; width: auto; max-width: 240px; }
+.thumb { width: 100%; }
+.thumb svg { display: block; width: 100%; height: 100px; }
 .thumb .t-arrow { stroke: var(--pol); stroke-width: 1.6; stroke-linecap: round; }
 .thumb .t-truth { stroke: var(--ink-2); stroke-width: 1.5; }
 .thumb .t-zero { stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 2 2; }
@@ -328,9 +332,18 @@
 .graphview .fx { pointer-events: none; }
 
 @media (max-width: 1100px) {
+  /* One column: the side panel moves up under the stages, before the play bar, the filmstrip and the charts. */
   .lab-main { grid-template-columns: minmax(0, 1fr); }
-  .lab-side { position: static; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .lab-flow { display: contents; }
+  .lab-side { position: static; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); order: 1; }
+  .lab-flow > .transport, .lab-flow > .film, .lab-flow > .chart-card { order: 2; }
 }
+@media (max-width: 1100px) and (min-width: 701px) {
+  /* The pseudocode on the left, "This step" and "Show" stacked beside it: no half-empty cards. */
+  .lab-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .lab-side > :first-child { grid-row: span 2; }
+}
+@media (max-width: 700px) { .lab-side { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) {
   .cardsview { grid-template-columns: 1fr; }
   .chart-grid.n2 { grid-template-columns: 1fr; }

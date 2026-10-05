@@ -72,16 +72,20 @@
   RL.demos["changing-maze"] = function (host, arg = "blocking") {
     const c = CHANGING[arg], env = lab.make(c.world), id = RL.fig.uid();
     const params = { alpha: 1, epsilon: 0.1, gamma: 0.95, planning: c.planning, kappa: 0.001 };
-    // The maze before and after its change, side by side, above the curves.
-    let mazes = "", x0 = 0, H = 0;
-    for (const [t, title] of [[0, `Steps 1–${env.changes.toLocaleString("en")}`], [env.changes, `After step ${env.changes.toLocaleString("en")}`]]) {
+    // The maze before and after its change, at the scale of the plot below, with the moment of the change between them.
+    const W = 640, T = 15, mw = env.cols * T + 12, gap = W - 2 * mw - 24;
+    let mazes = "", H = 0;
+    for (const [k, t, title] of [[0, 0, `Steps 1 to ${env.changes.toLocaleString("en")}`], [1, env.changes, `From step ${(env.changes + 1).toLocaleString("en")}`]]) {
       env.setTime(t);
-      const mz = RL.fig.maze(env, { T: 16, X: x0 + 4, Y: 22, id: `${id}-${t}` });
-      mazes += mz.svg + `<text class="note" x="${x0 + mz.W / 2}" y="14" text-anchor="middle">${title}</text>`;
-      x0 += mz.W + 40;
+      const x0 = k ? W - mw - 12 : 12, mz = RL.fig.maze(env, { T, X: x0, Y: 22, id: `${id}-${t}` });
+      mazes += mz.svg + `<text class="note" x="${x0 + mz.W / 2 - 6}" y="14" text-anchor="middle">${title}</text>`;
       H = Math.max(H, mz.H + 22);
     }
-    host.innerHTML = `<svg class="fig maze pair" viewBox="0 0 ${x0 - 40} ${H}" role="img" aria-label="The maze before and after it changes">${mazes}</svg><div class="fig-curves"></div>`;
+    const ax = 12 + mw + 18, ay = 22 + (env.rows * T) / 2;
+    mazes += `<defs><marker id="arr-${id}" class="tip-mark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+      <path class="arch-arrow" d="M${ax} ${ay} H${ax + gap - 24}" marker-end="url(#arr-${id})"/>
+      <text class="note" x="${ax + (gap - 24) / 2}" y="${ay - 10}" text-anchor="middle">${arg === "blocking" ? "the gap moves to the left end" : "a shortcut opens on the right"}</text>`;
+    host.innerHTML = `<svg class="fig maze pair" viewBox="0 0 ${W} ${H + 6}" role="img" aria-label="The maze before and after it changes">${mazes}</svg><div class="fig-curves"></div>`;
     RL.fig.average(host.querySelector(".fig-curves"), {
       label: `Cumulative reward in the ${arg} maze for Dyna-Q and Dyna-Q+`,
       right: 100, x: { min: 0, max: c.budget, from: 1, ticks: Array.from({ length: c.budget / 1000 + 1 }, (_, i) => i * 1000), label: "Time steps" },

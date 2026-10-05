@@ -325,7 +325,9 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .sec h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
 .sec h2 .term { text-transform: none; letter-spacing: 0.02em; } /* a station's name as written: uppercase would turn ε into Ε */
 .sec p { margin: 0 0 0.75em; }
-.sec-idea, .sec-knobs, .sec-check { grid-column: span 2; }
+.sec-idea, .sec-knobs, .sec-check, .sec-sources, .sec.wide { grid-column: span 2; }
+.sec-sources ul { columns: 2 320px; column-gap: 32px; }
+.sec-sources li { break-inside: avoid; }
 .sec-idea > p:first-of-type { font-size: 18px; }
 .tex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
 .sec-update .tex-display { font-size: 1.1em; }
@@ -351,8 +353,10 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .pseudo li::before { content: counter(line); position: absolute; left: 14px; top: 5px; color: var(--ink-3); font: 12px var(--mono); }
 .pseudo li.on { background: color-mix(in oklab, var(--ink) 9%, transparent); box-shadow: inset 3px 0 0 var(--ink); }
 
-.sec-check { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.sec-check h2 { grid-column: 1 / -1; margin: 0; }
+/* The questions share the row whatever their number (a grid with a full-width title would keep empty tracks). */
+.sec-check { display: flex; flex-wrap: wrap; gap: 14px; }
+.sec-check h2 { flex-basis: 100%; margin: 0; }
+.sec-check .question { flex: 1 1 240px; }
 .question { display: grid; min-height: 176px; perspective: 900px; cursor: pointer; border-radius: 14px; }
 .question .face { grid-area: 1 / 1; padding: 16px; border-radius: 14px; backface-visibility: hidden; transition: transform 0.6s var(--ease); }
 .question .q { background: var(--surface-2); }

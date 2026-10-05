@@ -766,7 +766,9 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .sec h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
 .sec h2 .term { text-transform: none; letter-spacing: 0.02em; } /* a station's name as written: uppercase would turn ε into Ε */
 .sec p { margin: 0 0 0.75em; }
-.sec-idea, .sec-knobs, .sec-check { grid-column: span 2; }
+.sec-idea, .sec-knobs, .sec-check, .sec-sources, .sec.wide { grid-column: span 2; }
+.sec-sources ul { columns: 2 320px; column-gap: 32px; }
+.sec-sources li { break-inside: avoid; }
 .sec-idea > p:first-of-type { font-size: 18px; }
 .tex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
 .sec-update .tex-display { font-size: 1.1em; }
@@ -792,8 +794,10 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .pseudo li::before { content: counter(line); position: absolute; left: 14px; top: 5px; color: var(--ink-3); font: 12px var(--mono); }
 .pseudo li.on { background: color-mix(in oklab, var(--ink) 9%, transparent); box-shadow: inset 3px 0 0 var(--ink); }
 
-.sec-check { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.sec-check h2 { grid-column: 1 / -1; margin: 0; }
+/* The questions share the row whatever their number (a grid with a full-width title would keep empty tracks). */
+.sec-check { display: flex; flex-wrap: wrap; gap: 14px; }
+.sec-check h2 { flex-basis: 100%; margin: 0; }
+.sec-check .question { flex: 1 1 240px; }
 .question { display: grid; min-height: 176px; perspective: 900px; cursor: pointer; border-radius: 14px; }
 .question .face { grid-area: 1 / 1; padding: 16px; border-radius: 14px; backface-visibility: hidden; transition: transform 0.6s var(--ease); }
 .question .q { background: var(--surface-2); }
@@ -888,7 +892,10 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .knob select, .transport select, .sandbox select { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); }
 .pill.seed svg { width: 16px; height: 16px; }
 
-.lab-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.lab-main { display: grid; grid-template-columns: minmax(0, 1fr) clamp(330px, 26vw, 380px); gap: 16px; align-items: start; }
+/* Everything that follows the playhead flows down the left column, so it fills itself whatever the stages' height;
+   the side panel stays in view beside it. */
+.lab-flow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .stages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 @media (min-width: 900px) {
   .stages[data-shape="boxy"].n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -943,10 +950,11 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .film-head h3 { margin: 0; }
 .film-head .faint { font-size: 12.5px; }
 .filmstrip { display: flex; gap: 12px; margin: 10px 0 0; padding: 0; list-style: none; overflow-x: auto; }
-.filmstrip li { flex: none; display: grid; gap: 6px; justify-items: center; padding: 8px; border-radius: 12px; cursor: pointer; border: 1px solid var(--line); background: var(--surface-2); font-size: 12px; color: var(--ink-2); transition: border-color 0.2s, background-color 0.2s, transform 0.2s var(--ease); animation: rise-in 0.45s var(--ease) calc(var(--i) * 60ms) both; }
+.filmstrip li { flex: 1 1 0; min-width: 132px; display: grid; gap: 6px; justify-items: center; padding: 8px; border-radius: 12px; cursor: pointer; border: 1px solid var(--line); background: var(--surface-2); font-size: 12px; color: var(--ink-2); transition: border-color 0.2s, background-color 0.2s, transform 0.2s var(--ease); animation: rise-in 0.45s var(--ease) calc(var(--i) * 60ms) both; }
 .filmstrip li:hover { transform: translateY(-2px); }
 .filmstrip li.on { border-color: var(--ink-2); background: var(--surface); color: var(--ink); font-weight: 600; }
-.thumb svg { display: block; height: 86px; width: auto; max-width: 240px; }
+.thumb { width: 100%; }
+.thumb svg { display: block; width: 100%; height: 100px; }
 .thumb .t-arrow { stroke: var(--pol); stroke-width: 1.6; stroke-linecap: round; }
 .thumb .t-truth { stroke: var(--ink-2); stroke-width: 1.5; }
 .thumb .t-zero { stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 2 2; }
@@ -1202,9 +1210,18 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .graphview .fx { pointer-events: none; }
 
 @media (max-width: 1100px) {
+  /* One column: the side panel moves up under the stages, before the play bar, the filmstrip and the charts. */
   .lab-main { grid-template-columns: minmax(0, 1fr); }
-  .lab-side { position: static; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .lab-flow { display: contents; }
+  .lab-side { position: static; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); order: 1; }
+  .lab-flow > .transport, .lab-flow > .film, .lab-flow > .chart-card { order: 2; }
 }
+@media (max-width: 1100px) and (min-width: 701px) {
+  /* The pseudocode on the left, "This step" and "Show" stacked beside it: no half-empty cards. */
+  .lab-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .lab-side > :first-child { grid-row: span 2; }
+}
+@media (max-width: 700px) { .lab-side { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) {
   .cardsview { grid-template-columns: 1fr; }
   .chart-grid.n2 { grid-template-columns: 1fr; }
@@ -3224,7 +3241,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
       this.path_ = [];
       const W = env.cols * T, H = env.rows * T;
       this.svg = el("svg", { class: `gridview${env.ice ? " ice" : ""}`, viewBox: `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`, role: "img", "aria-label": env.title });
-      this.svg.style.maxWidth = `${env.cols * 100}px`; // small worlds stay a comfortable size instead of filling the page
+      this.svg.style.maxWidth = `${env.cols * (env.cols <= 5 ? 125 : 100)}px`; // small worlds stay a comfortable size instead of filling the page
       host.appendChild(this.svg);
       const layer = (cls) => el("g", { class: cls }, this.svg);
       this.gTiles = layer("tiles");
@@ -4664,6 +4681,12 @@ a.ref:hover { text-decoration-color: var(--ink); }
     for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9 * step; v += step) out.push(Math.abs(v) < step * 1e-9 ? 0 : v);
     return out;
   }
+  // Ticks on a log axis: the powers of ten in range, with 2 and 5 times them when the range is short, and both ends.
+  function logTicks(lo, hi) {
+    const short = Math.log10(hi / lo) <= 2.5, out = new Set(short ? [lo, hi] : []), mults = short ? [1, 2, 5] : [1];
+    for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) for (const m of mults) { const v = m * 10 ** e; if (v >= lo * (1 - 1e-9) && v <= hi * (1 + 1e-9)) out.add(v); }
+    return [...out].sort((a, b) => a - b);
+  }
   const trim = (t) => (t.includes(".") ? t.replace(/0+$/, "").replace(/\.$/, "") : t); // 2.50 → 2.5, but 100 stays 100
   const num = (v) => {
     const a = Math.abs(v), d = a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : a >= 0.01 ? 3 : 4;
@@ -4706,7 +4729,15 @@ a.ref:hover { text-decoration-color: var(--ink); }
       if (!Number.isFinite(lo)) return this.log ? [1e-3, 1] : [0, 1];
       if (this.log) {
         lo = Math.max(lo, hi * 1e-6, 1e-9);
-        return [10 ** Math.floor(Math.log10(lo)), 10 ** Math.ceil(Math.log10(Math.max(hi, lo * 10)))];
+        // Round to 1, 2 or 5 times a power of ten, so the scale ends close to the data instead of a whole decade away.
+        const round = (v, up) => {
+          const mag = 10 ** Math.floor(Math.log10(v)), steps = [1, 2, 5, 10];
+          return mag * (up ? steps.find((m) => m * mag >= v * (1 - 1e-9)) : [...steps].reverse().find((m) => m * mag <= v * (1 + 1e-9)) || 1);
+        };
+        hi = Math.max(hi, lo * 3);
+        // Over many decades the axis shows powers of ten only, so it ends on one.
+        if (Math.log10(hi / lo) > 2.5) return [10 ** Math.floor(Math.log10(lo)), 10 ** Math.ceil(Math.log10(hi))];
+        return [round(lo, false), round(hi, true)];
       }
       if (this.zero) lo = Math.min(0, lo);
       if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
@@ -4731,12 +4762,12 @@ a.ref:hover { text-decoration-color: var(--ink); }
 
       // axes and grid
       const grid = el("g", { class: "grid" }, svg);
-      const yt = this.log ? Array.from({ length: Math.round(Math.log10(hi / lo)) + 1 }, (_, k) => lo * 10 ** k) : ticks(lo, hi, 4);
+      const yt = this.log ? logTicks(lo, hi) : ticks(lo, hi, 4);
       for (const v of yt) {
         el("line", { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v) }, grid);
         el("text", { class: "tick", x: M.l - 8, y: y(v) + 4, "text-anchor": "end" }, grid).textContent = this.fmt(v);
       }
-      const xt = this.logX ? Array.from({ length: Math.floor(lx) + 1 }, (_, k) => 10 ** k) : ticks(0, n, 5).filter((u) => u <= n);
+      const xt = this.logX ? Array.from({ length: Math.floor(lx) + 1 }, (_, k) => 10 ** k) : ticks(0, n, W < 520 ? 2 : 5).filter((u) => u <= n); // fewer ticks on narrow charts, so labels never collide
       xt.forEach((u, k) => {
         const last = k === xt.length - 1;
         el("text", { class: "tick", x: x(u), y: H - 8, "text-anchor": k === 0 && !this.logX ? "start" : last ? "end" : "middle" }, grid)
@@ -5061,7 +5092,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
   // What a chart can plot.
   const METRICS = {
     return: { title: (n) => `Reward per ${n}`, smooth: 10 },
-    steps: { title: (n) => `Steps per ${n}`, smooth: 10 },
+    steps: { title: (n) => `Steps per ${n}`, smooth: 10, log: true }, // a first episode of 1000 steps would flatten the rest
     optimal: { title: () => "How often the best arm is pulled", percent: true },
     left: { title: () => "How often the agent goes left from A", percent: true },
     delta: { title: () => "Largest change in a sweep", log: true },
@@ -5109,7 +5140,27 @@ a.ref:hover { text-decoration-color: var(--ink); }
         </header>
         ${sandbox ? '<section class="sandbox card"></section>' : ""}
         <div class="lab-main">
-          <div class="stages"></div>
+          <div class="lab-flow">
+            <div class="stages"></div>
+            <div class="transport card">
+              <button class="icon-btn restart" type="button" aria-label="Back to the start">${ICON.restart}</button>
+              <button class="icon-btn big play" type="button" aria-label="Play">${ICON.play}</button>
+              <button class="icon-btn step" type="button" aria-label="One step forward">${ICON.step}</button>
+              <select class="speed" aria-label="Speed"></select>
+              <input class="scrub" type="range" min="0" value="0" aria-label="Position in the run">
+              <span class="pos"></span>
+            </div>
+            <section class="film card" hidden><div class="film-head"><h3>Filmstrip · <span class="film-name as-is"></span></h3><span class="faint">click a frame to jump there</span></div><div class="film-host"></div></section>
+            <section class="chart-card card">
+              <div class="chart-head">
+                <div class="legend"></div>
+                <div class="chart-mode"></div>
+              </div>
+              <div class="chart-grid"></div>
+              <p class="faint chart-note"></p>
+              <p class="summary"></p>
+            </section>
+          </div>
           <aside class="lab-side">
             <section class="panel card"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-host"></div></section>
             <section class="panel card live">
@@ -5121,24 +5172,6 @@ a.ref:hover { text-decoration-color: var(--ink); }
             <section class="panel card show-panel"><h3>Show</h3><div class="show-host"></div></section>
           </aside>
         </div>
-        <div class="transport card">
-          <button class="icon-btn restart" type="button" aria-label="Back to the start">${ICON.restart}</button>
-          <button class="icon-btn big play" type="button" aria-label="Play">${ICON.play}</button>
-          <button class="icon-btn step" type="button" aria-label="One step forward">${ICON.step}</button>
-          <select class="speed" aria-label="Speed"></select>
-          <input class="scrub" type="range" min="0" value="0" aria-label="Position in the run">
-          <span class="pos"></span>
-        </div>
-        <section class="film card" hidden><div class="film-head"><h3>Filmstrip · <span class="film-name as-is"></span></h3><span class="faint">click a frame to jump there</span></div><div class="film-host"></div></section>
-        <section class="chart-card card">
-          <div class="chart-head">
-            <div class="legend"></div>
-            <div class="chart-mode"></div>
-          </div>
-          <div class="chart-grid"></div>
-          <p class="faint chart-note"></p>
-          <p class="summary"></p>
-        </section>
       </section>`;
 
     const q = (sel) => host.querySelector(sel);
@@ -5305,7 +5338,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 
     // One sentence on where each run ended up.
     function summary() {
-      const out = [], last = Math.min(100, knobs.units);
+      const out = [], last = Math.min(100, Math.max(1, Math.floor(knobs.units / 2))); // the second half at most: early episodes are a search
       const each = (f) => runs.map((r, i) => `<b>${esc(racers[i].name)}</b> ${f(r, i)}`).join(" · ");
       const pct = (v) => `${Math.round(100 * v)}%`;
       if (env.kind === "bandit") {
@@ -5315,7 +5348,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
       if (env.kind === "blackjack" && unitOf() === "episode") out.push(`Hands won in this run: ${each((r) => pct(r.metrics.return.reduce((n, g) => n + (g > 0), 0) / knobs.units))}.`);
       if (env.kind === "grid" && unitOf() === "episode") {
         if (env.ice) out.push(`Reached the gem in the last ${last} episodes: ${each((r) => pct(lab.mean(r.metrics.return, knobs.units - last)))}.`);
-        else if (preset.charts.includes("steps")) out.push(`Average steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(1))}.`);
+        else if (preset.charts.includes("steps")) out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(1))}.`);
         else out.push(`Average reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 0))}.`);
         const finals = runs.map((r) => r.algorithm.show(r.at(knobs.units), r.env, r.params));
         if (finals[0].t !== undefined) env.setTime?.(finals[0].t); // a maze whose walls moved: follow the final layout
@@ -7170,16 +7203,20 @@ a.ref:hover { text-decoration-color: var(--ink); }
   RL.demos["changing-maze"] = function (host, arg = "blocking") {
     const c = CHANGING[arg], env = lab.make(c.world), id = RL.fig.uid();
     const params = { alpha: 1, epsilon: 0.1, gamma: 0.95, planning: c.planning, kappa: 0.001 };
-    // The maze before and after its change, side by side, above the curves.
-    let mazes = "", x0 = 0, H = 0;
-    for (const [t, title] of [[0, `Steps 1–${env.changes.toLocaleString("en")}`], [env.changes, `After step ${env.changes.toLocaleString("en")}`]]) {
+    // The maze before and after its change, at the scale of the plot below, with the moment of the change between them.
+    const W = 640, T = 15, mw = env.cols * T + 12, gap = W - 2 * mw - 24;
+    let mazes = "", H = 0;
+    for (const [k, t, title] of [[0, 0, `Steps 1 to ${env.changes.toLocaleString("en")}`], [1, env.changes, `From step ${(env.changes + 1).toLocaleString("en")}`]]) {
       env.setTime(t);
-      const mz = RL.fig.maze(env, { T: 16, X: x0 + 4, Y: 22, id: `${id}-${t}` });
-      mazes += mz.svg + `<text class="note" x="${x0 + mz.W / 2}" y="14" text-anchor="middle">${title}</text>`;
-      x0 += mz.W + 40;
+      const x0 = k ? W - mw - 12 : 12, mz = RL.fig.maze(env, { T, X: x0, Y: 22, id: `${id}-${t}` });
+      mazes += mz.svg + `<text class="note" x="${x0 + mz.W / 2 - 6}" y="14" text-anchor="middle">${title}</text>`;
       H = Math.max(H, mz.H + 22);
     }
-    host.innerHTML = `<svg class="fig maze pair" viewBox="0 0 ${x0 - 40} ${H}" role="img" aria-label="The maze before and after it changes">${mazes}</svg><div class="fig-curves"></div>`;
+    const ax = 12 + mw + 18, ay = 22 + (env.rows * T) / 2;
+    mazes += `<defs><marker id="arr-${id}" class="tip-mark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+      <path class="arch-arrow" d="M${ax} ${ay} H${ax + gap - 24}" marker-end="url(#arr-${id})"/>
+      <text class="note" x="${ax + (gap - 24) / 2}" y="${ay - 10}" text-anchor="middle">${arg === "blocking" ? "the gap moves to the left end" : "a shortcut opens on the right"}</text>`;
+    host.innerHTML = `<svg class="fig maze pair" viewBox="0 0 ${W} ${H + 6}" role="img" aria-label="The maze before and after it changes">${mazes}</svg><div class="fig-curves"></div>`;
     RL.fig.average(host.querySelector(".fig-curves"), {
       label: `Cumulative reward in the ${arg} maze for Dyna-Q and Dyna-Q+`,
       right: 100, x: { min: 0, max: c.budget, from: 1, ticks: Array.from({ length: c.budget / 1000 + 1 }, (_, i) => i * 1000), label: "Time steps" },
@@ -7574,7 +7611,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
     error: { label: "Error: distance from the true values (RMS)", zero: true },
     match: { label: "States where the greedy action is optimal", percent: true },
     greedy: { label: "Chance the greedy policy reaches the gem", percent: true },
-    steps: { label: "Steps per episode" },
+    steps: { label: "Steps per episode", log: true },
   };
   function curves(host, cfg, runOf) {
     const cache = new Map();
@@ -7588,7 +7625,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
       chart?.destroy();
       host.innerHTML = `<div class="scene-chart-title">${METRIC[metric].label}<span class="faint"></span></div><div class="scene-chart-host"></div>`;
       const first = runOf(names[0]), unit = first.env.unitName, noun = unit === "pull" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : ["episode", "episodes"];
-      chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, noun });
+      chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, log: METRIC[metric].log, noun });
       const total = cfg.average || 200, status = host.querySelector(".faint");
       const acc = cache.get(key) || { done: 0, sums: names.map(() => new Float64Array(first.units)) };
       cache.set(key, acc);
@@ -8869,10 +8906,21 @@ a.ref:hover { text-decoration-color: var(--ink); }
 
   const badge = (st) => `<a class="part-badge" href="#/"><i>${st.part}</i>${esc(st.partTitle)}</a>`;
 
+  // Sections that take the whole width of a card; the others pair up two by two.
+  const FULL = new Set(["idea", "knobs", "check"]);
+
   function card(e) {
     const sources = e.sources.map((s) => `<li>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.text)}</a>` : esc(s.text)}</li>`).join("");
+    // A half-width section left without a partner (the next one is full-width, or there is none) takes the whole row.
+    const wide = new Set();
+    let open = -1;
+    e.card.forEach((s, i) => {
+      if (FULL.has(s.id)) { if (open >= 0) wide.add(open); open = -1; }
+      else open = open >= 0 ? -1 : i;
+    });
+    if (open >= 0) wide.add(open);
     return `<div class="card-grid">
-      ${e.card.map((s, i) => `<section class="sec sec-${s.id}" style="--i:${i}"><h2>${s.title}</h2>${s.html}</section>`).join("")}
+      ${e.card.map((s, i) => `<section class="sec sec-${s.id}${wide.has(i) ? " wide" : ""}" style="--i:${i}"><h2>${s.title}</h2>${s.html}</section>`).join("")}
       <section class="sec sec-sources" style="--i:${e.card.length}"><h2>Sources</h2><ul>${sources}</ul></section>
     </div>`;
   }

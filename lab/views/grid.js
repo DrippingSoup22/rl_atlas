@@ -54,7 +54,7 @@
       this.path_ = [];
       const W = env.cols * T, H = env.rows * T;
       this.svg = el("svg", { class: `gridview${env.ice ? " ice" : ""}`, viewBox: `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`, role: "img", "aria-label": env.title });
-      this.svg.style.maxWidth = `${env.cols * 100}px`; // small worlds stay a comfortable size instead of filling the page
+      this.svg.style.maxWidth = `${env.cols * (env.cols <= 5 ? 125 : 100)}px`; // small worlds stay a comfortable size instead of filling the page
       host.appendChild(this.svg);
       const layer = (cls) => el("g", { class: cls }, this.svg);
       this.gTiles = layer("tiles");

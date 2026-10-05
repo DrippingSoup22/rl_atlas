@@ -94,7 +94,7 @@
     error: { label: "Error: distance from the true values (RMS)", zero: true },
     match: { label: "States where the greedy action is optimal", percent: true },
     greedy: { label: "Chance the greedy policy reaches the gem", percent: true },
-    steps: { label: "Steps per episode" },
+    steps: { label: "Steps per episode", log: true },
   };
   function curves(host, cfg, runOf) {
     const cache = new Map();
@@ -108,7 +108,7 @@
       chart?.destroy();
       host.innerHTML = `<div class="scene-chart-title">${METRIC[metric].label}<span class="faint"></span></div><div class="scene-chart-host"></div>`;
       const first = runOf(names[0]), unit = first.env.unitName, noun = unit === "pull" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : ["episode", "episodes"];
-      chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, noun });
+      chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, log: METRIC[metric].log, noun });
       const total = cfg.average || 200, status = host.querySelector(".faint");
       const acc = cache.get(key) || { done: 0, sums: names.map(() => new Float64Array(first.units)) };
       cache.set(key, acc);
