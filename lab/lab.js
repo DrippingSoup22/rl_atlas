@@ -99,7 +99,7 @@
     const knobs = { units: recorded ? recRuns[0].units : preset.units, seed: recorded ? recRuns[0].seed : preset.seed, runs: preset.runs, ...preset.params };
     const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && racers.some((r) => !(k in r.params)));
     const paramsOf = (r) => ({ ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...r.params });
-    const view = { seeds: false, show: {} };
+    const view = { seeds: !!preset.seeds, show: {} };
     const from = RL.app?.from?.name === "entry" ? racers.findLastIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
     const P = { e: 0, playing: false, speed: "step", acc: 0, wait: 0, walkers: null, focus: Math.max(0, from >= 0 ? from : racers.length - 1) };
     let runs = [], stages = [], views = [], job = null, film = null, charts = [], avg = null, sweepJob = null, sweepCharts = [], perRun = 0, runsChosen = false;
@@ -274,14 +274,15 @@
       if (recorded) return averageRecorded();
       const n = knobs.runs > 1 ? knobs.runs : preset.success ? 20 : 10, seeds = Array.from({ length: n }, (_, k) => knobs.seed + k);
       const sums = racers.map(() => ({})), lines = racers.map(() => []), wins = racers.map(() => 0);
-      let done = 0, cancelled = false;
+      let done = 0, stuck = 0, cancelled = false;
       const note = q(".chart-note"), charted = () => knobs.runs > 1 || view.seeds;
       const chunk = () => {
         if (cancelled) return;
         const t0 = performance.now();
         while (done < n && performance.now() - t0 < 14) {
           racers.forEach((r, i) => {
-            const { metrics } = lab.simulate({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: seeds[done], snapshots: false, measures: preset.measures });
+            const { metrics, stopped } = lab.simulate({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: seeds[done], snapshots: false, measures: preset.measures, giveUp: GIVE_UP });
+            if (stopped) stuck++;
             for (const k of preset.charts) {
               const s = (sums[i][k] ||= new Float64Array(knobs.units));
               for (let t = 0; t < knobs.units; t++) s[t] += metrics[k][t];
@@ -291,9 +292,9 @@
           });
           done++;
         }
-        avg = { sums, lines, wins, done, n };
+        avg = { sums, lines, wins, done, n, stuck };
         if (charted()) drawCharts(avg);
-        note.textContent = !charted() ? chartNote(1) : done < n ? `Running ${done} of ${n} runs…` : chartNote(n);
+        note.textContent = !charted() ? chartNote(1) : done < n ? `Running ${done} of ${n} runs…` : chartNote(n) + (stuck ? ` ${stuckNote(stuck)}` : "");
         tally();
         if (done < n) timer = setTimeout(chunk, 0);
       };
@@ -402,6 +403,9 @@
     }
     const sweepable = () => (recorded ? Object.keys(sweepData?.knobs || {}) : null) || Object.keys(KNOBS).filter((k) => (k in preset.params || racers.some((r) => k in r.params)) && sweepValues(k).length > 1);
     const fmtSweep = (k, v) => (k === "alpha" && v === 0 ? "1/n" : v > 0 && v < 0.001 ? v.toExponential(0) : String(v));
+    // The odds give up on a run whose episodes keep running to the step limit: it is stuck, and judged as it stands.
+    const GIVE_UP = 20;
+    const stuckNote = (k) => `${plural(k, ["run", "runs"])} got stuck: ${GIVE_UP} episodes in a row ran to the limit of ${(preset.params.maxSteps ?? 5000).toLocaleString("en")} steps, so ${k === 1 ? "it was" : "they were"} stopped there and judged as if ${k === 1 ? "it" : "they"} stayed stuck.`;
     const sweepIdle = () => `Run the sweep to see how ${preset.success ? "the odds move" : "the final score moves"} with a knob; every value gets the same seeds.`;
 
     function oddsPanel() {
@@ -417,9 +421,9 @@
     // How many of the runs so far ended as the success rule asks, for each racer.
     function tally() {
       if (!preset.success || !avg) return;
-      const { wins, done, n } = avg, pct = (w) => Math.round((100 * w) / Math.max(1, done));
+      const { wins, done, n, stuck } = avg, pct = (w) => Math.round((100 * w) / Math.max(1, done));
       q(".odds-tally").innerHTML = `Out of ${done} runs with these settings${done < n ? ` (${n - done} still to come)` : ""}, how many ${esc(preset.success.text)}: ` +
-        racers.map((r, i) => `<b>${esc(r.name)}</b> ${wins[i]} (${pct(wins[i])}%)`).join(" · ") + ".";
+        racers.map((r, i) => `<b>${esc(r.name)}</b> ${wins[i]} (${pct(wins[i])}%)`).join(" · ") + "." + (stuck ? ` ${stuckNote(stuck)}` : "");
     }
 
     // Unless the reader picked a number, as many runs per value as fit in about 20 seconds of computing (at least 10).
@@ -459,13 +463,13 @@
       sweepCharts = kinds.map((c, j) => new RL.SweepChart(grid.querySelectorAll(".chart-host")[j], {
         label: titles[c], percent: c === "ok" || m.percent, log: c === "score" && m.log, values, fmtX: (v) => fmtSweep(k, v), current,
       }));
-      const res = groups.map(() => values.map(() => ({ runs: 0, wins: 0, sum: 0, scored: 0 })));
+      const res = groups.map(() => values.map(() => ({ runs: 0, wins: 0, sum: 0, scored: 0, stuck: 0 })));
       const total = values.length * groups.length * n;
-      let done = 0, cancelled = false, timer;
+      let done = 0, stuck = 0, cancelled = false, timer;
       const draw = () => kinds.forEach((c, j) => sweepCharts[j].set(groups.map((g, gi) => ({
         name: g.name, color: `--s${g.i + 1}`,
         points: res[gi].map((x) => (c === "ok" ? (x.runs ? x.wins / x.runs : NaN) : x.scored ? x.sum / x.scored : NaN)),
-        notes: res[gi].map((x) => (c === "ok" ? `${x.wins} of ${x.runs} runs` : x.scored ? `average ${sweepCharts[j].fmt(x.sum / x.scored)} over ${x.scored} runs` : "")),
+        notes: res[gi].map((x) => (c === "ok" ? `${x.wins} of ${x.runs} runs${x.stuck ? ` (${x.stuck} stuck)` : ""}` : x.scored ? `average ${sweepCharts[j].fmt(x.sum / x.scored)} over ${x.scored} runs` : "")),
       }))));
       if (recorded) { // trained offline: every value's seeds are in the sweep file
         const d = sweepData.knobs[k];
@@ -484,8 +488,9 @@
         const t0 = performance.now();
         while (done < total && performance.now() - t0 < 14) {
           const vi = Math.floor(done / (groups.length * n)), si = Math.floor(done / groups.length) % n, gi = done % groups.length, g = groups[gi];
-          const { metrics } = lab.simulate({ world: make, algorithm: g.r.algorithm, params: { ...g.base, [k]: values[vi] }, units: knobs.units, seed: knobs.seed + si, snapshots: false, measures: preset.measures });
+          const { metrics, stopped } = lab.simulate({ world: make, algorithm: g.r.algorithm, params: { ...g.base, [k]: values[vi] }, units: knobs.units, seed: knobs.seed + si, snapshots: false, measures: preset.measures, giveUp: GIVE_UP });
           const { ok, score } = lab.success(rule, metrics), x = res[gi][vi];
+          if (stopped) { x.stuck++; stuck++; }
           x.runs++;
           if (ok) x.wins++;
           if (!Number.isNaN(score)) { x.sum += score; x.scored++; }
@@ -493,7 +498,7 @@
         }
         draw();
         q(".sweep-note").textContent = done < total ? `Running ${done} of ${total} runs…`
-          : `${n} runs per value, with seeds ${knobs.seed} to ${knobs.seed + n - 1} and the other knobs as set above.${current !== null ? " The shaded value is the one the Lab is set to." : ""} Hover a dot for its numbers.`;
+          : `${n} runs per value, with seeds ${knobs.seed} to ${knobs.seed + n - 1} and the other knobs as set above.${current !== null ? " The shaded value is the one the Lab is set to." : ""}${stuck ? ` ${stuckNote(stuck)}` : ""} Hover a dot for its numbers.`;
         if (done < total) timer = setTimeout(chunk, 0);
       };
       timer = setTimeout(chunk, 30);

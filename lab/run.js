@@ -35,7 +35,9 @@
   };
 
   // world: a world's name or a function that makes one. measures: names of numbers to add after each unit (measures.js).
-  lab.simulate = function ({ world, algorithm, params, units, seed, snapshots = true, measures = null }) {
+  // giveUp (runs without snapshots: the odds): stop a run once that many episodes in a row ran to the step cap, and take
+  // its remaining units as more of the same. `stopped` then says after how many units it stopped; 0 if it never did.
+  lab.simulate = function ({ world, algorithm, params, units, seed, snapshots = true, measures = null, giveUp = 0 }) {
     const make = typeof world === "function" ? world : () => lab.make(world);
     const p = { maxSteps: 5000, ...params };
     const env = make(), rng = lab.rng(seed);
@@ -49,6 +51,7 @@
     const marks = snapshots ? Math.ceil(units / every) : 0;
     const saved = new Float64Array(marks * size), rngAt = new Uint32Array(marks);
     const metrics = {};
+    let capped = 0, stopped = 0;
 
     for (let t = 0; t < units; t++) {
       if (snapshots && t % every === 0) {
@@ -60,6 +63,14 @@
       const stats = lab.play(algorithm, { env, m, rng, p, t });
       measure?.(m, stats, t);
       for (const key in stats) (metrics[key] ||= new Float64Array(units))[t] = stats[key];
+      if (giveUp && !snapshots && t < units - 1) {
+        capped = stats.steps >= p.maxSteps ? capped + 1 : 0;
+        if (capped >= giveUp) {
+          for (const key in metrics) metrics[key].fill(metrics[key][t], t + 1);
+          stopped = t + 1;
+          break;
+        }
+      }
     }
     const end = { buf: Float64Array.from(buf), world: worldLen ? Float64Array.from(env.state) : null, rng: rng.state };
 
@@ -87,7 +98,7 @@
     }
 
     return {
-      env: shown, algorithm, params: p, units, seed, metrics, every,
+      env: shown, algorithm, params: p, units, seed, metrics, every, stopped,
       // What the algorithm knew at the start of unit t (t = units: at the end), as a fresh copy.
       at(t) {
         if (!snapshots) throw new Error("this run kept no snapshots");

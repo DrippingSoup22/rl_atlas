@@ -34,7 +34,7 @@ REQUIRED = {
 }
 FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story"}
 # The keys of a Lab preset (content/lab.toml); any other key is a knob, and what its charts may plot.
-PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro", "success", "sweep"}
+PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds"}
 CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights",
           "policy-value", "right", "aim", "kl", "clipped"}
 # What a preset of recorded runs (racers that name a recording) can chart: from the recordings, nothing is recomputed.
@@ -474,6 +474,8 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
     sweep = raw.get("sweep")
     if sweep is not None and not (isinstance(sweep, dict) and all(isinstance(v, list) and len(v) > 1 and all(isinstance(x, (int, float)) for x in v) for v in sweep.values())):
         problems.error(where, "sweep must map knobs to lists of at least two numbers, as in sweep = { q0 = [-100.0, 0.0] }")
+    if not isinstance(raw.get("seeds", False), bool):
+        problems.error(where, "seeds must be true or false (true: the charts open on the thin lines of 10 seeds)")
     return {
         "title": raw.get("title", pid), "env": raw.get("env", ""), "racers": racers,
         "units": raw.get("units", 500), "seed": raw.get("seed", 1), "runs": raw.get("runs", 1),
@@ -481,6 +483,7 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
         "params": {k: v for k, v in raw.items() if k not in PRESET_KEYS},
         **({"success": success} if success is not None else {}),
         **({"sweep": sweep} if sweep is not None else {}),
+        **({"seeds": True} if raw.get("seeds") is True else {}),
     }
 
 

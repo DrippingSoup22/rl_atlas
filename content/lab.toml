@@ -13,6 +13,7 @@
 #   success    what counts as a run that ended well, for the odds the Lab counts over many seeds: { metric, min or
 #              max, window = [first, last] units (the last tenth by default), text }; text finishes "how many …"
 #   sweep      the values the Lab's sweep tries for a knob, where the defaults do not suit the world: { q0 = [...] }
+#   seeds      true: the charts open on the thin lines of 10 seeds instead of the one run played
 # Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge,
 # n (n-step methods), lambda and trace ("accumulating" or "replacing"), planning and kappa (Dyna),
 # features ("groups", "tiles", "poly", "fourier", "table" or "own") with cells, tilings and order, and behavior (the
@@ -619,6 +620,25 @@ maxSteps = 500
 charts = ["return"]
 film = [1, 20, 60, 200]
 intro = "A small gem two steps away pays 0.3; a big one seven steps away pays 1. A learner that settles on the first thing that works never finds the big gem. The entropy bonus rewards the policy for staying uncertain, so it keeps wandering long enough to find the better way."
+success = { metric = "return", min = 0.9, text = "end up going for the big gem" }
+
+[seeds-gems]
+title = "Seeds: one setting, two fates"
+env = "two-gems"
+algorithms = ["a2c"]
+units = 200
+seed = 19
+beta = 0.05
+alpha = 2.0
+alphaW = 0.3
+workers = 4
+n = 5
+gamma = 0.95
+maxSteps = 500
+charts = ["return"]
+film = [1, 40, 100, 200]
+seeds = true
+intro = "The same settings every time; only the seed changes. With an entropy weight β = 0.05, a run is about as likely to settle on the small gem as to find the big one, depending on which gem the workers happen to stumble on, and when. The thin lines are ten seeds; the odds below count twenty. β moves the odds, not the luck: with β = 0, 3 of these 20 runs find the big gem; with β = 0.1, 16 do."
 success = { metric = "return", min = 0.9, text = "end up going for the big gem" }
 
 [trpo-cliff]

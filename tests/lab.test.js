@@ -349,3 +349,15 @@ test("recorded runs play back what was recorded: each block's test episode, step
     }
   }
 });
+
+test("the odds give up on a stuck run: 20 episodes in a row at the step limit", () => {
+  // Actor–critic with α = 1 on the cliff: the policy saturates and its episodes run to the limit.
+  const params = { alpha: 1, alphaW: 0.1, lambda: 0, gamma: 1 };
+  const run = lab.simulate({ world: "cliff", algorithm: lab.algorithms["actor-critic"], params, units: 60, seed: 1, snapshots: false, giveUp: 20 });
+  assert.ok(run.stopped >= 20 && run.stopped < 60, `stopped after ${run.stopped} episodes`);
+  assert.equal(run.metrics.steps[run.stopped - 1], 5000);
+  assert.equal(run.metrics.return[59], run.metrics.return[run.stopped - 1]); // the rest: more of the same
+  const full = lab.simulate({ world: "cliff", algorithm: lab.algorithms["actor-critic"], params, units: 60, seed: 1, snapshots: false });
+  assert.equal(full.stopped, 0);
+  assert.deepEqual(Array.from(full.metrics.steps.slice(0, run.stopped)), Array.from(run.metrics.steps.slice(0, run.stopped)));
+});
