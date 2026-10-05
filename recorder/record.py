@@ -37,6 +37,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dqn import DQN, DQNConfig  # noqa: E402
 from pg import PG, PGConfig, gae  # noqa: E402
+from ac import AC, ACConfig  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "content" / "recordings"
@@ -101,6 +102,13 @@ CATALOG = {
                           cfg=dict(algo="trpo", workers=8, steps=256, delta=0.01, lam=0.95, v_epochs=10, minibatch=64)),
     "ppo-pendulum": dict(world="pendulum", learner="pg", station="ppo", title="PPO", steps=200_000, block=5_000, seeds=[1, 2, 3, 4, 5],
                          cfg=dict(algo="ppo", workers=4, steps=512, epochs=10, minibatch=64, lr=1e-3, gamma=0.9, lam=0.95, reward_scale=0.1)),
+    # Off-policy actor-critics for continuous actions (Part 11)
+    "ddpg-pendulum": dict(world="pendulum", learner="ac", station="ddpg", title="DDPG", steps=60_000, block=1_500, seeds=[1, 2, 3, 4, 5],
+                          cfg=dict(algo="ddpg", reward_scale=0.1)),
+    "td3-pendulum": dict(world="pendulum", learner="ac", station="td3", title="TD3", steps=60_000, block=1_500, seeds=[1, 2, 3, 4, 5],
+                         cfg=dict(algo="td3", reward_scale=0.1)),
+    "sac-pendulum": dict(world="pendulum", learner="ac", station="sac", title="SAC", steps=60_000, block=1_500, seeds=[1, 2, 3, 4, 5],
+                         cfg=dict(algo="sac", reward_scale=0.1)),
 }
 
 # The knobs each recording's sweep tries, with the recording's own value among them. target_every = 0: no target
@@ -112,7 +120,12 @@ SWEEPS = {
     "ppo-cartpole": {"clip": [0.0, 0.1, 0.2, 0.3, 0.5], "epochs": [1, 4, 10, 30], "lr": [1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2]},
     "trpo-cartpole": {"delta": [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0]},
     "ppo-pendulum": {"lr": [3e-4, 1e-3, 3e-3], "gamma": [0.9, 0.95, 0.99], "clip": [0.0, 0.1, 0.2, 0.3, 0.5], "epochs": [1, 4, 10, 30]},
+    "ddpg-pendulum": {"tau": [0.001, 0.005, 0.02, 0.1], "noise": [0.0, 0.1, 0.3, 0.6]},
+    "td3-pendulum": {"delay": [1, 2, 4, 8], "policy_noise": [0.0, 0.2, 0.5, 1.0]},
+    "sac-pendulum": {"alpha": ["auto", 0.01, 0.05, 0.2, 1.0], "tau": [0.001, 0.005, 0.02, 0.1]},
 }
+# Sweep values that set more than one knob: SAC's α is either tuned ("auto") or fixed.
+SWEEP_AS = {"alpha": lambda v: {"auto_alpha": True} if v == "auto" else {"alpha": v, "auto_alpha": False}}
 
 
 # ---- packing numbers: quantized to bytes, base64 ----
@@ -273,7 +286,54 @@ def run_pg(spec: dict, seed: int, snapshots: bool) -> dict:
             "episodes": [len(b) for b in per_block], "snapshots": shots}
 
 
-RUNNERS = {"dqn": run_dqn, "pg": run_pg}
+def snapshot_ac(agent: AC, world: dict, rng: np.random.Generator) -> dict:
+    """What the critic thinks of the grid (Q of the greedy action), the actor's greedy action there, and a test episode
+    played greedily, keeping per step the action, the spread the policy explores with, and the value."""
+    xs, ys = grid_axes(world)
+    g = world["grid"](xs, ys)
+
+    def choose(o, r):
+        a = agent.policy(o[None], greedy=True)[0]
+        return a, [float(a[0]), float(agent.spread(o[None])[0]), float(agent.value(o[None])[0])]
+
+    ep, _ = test_episode(world, choose, TEST_SEED, rng)
+    return {"v": pack(agent.value(g)), "mean": pack(agent.policy(g, greedy=True)[:, 0]), "test": ep}
+
+
+def run_ac(spec: dict, seed: int, snapshots: bool) -> dict:
+    world = WORLDS[spec["world"]]
+    cfg = ACConfig(**spec["cfg"])
+    env = gym.make(world["gym"])
+    rng = np.random.default_rng(seed)
+    obs, _ = env.reset(seed=seed)
+    agent = AC(env.observation_space.shape[0], env.action_space, cfg, rng, spec["steps"])
+    block, blocks = spec["block"], spec["steps"] // spec["block"]
+    per_block, qs = [[] for _ in range(blocks)], []
+    shots = [snapshot_ac(agent, world, np.random.default_rng(seed + 10_000))] if snapshots else []
+    ret = 0.0
+    for t in range(spec["steps"]):
+        a = agent.act(obs)
+        obs2, r, term, trunc, _ = env.step(a)
+        agent.observe(obs, a, r, obs2, term)
+        obs, ret = obs2, ret + r
+        if term or trunc:
+            per_block[t // block].append(ret)
+            ret = 0.0
+            obs, _ = env.reset(seed=int(rng.integers(1 << 30)))
+        if (t + 1) % block == 0:
+            L = agent.log
+            qs.append(round(float(np.mean(L["q"])) / cfg.reward_scale, 2) if L["q"] else None)  # in the reward's own units
+            if snapshots:
+                shot = snapshot_ac(agent, world, np.random.default_rng(seed + 10_000 + (t + 1) // block))
+                shot["stats"] = rounded({"q": qs[-1] or 0.0, "loss": float(np.mean(L["loss"])) if L["loss"] else 0.0,
+                                         **({"alpha": float(L["alpha"][-1])} if L["alpha"] else {})})
+                shots.append(shot)
+            agent.log = {"q": [], "loss": [], "alpha": []}
+    return {"seed": seed, "train": [round(float(np.mean(b)), 2) if b else None for b in per_block],
+            "episodes": [len(b) for b in per_block], "q": qs, "snapshots": shots}
+
+
+RUNNERS = {"dqn": run_dqn, "pg": run_pg, "ac": run_ac}
 
 
 def record(name: str, spec: dict) -> None:
@@ -298,16 +358,26 @@ def record(name: str, spec: dict) -> None:
     log.info("%s: %.0f s, %d KB; test returns %s", name, time.time() - t0, path.stat().st_size // 1024, " ".join(f"{x:.0f}" for x in tests))
 
 
+def current(spec: dict, knob: str):
+    """The recording's own value of a knob: its setting, or the learner's default."""
+    cfg = {"dqn": DQNConfig, "pg": PGConfig, "ac": ACConfig}[spec["learner"]](**spec["cfg"])
+    if knob == "alpha" and getattr(cfg, "auto_alpha", False):
+        return "auto"
+    v = getattr(cfg, knob)
+    return list(v) if isinstance(v, tuple) else v
+
+
 def sweep(name: str, knobs: dict) -> None:
     """Every value of every knob, every seed, all at once over the processes; the training curves only."""
     t0, spec = time.time(), CATALOG[name]
     jobs = [(knob, v, s) for knob, values in knobs.items() for v in values for s in spec["seeds"]]
-    specs = [dict(spec, cfg=dict(spec["cfg"], **{knob: v})) for knob, v, _ in jobs]
+    specs = [dict(spec, cfg=dict(spec["cfg"], **(SWEEP_AS[knob](v) if knob in SWEEP_AS else {knob: v}))) for knob, v, _ in jobs]
     with ProcessPoolExecutor(max_workers=4) as pool:
         results = list(pool.map(RUNNERS[spec["learner"]], specs, [s for *_, s in jobs], [False] * len(jobs)))
     train = {job: r["train"] for job, r in zip(jobs, results)}
     out = {"name": name, "world": spec["world"], "steps": spec["steps"], "block": spec["block"], "seeds": spec["seeds"],
-           "config": spec["cfg"], "knobs": {knob: {"values": values, "train": [[train[(knob, v, s)] for s in spec["seeds"]] for v in values]}
+           "config": spec["cfg"], "knobs": {knob: {"values": values, "current": current(spec, knob),
+                                                   "train": [[train[(knob, v, s)] for s in spec["seeds"]] for v in values]}
                                            for knob, values in knobs.items()}}
     path = OUT / "sweeps" / f"{name}.json"
     path.parent.mkdir(parents=True, exist_ok=True)

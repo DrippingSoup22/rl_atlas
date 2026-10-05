@@ -33,7 +33,7 @@
     // the numbers of each step: one packed column each (older recordings packed them all together, step by step)
     const cols = Array.isArray(t.x) ? t.x.map(lab.unpack) : null, width = cols ? cols.length : lab.unpack(t.x).length / steps;
     return {
-      t: snap, kind: rec.learner === "dqn" ? "dqn" : "pg", grid: rec.grid, v: lab.unpack(snap.v), act: snap.act ? lab.unpack(snap.act) : null, mean: snap.mean ? lab.unpack(snap.mean) : null,
+      t: snap, kind: rec.learner === "pg" ? "pg" : rec.learner, grid: rec.grid, v: lab.unpack(snap.v), act: snap.act ? lab.unpack(snap.act) : null, mean: snap.mean ? lab.unpack(snap.mean) : null,
       n, eps: snap.eps, stats: snap.stats || {}, steps, ret: t.return,
       state: (k) => dims.map((d) => d[k]), action: (k) => lab.unpack(t.a)[k], numbers: (k) => (cols ? Float64Array.from(cols, (c) => c[k]) : lab.unpack(t.x).subarray(k * width, (k + 1) * width)),
     };
@@ -56,14 +56,23 @@
     },
   };
 
+  // Off-policy actor-critics for continuous actions (DDPG, TD3, SAC): the actor climbs the critic.
+  LEARNERS.ac = {
+    rule: (rec) => (rec.station === "sac"
+      ? "\\boldsymbol\\theta \\leftarrow \\boldsymbol\\theta + \\alp\\,\\nabla_{\\boldsymbol\\theta}\\Big(\\min_i \\val{\\hat q_i(s, a_{\\boldsymbol\\theta})} - \\alpha \\ln \\pol{\\pi(a_{\\boldsymbol\\theta} \\mid s)}\\Big)"
+      : "\\boldsymbol\\theta \\leftarrow \\boldsymbol\\theta + \\alp\\,\\nabla_a \\val{\\hat q(s, a)}\\big|_{a = \\pol{\\mu(s)}}\\,\\nabla_{\\boldsymbol\\theta}\\pol{\\mu(s, \\boldsymbol\\theta)}"),
+    numbers: (ev) => `\\pol{\\mu(s)} = ${fmt(ev.x[0], 2)} \\qquad \\text{spread } ${fmt(ev.x[1], 2)} \\qquad \\val{\\hat q(s, \\mu(s))} = ${fmt(ev.x[2])}`,
+    note: (ev) => `Step ${ev.k + 1} of the test episode · the actor chose <b>a torque of ${fmt(ev.a, 2)}</b> (no exploration in a test)`,
+  };
+
   // The learner of a recording, in the shape of a Lab algorithm: the station whose pseudocode it follows, how it shows
   // a snapshot, and its test episode as events.
   lab.recordedLearner = function (rec) {
-    const kind = rec.learner === "dqn" ? "dqn" : "pg", L = LEARNERS[kind];
+    const kind = rec.learner, L = LEARNERS[kind];
     const reward = REWARD[rec.world];
     return {
       id: rec.station, title: rec.title, unit: "block", recorded: true, kind,
-      rule: L.rule,
+      rule: typeof L.rule === "function" ? L.rule(rec) : L.rule,
       numbers: (ev) => L.numbers(ev, lab.make(rec.world)),
       note: (ev) => L.note(ev, lab.make(rec.world)),
       show: (m) => m,

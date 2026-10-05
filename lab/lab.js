@@ -382,7 +382,9 @@
     // ---- the odds: how often runs end well, and how that moves with a knob ----
     // The knobs of recorded runs (recorder/record.py), as their sweeps name them.
     const DEEP_KNOBS = { lr: { sym: "α", name: "learning rate" }, target_every: { sym: "C", name: "steps between target updates (0: none)" },
-      buffer: { sym: "N", name: "replay memory (128: none)" }, clip: { sym: "ε", name: "clip range (0: no clip)" }, epochs: { sym: "K", name: "passes over each batch" },
+      buffer: { sym: "N", name: "replay memory (128: none)" }, tau: { sym: "τ", name: "how fast the target copies follow" },
+      noise: { sym: "σ", name: "exploration noise" }, delay: { sym: "d", name: "critic updates per actor update" },
+      policy_noise: { sym: "σ′", name: "noise on the target action" }, alpha: { sym: "α", name: "entropy weight (auto: tuned)" }, clip: { sym: "ε", name: "clip range (0: no clip)" }, epochs: { sym: "K", name: "passes over each batch" },
       steps: { sym: "n", name: "steps per worker between updates" }, delta: { sym: "δ", name: "trust region (KL)" }, gamma: { sym: "γ", name: "discount" } };
     const knobOf = (k) => (recorded ? DEEP_KNOBS[k] || { sym: k, name: k } : { ...KNOBS[k], ...racers.find((r) => r.algorithm.knobs?.[k])?.algorithm.knobs[k] });
     // The values a sweep tries: a knob's choices or its sweep list. Tiny step sizes (linear methods, policy gradients)
@@ -438,7 +440,7 @@
         if (same) same.name = r.algorithm.title;
         else groups.push({ key, r, i, base, name: k in r.params ? r.algorithm.title : r.name }); // its own value is overridden
       });
-      const kinds = preset.success ? ["ok", "score"] : ["score"], current = recorded ? rec0.config[k] ?? null : k in preset.params ? knobs[k] : null;
+      const kinds = preset.success ? ["ok", "score"] : ["score"], current = recorded ? sweepData.knobs[k].current ?? rec0.config[k] ?? null : k in preset.params ? knobs[k] : null;
       const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}` };
       const grid = q(".sweep-grid");
       grid.className = `chart-grid sweep-grid n${kinds.length}`;

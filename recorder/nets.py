@@ -62,6 +62,17 @@ class MLP:
                 g = g * (h > 0) if self.act == "relu" else g * (1 - h**2)
         return dW + db
 
+    def input_grad(self, inputs: list[np.ndarray], dy: np.ndarray) -> np.ndarray:
+        """The gradient with respect to the network's input, for a gradient dy at the output: how a critic's value moves
+        with the action it was given, which is what an actor climbs."""
+        g = dy
+        for i in range(len(self.W) - 1, -1, -1):
+            g = g @ self.W[i].T
+            if i > 0:
+                h = inputs[i]
+                g = g * (h > 0) if self.act == "relu" else g * (1 - h**2)
+        return g
+
 
 class Adam:
     """Adam (Kingma & Ba, 2015) with an optional limit on the norm of each gradient."""
