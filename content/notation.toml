@@ -107,6 +107,26 @@ text = "the weights of a policy or of a value function"
 station = "features"
 
 [[symbol]]
+tex = '\mathbf{x}(s)'
+text = "the feature vector of state s: a few numbers that describe it"
+station = "features"
+
+[[symbol]]
+tex = '\val{\hat v(s, \mathbf w)},\ \val{\hat q(s, a, \mathbf w)}'
+text = "estimated values computed from weights, instead of read from a table"
+station = "why-approximate"
+
+[[symbol]]
+tex = '\mu(s)'
+text = "the share of its time the agent spends in state s"
+station = "value-error"
+
+[[symbol]]
+tex = '\overline{\text{VE}}(\mathbf w)'
+text = "the value error: squared errors weighted by μ"
+station = "value-error"
+
+[[symbol]]
 tex = '\mathbb{E}'
 text = "expected value: the average over all the randomness"
 station = "value-functions"

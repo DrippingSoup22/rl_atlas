@@ -38,7 +38,7 @@ directly, which is handier while editing.
 | --- | --- |
 | `content/` | `map.toml` (every station in reading order, with each algorithm's parent and labels), `lab.toml` (Lab presets), `notation.toml` (symbols page), and one Markdown file per written entry |
 | `app/` | the page: `index.html`, `css/` and `js/` (shell, map, pages, stories and their scenes, textbook, diagrams, figures, demos, math) |
-| `lab/` | worlds, algorithms, runs and dynamic programming (no DOM, also used by the tests), and their views |
+| `lab/` | worlds, features, algorithms, runs and dynamic programming (no DOM, also used by the tests), and their views |
 | `vendor/` | KaTeX 0.19 (MIT license) |
 | `tests/` | `lab.test.js` |
 
@@ -47,7 +47,7 @@ directly, which is handier while editing.
 An entry is `content/<part folder>/<id>.md`, where `<id>` is a station in `map.toml`. It starts with TOML
 front matter between `+++` lines: `summary`, `change` (what changed from the parent), `prereqs`, `lab`, `sources`,
 and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline`, `mdp`, or one of the Lab's views: `bandit`,
-`chain`, `cards`, `graph`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
+`chain`, `cards`, `graph`, `line`, `car`, `star`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
 a Lab view, and grid stories that replay dynamic programming or Monte Carlo, name their runs in a `[story.runs]`
 table (`name = { algorithm, <knobs> }`); a step then picks a run and a moment (`run`, `at`), can replay some units
 (`play`, `pace`) and can chart runs averaged over many seeds (`curves`, `metric`).
@@ -67,7 +67,9 @@ shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of 
   `dp-race`, `gpi`, `blackjack-values`, `blackjack-policy`, `blackjack-match`, `frozen-mc`, `is-blackjack`,
   `is-infinite`, `random-walk` (values, error, batch), `max-bias`, `n-step-study`, `lambda-study` (offline, online),
   `lambda-weights`, `trace-shapes`, `n-step-paths` (lambda), `dyna-architecture`, `dyna-curves`, `dyna-midway`,
-  `changing-maze` (blocking, shortcut), `expected-vs-sample`, `sweeping-curves`. A backup label breaks into lines at `\n`, and
+  `changing-maze` (blocking, shortcut), `expected-vs-sample`, `sweeping-curves`, `touch-tiles`, `feature-shapes`,
+  `coarse-widths`, `walk-fit` (mc), `walk-alpha`, `walk-n-study`, `basis-study`, `tiling-study`, `car-surfaces`, `car-curves` (n),
+  `baird-weights`. A backup label breaks into lines at `\n`, and
   a display formula too wide for its column shrinks a little, then stacks the parts written side by side with `\qquad`;
 - `::: pseudocode` (end a line with `{#id}` to link it to the Lab's step-by-step mode), `::: question` (answer after `---`) and `::: analogy`.
 

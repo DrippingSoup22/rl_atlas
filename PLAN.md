@@ -44,7 +44,7 @@ The full curriculum, 95 stations in 14 parts, lives in [content/map.toml](conten
 | --- | --- | --- |
 | The guide | one offline HTML file, plain JavaScript, SVG and canvas | animation, hover-linking and scrubbing need to run in the browser at 60 fps; opens with a double-click |
 | Math | KaTeX, vendored | standard, fast, offline, supports the color and link macros |
-| 3D (M4) | three.js, copied from memory_viz | already used in this workspace |
+| 3D (M4) | a small canvas surface renderer of our own | one surface of a few hundred tiles needs no library; keeps the file small and offline |
 | Content | Markdown + TOML front matter, built by `build.py` | readable and editable; Python standard library only |
 | Tests | `node --test`, one file | checks the Lab against the book's results |
 | Deep RL runs (M6) | Python recorder → data files played in the page | training is heavy and offline; playback is light |
@@ -71,7 +71,14 @@ animations and hover effects this guide relies on would not be smooth.
   a bracket, planning updates as dashed sparks (in queue order for prioritized sweeping), fog hides what a model has
   never seen, and maze walls move mid-run. Eight new Lab presets; new worlds: the 19-state random walk, the Dyna,
   blocking and shortcut mazes. Figures recomputed live: Sutton & Barto's 7.2, 7.4, 8.2–8.5, 8.7, 12.3 and 12.6.
-- [ ] **M4 · Function approximation**: features, the "touch a tile" demo, Mountain Car in 3D, the deadly triad.
+- [x] **M4 · Function approximation**: features, the "touch a tile" demo, Mountain Car in 3D, the deadly triad.
+  Part 8 is written: 8 entries (why tables break, features, value error, gradient Monte Carlo, semi-gradient TD and
+  SARSA, generalization, the deadly triad), each with a Textbook and a Card, 7 with a Story on Lab runs. The Lab learns
+  with features (groups, tile coding, polynomials, Fourier cosines, tables, or a world's own) built from scaled
+  coordinates; new worlds: the 1000-state walk with its exact values and visit shares, Mountain Car, Baird's
+  counterexample. New views: the walk as one value line with the footprint of each update, Mountain Car with a
+  cost-to-go landscape you can turn (or a map from above), Baird's star with its weights on a log scale. Five new
+  presets. Figures recomputed live: Sutton & Barto's 9.1, 9.2, 9.5, 9.8, 9.10, 10.1–10.3 and 11.2, plus touch a tile.
 - [ ] **M5 · Policy gradients, live**: gradient bandit, short corridor, REINFORCE, actor–critic, A2C; GAE and PPO demos.
 - [ ] **M6 · Recorded runs**: the recorder; DQN, A2C, TRPO and PPO on CartPole, Mountain Car and Pendulum.
 - [ ] **M7 · The rest**: continuous control, toolbox, where next, quizzes everywhere, polish.

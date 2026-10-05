@@ -43,7 +43,7 @@
     if (phase[0] === 0) {
       const delta = yield* sweep(ctx, P);
       if (delta < p.theta) phase[0] = 1;
-      return { delta, improved: 0 };
+      return { delta, improved: 0, changed: 0, converged: 0 }; // every unit reports the same numbers, so short runs chart them too
     }
     let changed = 0;
     const row = new Float64Array(nA);

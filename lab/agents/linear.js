@@ -77,6 +77,7 @@
       for (const a of acts) q[a] = lab.dot(w, x, a * N);
       let best = -Infinity, ties = [];
       for (const a of acts) { if (q[a] > best) { best = q[a]; ties = [a]; } else if (q[a] === best) ties.push(a); }
+      if (!ties.length) return acts[rng.int(acts.length)]; // weights that diverged to NaN rank nothing: act at random
       return ties.length > 1 ? ties[rng.int(ties.length)] : ties[0];
     };
     const S = [env.reset(rng)], X = [F.of(S[0])], A = [], R = [0];
@@ -135,12 +136,15 @@
   // The estimate of the updated state in numbers: with linear features it moves by α δ ‖x‖² (times ρ off-policy),
   // so with 50 tilings each update moves it 50 times as far as α alone says.
   const sq = (x) => { let v = 0; for (let i = 0; i < x.k; i++) v += x.val[i] * x.val[i]; return v; };
-  const target = (ev, p) => `\\rew{${tex(ev.rewards ?? ev.target)}}${ev.boot ? ` + ${ev.k === 1 ? p.gamma : +ev.discount.toFixed(3)}\\cdot\\val{${tex(ev.next)}}` : ""}`;
+  const target = (ev, p) => {
+    const g = ev.k === 1 ? p.gamma : +ev.discount.toFixed(3);
+    return `\\rew{${tex(ev.rewards ?? ev.target)}}${ev.boot ? ` + ${g === 1 ? "" : `${g}\\,`}\\val{${tex(ev.next)}}` : ""}`;
+  };
   const moved = (sym) => (ev, p) => {
     const n2 = sq(ev.x), ratio = ev.offPolicy ? `${+ev.rho.toFixed(2)}\\cdot ` : "";
     return `\\val{${sym}} \\leftarrow \\val{${ev.old.toFixed(2)}} + ${ratio}${p.alpha}\\,\\big[\\,${target(ev, p)} - \\val{${tex(ev.old)}}\\,\\big]${n2 === 1 ? "" : `\\cdot ${+n2.toFixed(2)}`} = \\val{${ev.value.toFixed(2)}}`;
   };
-  const vNumbers = moved("\\hat v(S)"), qNumbers = moved("\\hat q(S,A)");
+  const vNumbers = moved("\\hat v"), qNumbers = moved("\\hat q");
   // How many weights an update touched, and so how much of the space it moved.
   const shared = (ev) => {
     const k = ev.x.k;
@@ -156,21 +160,21 @@
   lab.algorithms = Object.assign(lab.algorithms || {}, {
     "gradient-mc": {
       id: "gradient-mc", title: "Gradient Monte Carlo", ...linear(false), run: gradientMC,
-      rule: "\\mathbf w \\leftarrow \\mathbf w + \\alp\\,\\big[\\rew{G_t} - \\val{\\hat v(S_t, \\mathbf w)}\\big]\\,\\nabla \\val{\\hat v(S_t, \\mathbf w)}",
+      rule: "\\mathbf w \\leftarrow \\mathbf w + \\alp\\,\\big[\\rew{G_t} - \\val{\\hat v(S_t)}\\big]\\,\\mathbf x(S_t)",
       numbers: vNumbers, note,
     },
     "semi-gradient-td": {
       id: "semi-gradient-td", title: "Semi-gradient TD", ...linear(false), run: semiTD,
       rule: (p) => steps(p) === 1
-        ? `\\mathbf w \\leftarrow \\mathbf w + \\alp${p.behavior ? "\\,\\rho" : ""}\\,\\big[\\rew{R} + \\gam\\,\\val{\\hat v(S', \\mathbf w)} - \\val{\\hat v(S, \\mathbf w)}\\big]\\,\\nabla \\val{\\hat v(S, \\mathbf w)}`
-        : `\\mathbf w \\leftarrow \\mathbf w + \\alp\\,\\big[\\rew{G_{\\tau:\\tau+${steps(p)}}} - \\val{\\hat v(S_\\tau, \\mathbf w)}\\big]\\,\\nabla \\val{\\hat v(S_\\tau, \\mathbf w)}`,
+        ? `\\mathbf w \\leftarrow \\mathbf w + \\alp${p.behavior ? "\\,\\rho" : ""}\\,\\big[\\rew{R} + \\gam\\,\\val{\\hat v(S')} - \\val{\\hat v(S)}\\big]\\,\\mathbf x(S)`
+        : `\\mathbf w \\leftarrow \\mathbf w + \\alp\\,\\big[\\rew{G_{\\tau:\\tau+${steps(p)}}} - \\val{\\hat v(S_\\tau)}\\big]\\,\\mathbf x(S_\\tau)`,
       numbers: vNumbers, note,
     },
     "semi-gradient-sarsa": {
       id: "semi-gradient-sarsa", title: "Semi-gradient SARSA", ...linear(true), run: semiSarsa,
       rule: (p) => steps(p) === 1
-        ? "\\mathbf w \\leftarrow \\mathbf w + \\alp\\,\\big[\\rew{R} + \\gam\\,\\val{\\hat q(S', A', \\mathbf w)} - \\val{\\hat q(S, A, \\mathbf w)}\\big]\\,\\nabla \\val{\\hat q(S, A, \\mathbf w)}"
-        : `\\mathbf w \\leftarrow \\mathbf w + \\alp\\,\\big[\\rew{G_{\\tau:\\tau+${steps(p)}}} - \\val{\\hat q(S_\\tau, A_\\tau, \\mathbf w)}\\big]\\,\\nabla \\val{\\hat q(S_\\tau, A_\\tau, \\mathbf w)}`,
+        ? "\\mathbf w_A \\leftarrow \\mathbf w_A + \\alp\\,\\big[\\rew{R} + \\gam\\,\\val{\\hat q(S', A')} - \\val{\\hat q(S, A)}\\big]\\,\\mathbf x(S)"
+        : `\\mathbf w_A \\leftarrow \\mathbf w_A + \\alp\\,\\big[\\rew{G_{\\tau:\\tau+${steps(p)}}} - \\val{\\hat q(S_\\tau, A_\\tau)}\\big]\\,\\mathbf x(S_\\tau)`,
       numbers: qNumbers, note,
     },
   });

@@ -23,7 +23,8 @@
       const s = [env.xMin + ((env.xMax - env.xMin) * i) / (N - 1), -env.vMax + (2 * env.vMax * j) / (N - 1)], x = F.of(s);
       let best = -Infinity;
       for (let a = 0; a < env.nA; a++) best = Math.max(best, lab().dot(d.w, x, a * n));
-      Z[j * N + i] = Math.max(0, -best);
+      // a learner whose step size is too large diverges: its runaway estimates are drawn at the top of a tall scale
+      Z[j * N + i] = Number.isFinite(best) ? Math.min(1e6, Math.max(0, -best)) : 1e6;
       top = Math.max(top, Z[j * N + i]);
     }
     return { Z, top };
