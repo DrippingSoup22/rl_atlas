@@ -99,7 +99,7 @@
               d += `${d ? "L" : "M"}${x(from + i + (k - 1) / 2).toFixed(1)} ${y(sum / k).toFixed(1)}`;
             }
           }
-          ends.push({ id: c.id, y: y(L[n - 1]) + 4, y0: y(L[n - 1]) });
+          if (c.name) ends.push({ id: c.id, y: y(L[n - 1]) + 4, y0: y(L[n - 1]) }); // a curve without a name shares one with others
         }
         svg.querySelector(`.curve[data-id="${c.id}"]`).setAttribute("d", d);
       }

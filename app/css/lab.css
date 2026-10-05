@@ -331,6 +331,95 @@
 .graphview .bot-eye { fill: var(--surface); }
 .graphview .fx { pointer-events: none; }
 
+/* ---- line view (the 1000-state walk) ---- */
+.lineview { display: block; width: 100%; max-width: 780px; height: auto; margin: 0 auto; overflow: visible; }
+.lineview text { font-family: var(--font); }
+.lineview .grid { stroke: var(--line); }
+.lineview .grid.zero { stroke: var(--line-2); }
+.lineview .tick, .lineview .axis-name { font-size: 11px; fill: var(--ink-3); }
+.lineview .visits { fill: color-mix(in oklab, var(--ink) 7%, transparent); transition: opacity 0.3s; }
+.lineview .visits-name { font-size: 10.5px; fill: var(--ink-3); transition: opacity 0.3s; }
+.lineview:not([data-visits]) :is(.visits, .visits-name) { opacity: 0; }
+.lineview .bound { stroke: var(--line-2); stroke-dasharray: 2 3; }
+.lineview .truth { fill: none; stroke: var(--ink-2); stroke-width: 1.8; stroke-dasharray: 5 4; transition: opacity 0.3s; }
+.lineview:not([data-truth]) .truth { opacity: 0; }
+.lineview .est-line { fill: none; stroke: var(--val); stroke-width: 2.6; stroke-linejoin: round; }
+.lineview .est-mark { fill: var(--surface); stroke: var(--err); stroke-width: 2.5; opacity: 0; transition: opacity 0.2s; }
+.lineview .ghost { fill: none; stroke: var(--ink-3); stroke-width: 1.3; opacity: 0.6; }
+.lineview .ghost-name { font-size: 11px; fill: var(--ink-3); }
+.lineview .strip-zero { stroke: var(--line-2); }
+.lineview .strip-name { font-size: 10.5px; fill: var(--ink-3); transition: opacity 0.3s; }
+.lineview .footprint { fill: color-mix(in oklab, var(--err) 30%, transparent); stroke: var(--err); stroke-width: 1.4; stroke-linejoin: round; transition: opacity 0.3s; }
+.lineview .footprint.neg { fill: color-mix(in oklab, var(--val) 22%, transparent); stroke: var(--val); }
+.lineview:not([data-footprint]) :is(.footprint, .strip-name, .strip-zero) { opacity: 0; }
+.lineview .track-line { stroke: var(--line-2); stroke-width: 3; stroke-linecap: round; }
+.lineview .exit { fill: var(--surface-3); stroke: var(--ink-3); stroke-width: 1.5; }
+.lineview .exit-r { font-size: 9.5px; font-weight: 800; fill: var(--rew-ink); text-anchor: middle; }
+.lineview .jump { fill: none; stroke: var(--ink-3); stroke-width: 1.6; stroke-dasharray: 3 3; }
+.lineview .bot { fill: var(--ink); stroke: var(--surface); stroke-width: 2.5; transition: transform 0.2s var(--ease), opacity 0.3s; }
+.lineview .bot.instant { transition: none; }
+.lineview .bot.gone { opacity: 0; }
+.lineview .fx { pointer-events: none; }
+.thumb .t-zero, .thumb-line .t-zero { stroke: var(--line-2); }
+.thumb-line .t-truth { fill: none; stroke: var(--ink-2); stroke-width: 1.2; stroke-dasharray: 3 2; }
+
+/* ---- car view (Mountain Car) and the 3D surface ---- */
+.carview { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px 20px; align-items: center; }
+.carview .hill { display: block; width: 100%; height: auto; overflow: visible; }
+.carview text { font-family: var(--font); }
+.carview .ground { fill: var(--surface-3); }
+.carview .ground-line { fill: none; stroke: var(--ink-2); stroke-width: 2; }
+.carview .pole { stroke: var(--ink-2); stroke-width: 2; }
+.carview .flag { fill: var(--rew); }
+.carview .hill-note { font-size: 11px; fill: var(--ink-3); }
+.carview .speedo { font-size: 11.5px; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+.carview .car { transition: transform 0.12s linear; }
+.carview .car.instant { transition: none; }
+.carview .car-shell, .carview .car-top { fill: var(--ink); }
+.carview .wheel { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+.carview .throttle { fill: none; stroke: var(--pol); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.carview .map-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 12.5px; margin-bottom: 4px; }
+.carview .map-head span { color: var(--ink-3); font-size: 11.5px; }
+.carview .phase { display: block; width: 100%; height: auto; }
+.carview .phase .tick, .carview .phase .axis-name { font-size: 11px; fill: var(--ink-3); }
+.carview .phase .zero { stroke: var(--ink-3); stroke-dasharray: 2 3; opacity: 0.6; }
+.carview .phase-path { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; }
+.carview .phase-dot { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
+.surface3d { position: relative; width: 100%; }
+.surface3d canvas { display: block; width: 100%; cursor: grab; touch-action: none; }
+.surface3d canvas:active { cursor: grabbing; }
+.surface3d .surface-hint { position: absolute; right: 6px; top: 2px; font-size: 11px; color: var(--ink-3); pointer-events: none; transition: opacity 0.4s; }
+.surface3d.turned .surface-hint { opacity: 0; }
+
+/* ---- star view (Baird's counterexample) ---- */
+.starview { display: block; width: 100%; max-width: 780px; height: auto; margin: 0 auto; overflow: visible; }
+.starview text { font-family: var(--font); }
+.starview .edge { fill: none; stroke: var(--ink-3); stroke-width: 1.6; }
+.starview .edge.dashed { stroke-dasharray: 5 4; }
+.starview .edge.chosen { animation: edge-flash 0.7s ease-out; }
+.starview .tip path { fill: var(--ink-3); }
+.starview .edge-name { font-size: 11.5px; fill: var(--ink-3); }
+.starview .node circle { fill: color-mix(in oklab, var(--err) calc(var(--glow, 0) * 26%), var(--surface)); stroke: var(--ink); stroke-width: 2.2; transition: fill 0.35s; }
+.starview .node .v { font-size: 12.5px; font-weight: 800; text-anchor: middle; fill: var(--val-ink); }
+.starview .node .form { font-size: 10.5px; text-anchor: middle; fill: var(--ink-3); }
+.starview .node .name { font-size: 10.5px; font-weight: 700; fill: var(--ink-2); }
+.starview .zero { stroke: var(--line-2); }
+.starview .w-grid { stroke: var(--line); stroke-dasharray: 2 3; }
+.starview .w-tick { font-size: 10px; fill: var(--ink-3); }
+.starview .w-title { font-size: 12px; font-weight: 700; fill: var(--ink-2); }
+.starview .w-bar { fill: var(--val); transition: y 0.3s var(--ease), height 0.3s var(--ease); }
+.starview .w-bar.neg { fill: var(--v-neg); }
+.starview .w-bar.sparked { animation: bar-spark 0.6s ease-out; }
+@keyframes bar-spark { from { stroke: var(--err); stroke-width: 3; } }
+.starview .w-name { font-size: 10.5px; text-anchor: middle; fill: var(--ink-2); }
+.starview .bot { fill: var(--ink); stroke: var(--surface); stroke-width: 2.5; transition: transform 0.25s var(--ease), opacity 0.3s; }
+.starview .bot.instant { transition: none; }
+.starview .bot.gone { opacity: 0; }
+.starview .spark { fill: none; stroke: var(--err); stroke-width: 3; transform-box: fill-box; transform-origin: center; }
+.starview .fx { pointer-events: none; }
+.thumb-star .t-bar { fill: var(--val); }
+.thumb-star .t-bar.neg { fill: var(--v-neg); }
+
 @media (max-width: 1100px) {
   /* One column: the side panel moves up under the stages, before the play bar, the filmstrip and the charts. */
   .lab-main { grid-template-columns: minmax(0, 1fr); }

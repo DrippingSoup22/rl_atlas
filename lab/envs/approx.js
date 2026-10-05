@@ -6,6 +6,7 @@
 (function (RL) {
   "use strict";
   const lab = (RL.lab = RL.lab || {});
+  lab.fmtSigned = (v, d) => `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(d)}`;
 
   // ---- the 1000-state random walk ----
   // States 1 … 1000 between two exits (0 pays −1, 1001 pays +1); the walk starts at 500. Each step goes left or right
@@ -41,6 +42,7 @@
     }
     const env = {
       name: "walk-1000", key: `walk-${n}`, kind: "line", title: `${n}-state random walk`, n, nS, nA: 2, start, reach, valueRange: 1, dims: 1,
+      pace: { line: 420, step: 60 }, // the Lab's walking speeds (ms per event): episodes of 80 steps, and as many updates
       acts: (s) => (s === 0 || s === n + 1 ? none : both),
       terminal: (s) => s === 0 || s === n + 1,
       describe: (s, a) => `state ${s}${a >= 0 ? `, jumping ${a ? "right" : "left"}` : ""}`,
@@ -80,10 +82,11 @@
     const env = {
       name: "mountain-car", key: "mountain-car", kind: "car", title: "Mountain Car", nA: 3, dims: 2, continuous: true, valueRange: 100, ...MC,
       actionNames: ["reverse", "coast", "forward"],
+      pace: { line: 320, step: 28 }, // episodes of hundreds of steps
       acts: () => all,
       terminal: (s) => s[0] >= MC.xMax,
       height: (x) => Math.sin(3 * x), // the hill, for drawing
-      describe: (s, a) => `x = ${s[0].toFixed(2)}, v = ${s[1].toFixed(3)}${a >= 0 ? `, ${env.actionNames[a]}` : ""}`,
+      describe: (s, a) => `position ${RL.lab.fmtSigned(s[0], 2)}, speed ${RL.lab.fmtSigned(s[1], 3)}${a >= 0 ? `, ${env.actionNames[a]}` : ""}`,
       // Each episode starts at rest somewhere near the bottom of the valley.
       reset: (rng, s0) => s0 || [-0.6 + 0.2 * rng.next(), 0],
       step(s, a) {
@@ -111,6 +114,7 @@
     const env = {
       name: "baird", key: "baird", kind: "star", title: "Baird's counterexample", nS: 7, nA: 2, names, unitName: "step", stretch: 1, valueRange: 10,
       state: new Float64Array(1), DASHED, SOLID, LOW,
+      rates: [10, 50, 250], // units a second the Lab can play: here each unit is a single step
       actionNames: ["dashed", "solid"],
       acts: () => both,
       terminal: () => false,

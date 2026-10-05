@@ -37,6 +37,7 @@
     planning: { sym: "n", name: "planning steps", choices: [0, 1, 5, 10, 20, 50, 100] },
     kappa: { sym: "κ", name: "exploration bonus", choices: [0, 0.0001, 0.001, 0.01] },
   };
+  const ALPHA_LADDER = [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05];
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);
   // What a chart can plot.
   const METRICS = {
@@ -56,6 +57,7 @@
   const signed = (v, d = 2) => (v < 0 ? "−" : v > 0 ? "+" : "") + Math.abs(v).toFixed(d);
   // Events after which the views redraw what the algorithm knows.
   const SHOWN = new Set(["update", "improve", "trace", "plan", "world"]);
+  const fmtBig = (v) => (!Number.isFinite(v) ? "beyond any number" : v >= 1e5 ? v.toExponential(1).replace("e+", " × 10^") : v.toFixed(v >= 100 ? 0 : 1));
   const plural = (n, [one, many]) => `${n.toLocaleString("en")} ${n === 1 ? one : many}`;
 
   RL.views.lab = function (host, presetId) {
@@ -134,6 +136,9 @@
       const box = q(".knobs");
       const slider = (k) => {
         const d = KNOBS[k], v = knobs[k];
+        // Linear methods with many features step in tiny amounts: their α is picked from a ladder instead of a slider.
+        if (k === "alpha" && preset.params.alpha < 0.01) return `<label class="knob"><span class="sym">${d.sym}</span><span class="name">${d.name}</span>
+          <select data-knob="${k}">${[...new Set([...ALPHA_LADDER, v])].sort((a, b) => a - b).map((c) => `<option value="${c}"${c === v ? " selected" : ""}>${c}</option>`).join("")}</select></label>`;
         if (d.choices) return `<label class="knob"><span class="sym">${d.sym}</span><span class="name">${d.name}</span>
           <select data-knob="${k}">${d.choices.map((c) => `<option value="${c}"${c === v ? " selected" : ""}>${c}</option>`).join("")}</select></label>`;
         const min = k === "alpha" && racers.every((r) => AVERAGING.has(r.algorithm.id)) ? 0 : d.min;
@@ -181,7 +186,7 @@
         : `<label class="check"><input type="checkbox" data-opt="${o.key}"${view.show[o.key] ? " checked" : ""}> ${esc(o.label)}${o.swatch ? ` <i class="swatch ${o.swatch}"></i>` : ""}</label>`).join("") +
         (View.legend ? View.legend(env) : "");
       views.forEach((v) => v.setOptions(view.show));
-      const speeds = SPEEDS[unitOf()];
+      const speeds = speedList();
       if (!speeds.some((s) => s.id === P.speed)) P.speed = "step";
       q(".speed").innerHTML = speeds.map((s) => `<option value="${s.id}"${s.id === P.speed ? " selected" : ""}>${s.rate ? `${s.rate} ${noun()[s.rate === 1 ? 0 : 1]} / s` : s.label}</option>`).join("");
       // The note is rewritten whole: stepping replaces its contents, so its parts cannot be looked up later.
@@ -192,6 +197,13 @@
       chartsFor();
       focus(Math.min(P.focus, racers.length - 1));
       simulate();
+    }
+
+    // The speeds of this world: some worlds walk faster (a Mountain Car episode has hundreds of steps) or play more
+    // units a second (Baird's counterexample, whose units are single steps).
+    function speedList() {
+      const list = SPEEDS[unitOf()];
+      return list.map((s, i) => (s.rate ? (env.rates ? { ...s, id: `r${env.rates[i - 2]}`, rate: env.rates[i - 2] } : s) : env.pace ? { ...s, every: env.pace[s.id] } : s));
     }
 
     // ---- the runs ----
@@ -312,6 +324,9 @@
             return lab.mean(r.metrics.steps, Math.max(0, knobs.units - 10)) < 200 ? "none, its greedy moves go round in circles" : "none yet"; })}.`);
         }
       }
+      if (env.kind === "line") out.push(`Value error √VE at the end: ${each((r) => r.metrics.ve ? r.metrics.ve[knobs.units - 1].toFixed(3) : "—")} (0 would be a perfect fit; how close the features allow is in the textbook).`);
+      if (env.kind === "car") out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(0))} (the best possible from a typical start is a little over 100).`);
+      if (env.kind === "star") out.push(`Size of the weights at the end: ${each((r) => fmtBig(r.metrics.weights[knobs.units - 1]))}, from ${fmtBig(runs[0].metrics.weights[0])} after the first step.`);
       if (unitOf() === "sweep") {
         out.push(`Settled (largest change below θ = ${knobs.theta}) after: ${each((r) => { const t = r.metrics.converged.findIndex((c) => c); return t < 0 ? "not yet" : plural(t + 1, noun()); })}.`);
       }
@@ -369,11 +384,13 @@
       if (unitOf() === "sweep") text = M.improved?.[t] ? (M.changed[t] ? `improvement: ${plural(M.changed[t], ["state", "states"])} changed` : "improvement: nothing changed, done") : M.converged[t] && racers[i].algorithm.id === "policy-iteration" ? "done" : `largest change ${M.delta[t].toFixed(3)}`;
       else if (env.kind === "bandit") text = `reward ${signed(M.return[t])}${M.optimal[t] ? " · a best arm" : ""}`;
       else if (env.kind === "blackjack") text = M.return[t] > 0 ? "won (+1)" : M.return[t] < 0 ? "lost (−1)" : "a draw (0)";
+      else if (env.kind === "star") text = `weights ‖w‖ = ${fmtBig(M.weights[t])}`;
+      else if (env.kind === "car") text = `${plural(M.steps[t], ["step", "steps"])} to the flag${M.steps[t] >= runs[i].params.maxSteps ? " (cut short)" : ""}`;
       else if (env.kind === "graph") text = `${M.left?.[t] ? "went left" : "went right"} · return ${signed(M.return[t])}`;
       else text = `${signed(M.return[t], 0)} · ${plural(M.steps[t], ["step", "steps"])}${M.falls[t] ? ` · ${plural(M.falls[t], ["fall", "falls"])}` : ""}`;
       stat.textContent = `${cap(one)} ${P.e}: ${text}`;
     }
-    const live = (w) => (unitOf() === "sweep" ? `state ${w.n}` : env.kind === "bandit" ? "pulling" : `${signed(w.G, env.kind === "grid" ? 0 : 2)} so far · ${plural(w.n, ["step", "steps"])}`);
+    const live = (w) => (unitOf() === "sweep" ? `state ${w.n}` : env.kind === "bandit" ? "pulling" : env.kind === "star" ? "one step" : env.kind === "car" ? `${plural(w.n, ["step", "steps"])} so far` : `${signed(w.G, env.kind === "grid" ? 0 : 2)} so far · ${plural(w.n, ["step", "steps"])}`);
 
     // ---- walking through a unit, event by event ----
     function walk(toUpdate) {
@@ -473,7 +490,7 @@
       playBtn.innerHTML = ICON.play;
       playBtn.setAttribute("aria-label", "Play");
     }
-    const speed = () => SPEEDS[unitOf()].find((s) => s.id === P.speed);
+    const speed = () => speedList().find((s) => s.id === P.speed);
     const rate = () => speed().rate || 0;
     function stepOnce() {
       pause();

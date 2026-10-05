@@ -2,15 +2,17 @@
 #
 #   env        the world (lab/envs): cliff, gridworld, small-gridworld, frozen-lake, dyna-maze, blocking-maze,
 #              shortcut-maze, testbed, testbed-4, drifting, random-walk, random-walk-19, blackjack, max-bias,
-#              or sandbox (the map you draw)
+#              walk-1000, mountain-car, baird, or sandbox (the map you draw)
 #   algorithms the algorithms that race, with the shared knobs; or racers = [{ algorithm, name, <knobs of its own> }]
 #   units      how many episodes, sweeps or steps a run lasts; seed: its randomness
 #   runs       > 1: the charts average that many runs, each with its own seed
-#   charts     what to plot: return, optimal, left, error, match, greedy, delta, steps
-#   measures   numbers computed against the exact answer after each unit: error, match, greedy, optimal-error
+#   charts     what to plot: return, optimal, left, error, match, greedy, delta, steps, ve, weights
+#   measures   numbers computed against the exact answer after each unit: error, match, greedy, optimal-error, ve
 #   film       the moments the filmstrip shows (in units)
 # Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge,
-# n (n-step methods), lambda and trace ("accumulating" or "replacing"), planning and kappa (Dyna).
+# n (n-step methods), lambda and trace ("accumulating" or "replacing"), planning and kappa (Dyna),
+# features ("groups", "tiles", "poly", "fourier", "table" or "own") with cells, tilings and order, and behavior (the
+# policy an off-policy method follows; policy is then the one it learns about).
 
 [cliff-race]
 title = "SARSA vs Q-learning on the cliff"
@@ -359,6 +361,93 @@ planning = 5
 charts = ["steps"]
 film = [1, 2, 5, 30]
 intro = "Both may make 5 planning updates per step. Dyna-Q picks remembered moves at random, mostly ones where nothing changes; prioritized sweeping works backward from wherever a value just changed, so the news spreads from the gem along the way it came."
+
+[walk-aggregation]
+title = "Gradient Monte Carlo and semi-gradient TD on 1000 states"
+env = "walk-1000"
+racers = [
+  { algorithm = "gradient-mc", name = "Gradient Monte Carlo", alpha = 0.0005 },
+  { algorithm = "semi-gradient-td", name = "Semi-gradient TD(0)", alpha = 0.002 },
+]
+units = 2000
+seed = 3
+gamma = 1.0
+features = "groups"
+cells = 10
+charts = ["ve"]
+measures = ["ve"]
+film = [0, 10, 100, 500, 2000]
+intro = "A thousand states, ten weights: each weight is shared by a group of 100 states. Every update moves a whole group, the box in the strip under the plot. Monte Carlo settles on each group's average true value; TD settles on something flatter."
+
+[walk-features]
+title = "Four ways to describe 1000 states"
+env = "walk-1000"
+racers = [
+  { algorithm = "gradient-mc", name = "5 groups", features = "groups", cells = 5, alpha = 0.0005 },
+  { algorithm = "gradient-mc", name = "Tile coding, 50 tilings", features = "tiles", tilings = 50, cells = 5, alpha = 0.00001 },
+  { algorithm = "gradient-mc", name = "Polynomials up to x⁵", features = "poly", order = 5, alpha = 0.0002 },
+  { algorithm = "gradient-mc", name = "Fourier cosines up to 5", features = "fourier", order = 5, alpha = 0.0001 },
+]
+units = 2000
+seed = 2
+gamma = 1.0
+charts = ["ve"]
+measures = ["ve"]
+film = [0, 10, 100, 2000]
+intro = "Same learner, same walks, four sets of features. Watch the footprint strip: a box for groups, a tent for tile coding, waves across all states for polynomials and cosines. What an update touches is what the learner generalizes to."
+
+[mountain-car]
+title = "Semi-gradient SARSA climbs Mountain Car"
+env = "mountain-car"
+algorithms = ["semi-gradient-sarsa"]
+units = 500
+seed = 1
+alpha = 0.06
+epsilon = 0.0
+gamma = 1.0
+features = "tiles"
+tilings = 8
+cells = 8
+charts = ["steps"]
+film = [1, 12, 100, 500]
+intro = "Every step costs 1, and the engine is too weak to drive straight up. The landscape on the right is what the learner expects to pay from each position and speed: it starts flat and hopeful (all estimates 0), and every disappointment digs in, until the car learns to rock back first."
+
+[mountain-car-n]
+title = "One step or eight on Mountain Car"
+env = "mountain-car"
+racers = [
+  { algorithm = "semi-gradient-sarsa", name = "n = 1", n = 1, alpha = 0.06 },
+  { algorithm = "semi-gradient-sarsa", name = "n = 8", n = 8, alpha = 0.04 },
+]
+units = 300
+runs = 20
+seed = 1
+epsilon = 0.0
+gamma = 1.0
+features = "tiles"
+tilings = 8
+cells = 8
+charts = ["steps"]
+film = [1, 10, 100, 300]
+intro = "The n-step return reaches eight steps ahead, so each disappointment travels back faster: the landscape fills in sooner, and the first episodes are shorter."
+
+[deadly-triad]
+title = "The deadly triad on Baird's counterexample"
+env = "baird"
+racers = [
+  { algorithm = "semi-gradient-td", name = "All three: off-policy, shared features, bootstrapping", features = "own", behavior = "behavior" },
+  { algorithm = "semi-gradient-td", name = "A table instead of shared features", features = "table", behavior = "behavior" },
+  { algorithm = "semi-gradient-td", name = "On-policy instead of off-policy", features = "own" },
+]
+units = 1000
+seed = 1
+alpha = 0.01
+gamma = 0.99
+policy = "target"
+charts = ["weights", "error"]
+measures = ["error"]
+film = [0, 100, 300, 1000]
+intro = "Every true value is 0, and nothing random can mislead the learner: rewards are always 0. Yet off-policy semi-gradient TD with these features walks its weights away to infinity. Take away any one of the three ingredients and it stays put."
 
 [sandbox]
 title = "Sandbox"

@@ -132,15 +132,15 @@
   });
 
   const tex = lab.texNum;
-  const vNumbers = (ev, p) => {
-    const tail = ev.boot ? ` + ${ev.k === 1 ? p.gamma : +ev.discount.toFixed(3)}\\cdot\\val{${tex(ev.next)}}` : "";
-    const ratio = ev.offPolicy ? `${+ev.rho.toFixed(2)}\\cdot ` : "";
-    return `\\val{\\hat v} \\leftarrow \\val{${ev.old.toFixed(2)}} + ${ratio}\\alpha\\,\\big[\\,\\rew{${tex(ev.rewards ?? ev.target)}}${tail} - \\val{${tex(ev.old)}}\\,\\big]\\,\\nabla\\hat v = \\val{${ev.value.toFixed(2)}}`;
+  // The estimate of the updated state in numbers: with linear features it moves by α δ ‖x‖² (times ρ off-policy),
+  // so with 50 tilings each update moves it 50 times as far as α alone says.
+  const sq = (x) => { let v = 0; for (let i = 0; i < x.k; i++) v += x.val[i] * x.val[i]; return v; };
+  const target = (ev, p) => `\\rew{${tex(ev.rewards ?? ev.target)}}${ev.boot ? ` + ${ev.k === 1 ? p.gamma : +ev.discount.toFixed(3)}\\cdot\\val{${tex(ev.next)}}` : ""}`;
+  const moved = (sym) => (ev, p) => {
+    const n2 = sq(ev.x), ratio = ev.offPolicy ? `${+ev.rho.toFixed(2)}\\cdot ` : "";
+    return `\\val{${sym}} \\leftarrow \\val{${ev.old.toFixed(2)}} + ${ratio}${p.alpha}\\,\\big[\\,${target(ev, p)} - \\val{${tex(ev.old)}}\\,\\big]${n2 === 1 ? "" : `\\cdot ${+n2.toFixed(2)}`} = \\val{${ev.value.toFixed(2)}}`;
   };
-  const qNumbers = (ev, p) => {
-    const tail = ev.boot ? ` + ${ev.k === 1 ? p.gamma : +ev.discount.toFixed(3)}\\cdot\\val{${tex(ev.next)}}` : "";
-    return `\\val{\\hat q} \\leftarrow \\val{${ev.old.toFixed(2)}} + \\alpha\\,\\big[\\,\\rew{${tex(ev.rewards)}}${tail} - \\val{${tex(ev.old)}}\\,\\big]\\,\\nabla\\hat q = \\val{${ev.value.toFixed(2)}}`;
-  };
+  const vNumbers = moved("\\hat v(S)"), qNumbers = moved("\\hat q(S,A)");
   // How many weights an update touched, and so how much of the space it moved.
   const shared = (ev) => {
     const k = ev.x.k;
@@ -149,7 +149,8 @@
   const note = (ev, where, signed, p) => {
     const own = ev.boot === undefined ? `Return <b>${signed(ev.target)}</b>` : `Target <b>${signed(ev.target)}</b>${ev.boot ? "" : " (no estimate at the end)"}`;
     const off = ev.offPolicy ? ` · importance ratio <b>${+ev.rho.toFixed(2)}</b>${ev.rho === 0 ? ": the target policy never takes this action, nothing is learned" : ""}` : "";
-    return `${own} · surprise <b class="q-err">${signed(ev.delta)}</b>${off} · ${where}: ${shared(ev)}`;
+    const n2 = sq(ev.x), far = n2 === 1 ? "" : ` · the estimate here moves by α·δ·‖x‖², and ‖x‖² = ${+n2.toFixed(2)}`;
+    return `${own} · surprise <b class="q-err">${signed(ev.delta)}</b>${off}${far} · ${where}: ${shared(ev)}`;
   };
 
   lab.algorithms = Object.assign(lab.algorithms || {}, {
