@@ -75,7 +75,7 @@ Averaged over 30 runs: the actor–critic needs 16 steps per episode after 200 e
 
 $$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp^{\boldsymbol\theta}\,\gam^t\,\big(\rew{R_{t+1}} + \gam\,\val{\hat v(S_{t+1}, \mathbf w)} - \val{\hat v(S_t, \mathbf w)}\big)\,\nabla \ln \pol{\pi(A_t \mid S_t, \boldsymbol\theta)} = \boldsymbol\theta + \alp^{\boldsymbol\theta}\,\gam^t\,\del_t\,\nabla \ln \pol{\pi(A_t \mid S_t, \boldsymbol\theta)}. \label{eq-actor}$$
 
-The weight of the score is the **TD error** $\del_t$ ([[td-error]]), and the same number updates the value function by semi-gradient TD(0) ([[semi-gradient-td]]):
+The weight of the score is the [[td-error|TD error]] $\del_t$, and the same number updates the value function by [[semi-gradient-td|semi-gradient TD(0)]]:
 
 $$\mathbf w \leftarrow \mathbf w + \alp^{\mathbf w}\,\del_t\,\nabla \val{\hat v(S_t, \mathbf w)}. \label{eq-critic}$$
 

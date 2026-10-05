@@ -109,8 +109,9 @@
       const lx = Math.log10(Math.max(2, n));
       const x = this.logX ? (u) => M.l + (Math.log10(Math.max(1, u)) / lx) * pw : (u) => M.l + (u / n) * pw;
       const unitAt = this.logX ? (px) => 10 ** (((px - M.l) / pw) * lx) : (px) => ((px - M.l) / pw) * n;
-      const yv = this.log ? (v) => (Math.log10(hi) - Math.log10(Math.max(lo, v))) / (Math.log10(hi) - Math.log10(lo)) : (v) => (hi - Math.min(hi, Math.max(lo, v))) / (hi - lo);
-      const y = (v) => M.t + yv(v) * ph;
+      // values beyond the axis, infinite ones included, are drawn at its ends; a missing value (NaN) at the bottom
+      const yv = this.log ? (v) => (Math.log10(hi) - Math.log10(Math.min(hi, Math.max(lo, v)))) / (Math.log10(hi) - Math.log10(lo)) : (v) => (hi - Math.min(hi, Math.max(lo, v))) / (hi - lo);
+      const y = (v) => M.t + (Number.isNaN(v) ? 1 : yv(v)) * ph;
       Object.assign(this, { n, x, y, unitAt, W, H, pw });
 
       // axes and grid

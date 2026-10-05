@@ -55,8 +55,8 @@
     return out.map((t) => t.trim()).filter(Boolean);
   }
 
-  // A display formula a little wider than its column shrinks to fit, down to 80% of its size. One written as parts
-  // side by side stacks them instead when even that is too wide; anything still too wide scrolls.
+  // A display formula a little wider than its column shrinks to fit, down to 80% of its size (65% on a phone). One
+  // written as parts side by side stacks them instead when even that is too wide; anything still too wide scrolls.
   function fit(root) {
     for (const el of root.querySelectorAll(".tex-display[data-done]")) {
       el.style.fontSize = "";
@@ -64,15 +64,15 @@
       const room = el.clientWidth;
       let need = el.scrollWidth;
       if (!room || need <= room + 1) continue; // hidden, or it fits
-      const split = parts(el.dataset.src || "");
-      if (need * 0.8 > room && split.length > 1) {
+      const split = parts(el.dataset.src || ""), floor = innerWidth < 640 ? 0.65 : 0.8;
+      if (need * floor > room && split.length > 1) {
         el.innerHTML = tex(`\\begin{gathered} ${split.join(" \\\\[3pt] ")} \\end{gathered}`, true);
         el.dataset.stacked = "1";
         need = el.scrollWidth;
         if (need <= room + 1) continue;
       }
       const size = parseFloat(getComputedStyle(el).fontSize);
-      el.style.fontSize = `${(size * Math.max(0.8, (room - 2) / need)).toFixed(2)}px`;
+      el.style.fontSize = `${(size * Math.max(floor, (room - 2) / need)).toFixed(2)}px`;
     }
   }
   // Fit again when the column changes width, and when a KaTeX font arrives (they load as first used).

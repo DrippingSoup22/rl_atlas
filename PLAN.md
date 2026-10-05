@@ -30,13 +30,13 @@ The full curriculum, 95 stations in 14 parts, lives in [content/map.toml](conten
 
 ## The Lab
 
-- Tabular and linear methods, and policy gradients with a per-tile softmax policy, run live in the browser:
+- Tabular and linear methods, and policy gradients (softmax and Gaussian policies, from REINFORCE to PPO), run live in the browser:
   a whole run is computed at once (milliseconds), then played like a video and replayable line by line.
 - Neural-network methods (DQN, A2C, PPO, TRPO, DDPG, TD3, SAC) will be **recorded runs** made by a standalone Python
   recorder (numpy, PyTorch, Gymnasium; none of RL_lib or Centipede) and played back with the same player,
   with a few pre-recorded variants per knob.
 - Worlds are picked so that values and policies stay pictures: grids, random walks, Blackjack, Mountain Car,
-  Pendulum, the short corridor, CartPole with value and probability bars.
+  Pendulum, the short corridor, the throw, CartPole with value and probability bars.
 
 ## Technology (decided)
 
@@ -79,6 +79,17 @@ animations and hover effects this guide relies on would not be smooth.
   counterexample. New views: the walk as one value line with the footprint of each update, Mountain Car with a
   cost-to-go landscape you can turn (or a map from above), Baird's star with its weights on a log scale. Five new
   presets. Figures recomputed live: Sutton & Barto's 9.1, 9.2, 9.5, 9.8, 9.10, 10.1–10.3 and 11.2, plus touch a tile.
-- [ ] **M5 · Policy gradients, live**: gradient bandit, short corridor, REINFORCE, actor–critic, A2C; GAE and PPO demos.
+- [x] **M5 · Policy gradients, live**: gradient bandit, short corridor, REINFORCE, actor–critic, A2C; GAE and PPO demos.
+  Part 10 is written: 11 entries (why learn a policy, softmax and Gaussian policies, the policy gradient theorem,
+  REINFORCE, REINFORCE with baseline, actor–critic, A2C and A3C, the entropy bonus, GAE, TRPO, PPO), each with a Textbook
+  and a Card, 10 with a Story on Lab runs. The Lab learns policies directly: softmax and Gaussian policies over its
+  features; REINFORCE with and without a baseline; actor–critic with eligibility traces; and the batch methods A2C, TRPO
+  (closed-form natural gradient and line search) and PPO, with GAE advantages and an entropy bonus, played by several
+  workers at once, with replay checked by the tests. New worlds: the short corridor, its landscape worked out exactly; the
+  throw, a continuous action; two gems. New views: the corridor above its value landscape, the throw with its bell curve;
+  grids show workers, TD errors and a batch's advantages. Figures computed exactly or live: Sutton & Barto's Example 13.1
+  and Figures 13.1 and 13.2, single-episode gradient estimates, softmax and Gaussian scores to play with, the critic's
+  step size, the entropy bonus, GAE's weights and λ, and TRPO's trust region and PPO's clip on the corridor. Stories
+  gained chart legends and partial replays.
 - [ ] **M6 · Recorded runs**: the recorder; DQN, A2C, TRPO and PPO on CartPole, Mountain Car and Pendulum.
 - [ ] **M7 · The rest**: continuous control, toolbox, where next, quizzes everywhere, polish.

@@ -31,7 +31,7 @@ free = { algorithm = "ppo", clip = 0.0, alpha = 0.3, alphaW = 0.1, workers = 4, 
 ## Story
 
 ::: step {run = "clip", at = 0}
-**PPO** in the maze of [[a2c]], with four workers per round. TRPO ([[trpo]]) keeps each step safe with a constraint and second-order mathematics. PPO wants the same safety from plain gradient steps, and more: it squeezes each round's experience with **ten passes** over it instead of one.
+**PPO** in the maze of [[a2c]], with four workers per round. [[trpo|TRPO]] keeps each step safe with a constraint and second-order mathematics. PPO wants the same safety from plain gradient steps, and more: it squeezes each round's experience with **ten passes** over it instead of one.
 :::
 
 ::: step {run = "clip", at = 1, formula = 2}
@@ -66,7 +66,7 @@ Averaged over 12 runs: with the clip, 21 steps per episode after 10 rounds, and 
 
 ### From TRPO to PPO {#why}
 
-TRPO ([[trpo]]) makes large policy steps safe, but at a price: conjugate gradients, Fisher-vector products and a line search, one step per batch, and trouble with networks that share layers between actor and critic or use noise such as dropout. Proximal policy optimization (PPO; Schulman, Wolski, Dhariwal, Radford and Klimov, 2017) keeps the goal, staying close to the policy that collected the data, and reaches it with an objective that ordinary stochastic gradient ascent can optimize, several times over the same batch.
+[[trpo|TRPO]] makes large policy steps safe, but at a price: conjugate gradients, Fisher-vector products and a line search, one step per batch, and trouble with networks that share layers between actor and critic or use noise such as dropout. Proximal policy optimization (PPO; Schulman, Wolski, Dhariwal, Radford and Klimov, 2017) keeps the goal, staying close to the policy that collected the data, and reaches it with an objective that ordinary stochastic gradient ascent can optimize, several times over the same batch.
 
 ### The clipped surrogate {#clip}
 
@@ -94,11 +94,11 @@ The clip limits the ratio of the moves in the batch, not the policy as a whole; 
 
 ### The algorithm {#algorithm}
 
-PPO collects a batch from $N$ parallel actors, each running $T$ steps, as A2C does ([[a2c]]); computes GAE advantages ([[gae]]), usually **normalized** to mean 0 and standard deviation 1 within the batch; then optimizes $L^{\text{CLIP}}$ for $K$ **epochs**, each a pass over the batch in shuffled minibatches, with Adam. With a shared actor–critic network, the loss combines three terms,
+PPO collects a batch from $N$ parallel actors, each running $T$ steps, as [[a2c|A2C]] does; computes GAE advantages ([[gae]]), usually **normalized** to mean 0 and standard deviation 1 within the batch; then optimizes $L^{\text{CLIP}}$ for $K$ **epochs**, each a pass over the batch in shuffled minibatches, with Adam. With a shared actor–critic network, the loss combines three terms,
 
 $$L(\boldsymbol\theta) = \hat{\mathbb E}\Big[L^{\text{CLIP}}_t(\boldsymbol\theta) - c_1\,\big(\val{\hat v_{\boldsymbol\theta}(S_t)} - \hat G_t\big)^2 + c_2\,\pol{H\big(\pi_{\boldsymbol\theta}(\cdot \mid S_t)\big)}\Big], \label{eq-loss}$$
 
-the clipped surrogate, a value loss toward the targets $\hat G_t$ (λ-returns), and an entropy bonus ([[entropy-bonus]]), maximized together.
+the clipped surrogate, a value loss toward the targets $\hat G_t$ (λ-returns), and an [[entropy-bonus|entropy bonus]], maximized together.
 
 ::: algorithm {#alg-ppo} PPO, clipped version (actor–critic style)
 Input: a policy and value network, $N$ actors, $T$ steps per actor, $K$ epochs, minibatch size $M$, clip range $\epsilon$, GAE's $\gam$ and $\lam$

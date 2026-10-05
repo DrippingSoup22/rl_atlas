@@ -134,7 +134,7 @@ $\delta$ replaces the step size, and is easier to set: it is measured in nats of
 
 ### Historical remarks {#history}
 
-The natural gradient is due to Amari (1998); Kakade (2001) brought it to policy gradients, and Peters and Schaal (2008) built the natural actor–critic on it. Kakade and Langford (2002) proved the performance difference lemma and used it in conservative policy iteration, which mixes old and new policies to guarantee improvement. Schulman, Levine, Moritz, Jordan and Abbeel (2015) turned that guarantee into a practical algorithm for neural networks, with the average-KL constraint, conjugate gradient and line search, and showed it learning locomotion and Atari games; with GAE (Schulman et al., 2016) it learned 3D humanoid running. Its complexity led to PPO ([[ppo]]), which keeps the trust region with first-order tools.
+The natural gradient is due to Amari (1998); Kakade (2001) brought it to policy gradients, and Peters and Schaal (2008) built the natural actor–critic on it. Kakade and Langford (2002) proved the performance difference lemma and used it in conservative policy iteration, which mixes old and new policies to guarantee improvement. Schulman, Levine, Moritz, Jordan and Abbeel (2015) turned that guarantee into a practical algorithm for neural networks, with the average-KL constraint, conjugate gradient and line search, and showed it learning locomotion and Atari games; with GAE (Schulman et al., 2016) it learned 3D humanoid running. Its complexity led to [[ppo|PPO]], which keeps the trust region with first-order tools.
 
 ## Card
 

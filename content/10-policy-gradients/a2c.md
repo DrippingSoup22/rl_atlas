@@ -59,7 +59,7 @@ Averaged over 12 runs, three update intervals. Updating every step ($n = 1$) pas
 
 ### Many workers, one learner {#workers}
 
-The one-step actor–critic ([[actor-critic]]) learns from a single stream of experience, in which consecutive samples are strongly correlated: the same few states, visited one after the other, under a policy that changes after each step. With neural networks this correlation makes learning unstable, the problem that DQN solved with a replay memory ([[experience-replay]]). A replay memory, however, holds data from old policies, which on-policy methods cannot use.
+The one-step [[actor-critic|actor–critic]] learns from a single stream of experience, in which consecutive samples are strongly correlated: the same few states, visited one after the other, under a policy that changes after each step. With neural networks this correlation makes learning unstable, the problem that DQN solved with a replay memory ([[experience-replay]]). A replay memory, however, holds data from old policies, which on-policy methods cannot use.
 
 Mnih and colleagues (2016) found another way to decorrelate the data: run **many workers in parallel**, each with its own copy of the environment, all acting with the same policy. At any moment the workers are in different states, at different stages of different episodes, so a batch of their recent experience is far more varied than a stretch of one agent's experience. The data stays on-policy, no memory is needed, and the computation spreads over many processors.
 
@@ -75,7 +75,7 @@ $$\boldsymbol\theta \leftarrow \boldsymbol\theta + \frac{\alp^{\boldsymbol\theta
 
 $$\mathbf w \leftarrow \mathbf w + \frac{\alp^{\mathbf w}}{N} \sum_{\text{workers}} \sum_t \err{\hat A_t}\,\nabla \val{\hat v(S_t, \mathbf w)}, \label{eq-critic}$$
 
-where $N$ is the number of workers and the last term of \ref{eq-actor} is an **entropy bonus** of weight $\beta$, which keeps the policy from becoming deterministic too soon ([[entropy-bonus]]). The critic's update moves each estimate toward its $n$-step return, $\err{\hat A_t} + \val{\hat v(S_t, \mathbf w)}$. Like most deep-RL code, A2C leaves out the $\gam^t$ factor of the policy gradient theorem ([[pg-theorem]]).
+where $N$ is the number of workers and the last term of \ref{eq-actor} is an **entropy bonus** of weight $\beta$, which keeps the policy from becoming deterministic too soon ([[entropy-bonus]]). The critic's update moves each estimate toward its $n$-step return, $\err{\hat A_t} + \val{\hat v(S_t, \mathbf w)}$. Like most deep-RL code, A2C leaves out the $\gam^t$ factor of the [[pg-theorem|policy gradient theorem]].
 
 The interval $n$ is a bias–variance knob, as for any $n$-step method: short stretches bootstrap often from a critic that may be wrong, long ones carry the noise of many rewards. Mnih and colleagues used $n = 5$.
 

@@ -47,10 +47,12 @@ directly, which is handier while editing.
 An entry is `content/<part folder>/<id>.md`, where `<id>` is a station in `map.toml`. It starts with TOML
 front matter between `+++` lines: `summary`, `change` (what changed from the parent), `prereqs`, `lab`, `sources`,
 and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline`, `mdp`, or one of the Lab's views: `bandit`,
-`chain`, `cards`, `graph`, `line`, `car`, `star`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
+`chain`, `cards`, `graph`, `line`, `car`, `star`, `corridor`, `throw`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
 a Lab view, and grid stories that replay dynamic programming or Monte Carlo, name their runs in a `[story.runs]`
 table (`name = { algorithm, <knobs> }`); a step then picks a run and a moment (`run`, `at`), can replay some units
-(`play`, `pace`) and can chart runs averaged over many seeds (`curves`, `metric`).
+(`play`, `pace`), or only the first few updates of one (`updates`), and can chart runs averaged over many seeds (`curves`,
+`metric`, and `domain` to fix the range). Grid steps can paint a batch's advantages on the move triangles (`advantages`),
+and a `[story.numbers]` table names lines of numbers that steps show under the formula (`numbers = "name"`).
 [q-learning.md](content/05-temporal-difference/q-learning.md) is a complete algorithm,
 [bellman.md](content/01-problem/bellman.md) a complete concept, and [epsilon-greedy.md](content/02-bandits/epsilon-greedy.md)
 a story on Lab runs.
@@ -61,7 +63,7 @@ shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of 
 - `[[station]]` or `[[station|text]]` for links that explain themselves on hover, and `[text](lab:preset)` for Lab links;
 - `$…$` and `$$…$$` math with the color macros `\val \rew \pol \err` and `\alp \gam \eps \lam \del`;
 - `{{demo arg}}` for a diagram, figure or demo: `backup` (bandit, mc, mc-q, td0, sarsa, q-learning, expected-sarsa,
-  double-q, n-step-td, n-step-sarsa, lambda, lambda-q, v-pi, q-pi, v-star, q-star), `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `cliff-alpha`,
+  double-q, n-step-td, n-step-sarsa, lambda, lambda-q, v-pi, q-pi, v-star, q-star, reinforce, baseline, actor-critic, a2c, gae), `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `cliff-alpha`,
   `loop`, `mdp-graph`, `discount`, `be-the-agent`, `testbed`, `sample-average`, `step-weights`, `step-sizes`,
   `bandit-curves` (epsilon, optimistic, ucb, gradient, drift), `bandit-study`, `dp-sweeps`, `frozen` (pi, optimal),
   `dp-race`, `gpi`, `blackjack-values`, `blackjack-policy`, `blackjack-match`, `frozen-mc`, `is-blackjack`,
@@ -69,7 +71,8 @@ shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of 
   `lambda-weights`, `trace-shapes`, `n-step-paths` (lambda), `dyna-architecture`, `dyna-curves`, `dyna-midway`,
   `changing-maze` (blocking, shortcut), `expected-vs-sample`, `sweeping-curves`, `touch-tiles`, `feature-shapes`,
   `coarse-widths`, `walk-fit` (mc), `walk-alpha`, `walk-n-study`, `basis-study`, `tiling-study`, `car-surfaces`, `car-curves` (n),
-  `baird-weights`. A backup label breaks into lines at `\n`, and
+  `baird-weights`, `corridor-values`, `softmax-play`, `gaussian-play`, `pg-estimates`, `reinforce-alpha`, `baseline-curves`,
+  `critic-speed`, `entropy-study`, `gae-weights`, `gae-study`, `trust-region` (clip), `ppo-clip`. A backup label breaks into lines at `\n`, and
   a display formula too wide for its column shrinks a little, then stacks the parts written side by side with `\qquad`;
 - `::: pseudocode` (end a line with `{#id}` to link it to the Lab's step-by-step mode), `::: question` (answer after `---`) and `::: analogy`.
 

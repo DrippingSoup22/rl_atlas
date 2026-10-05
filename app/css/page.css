@@ -458,3 +458,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 @media (min-width: 761px) {
   .tb-paper p { text-align: justify; }
 }
+/* small screens: a wide table scrolls inside its own box instead of widening the page */
+@media (max-width: 640px) {
+  .tb-paper table, .sec table { display: block; max-width: 100%; overflow-x: auto; }
+}

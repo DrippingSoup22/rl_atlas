@@ -226,7 +226,8 @@
     let D = 0;
     for (const b of batch) {
       const q = P.probs(theta, b.s);
-      for (const a of env.acts(b.s)) if (b.pi[a] > 0) D += b.pi[a] * Math.log(b.pi[a] / q[a]);
+      // a probability that underflowed to 0 counts as the smallest number there is, so the divergence stays finite
+      for (const a of env.acts(b.s)) if (b.pi[a] > 0) D += b.pi[a] * Math.log(b.pi[a] / Math.max(q[a], Number.MIN_VALUE));
     }
     return D / Math.max(1, batch.length);
   }

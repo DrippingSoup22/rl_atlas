@@ -25,7 +25,7 @@ bonus = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta
 ## Story
 
 ::: step {run = "greedy", at = 0}
-**Two gems.** A small one, two steps from the start, pays $\rew{0.3}$; a big one, seven steps away, pays $\rew{1}$. Either ends the episode, and with $\gam = 0.95$ the big gem is still worth much more from the start: $0.95^6 \approx 0.74$, against $0.95 \times 0.3 \approx 0.29$. Four A2C workers ([[a2c]]) share one policy, all directions equally likely.
+**Two gems.** A small one, two steps from the start, pays $\rew{0.3}$; a big one, seven steps away, pays $\rew{1}$. Either ends the episode, and with $\gam = 0.95$ the big gem is still worth much more from the start: $0.95^6 \approx 0.74$, against $0.95 \times 0.3 \approx 0.29$. Four [[a2c|A2C]] workers share one policy, all directions equally likely.
 :::
 
 ::: step {run = "greedy", at = 0, play = 1, pace = 25, formula = 1}
@@ -78,7 +78,7 @@ The **entropy bonus** adds the entropy of the policy, in the states the agent vi
 
 $$J_\beta(\boldsymbol\theta) = J(\boldsymbol\theta) + \beta\,\mathbb E_\pi\big[\pol{H\big(\pi(\cdot \mid S_t, \boldsymbol\theta)\big)}\big], \label{eq-objective}$$
 
-and each sampled update gains a term $\beta\,\nabla \pol{H(\pi(\cdot \mid S_t, \boldsymbol\theta))}$, as in A2C ([[a2c]]) and PPO ([[ppo]]). The weight $\beta \ge 0$ sets how much uncertainty is worth compared with return.
+and each sampled update gains a term $\beta\,\nabla \pol{H(\pi(\cdot \mid S_t, \boldsymbol\theta))}$, as in [[a2c|A2C]] and [[ppo|PPO]]. The weight $\beta \ge 0$ sets how much uncertainty is worth compared with return.
 
 ::: lemma {#lem-grad} The gradient of a softmax policy's entropy
 For a softmax over preferences $\pol{h(s, b)}$,
@@ -103,7 +103,7 @@ A2C on the two gems for seven entropy weights, 16 runs each. Without the bonus n
 
 ### Entropy in the objective {#max-ent}
 
-The bonus \ref{eq-objective} rewards uncertainty only in the states the agent visits now, and only for the step at hand. *Maximum-entropy* reinforcement learning goes further and adds the entropy to every reward, $\rew{R_{t+1}} + \alpha\,\pol{H(\pi(\cdot \mid S_t))}$, so that the agent also values *reaching* states where it can keep its options open. Values and policies then become "soft", with a softmax in place of the max of the Bellman optimality equation. Soft actor–critic ([[sac]]) is built this way, and tunes the temperature $\alpha$ automatically.
+The bonus \ref{eq-objective} rewards uncertainty only in the states the agent visits now, and only for the step at hand. *Maximum-entropy* reinforcement learning goes further and adds the entropy to every reward, $\rew{R_{t+1}} + \alpha\,\pol{H(\pi(\cdot \mid S_t))}$, so that the agent also values *reaching* states where it can keep its options open. Values and policies then become “soft”, with a softmax in place of the max of the Bellman optimality equation. [[sac|Soft actor–critic]] is built this way, and tunes the temperature $\alpha$ automatically.
 
 ### Example: two gems {#example}
 
@@ -142,7 +142,7 @@ $$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp \sum \Big[\err{\hat A_t}
 
 - A $\beta$ that ignores the reward scale: the bonus is compared with the advantages, so rescaling rewards rescales the right $\beta$.
 - Reading high entropy as progress: a policy can be uncertain because it has learned nothing.
-- Expecting the bonus to find rewards far off the beaten path: it keeps choices spread, it does not direct exploration ([[exploration-strategies]]).
+- Expecting the bonus to find rewards far off the beaten path: it keeps choices spread, it does not direct [[exploration-strategies|exploration]].
 
 ### Check yourself {#check}
 
