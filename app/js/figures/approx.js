@@ -281,6 +281,16 @@
     return p;
   }
 
+  // ---- gradient Monte Carlo with 10 groups, four step sizes: fast and noisy against slow and smooth ----
+  RL.demos["walk-alpha"] = function (host) {
+    walkCurves(host, {
+      label: "Value error of gradient Monte Carlo on the 1000-state walk with 10 groups, for four step sizes",
+      episodes: 2000, runs: 10,
+      curves: [[0.0001, true], [0.0005, false], [0.002, "dotted"], [0.01, false]].map(([a, dash], i) => ({ id: `a${a}`, name: `α = ${a}`, dash, light: i === 3, params: { features: "groups", cells: 10, alpha: a } })),
+      note: "Average of 10 runs of 2,000 walks. The best a staircase of 10 steps can do here is a √VE of 0.054.",
+    });
+  };
+
   // ---- polynomials against Fourier cosines (after Figure 9.5) ----
   RL.demos["basis-study"] = function (host) {
     walkCurves(host, {
