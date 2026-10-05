@@ -57,6 +57,42 @@
       { kind: "state", label: "S′", edge: "R" },
       { kind: "action", label: "best by Q₁,\nvalued by Q₂", fan: 3, max: true },
     ],
+    // n-step methods: n sampled steps, then the estimate of where they led.
+    "n-step-td": { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "more" },
+      { kind: "state", label: "S after n steps", edge: "R" },
+    ] },
+    "n-step-sarsa": { gap: 50, levels: [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "more" },
+      { kind: "state", label: "S after n steps", edge: "R" },
+      { kind: "action", label: "A after n steps" },
+    ] },
+    // The λ-return: every n-step return at once, the n-step one weighted (1 − λ)λⁿ⁻¹, down to the end of the episode.
+    "lambda": { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A", edge: "π" },
+      { kind: "state", label: "S′: weight 1 − λ", edge: "R" },
+      { kind: "action", label: "A′" },
+      { kind: "state", label: "S″: weight (1 − λ)λ", edge: "R" },
+      { kind: "more" },
+      { kind: "end", label: "end: what is left, λ^(T−t−1)", edge: "R" },
+    ] },
+    "lambda-q": { gap: 50, levels: [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′: weight 1 − λ" },
+      { kind: "state", label: "S″", edge: "R" },
+      { kind: "action", label: "A″: weight (1 − λ)λ" },
+      { kind: "more" },
+      { kind: "end", label: "end: what is left", edge: "R" },
+    ] },
     "v-pi": [
       { kind: "state", label: "s" },
       { kind: "action", label: "a", fan: 3, edge: "π" },

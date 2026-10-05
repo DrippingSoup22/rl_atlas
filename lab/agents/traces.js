@@ -137,7 +137,7 @@
   lab.algorithms = Object.assign(lab.algorithms || {}, {
     "n-step-td": {
       id: "n-step-td", title: "n-step TD", unit: "episode", run: nStep(false), ...vTable,
-      rule: (p) => `\\val{V(S_\\tau)} \\leftarrow \\val{V(S_\\tau)} + \\alp\\,\\big[\\,\\rew{R_{\\tau+1}} + \\cdots + \\gam^{${steps(p) - 1}}\\rew{R_{\\tau+${steps(p)}}} + \\gam^{${steps(p)}}\\,\\val{V(S_{\\tau+${steps(p)}})} - \\val{V(S_\\tau)}\\,\\big]`,
+      rule: (p) => `\\val{V(S_\\tau)} \\leftarrow \\val{V(S_\\tau)} + \\alp\\,\\big[\\,\\rew{G_{\\tau:\\tau+${steps(p)}}} - \\val{V(S_\\tau)}\\,\\big]`,
       numbers: nStepNumbers("V(S_\\tau)"), note: nStepNote,
     },
     "n-step-sarsa": {

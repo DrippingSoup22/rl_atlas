@@ -1,14 +1,16 @@
 # Lab presets: a world, the algorithms that race on it, and their starting knobs. Entries link to one with [text](lab:<id>).
 #
-#   env        the world (lab/envs): cliff, gridworld, small-gridworld, frozen-lake, testbed, testbed-4, drifting,
-#              random-walk, blackjack, max-bias, or sandbox (the map you draw)
+#   env        the world (lab/envs): cliff, gridworld, small-gridworld, frozen-lake, dyna-maze, blocking-maze,
+#              shortcut-maze, testbed, testbed-4, drifting, random-walk, random-walk-19, blackjack, max-bias,
+#              or sandbox (the map you draw)
 #   algorithms the algorithms that race, with the shared knobs; or racers = [{ algorithm, name, <knobs of its own> }]
 #   units      how many episodes, sweeps or steps a run lasts; seed: its randomness
 #   runs       > 1: the charts average that many runs, each with its own seed
 #   charts     what to plot: return, optimal, left, error, match, greedy, delta, steps
 #   measures   numbers computed against the exact answer after each unit: error, match, greedy, optimal-error
 #   film       the moments the filmstrip shows (in units)
-# Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge.
+# Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge,
+# n (n-step methods), lambda and trace ("accumulating" or "replacing"), planning and kappa (Dyna).
 
 [cliff-race]
 title = "SARSA vs Q-learning on the cliff"
@@ -213,6 +215,150 @@ epsilon = 0.1
 gamma = 1.0
 charts = ["left"]
 intro = "Going left from A leads to B, whose many actions all lose a little on average, but some will look like winners by luck. Q-learning trusts the luckiest one; Double Q-learning does not."
+
+[n-step-walk]
+title = "n-step TD on the 19-state random walk"
+env = "random-walk-19"
+racers = [
+  { algorithm = "n-step-td", name = "n = 1 (TD(0))", n = 1 },
+  { algorithm = "n-step-td", name = "n = 4", n = 4 },
+  { algorithm = "n-step-td", name = "n = 32", n = 32 },
+]
+units = 20
+runs = 100
+seed = 1
+alpha = 0.4
+gamma = 1.0
+charts = ["error"]
+measures = ["error"]
+film = [0, 1, 5, 20]
+intro = "Nineteen states between an exit that pays −1 and one that pays +1. One-step TD passes the news back one state per walk; a long n waits for many real rewards and inherits their noise. In between learns fastest."
+
+[n-step-sarsa]
+title = "n-step SARSA in the maze"
+env = "dyna-maze"
+racers = [
+  { algorithm = "n-step-sarsa", name = "n = 1 (SARSA)", n = 1 },
+  { algorithm = "n-step-sarsa", name = "n = 4", n = 4 },
+  { algorithm = "n-step-sarsa", name = "n = 16", n = 16 },
+]
+units = 50
+runs = 30
+seed = 1
+alpha = 0.1
+epsilon = 0.1
+gamma = 0.95
+charts = ["steps"]
+film = [1, 2, 5, 50]
+intro = "Only the gem pays. When the first episode finally reaches it, one-step SARSA strengthens one move, the last; n-step SARSA strengthens the last n moves at once, so the way home is found in fewer episodes."
+
+[td-lambda-walk]
+title = "TD(λ) on the 19-state random walk"
+env = "random-walk-19"
+racers = [
+  { algorithm = "td-lambda", name = "λ = 0 (TD(0))", lambda = 0.0 },
+  { algorithm = "td-lambda", name = "λ = 0.6", lambda = 0.6 },
+  { algorithm = "td-lambda", name = "λ = 0.9", lambda = 0.9 },
+]
+units = 20
+runs = 100
+seed = 1
+alpha = 0.2
+gamma = 1.0
+charts = ["error"]
+measures = ["error"]
+film = [0, 1, 5, 20]
+intro = "Every state the walk passes leaves a glowing trace that fades with each step. Each surprise is shared by all the glowing states at once, the brightest getting the most. With λ = 0 the trace vanishes at once, and TD(λ) is TD(0)."
+
+[sarsa-lambda]
+title = "SARSA(λ) in the maze"
+env = "dyna-maze"
+racers = [
+  { algorithm = "sarsa-lambda", name = "λ = 0 (SARSA)", lambda = 0.0 },
+  { algorithm = "sarsa-lambda", name = "λ = 0.9, accumulating", lambda = 0.9 },
+  { algorithm = "sarsa-lambda", name = "λ = 0.9, replacing", lambda = 0.9, trace = "replacing" },
+]
+units = 50
+runs = 30
+seed = 1
+alpha = 0.1
+epsilon = 0.1
+gamma = 0.95
+charts = ["steps"]
+film = [1, 2, 5, 50]
+intro = "The trace marks every move of the episode, fading with time. When the gem is reached, the whole glowing trail learns at once. Accumulating traces grow on moves made again and again, replacing traces stop at 1."
+
+[dyna-maze]
+title = "Dyna-Q: planning in the maze"
+env = "dyna-maze"
+racers = [
+  { algorithm = "dyna-q", name = "no planning (Q-learning)", planning = 0 },
+  { algorithm = "dyna-q", name = "5 planning steps", planning = 5 },
+  { algorithm = "dyna-q", name = "50 planning steps", planning = 50 },
+]
+units = 50
+runs = 30
+seed = 1
+alpha = 0.1
+epsilon = 0.1
+gamma = 0.95
+charts = ["steps"]
+film = [1, 2, 3, 50]
+intro = "After every real step, Dyna-Q replays remembered moves to itself: the dashed sparks. The first episode is a long random search for all three; after it, the planners find the way home almost at once."
+
+[dyna-blocking]
+title = "Dyna-Q vs Dyna-Q+ when the way is blocked"
+env = "blocking-maze"
+racers = [
+  { algorithm = "dyna-q", name = "Dyna-Q" },
+  { algorithm = "dyna-q-plus", name = "Dyna-Q+ (κ = 0.001)" },
+]
+units = 200
+seed = 1
+alpha = 1.0
+epsilon = 0.1
+gamma = 0.95
+planning = 10
+kappa = 0.001
+charts = ["steps"]
+film = [10, 60, 100, 200]
+intro = "After 1000 steps the gap in the wall moves from the right end to the left. Both agents' models still believe in the old gap. Dyna-Q+ gives a bonus to moves it has not tried in a while, so it goes and checks sooner."
+
+[dyna-shortcut]
+title = "Dyna-Q vs Dyna-Q+ when a shortcut opens"
+env = "shortcut-maze"
+racers = [
+  { algorithm = "dyna-q", name = "Dyna-Q" },
+  { algorithm = "dyna-q-plus", name = "Dyna-Q+ (κ = 0.001)" },
+]
+units = 400
+seed = 1
+alpha = 1.0
+epsilon = 0.1
+gamma = 0.95
+planning = 50
+kappa = 0.001
+charts = ["steps"]
+film = [50, 150, 250, 400]
+intro = "After 3000 steps a shortcut opens on the right. Nothing tells Dyna-Q: its model and its plans say the long way is best, and it never looks. Dyna-Q+'s curiosity bonus sends it to check, and it finds the shorter path."
+
+[sweeping]
+title = "Prioritized sweeping vs Dyna-Q"
+env = "dyna-maze"
+racers = [
+  { algorithm = "dyna-q", name = "Dyna-Q, random order" },
+  { algorithm = "prioritized-sweeping", name = "prioritized sweeping" },
+]
+units = 30
+runs = 30
+seed = 1
+alpha = 0.5
+epsilon = 0.1
+gamma = 0.95
+planning = 5
+charts = ["steps"]
+film = [1, 2, 5, 30]
+intro = "Both may make 5 planning updates per step. Dyna-Q picks remembered moves at random, mostly ones where nothing changes; prioritized sweeping works backward from wherever a value just changed, so the news spreads from the gem along the way it came."
 
 [sandbox]
 title = "Sandbox"

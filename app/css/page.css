@@ -275,6 +275,17 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .fig .violin { fill: color-mix(in oklab, var(--ink) 7%, transparent); stroke: var(--ink-2); stroke-width: 1.1; }
 .fig .mean-line { stroke: var(--ink); stroke-width: 1.8; }
 .fig .bar { fill: color-mix(in oklab, var(--ink) 14%, transparent); stroke: var(--ink-2); stroke-width: 1; }
+.fig .bar.last { fill: color-mix(in oklab, var(--ink) 5%, transparent); stroke-dasharray: 4 3; }
+.fig .agent-dot { fill: var(--ink); }
+.fig .maze-mark { font-size: 13px; font-style: italic; font-weight: 700; }
+.fig .wall { stroke: none; }
+.fig.maze .route { stroke-width: 1.5; }
+.fig.maze .pol-arrow { stroke-width: 1.8; }
+.fig .pol-arrow.faint { stroke: var(--ink-3); }
+.fig-knob { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 4px 0 0; font: 600 14px var(--font); color: var(--ink-2); }
+.fig-knob span { font: italic 18px var(--serif); color: var(--ink); }
+.fig-knob input { width: min(260px, 60%); }
+.fig-knob output { min-width: 3em; font-variant-numeric: tabular-nums; }
 .fig-panel + .fig-panel { margin-top: 10px; }
 .fig.dp .cell { fill: transparent; }
 .fig.dp .cell.shade { fill: var(--surface-3); }

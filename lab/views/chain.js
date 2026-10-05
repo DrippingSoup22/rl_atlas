@@ -4,7 +4,7 @@
 (function (RL) {
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
-  const W = 620, PT = 26, PH = 132, CY = 214, H = 250;
+  const W0 = 620, PT = 26, PH = 132, CY = 214, H = 250;
   function el(tag, attrs, parent) {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -21,9 +21,13 @@
       const n = env.n;
       this.lo = Math.min(0, env.exits.left);
       this.hi = 1;
-      this.dx = Math.min(84, (W - 160) / Math.max(1, n - 1));
+      // Long chains get a wider drawing, and smaller states, so they never touch.
+      this.W = Math.max(W0, 170 + 34 * (n - 1));
+      this.dx = Math.min(84, (this.W - 160) / Math.max(1, n - 1));
+      const R = Math.min(17, this.dx * 0.42), k = +(R / 17).toFixed(3);
       this.V = new Float64Array(env.nS);
-      this.svg = el("svg", { class: "chainview", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": env.title });
+      this.svg = el("svg", { class: "chainview", viewBox: `0 0 ${this.W} ${H}`, role: "img", "aria-label": env.title });
+      if (this.W > W0) this.svg.style.maxWidth = `${Math.round(this.W * 1.25)}px`;
       host.appendChild(this.svg);
       const g = (cls) => el("g", { class: cls }, this.svg);
       const axis = g("axis");
@@ -43,12 +47,15 @@
         this.nums[s] = el("text", { class: "est-num", x: this.x(s) }, this.svg);
       }
       // the chain itself
+      this.gTrace = g("trace-layer"); // eligibility traces: a glow around each state, brighter the more credit it is due
+      this.traces = [];
+      for (let s = 1; s <= n; s++) this.traces[s] = el("circle", { class: "trace", cx: this.x(s), cy: CY, r: R + 6 }, this.gTrace);
       const chain = g("chain");
       el("line", { class: "track", x1: this.x(0), x2: this.x(n + 1), y1: CY, y2: CY }, chain);
       this.nodes = [];
       for (let s = 0; s <= n + 1; s++) {
         const exit = s === 0 || s === n + 1, x = this.x(s);
-        const node = el("g", { class: `node${exit ? " exit" : ""}`, transform: `translate(${x} ${CY})` }, chain);
+        const node = el("g", { class: `node${exit ? " exit" : ""}`, transform: `translate(${x} ${CY})${k < 1 ? ` scale(${k})` : ""}` }, chain);
         if (exit) {
           el("rect", { x: -17, y: -17, width: 34, height: 34, rx: 8 }, node);
           el("text", { class: "exit-r", y: 5 }, node).textContent = s === 0 ? (env.exits.left ? "−1" : "0") : "+1";
@@ -58,6 +65,7 @@
         }
         this.nodes[s] = node;
       }
+      this.gWindow = g("window-layer"); // n-step: the stretch of the walk whose rewards make the target
       this.gAgent = g("agent-layer");
       this.bot = el("g", { class: "bot" }, this.gAgent);
       this.body = el("g", { class: "bot-body" }, this.bot);
@@ -72,7 +80,7 @@
       this.place(env.start, true);
     }
 
-    x(s) { const n = this.env.n; return W / 2 + (s - (n + 1) / 2) * this.dx; }
+    x(s) { const n = this.env.n; return this.W / 2 + (s - (n + 1) / 2) * this.dx; }
     y(v) { return PT + ((this.hi - v) / (this.hi - this.lo)) * PH; }
     _steps(V) {
       let d = "";
@@ -89,6 +97,12 @@
 
     show(d) {
       if (!d.V) return;
+      for (let s = 1; s <= this.env.n; s++) {
+        const z = d.Z && this.o.traces !== false ? d.Z[s] : 0;
+        this.traces[s].style.opacity = z > 0.005 ? (0.2 + 0.8 * Math.min(1, z) ** 0.7).toFixed(3) : 0;
+        this.traces[s].style.strokeWidth = `${(3 + 7 * Math.min(1.5, z)).toFixed(1)}px`;
+      }
+      this.Z = d.Z ? Float64Array.from(d.Z) : null;
       this.V.set(d.V);
       let line = "";
       for (let s = 1; s <= this.env.n; s++) {
@@ -130,6 +144,12 @@
       t.animate([{ opacity: 0, transform: "translateY(4px)" }, { opacity: 1, offset: 0.2 }, { opacity: 0, transform: "translateY(-18px)" }], { duration: 950, easing: "ease-out" }).onfinish = () => t.remove();
     }
 
+    // A ring around the state whose trace was just bumped up.
+    traceSpark(s) {
+      const c = el("circle", { class: "spark k-trc", cx: this.x(s), cy: CY, r: 20 }, this.gFx);
+      c.animate([{ opacity: 1, transform: "scale(0.6)" }, { opacity: 0, transform: "scale(1.5)" }], { duration: 600, easing: "ease-out" }).onfinish = () => c.remove();
+    }
+
     spark(s) {
       const c = el("circle", { class: "spark", cx: this.x(s), cy: this.y(this.V[s]), r: 13 }, this.gFx);
       c.animate([{ opacity: 1, transform: "scale(0.3)" }, { opacity: 0, transform: "scale(1.6)" }], { duration: 600, easing: "ease-out" }).onfinish = () => c.remove();
@@ -145,36 +165,51 @@
           if (!RL.reducedMotion()) this.body.animate(HOP, { duration: 240, easing: "ease-out" });
           if (exitNames(ev.s2)) { this.pop(ev.s2, ev.r > 0 ? "+1" : ev.r < 0 ? "−1" : "0"); return 400; }
           return 0;
-        case "update": this.spark(ev.s); this.mark(ev.s); return 0;
+        case "update": this.spark(ev.s); this.mark(ev.s); if (ev.states) this.window(null); return 0;
+        case "window": this.window(ev); this.mark(ev.s); return line ? 250 : 0;
+        case "trace": this.traceSpark(ev.s); return 0;
         case "return": this.mark(ev.s); this.pop(ev.s, `G ${fmt(ev.G, 0)}`, "ret"); return line ? 150 : 0;
         case "skip": this.pop(ev.s, "seen", "skip"); return 0;
         default: return 0;
       }
     }
 
+    // A bracket under the states S_τ … S_τ+k, with what the target is made of.
+    window(ev) {
+      this.gWindow.replaceChildren();
+      if (!ev) return;
+      const a = this.x(ev.states[0]), b = this.x(ev.states[ev.states.length - 1]), y = CY + 26;
+      el("path", { class: "window", d: `M${a} ${y - 6}V${y}H${b}V${y - 6}` }, this.gWindow);
+      el("text", { class: "window-name", x: (a + b) / 2, y: y + 14 }, this.gWindow).textContent =
+        `${ev.k === 1 ? "1 reward" : `${ev.k} rewards`}${ev.boot ? " + the estimate here" : ", to the end"}`;
+    }
+
     rest(events) {
       this.mark(-1);
+      this.window(null);
       const moves = events.filter((e) => e.type === "move");
       this.place(moves.length ? moves[moves.length - 1].s2 : this.env.start, true);
     }
 
     _hover(e) {
-      const box = this.svg.getBoundingClientRect(), px = ((e.clientX - box.left) / box.width) * W;
-      const s = Math.round((px - W / 2) / this.dx + (this.env.n + 1) / 2);
+      const box = this.svg.getBoundingClientRect(), px = ((e.clientX - box.left) / box.width) * this.W;
+      const s = Math.round((px - this.W / 2) / this.dx + (this.env.n + 1) / 2);
       if (s < 1 || s > this.env.n) { RL.tip.hide(); return; }
       const truth = this.env.truth()[s];
       RL.tip.show(e.clientX, e.clientY, `<div class="head">State ${this.env.names[s]}</div>
         <div class="row"><b>${fmt(this.V[s], 3)}</b><span>estimate V</span></div>
         <div class="row"><b>${fmt(truth, 3)}</b><span>true value</span></div>
-        <div class="row"><b>${fmt(this.V[s] - truth, 3)}</b><span>error</span></div>`);
+        <div class="row"><b>${fmt(this.V[s] - truth, 3)}</b><span>error</span></div>` +
+        (this.Z ? `<div class="row"><b>${this.Z[s].toFixed(3)}</b><span>z, its eligibility trace</span></div>` : ""));
     }
 
     destroy() { RL.tip.hide(); this.svg.remove(); }
 
-    static options() {
+    static options(env, displays = []) {
       return [
         { key: "truth", type: "check", label: "True values (dashed)", value: true },
         { key: "numbers", type: "check", label: "Estimates as numbers", value: false },
+        ...(displays.some((d) => d.Z) ? [{ key: "traces", type: "check", label: "Eligibility traces", swatch: "trc", value: true }] : []),
       ];
     }
 

@@ -32,6 +32,10 @@
     c: { sym: "c", name: "confidence", min: 0, max: 5, step: 0.1 },
     q0: { sym: "Q₁", name: "first estimate", min: -2, max: 10, step: 0.5 },
     theta: { sym: "θ", name: "tolerance", choices: [0.1, 0.01, 0.001, 0.0001] },
+    n: { sym: "n", name: "steps ahead", choices: [1, 2, 3, 4, 8, 16, 32, 64] },
+    lambda: { sym: "λ", name: "trace decay", min: 0, max: 1, step: 0.01 },
+    planning: { sym: "n", name: "planning steps", choices: [0, 1, 5, 10, 20, 50, 100] },
+    kappa: { sym: "κ", name: "exploration bonus", choices: [0, 0.0001, 0.001, 0.01] },
   };
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);
   // What a chart can plot.
@@ -48,6 +52,8 @@
   };
   const LADDER = [10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
   const signed = (v, d = 2) => (v < 0 ? "−" : v > 0 ? "+" : "") + Math.abs(v).toFixed(d);
+  // Events after which the views redraw what the algorithm knows.
+  const SHOWN = new Set(["update", "improve", "trace", "plan", "world"]);
   const plural = (n, [one, many]) => `${n.toLocaleString("en")} ${n === 1 ? one : many}`;
 
   RL.views.lab = function (host, presetId) {
@@ -149,6 +155,7 @@
       const View = RL.labViews[env.kind];
       const box = q(".stages");
       box.className = `stages n${racers.length}`;
+      box.dataset.shape = env.kind === "grid" && env.cols / env.rows < 2 ? "boxy" : ""; // boxy grids sit side by side
       box.innerHTML = racers.map((r, i) => `
         <figure class="stage card" data-i="${i}">
           <figcaption><i class="key" style="--k: var(--s${i + 1})"></i><b>${esc(r.name)}</b><span class="stat"></span></figcaption>
@@ -290,6 +297,7 @@
         if (env.ice) out.push(`Reached the gem in the last ${last} episodes: ${each((r) => pct(lab.mean(r.metrics.return, knobs.units - last)))}.`);
         else out.push(`Average reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 0))}.`);
         const finals = runs.map((r) => r.algorithm.show(r.at(knobs.units), r.env, r.params));
+        if (finals[0].t !== undefined) env.setTime?.(finals[0].t); // a maze whose walls moved: follow the final layout
         if (!env.slip && finals.every((d) => d.Q)) {
           out.push(`Greedy path at the end: ${each((r, i) => { const g = lab.greedyPath(env, finals[i].Q); return g.reached ? plural(g.path.length - 1, ["step", "steps"]) : "none yet"; })}.`);
         }
@@ -369,7 +377,7 @@
           const { value: ev, done } = w.events.next();
           if (done) { w.done = true; break; }
           wait = Math.max(wait, on(i, w, ev));
-          if (!toUpdate || ev.type === "update" || ev.type === "improve") break;
+          if (!toUpdate || ev.type === "update" || ev.type === "improve" || ev.type === "plan") break;
         }
       });
       P.wait = wait;
@@ -388,11 +396,25 @@
       const a = racers[i].algorithm;
       if (ev.type === "move") { w.G += ev.r; w.n += 1; }
       if (ev.type === "sweep") w.n += 1;
-      if (ev.type === "update" || ev.type === "improve") views[i].show(a.show(w.m, runs[i].env, w.p, P.e), w.p);
+      if (SHOWN.has(ev.type)) views[i].show(a.show(w.m, runs[i].env, w.p, P.e), w.p);
       const pauseFor = views[i].event(ev, { line: P.speed === "line", p: w.p }) || 0;
-      if (i === P.focus) { mark(ev.line); if (ev.type === "update") explain(ev, w.p); }
+      if (i === P.focus) {
+        mark(ev.line);
+        if (ev.type === "update") explain(ev, w.p);
+        else if (ev.type === "plan") planned(ev);
+      }
       caption(i, w);
       return pauseFor;
+    }
+
+    // Planning updates have no single formula: say how many there were and how much they changed.
+    function planned(ev) {
+      const n = ev.list.length;
+      let big = 0;
+      for (const u of ev.list) if (Math.abs(u.delta) > Math.abs(big)) big = u.delta;
+      liveNote.innerHTML = !n ? "Nothing in the queue is worth an update: no planning this step"
+        : `<b>${plural(n, ["planning update", "planning updates"])}</b> on remembered moves${ev.ordered ? `, the most urgent first; ${plural(ev.left, ["pair waits", "pairs wait"])} in the queue` : ", picked at random"} · the largest surprise was <b class="q-err">${signed(big, 3)}</b>${ev.list.some((u) => u.bonus > 1e-9) ? " · bonuses for moves not tried in a while included" : ""}`;
+      liveNote.classList.remove("faint");
     }
 
     // ---- the live formula ----
@@ -402,7 +424,8 @@
       liveNum.innerHTML = RL.math.tex(a.numbers(ev, p), true);
       const where = env.describe ? env.describe(ev.s, ev.a ?? -1) : "";
       let note;
-      if (ev.baseline !== undefined) note = `Reward <b>${signed(ev.r)}</b>, baseline <b>${signed(ev.baseline)}</b>: the difference <b class="q-err">${signed(ev.delta)}</b> pushes ${where}'s preference ${ev.delta >= 0 ? "up" : "down"}, and every other arm's the other way`;
+      if (a.note) note = a.note(ev, where, signed, p);
+      else if (ev.baseline !== undefined) note = `Reward <b>${signed(ev.r)}</b>, baseline <b>${signed(ev.baseline)}</b>: the difference <b class="q-err">${signed(ev.delta)}</b> pushes ${where}'s preference ${ev.delta >= 0 ? "up" : "down"}, and every other arm's the other way`;
       else if (unitOf() === "sweep") note = `${cap(where)}: from <b>${signed(ev.old)}</b> to <b>${signed(ev.value)}</b>`;
       else if (ev.target !== undefined && ev.n !== undefined) note = `${a.unit === "step" ? "Reward" : "Return"} <b>${signed(ev.target)}</b> · surprise <b class="q-err">${signed(ev.delta)}</b> · visit ${ev.n} · ${where}`;
       else if (ev.W !== undefined) note = `Return <b>${signed(ev.target)}</b> · weight W = <b>${+ev.W.toFixed(3)}</b> · ${where}`;

@@ -2,7 +2,7 @@
 (function (RL) {
   "use strict";
   const { lab } = RL;
-  const { timers, formula, FORMULA, ACTION, signed, runs, player, showRun } = RL.sceneKit;
+  const { timers, formula, FORMULA, ACTION, signed, runs, player, showRun, curves } = RL.sceneKit;
 
   // ---- grid: a grid world with values, a policy and the agent ----
   RL.scenes.grid = {
@@ -11,11 +11,13 @@
       const algorithm = cfg.algorithm ? lab.algorithms[cfg.algorithm] : null;
       card.innerHTML = `<div class="scene-grid"></div>${FORMULA}
         <div class="scene-foot"><span class="scene-note"></span>
-          <span class="scale" title="Colors of the values"><span>worse</span><i></i><span>0</span><i class="up"></i><span>better</span></span></div>`;
+          <span class="scale" title="Colors of the values"><span>worse</span><i></i><span>0</span><i class="up"></i><span>better</span></span></div>
+        <div class="scene-chart" hidden></div>`;
       // Without an ε of its own, a story draws the greedy arrows of Q.
       const view = new RL.GridView(card.querySelector(".scene-grid"), env, { tiles: "q", epsilon: cfg.epsilon ?? 0, digits: cfg.digits ?? 2 });
       const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
       const { later, stop } = timers(), runOf = runs(cfg), play = player(later);
+      const chart = cfg.runs ? curves(card.querySelector(".scene-chart"), cfg, runOf) : () => {};
       const tile = (v) => (v === "start" ? env.start : v[0] * env.cols + v[1]);
 
       // What a step can show, each computed once: a learned Q, and exact values from dynamic programming.
@@ -132,7 +134,7 @@
       // sweeps of dynamic programming, or Monte Carlo episodes walked and then added up backward.
       function fromRun(st) {
         const r = runOf(st.run), t = Math.min(st.at ?? 0, r.units);
-        view.setOptions({ arrows: st.arrows !== false, tiles: st.tiles || (r.algorithm.show(r.at(0), env, r.params).Q ? "q" : "v"), numbers: !!st.values, range: st.range || cfg.range, trail: st.trail !== false, agent: r.algorithm.unit !== "sweep" });
+        view.setOptions({ arrows: st.arrows !== false, tiles: st.tiles || (r.algorithm.show(r.at(0), env, r.params).Q ? "q" : "v"), numbers: !!st.values, range: st.range || cfg.range, trail: st.trail !== false, agent: r.algorithm.unit !== "sweep", traces: st.traces !== false, fog: !!st.fog });
         view.glow([]);
         view.path(null);
         showRun(view, r, t);
@@ -148,6 +150,7 @@
         apply(st, forward) {
           stop();
           note.textContent = "";
+          chart(st);
           if (st.run) return fromRun(st);
           const q = Float64Array.from(st.q ? Q[st.q]() : zeros);
           for (const [r, c, a, v] of st.set || []) q[(r * env.cols + c) * nA + ACTION[a]] = v;

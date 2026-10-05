@@ -1,0 +1,105 @@
+/* Figures of Part 7, planning: Dyna-Q in the maze, the blocking and shortcut mazes, and prioritized sweeping. */
+(function (RL) {
+  "use strict";
+  const { lab } = RL;
+  const MAZE = { alpha: 0.1, epsilon: 0.1, gamma: 0.95 };
+  const steps = (world, id, params, units, seed) => lab.simulate({ world, algorithm: lab.algorithms[id], params, units, seed, snapshots: false }).metrics.steps;
+
+  // ---- steps per episode with 0, 5 and 50 planning steps (Sutton & Barto, Figure 8.2) ----
+  RL.demos["dyna-curves"] = function (host) {
+    const N = [0, 5, 50];
+    RL.fig.average(host, {
+      label: "Steps per episode in the Dyna maze, for Dyna-Q with 0, 5 and 50 planning steps",
+      right: 150, x: { min: 2, max: 50, from: 2, ticks: [2, 10, 20, 30, 40, 50], label: "Episodes" }, // the first episode is a random search for all of them
+      y: { min: 0, max: 800, ticks: [0, 200, 400, 600, 800], label: "Steps per episode", digits: 0 },
+      curves: N.map((n, i) => ({ id: `n${n}`, name: n ? `${n} planning steps` : "0 (Q-learning)", dash: i === 0, light: i === 1 })),
+      at: (e) => `Episode ${e}`,
+    }, {
+      runs: 30,
+      sample: (seed) => Object.fromEntries(N.map((n) => [`n${n}`, steps("dyna-maze", "dyna-q", { ...MAZE, planning: n }, 50, seed).subarray(1)])),
+    });
+  };
+
+  // ---- the greedy policies halfway through the second episode, without and with planning (after Figure 8.3) ----
+  RL.demos["dyna-midway"] = function (host) {
+    const env = lab.make("dyna-maze"), id = RL.fig.uid(), parts = [];
+    let x0 = 0, W = 0, H = 0;
+    for (const n of [0, 50]) {
+      const r = lab.simulate({ world: "dyna-maze", algorithm: lab.algorithms["dyna-q"], params: { ...MAZE, planning: n }, units: 2, seed: 3 });
+      // Walk the second episode up to its middle; the copy of the memory follows every update.
+      const { m, events } = r.replay(1), half = Math.floor(r.metrics.steps[1] / 2);
+      let moves = 0, at = env.start;
+      for (const ev of events) { if (ev.type === "move") { moves++; at = ev.s2; } if (moves >= half && ev.type === "next") break; }
+      const mz = RL.fig.maze(env, { T: 26, X: x0 + 6, Y: 26, id: `${id}-${n}` });
+      let g = mz.svg + `<text class="note" x="${x0 + mz.W / 2}" y="16" text-anchor="middle">${n ? `With planning (n = ${n})` : "Without planning (n = 0)"}</text>`;
+      for (let s = 0; s < env.nS; s++) {
+        if (env.terminal(s) || env.blocked(s) || lab.maxQ(m.Q, s, env) <= 0) continue;
+        g += RL.fig.mazeArrow(mz, s, lab.greedy(m.Q, s, env));
+      }
+      g += `<circle class="agent-dot" cx="${mz.cx(at)}" cy="${mz.cy(at)}" r="${mz.T * 0.22}"/>`;
+      parts.push(g);
+      x0 += mz.W + 30;
+      W = x0 - 30;
+      H = Math.max(H, mz.H + 26);
+    }
+    host.innerHTML = `<svg class="fig maze" viewBox="0 0 ${W} ${H}" role="img" aria-label="Greedy policies halfway through the second episode, without and with planning">${parts.join("")}</svg>`;
+  };
+
+  // ---- the blocking and shortcut mazes: cumulative reward against time steps (Figures 8.4 and 8.5) ----
+  // From the steps each episode took: the cumulative reward at step k is the number of episodes finished by then.
+  const CHANGING = {
+    blocking: { world: "blocking-maze", budget: 3000, units: 400, planning: 10, top: 150, ticks: [0, 50, 100, 150] },
+    shortcut: { world: "shortcut-maze", budget: 6000, units: 800, planning: 50, top: 400, ticks: [0, 100, 200, 300, 400] },
+  };
+  RL.demos["changing-maze"] = function (host, arg = "blocking") {
+    const c = CHANGING[arg], env = lab.make(c.world), id = RL.fig.uid();
+    const params = { alpha: 1, epsilon: 0.1, gamma: 0.95, planning: c.planning, kappa: 0.001 };
+    // The maze before and after its change, side by side, above the curves.
+    let mazes = "", x0 = 0, H = 0;
+    for (const [t, title] of [[0, `Steps 1–${env.changes.toLocaleString("en")}`], [env.changes, `After step ${env.changes.toLocaleString("en")}`]]) {
+      env.setTime(t);
+      const mz = RL.fig.maze(env, { T: 16, X: x0 + 4, Y: 22, id: `${id}-${t}` });
+      mazes += mz.svg + `<text class="note" x="${x0 + mz.W / 2}" y="14" text-anchor="middle">${title}</text>`;
+      x0 += mz.W + 40;
+      H = Math.max(H, mz.H + 22);
+    }
+    host.innerHTML = `<svg class="fig maze pair" viewBox="0 0 ${x0 - 40} ${H}" role="img" aria-label="The maze before and after it changes">${mazes}</svg><div class="fig-curves"></div>`;
+    RL.fig.average(host.querySelector(".fig-curves"), {
+      label: `Cumulative reward in the ${arg} maze for Dyna-Q and Dyna-Q+`,
+      right: 100, x: { min: 0, max: c.budget, from: 1, ticks: Array.from({ length: c.budget / 1000 + 1 }, (_, i) => i * 1000), label: "Time steps" },
+      y: { min: 0, max: c.top, ticks: c.ticks, label: "Cumulative reward", digits: 1, tickDigits: 0 },
+      curves: [{ id: "plus", name: "Dyna-Q+" }, { id: "q", name: "Dyna-Q", dash: true }],
+      at: (k) => `Step ${Math.round(k).toLocaleString("en")}`,
+    }, {
+      runs: 20,
+      sample(seed) {
+        const out = {};
+        for (const [key, algo] of [["q", "dyna-q"], ["plus", "dyna-q-plus"]]) {
+          const ep = steps(c.world, algo, params, c.units, seed), cum = new Float64Array(c.budget);
+          let k = 0, done = 0;
+          for (const n of ep) { for (let j = 0; j < n && k < c.budget; j++) cum[k++] = done; done++; if (k >= c.budget) break; }
+          while (k < c.budget) cum[k++] = done;
+          out[key] = cum;
+        }
+        return out;
+      },
+    });
+  };
+
+  // ---- prioritized sweeping against Dyna-Q, same number of planning updates per step ----
+  RL.demos["sweeping-curves"] = function (host) {
+    RL.fig.average(host, {
+      label: "Steps per episode in the Dyna maze for Dyna-Q and prioritized sweeping, 5 planning updates per step",
+      right: 160, x: { min: 2, max: 30, from: 2, ticks: [2, 10, 20, 30], label: "Episodes" },
+      y: { min: 0, max: 200, ticks: [0, 50, 100, 150, 200], label: "Steps per episode", digits: 0 },
+      curves: [{ id: "ps", name: "prioritized sweeping" }, { id: "dq", name: "Dyna-Q", dash: true }],
+      at: (e) => `Episode ${e}`,
+    }, {
+      runs: 30,
+      sample: (seed) => ({
+        ps: steps("dyna-maze", "prioritized-sweeping", { ...MAZE, alpha: 0.5, planning: 5 }, 30, seed).subarray(1),
+        dq: steps("dyna-maze", "dyna-q", { ...MAZE, alpha: 0.5, planning: 5 }, 30, seed).subarray(1),
+      }),
+    });
+  };
+})(globalThis.RL = globalThis.RL || {});

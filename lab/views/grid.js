@@ -49,6 +49,8 @@
       this.hasQ = true; // false when an algorithm only knows state values
       this.V = null; // state values to show instead of the best Q
       this.P = null; // a policy to draw instead of ε-greedy on Q
+      this.Z = null; // eligibility traces (per tile, or per move), when the algorithm keeps them
+      this.model = null; // a learned model: where each move led (−1: never tried)
       this.path_ = [];
       const W = env.cols * T, H = env.rows * T;
       this.svg = el("svg", { class: `gridview${env.ice ? " ice" : ""}`, viewBox: `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`, role: "img", "aria-label": env.title });
@@ -56,6 +58,8 @@
       host.appendChild(this.svg);
       const layer = (cls) => el("g", { class: cls }, this.svg);
       this.gTiles = layer("tiles");
+      this.gTrace = layer("trace-layer"); // eligibility traces, glowing where credit will flow
+      this.gFog = layer("fog-layer"); // tiles the agent's model has never seen
       this.gJumps = layer("jumps");
       this.gTrail = layer("trail-layer");
       this.gPath = layer("path-layer");
@@ -92,6 +96,7 @@
     _tile(s) {
       const kind = this.env.tile(s), [x, y] = this.origin(s);
       const g = el("g", { class: `tile k-${KINDS[kind] || kind}`, transform: `translate(${x} ${y})` }, this.gTiles);
+      g.dataset.kind = kind;
       this.tiles[s] = g;
       g.bg = el("rect", { class: "bg", x: 1.5, y: 1.5, width: T - 3, height: T - 3, rx: 7 }, g);
       if (kind === "C") {
@@ -173,9 +178,30 @@
       else this.Q.fill(0);
       this.V = d.V ? Float64Array.from(d.V) : null;
       this.P = d.P ? Float64Array.from(d.P) : null;
+      this.Z = d.Z ? Float64Array.from(d.Z) : null;
+      this.model = d.model ? Float64Array.from(d.model) : null;
       this.o.epsilon = d.greedy ? 0 : p.epsilon ?? this.o.epsilon;
+      if (d.t !== undefined && this.env.setTime) { this.env.setTime(d.t); this.retile(); }
       this.svg.dataset.tiles = this._mode();
       this._paintAll();
+    }
+
+    // A world whose walls moved: draw the tiles that changed again.
+    retile() {
+      for (let s = 0; s < this.env.nS; s++) {
+        if (this.tiles[s].dataset.kind === this.env.tile(s)) continue;
+        this.tiles[s].remove();
+        this.nums[s]?.remove();
+        this.arrows[s]?.[0].parentNode.remove();
+        this.traces?.[s]?.remove();
+        this.fogs?.[s]?.remove();
+        this.tris[s] = this.nums[s] = this.arrows[s] = undefined;
+        if (this.traces) this.traces[s] = undefined;
+        if (this.fogs) this.fogs[s] = undefined;
+        this._tile(s);
+        this.tiles[s].bg.animate?.([{ opacity: 0.2 }, { opacity: 1 }], { duration: 500, easing: "ease-out" });
+      }
+      this._dist = null;
     }
 
     setQ(Q, { ripple = false } = {}) {
@@ -224,6 +250,8 @@
       const v = this._value(s);
       for (let a = 0; a < nA; a++) tris[a].style.fill = mode === "q" ? valueColor(Q[s * nA + a], range) : "";
       this.tiles[s].bg.style.fill = mode === "v" ? valueColor(v, range) : "";
+      this._trace(s);
+      this._fog(s);
       const num = this.nums[s];
       num.textContent = this.o.numbers ? fmt(v, this.o.digits) : "";
       if (!this.o.arrows) return;
@@ -240,6 +268,35 @@
         arrow.shaft.setAttribute("d", d);
         arrow.style.opacity = 1;
       }
+    }
+
+    // The glow of a trace: one shape per tile (traces of states) or per move (traces of state–action pairs).
+    // Brightness grows with the trace and saturates at 1, so a fading trail stays visible for a while.
+    _trace(s) {
+      const Z = this.o.traces !== false ? this.Z : null, nA = this.env.nA;
+      if (!Z && !this.traces?.[s]) return;
+      this.traces ||= [];
+      let g = this.traces[s];
+      if (!g) {
+        const [x, y] = this.origin(s), perMove = Z.length === this.env.nS * nA;
+        g = this.traces[s] = el("g", { class: "trace", transform: `translate(${x} ${y})` }, this.gTrace);
+        g.parts = perMove ? TRIANGLES.map(([p, q]) => el("polygon", { points: `${p} ${q} ${HALF},${HALF}` }, g)) : [el("rect", { x: 3, y: 3, width: T - 6, height: T - 6, rx: 7 }, g)];
+      }
+      g.parts.forEach((part, a) => {
+        const z = Z ? (g.parts.length > 1 ? Z[s * nA + a] : Z[s]) : 0;
+        part.style.opacity = z > 0.005 ? (0.18 + 0.8 * Math.min(1, z) ** 0.7).toFixed(3) : 0;
+      });
+    }
+
+    // Fog over the tiles the model knows nothing about yet: planning can only use what the agent has seen.
+    _fog(s) {
+      const M = this.o.fog !== false ? this.model : null, nA = this.env.nA;
+      if (!M && !this.fogs?.[s]) return;
+      this.fogs ||= [];
+      if (!this.fogs[s]) { const [x, y] = this.origin(s); this.fogs[s] = el("rect", { class: "fog", x: x + 1.5, y: y + 1.5, width: T - 3, height: T - 3, rx: 7 }, this.gFog); }
+      let known = false;
+      if (M) for (let a = 0; a < nA; a++) if (M[s * nA + a] >= 0) { known = true; break; }
+      this.fogs[s].style.opacity = M && !known && this.env.tile(s) !== "G" ? 1 : 0;
     }
 
     // ---- the Lab: one event of a run, and the picture at rest after a jump ----
@@ -285,7 +342,25 @@
         }
         case "update":
           this.spark(ev.s, ev.a ?? -1);
+          if (ev.states && line) this.mark([], "next");
           return 0;
+        case "window": // n-step: the stretch of the episode whose rewards make the target
+          this.mark([ev.s], "focus");
+          this.mark(ev.states.slice(1), "next");
+          return 0;
+        case "trace":
+          this.spark(ev.s, ev.a ?? -1, "trc");
+          return 0;
+        case "plan": { // planning: remembered moves replayed and learned from, in the order they were replayed
+          const list = ev.list.slice(0, 60), gap = ev.ordered ? 45 : 600 / Math.max(10, list.length);
+          list.forEach((u, k) => this.spark(u.s, u.a, "dream", k * gap));
+          if (line) this.pop(ev.s, `${ev.list.length} planning ${ev.list.length === 1 ? "update" : "updates"}`, "plan");
+          return ev.ordered ? Math.min(900, list.length * gap) : 0;
+        }
+        case "world":
+          this.retile();
+          this.pop(ev.s, "the walls moved!", "plan");
+          return 900;
         case "sweep":
           this.mark([ev.s], "focus");
           this.mark(line ? this._successors(ev.s) : [], "next");
@@ -414,11 +489,12 @@
     }
 
     // A ring where an update just happened: on the triangle of action a, or on the whole tile when a < 0.
-    spark(s, a) {
+    // kind: "trc" for a trace being laid down, "dream" for a planning update; delay in milliseconds.
+    spark(s, a, kind = "", delay = 0) {
       let [x, y] = this.center(s);
       if (a >= 0) { x += DIRS[a][0] * 17; y += DIRS[a][1] * 17; }
-      const c = el("circle", { class: "spark", cx: x, cy: y, r: a >= 0 ? 9 : 20 }, this.gFx);
-      c.animate([{ opacity: 1, transform: "scale(0.3)" }, { opacity: 0, transform: "scale(1.7)" }], { duration: 600, easing: "ease-out" })
+      const c = el("circle", { class: `spark${kind ? ` k-${kind}` : ""}`, cx: x, cy: y, r: a >= 0 ? 9 : 20, opacity: 0 }, this.gFx);
+      c.animate([{ opacity: 1, transform: "scale(0.3)" }, { opacity: 0, transform: "scale(1.7)" }], { duration: 600, delay, easing: "ease-out" })
         .onfinish = () => c.remove();
     }
 
@@ -485,12 +561,13 @@
       const head = `<div class="head">Tile row ${r + 1}, column ${c + 1}</div>`;
       if (this.V || !this.hasQ) {
         RL.tip.show(e.clientX, e.clientY, `${head}<div class="row"><b>${fmt(this._value(s), d)}</b><span>V, the value of this tile</span></div>` +
+          (this.Z?.length === this.env.nS ? `<div class="row"><b>${this.Z[s].toFixed(2)}</b><span>z, its eligibility trace</span></div>` : "") +
           probs.map((p, a) => (p ? `<div class="row"><span>${ARROW_TEXT[a]}</span><span class="faint">π ${Math.round(p * 100)}%</span></div>` : "")).join(""));
         return;
       }
-      const rows = Q.subarray(s * nA, s * nA + nA);
+      const rows = Q.subarray(s * nA, s * nA + nA), Z = this.Z?.length === Q.length ? this.Z : null;
       RL.tip.show(e.clientX, e.clientY, `${head}<div class="row"><b>${fmt(lab.maxQ(Q, s, this.env), d)}</b><span>V = best Q</span></div>` +
-        Array.from(rows, (q, a) => `<div class="row"><span>${ARROW_TEXT[a]}</span><b>${fmt(q, d)}</b><span class="faint">π ${Math.round(probs[a] * 100)}%</span></div>`).join(""));
+        Array.from(rows, (q, a) => `<div class="row"><span>${ARROW_TEXT[a]}</span><b>${fmt(q, d)}</b><span class="faint">π ${Math.round(probs[a] * 100)}%${Z && Z[s * nA + a] > 0.005 ? ` · trace ${Z[s * nA + a].toFixed(2)}` : ""}</span></div>`).join(""));
     }
 
     destroy() {
@@ -503,12 +580,15 @@
     // ---- for the Lab: the choices in its "Show" panel, a legend, and a small drawing for the filmstrip ----
     static options(env, displays) {
       const hasQ = displays.some((d) => d.Q), episodes = displays.some((d) => !d.sweeps);
+      const traces = displays.some((d) => d.Z), model = displays.some((d) => d.model);
       return [
         { key: "tiles", type: "seg", label: "Color the tiles by", value: hasQ ? "q" : "v",
           choices: hasQ ? [["q", "Q per move"], ["v", "V per tile"], ["none", "Off"]] : [["v", "V per tile"], ["none", "Off"]] },
         { key: "arrows", type: "check", label: "Policy arrows", swatch: "pol", value: true },
         ...(episodes ? [{ key: "trail", type: "check", label: "Path of the episode", swatch: "trail", value: true }] : []),
         { key: "numbers", type: "check", label: "Numbers on tiles", value: env.nS <= 16 },
+        ...(traces ? [{ key: "traces", type: "check", label: "Eligibility traces", swatch: "trc", value: true }] : []),
+        ...(model ? [{ key: "fog", type: "check", label: "Fog where the model knows nothing", swatch: "fog", value: true }] : []),
       ];
     }
 
@@ -519,6 +599,7 @@
     static thumb(env, d, p = {}) {
       const S = Math.max(9, Math.min(16, Math.floor(176 / env.cols))), range = env.valueRange, nA = env.nA;
       const eps = d.greedy ? 0 : p.epsilon ?? 0;
+      if (d.t !== undefined) env.setTime?.(d.t); // a maze whose walls move: draw them as they were then
       let g = "";
       for (let s = 0; s < env.nS; s++) {
         const [r, c] = env.rc(s), k = env.tile(s), x = c * S, y = r * S;

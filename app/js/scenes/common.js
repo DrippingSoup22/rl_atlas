@@ -5,6 +5,7 @@
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
   const SUB = "₀₁₂₃₄₅₆₇₈₉";
+  const SHOWN = new Set(["update", "improve", "trace", "plan", "world"]); // events after which a view redraws what the algorithm knows
   RL.scenes = RL.scenes || {};
 
   // Timers a scene cancels whenever its step changes.
@@ -75,7 +76,7 @@
         }
         const { value: ev, done } = w.events.next();
         if (done) { w = null; t++; after?.(t, true); later(next, 700); return; }
-        if (ev.type === "update" || ev.type === "improve") view.show(run.algorithm.show(w.m, run.env, run.params, t), run.params);
+        if (SHOWN.has(ev.type)) view.show(run.algorithm.show(w.m, run.env, run.params, t), run.params);
         const wait = view.event(ev, { line: fine, p: run.params }) || 0;
         const quiet = ev.type === "info" || ev.type === "next" || ev.type === "skip";
         later(next, quiet ? 40 : ev.type === "choose" ? pace / 2 : pace + wait);
@@ -93,6 +94,7 @@
     error: { label: "Error: distance from the true values (RMS)", zero: true },
     match: { label: "States where the greedy action is optimal", percent: true },
     greedy: { label: "Chance the greedy policy reaches the gem", percent: true },
+    steps: { label: "Steps per episode" },
   };
   function curves(host, cfg, runOf) {
     const cache = new Map();
