@@ -105,6 +105,7 @@
     right: { label: "Chance of stepping right, π(right)", percent: true },
     aim: { label: "Where the policy aims: its mean angle (degrees)" },
     test: { label: "Test episode after each block: its return" },
+    q: { label: "The largest Q-value in each batch, on average" },
   };
   function curves(host, cfg, runOf) {
     const cache = new Map();
@@ -132,9 +133,11 @@
       };
       if (names.every((n) => cfg.runs[n].recording)) { // trained offline: every seed's curve is in the recording
         const seeds = names.map((n) => RL.lab.recordedCurves(RL.recordings[cfg.runs[n].recording]));
-        chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: metric === "return" ? seeds[i].mean : runOf(n).metrics[metric] })));
+        // every seed kept its training returns, and DQN's its Q-values; anything else comes from the seed played back
+        const key = metric === "return" ? "train" : metric, all = names.every((n) => RL.recordings[cfg.runs[n].recording].curves.every((c) => c[key]));
+        chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: all ? RL.lab.recordedCurves(RL.recordings[cfg.runs[n].recording], key).mean : runOf(n).metrics[metric] })));
         chart.playhead(first.units);
-        status.textContent = metric === "return" ? ` · average of ${seeds[0].seeds.length} seeds` : "";
+        status.textContent = all ? ` · average of ${seeds[0].seeds.length} seeds` : " · the seed played back";
         return;
       }
       const more = () => {
