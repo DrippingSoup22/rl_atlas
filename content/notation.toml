@@ -132,6 +132,31 @@ text = "expected value: the average over all the randomness"
 station = "value-functions"
 
 [[symbol]]
+tex = '\mathbf w^-'
+text = "the target network's weights: a copy of the network's weights w, refreshed every C steps, used only to compute targets"
+station = "target-network"
+
+[[symbol]]
+tex = '\mathcal D,\ N,\ B'
+text = "the replay memory, the number of transitions it keeps, and the size of each minibatch drawn from it"
+station = "experience-replay"
+
+[[symbol]]
+tex = '\mathbf h_\ell = \varphi(W_\ell \mathbf h_{\ell-1} + \mathbf b_\ell)'
+text = "a network's layer ℓ: weights W, biases b and a nonlinearity φ (the rectifier max(0, z), or tanh)"
+station = "neural-networks"
+
+[[symbol]]
+tex = '\val{\hat v(s)},\ \err{\hat a(s, a)}'
+text = "a dueling network's two streams: how good the state is, and how much each action adds to it"
+station = "dqn-extensions"
+
+[[symbol]]
+tex = 'p_i,\ \alpha,\ \beta'
+text = "prioritized replay: transition i's priority (its last TD error, plus a little), how strongly priorities skew the sampling, and how fully importance weights correct for it (an ink α and β, not the step size or the entropy weight)"
+station = "dqn-extensions"
+
+[[symbol]]
 tex = '\pol{\pi(a \mid s, \boldsymbol\theta)}'
 text = "a policy with weights of its own: the probability of action a in state s"
 station = "why-policy"
