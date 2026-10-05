@@ -44,17 +44,24 @@ directly, which is handier while editing.
 
 An entry is `content/<part folder>/<id>.md`, where `<id>` is a station in `map.toml`. It starts with TOML
 front matter between `+++` lines: `summary`, `change` (what changed from the parent), `prereqs`, `lab`, `sources`,
-and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline` or `mdp`), the scene's settings, and a
-formula whose pieces are wrapped in `\step{n}{…}`. [q-learning.md](content/05-temporal-difference/q-learning.md)
-is a complete algorithm, [bellman.md](content/01-problem/bellman.md) a complete concept.
+and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline`, `mdp`, or one of the Lab's views: `bandit`,
+`chain`, `cards`, `graph`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
+a Lab view, and grid stories that replay dynamic programming or Monte Carlo, name their runs in a `[story.runs]`
+table (`name = { algorithm, <knobs> }`); a step then picks a run and a moment (`run`, `at`), can replay some units
+(`play`, `pace`) and can chart runs averaged over many seeds (`curves`, `metric`).
+[q-learning.md](content/05-temporal-difference/q-learning.md) is a complete algorithm,
+[bellman.md](content/01-problem/bellman.md) a complete concept, and [epsilon-greedy.md](content/02-bandits/epsilon-greedy.md)
+a story on Lab runs.
 
 The body has up to three parts: a `## Story` made of `::: step {…}` blocks (the braces say what the picture
 shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of plain Markdown you can use:
 
 - `[[station]]` or `[[station|text]]` for links that explain themselves on hover, and `[text](lab:preset)` for Lab links;
 - `$…$` and `$$…$$` math with the color macros `\val \rew \pol \err` and `\alp \gam \eps \lam \del`;
-- `{{demo arg}}` for a diagram, figure or demo: `backup` (sarsa, q-learning, v-pi, q-pi, v-star, q-star),
-  `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `loop`, `mdp-graph`, `discount`, `be-the-agent`;
+- `{{demo arg}}` for a diagram, figure or demo: `backup` (bandit, sarsa, q-learning, v-pi, q-pi, v-star, q-star),
+  `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `loop`, `mdp-graph`, `discount`, `be-the-agent`,
+  `testbed`, `sample-average`, `step-weights`, `step-sizes`, `bandit-curves` (epsilon, optimistic, ucb, gradient,
+  drift), `bandit-study`;
 - `::: pseudocode` (end a line with `{#id}` to link it to the Lab's step-by-step mode), `::: question` (answer after `---`) and `::: analogy`.
 
 The Textbook numbers its sections, figures and statements, and any display equation with a `\label{name}`;

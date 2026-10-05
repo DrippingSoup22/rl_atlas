@@ -53,6 +53,9 @@
 .f-num { font-size: 0.92em; }
 .scene-view { min-height: 120px; }
 .scene-chart { margin-top: 6px; }
+/* With a chart under the picture and no formula showing, the formula's space goes to the chart. */
+.stage-card:has(.scene-chart:not([hidden])) .scene-formula:not(:has(.on)) { min-height: 0; margin: 0; }
+.stage-card:has(.scene-chart:not([hidden])) .scene-formula:not(:has(.on)) > div { display: none; }
 .scene-chart-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
 .scene-chart-title .faint { text-transform: none; letter-spacing: 0; font-weight: 500; }
 .scene-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 22px; font-size: 13px; color: var(--ink-2); }
@@ -265,6 +268,14 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .fig .tip-mark path { fill: var(--ink); }
 .fig .route, .fig .back { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
 .fig .route.dashed, .fig .curve.dashed { stroke-dasharray: 7 4; }
+.fig .curve.dotted { stroke-dasharray: 1.5 4; stroke-linecap: round; stroke-width: 2.4; }
+.fig .curve.light { stroke: var(--ink-3); }
+.fig .pts circle { fill: var(--surface); stroke: var(--ink); stroke-width: 1.6; }
+.fig .pts.light circle { stroke: var(--ink-3); }
+.fig .violin { fill: color-mix(in oklab, var(--ink) 7%, transparent); stroke: var(--ink-2); stroke-width: 1.1; }
+.fig .mean-line { stroke: var(--ink); stroke-width: 1.8; }
+.fig .bar { fill: color-mix(in oklab, var(--ink) 14%, transparent); stroke: var(--ink-2); stroke-width: 1; }
+.fig-panel + .fig-panel { margin-top: 10px; }
 .fig .back { stroke-width: 1.3; stroke-dasharray: 3 3; }
 .fig .wipe { transform: scaleX(0); }
 .fig.on .wipe { transform: none; transition: transform 1.6s var(--ease); }
@@ -283,6 +294,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 18px; margin-top: 14px; }
 .sec { min-width: 0; padding: 20px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); animation: rise-in 0.5s var(--ease) calc(var(--i) * 60ms) both; }
 .sec h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+.sec h2 .term { text-transform: none; letter-spacing: 0.02em; } /* a station's name as written: uppercase would turn ε into Ε */
 .sec p { margin: 0 0 0.75em; }
 .sec-idea, .sec-knobs, .sec-check { grid-column: span 2; }
 .sec-idea > p:first-of-type { font-size: 18px; }
@@ -330,6 +342,10 @@ a.ref:hover { text-decoration-color: var(--ink); }
 @keyframes node-in { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
 .backup .state { fill: var(--surface); stroke: var(--ink); stroke-width: 2.5; }
 .backup .action { fill: var(--ink); }
+.backup .end { fill: var(--surface-3); stroke: var(--ink); stroke-width: 2.5; }
+.backup .more circle { fill: var(--ink-2); }
+.backup .edge.dotted { stroke-dasharray: 0.02 0.035; stroke-dashoffset: 0; stroke-linecap: round; opacity: 0; }
+.backup.on .edge.dotted { animation: node-in 0.45s var(--ease) calc(var(--d) * 220ms) both; }
 .backup .node-label, .backup .arc-label { font: 600 13px var(--font); fill: var(--ink-2); }
 .backup .edge-label { font: 700 13px var(--font); fill: var(--ink-2); }
 .backup .edge-label.q-rew { fill: var(--rew-ink); }

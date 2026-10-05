@@ -40,18 +40,20 @@
       void t.offsetWidth; // restart the animation
       t.classList.add("flash");
     }
-    host.addEventListener("click", (ev) => {
+    // The host is the entry's mode body, which the Story and the Card reuse: every listener goes in destroy().
+    function onClick(ev) {
       const a = ev.target.closest("a[data-go], a.ref");
       if (!a) return;
       ev.preventDefault();
       hidePeek();
       jump(a.dataset.go || a.dataset.ref);
-    });
+    }
+    host.addEventListener("click", onClick);
 
     // Peek: hover a reference to an equation or a statement to read it without leaving your place.
     let peek = null;
     function hidePeek() { peek?.remove(); peek = null; }
-    host.addEventListener("pointerover", (ev) => {
+    function onOver(ev) {
       const a = ev.target.closest("a.ref");
       if (!a || !PEEK.has(a.dataset.kind)) return;
       const t = target(a.dataset.ref);
@@ -63,8 +65,10 @@
       const r = a.getBoundingClientRect(), w = peek.offsetWidth, ht = peek.offsetHeight;
       peek.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8)}px`;
       peek.style.top = `${r.bottom + 10 + ht < innerHeight ? r.bottom + 10 : r.top - ht - 10}px`;
-    });
-    host.addEventListener("pointerout", (ev) => { if (ev.target.closest("a.ref")) hidePeek(); });
+    }
+    const onOut = (ev) => { if (ev.target.closest("a.ref")) hidePeek(); };
+    host.addEventListener("pointerover", onOver);
+    host.addEventListener("pointerout", onOut);
 
     // The contents list follows the reading: the section under the top of the screen is lit, and a bar fills up.
     let raf = 0;
@@ -80,6 +84,15 @@
     addEventListener("scroll", onScroll, { passive: true });
     follow();
 
-    return { destroy() { removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); hidePeek(); } };
+    return {
+      destroy() {
+        removeEventListener("scroll", onScroll);
+        host.removeEventListener("click", onClick);
+        host.removeEventListener("pointerover", onOver);
+        host.removeEventListener("pointerout", onOut);
+        cancelAnimationFrame(raf);
+        hidePeek();
+      },
+    };
   };
 })(globalThis.RL = globalThis.RL || {});

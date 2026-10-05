@@ -1,11 +1,18 @@
-/* Backup diagrams, in the style of Sutton & Barto: open circles are states, dots are actions.
-   A diagram shows which values an update looks at. Each one draws itself when it scrolls into view. */
+/* Backup diagrams, in the style of Sutton & Barto: open circles are states, dots are actions, a gray square is the
+   end of an episode. A diagram shows which values an update looks at. Each one draws itself when it scrolls into view. */
 (function (RL) {
   "use strict";
 
   // Levels from top to bottom. Every node of a level has `fan` children on the next level (default 1).
+  // kind: "state", "action", "end" (the terminal state) or "more" (and so on, until the end of the episode);
   // label: the level's name; edge: the label of the edges into it; max: an arc across each fan, meaning "take the best".
+  // A diagram is a list of levels, or { gap, levels } when its levels sit closer than usual (long chains).
   const DIAGRAMS = {
+    // A bandit method: the arm pulled and the reward it paid. Nothing follows, so the target is the reward itself.
+    bandit: [
+      { kind: "action", label: "A" },
+      { kind: "end", label: "", edge: "R" },
+    ],
     sarsa: [
       { kind: "action", label: "S, A" },
       { kind: "state", label: "S′", edge: "R" },
@@ -40,12 +47,13 @@
   const EDGE_CLASS = { R: "q-rew", r: "q-rew", "π": "q-pol" };
 
   RL.demos.backup = function (host, id) {
-    const levels = DIAGRAMS[id];
-    if (!levels) { RL.warn(`no backup diagram for '${id}'`); return; }
+    const diagram = DIAGRAMS[id];
+    if (!diagram) { RL.warn(`no backup diagram for '${id}'`); return; }
+    const levels = diagram.levels || diagram;
     // Place the bottom row evenly, then every parent above the middle of its children.
     const counts = [];
     levels.forEach((lv, k) => counts.push((counts[k - 1] || 1) * (k ? lv.fan || 1 : 1)));
-    const last = counts[counts.length - 1], spread = last > 3 ? 34 : 56, gap = 80, top = 22;
+    const last = counts[counts.length - 1], spread = last > 3 ? 34 : 56, gap = diagram.gap || 80, top = 22;
     const W = Math.max(240, (last - 1) * spread + 150), cx = (W - 70) / 2;
     const xs = levels.map(() => []);
     xs[levels.length - 1] = Array.from({ length: last }, (_, i) => cx + (i - (last - 1) / 2) * spread);
@@ -59,8 +67,9 @@
       const y = top + k * gap;
       if (k > 0) {
         const py = y - gap, fan = lv.fan || 1;
+        const dotted = lv.kind === "more" || levels[k - 1].kind === "more";
         xs[k].forEach((x, i) => {
-          svg += `<line class="edge" pathLength="1" style="--d:${d}" x1="${xs[k - 1][Math.floor(i / fan)]}" y1="${py}" x2="${x}" y2="${y}"/>`;
+          svg += `<line class="edge${dotted ? " dotted" : ""}" pathLength="1" style="--d:${d}" x1="${xs[k - 1][Math.floor(i / fan)]}" y1="${py}" x2="${x}" y2="${y}"/>`;
         });
         if (lv.edge) {
           const px = xs[k - 1][xs[k - 1].length - 1], x = xs[k][xs[k].length - 1];
@@ -78,11 +87,12 @@
         d += 1;
       }
       for (const x of xs[k]) {
-        svg += lv.kind === "state"
-          ? `<circle class="node state" style="--d:${d}" cx="${x}" cy="${y}" r="12"/>`
-          : `<circle class="node action" style="--d:${d}" cx="${x}" cy="${y}" r="6.5"/>`;
+        if (lv.kind === "state") svg += `<circle class="node state" style="--d:${d}" cx="${x}" cy="${y}" r="12"/>`;
+        else if (lv.kind === "end") svg += `<rect class="node end" style="--d:${d}" x="${x - 9}" y="${y - 9}" width="18" height="18" rx="1.5"/>`;
+        else if (lv.kind === "more") svg += `<g class="node more" style="--d:${d}">${[-9, 0, 9].map((dy) => `<circle cx="${x}" cy="${y + dy}" r="2"/>`).join("")}</g>`;
+        else svg += `<circle class="node action" style="--d:${d}" cx="${x}" cy="${y}" r="6.5"/>`;
       }
-      svg += `<text class="node-label" x="${xs[k][xs[k].length - 1] + (lv.kind === "state" ? 20 : 14)}" y="${y + 5}">${lv.label}</text>`;
+      if (lv.label) svg += `<text class="node-label" x="${xs[k][xs[k].length - 1] + (lv.kind === "action" ? 14 : 20)}" y="${y + 5}">${lv.label}</text>`;
       d += 1;
     });
     host.innerHTML = `${svg}</svg>`;

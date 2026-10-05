@@ -12,7 +12,8 @@
       card.innerHTML = `<div class="scene-grid"></div>${FORMULA}
         <div class="scene-foot"><span class="scene-note"></span>
           <span class="scale" title="Colors of the values"><span>worse</span><i></i><span>0</span><i class="up"></i><span>better</span></span></div>`;
-      const view = new RL.GridView(card.querySelector(".scene-grid"), env, { tiles: "q", epsilon: cfg.epsilon, digits: cfg.digits ?? 2 });
+      // Without an ε of its own, a story draws the greedy arrows of Q.
+      const view = new RL.GridView(card.querySelector(".scene-grid"), env, { tiles: "q", epsilon: cfg.epsilon ?? 0, digits: cfg.digits ?? 2 });
       const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
       const { later, stop } = timers(), runOf = runs(cfg), play = player(later);
       const tile = (v) => (v === "start" ? env.start : v[0] * env.cols + v[1]);
