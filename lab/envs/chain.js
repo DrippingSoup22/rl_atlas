@@ -10,7 +10,7 @@
     const nS = n + 2, both = [LEFT, RIGHT], none = [];
     const names = Array.from({ length: nS }, (_, s) => (s === 0 || s === n + 1 ? "exit" : n <= 26 ? String.fromCharCode(64 + s) : String(s)));
     const env = {
-      name: "chain", kind: "chain", title, n, nS, nA: 2, start: (n + 1) >> 1, names, valueRange: 1,
+      name: "chain", key: `chain-${n}-${left}`, kind: "chain", title, n, nS, nA: 2, start: (n + 1) >> 1, names, valueRange: 1,
       exits: { left, right: 1 },
       acts: (s) => (s === 0 || s === n + 1 ? none : both),
       terminal: (s) => s === 0 || s === n + 1,

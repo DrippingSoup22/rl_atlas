@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "dp", "run", "measures",
-  "agents/td", "agents/mc", "agents/dp", "agents/bandit"];
+  "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning"];
 for (const file of FILES) require(`../lab/${file}.js`);
 const { lab } = globalThis.RL;
 const A = lab.algorithms;
@@ -88,6 +88,44 @@ test("cliff walking: while learning, SARSA earns more reward per episode than Q-
   }
 });
 
+// The 19-state random walk: the RMS error over the first 10 episodes, averaged over 100 runs, at the best of a few step sizes.
+const walkError = (id, params) => Math.min(...[0.1, 0.2, 0.4, 0.6, 0.8].map((alpha) =>
+  lab.mean(lab.average({ world: "random-walk-19", algorithm: A[id], params: { gamma: 1, alpha, ...params }, units: 10, seeds: seeds(100), measures: ["error"] }).mean.error)));
+
+test("n-step TD: an intermediate n learns fastest on the 19-state random walk (Sutton & Barto, Figure 7.2)", () => {
+  const [one, four, many] = [1, 4, 64].map((n) => walkError("n-step-td", { n }));
+  assert.ok(four < one - 0.05 && four < many - 0.05, `best errors: n = 1 ${one}, n = 4 ${four}, n = 64 ${many}`);
+  assert.ok(four < 0.28, `n = 4: ${four}`);
+});
+
+test("TD(λ) and the λ-return: an intermediate λ is best, and TD(λ) with large α and λ blows up (Figures 12.3 and 12.6)", () => {
+  const offline = (lambda) => walkError("offline-lambda", { lambda }), online = (lambda) => walkError("td-lambda", { lambda });
+  assert.ok(offline(0.8) < offline(0) - 0.05 && offline(0.8) < offline(1) - 0.05);
+  assert.ok(online(0.8) < online(0) - 0.05);
+  assert.ok(Math.abs(online(0) - walkError("td0", {})) < 1e-9, "TD(0) is TD(λ) with λ = 0");
+  const wild = run("random-walk-19", "td-lambda", { gamma: 1, alpha: 0.8, lambda: 0.95 }, 10, 1, ["error"]);
+  assert.ok(!(wild.metrics.error[9] < 10), `error after 10 episodes: ${wild.metrics.error[9]}`);
+});
+
+test("Dyna-Q: planning steps cut the episodes needed to find the way (Sutton & Barto, Figure 8.2)", () => {
+  const steps = (n) => lab.average({ world: "dyna-maze", algorithm: A["dyna-q"], params: { alpha: 0.1, epsilon: 0.1, gamma: 0.95, planning: n }, units: 10, seeds: seeds(30) }).mean.steps;
+  const none = steps(0), fifty = steps(50);
+  assert.ok(fifty[2] < 25, `n = 50, third episode: ${fifty[2]} steps`);
+  assert.ok(none[2] > 200, `n = 0, third episode: ${none[2]} steps`);
+  const ps = lab.mean(lab.average({ world: "dyna-maze", algorithm: A["prioritized-sweeping"], params: { alpha: 0.5, epsilon: 0.1, gamma: 0.95, planning: 5 }, units: 10, seeds: seeds(30) }).mean.steps, 1);
+  const dyna = lab.mean(lab.average({ world: "dyna-maze", algorithm: A["dyna-q"], params: { alpha: 0.5, epsilon: 0.1, gamma: 0.95, planning: 5 }, units: 10, seeds: seeds(30) }).mean.steps, 1);
+  assert.ok(ps < dyna, `episodes 2-10: prioritized sweeping ${ps} steps, Dyna-Q ${dyna}`);
+});
+
+test("Dyna-Q+ finds the shortcut that Dyna-Q never takes (Figure 8.5)", () => {
+  const params = { alpha: 1, epsilon: 0.1, gamma: 0.95, planning: 50, kappa: 1e-3 };
+  for (const seed of [1, 2, 3]) {
+    const last = (id) => lab.mean(run("shortcut-maze", id, params, 450, seed).metrics.steps, 420);
+    assert.ok(last("dyna-q-plus") < 14, `Dyna-Q+: ${last("dyna-q-plus")} steps`);
+    assert.ok(last("dyna-q") > 15, `Dyna-Q: ${last("dyna-q")} steps`);
+  }
+});
+
 test("replaying a unit reproduces the run exactly, for every algorithm", () => {
   const cases = [
     ["cliff", "sarsa", cliff, 60], ["cliff", "q-learning", cliff, 60], ["cliff", "expected-sarsa", cliff, 60],
@@ -97,6 +135,11 @@ test("replaying a unit reproduces the run exactly, for every algorithm", () => {
     ["drifting", "epsilon-greedy", { epsilon: 0.1, alpha: 0.1 }, 3000], ["testbed", "ucb", { c: 2 }, 500],
     ["testbed-4", "gradient-bandit", { alpha: 0.1 }, 500], ["small-gridworld", "policy-iteration", { gamma: 1, theta: 1e-3 }, 120],
     ["gridworld", "value-iteration", { gamma: 0.9, theta: 1e-3 }, 30],
+    ["random-walk-19", "n-step-td", { alpha: 0.4, gamma: 1, n: 4 }, 30], ["cliff", "n-step-sarsa", { ...cliff, n: 3 }, 40],
+    ["random-walk-19", "td-lambda", { alpha: 0.4, gamma: 1, lambda: 0.8 }, 30], ["cliff", "sarsa-lambda", { ...cliff, lambda: 0.5, trace: "replacing" }, 40],
+    ["dyna-maze", "dyna-q", { alpha: 0.1, epsilon: 0.1, gamma: 0.95, planning: 5 }, 20],
+    ["shortcut-maze", "dyna-q-plus", { alpha: 1, epsilon: 0.1, gamma: 0.95, planning: 10, kappa: 1e-3 }, 300],
+    ["dyna-maze", "prioritized-sweeping", { alpha: 0.5, epsilon: 0.1, gamma: 0.95, planning: 5 }, 20],
   ];
   const flat = (m) => Object.values(m).flatMap((x) => Array.from(x));
   for (const [world, id, params, units] of cases) {

@@ -41,13 +41,37 @@
       ice: true,
       valueRange: 1,
     },
+    // Sutton & Barto, Example 8.1: a small maze where only the gem pays (+1), discounted by γ = 0.95.
+    "dyna-maze": {
+      title: "Dyna maze",
+      map: [".......#G", "..#....#.", "S.#....#.", "..#......", ".....#...", "........."],
+      reward: { step: 0, goal: 1 },
+      valueRange: 1,
+    },
+    // Example 8.2: after 1000 steps the gap in the wall moves from the right end to the left end.
+    "blocking-maze": {
+      title: "Blocking maze",
+      map: ["........G", ".........", ".........", "########.", ".........", "...S....."],
+      change: { at: 1000, map: ["........G", ".........", ".........", ".########", ".........", "...S....."] },
+      reward: { step: 0, goal: 1 },
+      valueRange: 1,
+    },
+    // Example 8.3: after 3000 steps a shortcut opens at the right end of the wall; the long way round stays open.
+    "shortcut-maze": {
+      title: "Shortcut maze",
+      map: ["........G", ".........", ".........", ".########", ".........", "...S....."],
+      change: { at: 3000, map: ["........G", ".........", ".........", ".#######.", ".........", "...S....."] },
+      reward: { step: 0, goal: 1 },
+      valueRange: 1,
+    },
   };
 
   // name: one of the worlds above, or a world spec of your own ({ title, map, reward, slip, … }).
   lab.grid = function (name) {
     const w = typeof name === "string" ? WORLDS[name] : name;
     if (!w) throw new Error(`unknown world '${name}'`);
-    const rows = w.map.length, cols = w.map[0].length, cells = w.map.join("");
+    const rows = w.map.length, cols = w.map[0].length, first = w.map.join(""), later = w.change ? w.change.map.join("") : first;
+    let cells = first;
     const reward = w.reward, slip = w.slip || 0;
     const wall = reward.wall ?? reward.step;
     const start = Math.max(0, cells.indexOf("S"));
@@ -76,6 +100,17 @@
       // Tiles an episode may start from (for exploring starts): anything that is not a wall, a cliff or an ending.
       starts: Array.from({ length: rows * cols }, (_, s) => s).filter((s) => !"#CGTH".includes(cells[s])),
       tile: (s) => cells[s],
+      // A world that changes (a wall that moves) is told the time, in steps; it returns true when its layout changed.
+      // `version` counts the changes, so a view knows when to draw the walls again.
+      changes: w.change ? w.change.at : null, version: 0,
+      setTime(t) {
+        const now = t >= (w.change?.at ?? Infinity) ? later : first;
+        if (now === cells) return false;
+        cells = now;
+        env.version++;
+        env.map = (now === first ? w.map : w.change.map);
+        return true;
+      },
       terminal: isTerminal,
       blocked: (s) => cells[s] === "#" || cells[s] === "C",
       acts: () => all,
