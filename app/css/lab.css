@@ -141,9 +141,9 @@
 .gridview .gem .shine { fill: #fff; opacity: 0.45; }
 @keyframes gem-float { 50% { transform: translateY(-2.5px) rotate(4deg); } }
 .gridview .mark { font: 800 11px var(--font); fill: var(--ink-3); }
-.gridview .num { font: 700 11px var(--font); text-anchor: middle; fill: var(--ink); pointer-events: none; }
-.gridview[data-arrows][data-numbers] .num { transform: translateY(21px); font-size: 10.5px; }
-.gridview .arrows, .gridview .agent-layer, .gridview .fx, .gridview .trail-layer, .gridview .path-layer { pointer-events: none; }
+.gridview .num { font: 700 11px var(--font); text-anchor: middle; fill: var(--ink); paint-order: stroke; stroke: color-mix(in oklab, var(--surface) 88%, transparent); stroke-width: 3.5px; stroke-linejoin: round; font-variant-numeric: tabular-nums; }
+.gridview[data-arrows][data-numbers] .num { font-size: 10px; }
+.gridview .nums, .gridview .arrows, .gridview .agent-layer, .gridview .fx, .gridview .trail-layer, .gridview .path-layer { pointer-events: none; }
 .gridview:not([data-arrows]) .arrows { display: none; }
 .gridview .arrow { transition: opacity 0.3s; }
 .gridview .arrow .halo { fill: none; stroke: var(--surface); stroke-width: 5.5; stroke-linecap: round; stroke-linejoin: round; }

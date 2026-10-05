@@ -60,6 +60,7 @@
       this.gTrail = layer("trail-layer");
       this.gPath = layer("path-layer");
       this.gArrows = layer("arrows");
+      this.gNums = layer("nums"); // numbers above the arrows and paths, so they always read
       this.gAgent = layer("agent-layer");
       this.gFx = layer("fx");
       this.tiles = [];
@@ -118,7 +119,7 @@
       }
       this.tris[s] = TRIANGLES.map(([p, q]) => el("polygon", { class: "tri", points: `${p} ${q} ${HALF},${HALF}` }, g));
       if (MARKS[kind]) el("text", { class: "mark", x: 7, y: 15 }, g).textContent = MARKS[kind];
-      this.nums[s] = el("text", { class: "num", x: HALF, y: HALF + 4 }, g);
+      this.nums[s] = el("text", { class: "num", x: x + HALF, y: y + HALF + 4 }, this.gNums);
       const set = el("g", { class: "arrow-set", transform: `translate(${x + HALF} ${y + HALF})` }, this.gArrows);
       this.arrows[s] = DIRS.map(() => {
         const a = el("g", { class: "arrow" }, set);
@@ -225,15 +226,16 @@
       this.tiles[s].bg.style.fill = mode === "v" ? valueColor(v, range) : "";
       const num = this.nums[s];
       num.textContent = this.o.numbers ? fmt(v, this.o.digits) : "";
-      num.style.fill = mode !== "none" && Math.abs(v / range) > 0.6 ? "#fff" : "";
       if (!this.o.arrows) return;
-      const p = this._probs(s), short = this.o.numbers; // with numbers on, the arrows stay clear of the number below them
+      // With numbers on, the number owns the middle of the tile and the arrows become chevrons by its edges.
+      const p = this._probs(s), edge = this.o.numbers;
       for (let a = 0; a < nA; a++) {
         const arrow = this.arrows[s][a], [dx, dy] = DIRS[a];
         if (p[a] < 0.06) { arrow.style.opacity = 0; continue; }
-        const r0 = 6, r1 = short ? 6.5 + 8.5 * p[a] : 8 + 18 * p[a], hs = short ? 3.5 + 1.8 * p[a] : 4 + 2.5 * p[a];
+        const r0 = 6, r1 = edge ? 27 : 8 + 18 * p[a], hs = edge ? 2.6 + 3.4 * p[a] : 4 + 2.5 * p[a];
         const bx = dx * (r1 - hs), by = dy * (r1 - hs), nx = -dy * hs * 0.85, ny = dx * hs * 0.85;
-        const d = `M${dx * r0} ${dy * r0}L${dx * r1} ${dy * r1}M${bx + nx} ${by + ny}L${dx * r1} ${dy * r1}L${bx - nx} ${by - ny}`;
+        const head = `M${bx + nx} ${by + ny}L${dx * r1} ${dy * r1}L${bx - nx} ${by - ny}`;
+        const d = edge ? head : `M${dx * r0} ${dy * r0}L${dx * r1} ${dy * r1}${head}`;
         arrow.halo.setAttribute("d", d);
         arrow.shaft.setAttribute("d", d);
         arrow.style.opacity = 1;

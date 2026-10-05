@@ -1,22 +1,69 @@
 /* The metro map. */
 
 .map-view { position: fixed; inset: 56px 0 0 0; overflow: hidden; }
-.map-banner {
-  position: absolute; top: 12px; left: 16px; right: 16px; z-index: 2; display: grid; gap: 8px;
-  padding: 9px 10px 9px 12px; font-size: 14px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
-  animation: rise-in 0.5s var(--ease) both;
+/* the panel: views, filters and the legend, slid in from the left by the button at the top left */
+.panel-toggle {
+  position: absolute; top: 14px; left: 16px; z-index: 3; display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px 9px 12px; border: 0; border-radius: 999px; cursor: pointer;
+  font: 600 13.5px var(--font); color: var(--ink); background: var(--surface); box-shadow: var(--shadow);
+  transition: opacity 0.25s, transform 0.35s var(--ease); animation: rise-in 0.5s var(--ease) both;
 }
-.mb-row { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.lens-caption { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.35; }
-.map-filters { gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
-.map-filters .eyebrow { flex: none; }
+.panel-toggle:hover { box-shadow: var(--shadow), inset 0 0 0 1px var(--line-2); }
+.panel-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.panel-toggle svg circle { fill: var(--surface); }
+.pt-badge { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 11.5px; display: grid; place-items: center; }
+.pt-badge[hidden] { display: none; }
+.map-view[data-panel="open"] .panel-toggle { opacity: 0; pointer-events: none; transform: translateX(-12px); }
+
+.map-panel {
+  position: absolute; top: 12px; bottom: 12px; left: 12px; z-index: 4; width: 300px; overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 14px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg, var(--shadow));
+  transform: translateX(calc(-100% - 24px)); visibility: hidden;
+  transition: transform 0.4s var(--ease), visibility 0s linear 0.4s;
+}
+.map-view[data-panel="open"] .map-panel { transform: none; visibility: visible; transition: transform 0.4s var(--ease), visibility 0s; }
+.mp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.mp-close { width: 30px; height: 30px; box-shadow: none; }
+.mp-close:hover { background: var(--surface-3); }
+.mp-close svg { width: 16px; height: 16px; fill: none; stroke: var(--ink-2); stroke-width: 1.8; stroke-linecap: round; }
+.mp-sec { padding: 10px 0 12px; border-top: 1px solid var(--line); }
+.mp-sec:first-of-type { border-top: 0; padding-top: 4px; }
+.mp-title { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 8px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.lenses { display: grid; gap: 6px; }
+.lenses button {
+  display: grid; gap: 2px; text-align: left; padding: 9px 11px; border: 0; border-radius: 12px; cursor: pointer;
+  font-family: inherit; color: var(--ink); background: var(--surface-2); box-shadow: inset 0 0 0 1px transparent;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+.lenses button b { font-size: 14px; }
+.lenses button span { font-size: 12.5px; line-height: 1.35; color: var(--ink-2); display: none; }
+.lenses button[aria-selected="true"] span { display: block; animation: fade-in 0.3s ease both; }
+.lenses button:hover { box-shadow: inset 0 0 0 1px var(--line-2); }
+.lenses button[aria-selected="true"] { background: var(--surface); box-shadow: inset 0 0 0 2px var(--ink); }
 .mf-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .mf-chips .chip { border: 0; cursor: pointer; font-family: inherit; transition: background-color 0.2s, color 0.2s; }
 .mf-chips .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); box-shadow: none; }
-.mf-count { margin-left: auto; font-size: 12.5px; white-space: nowrap; }
-.mf-clear { border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; color: var(--ink-2); text-decoration: underline; cursor: pointer; }
+.mf-count { margin: 8px 0 0; font-size: 12.5px; }
+.mf-clear { border: 0; background: none; padding: 0; font: 600 12px var(--font); letter-spacing: 0; text-transform: none; color: var(--ink-2); text-decoration: underline; cursor: pointer; }
 .mf-clear[hidden] { display: none; }
+.mp-lines { font-size: 13px; }
+.mp-lines .lg { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.mp-lines .lg i { width: 22px; height: 6px; border-radius: 3px; background: var(--c); }
+.mp-lines .lg b { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 600; }
+.mp-lines .lg-note { margin-top: 8px; color: var(--ink-3); display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 12.5px; }
+.map-view:not([data-lens="map"]) .mp-lines { display: none; }
+.mp-hint { margin: auto 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.45; }
+
+.map-cta { position: absolute; top: 14px; right: 16px; z-index: 2; animation: rise-in 0.5s var(--ease) 0.1s both; }
+.map-zoom {
+  position: absolute; right: 16px; bottom: 16px; z-index: 2; display: grid; gap: 6px;
+  animation: rise-in 0.5s var(--ease) 0.3s both;
+}
+.map-zoom .icon-btn { width: 36px; height: 36px; font-size: 19px; font-weight: 600; line-height: 1; color: var(--ink); }
+.map-zoom .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.dot-written, .dot-planned { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2.5px solid var(--ink-2); }
+.dot-planned { opacity: 0.4; margin-left: 6px; }
 .metro { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; user-select: none; }
 .metro.dragging { cursor: grabbing; }
 
@@ -57,20 +104,6 @@
 .metro.intro .st .dot { animation: dot-in 0.5s var(--spring) calc(350ms + var(--d) * 70ms) both; }
 @keyframes dot-in { from { r: 0; } }
 
-.map-legend { position: absolute; right: 16px; bottom: 16px; z-index: 2; padding: 12px 14px; font-size: 12.5px; min-width: 230px; animation: rise-in 0.5s var(--ease) 0.3s both; }
-.map-legend .lg { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
-.map-legend .lg i { width: 22px; height: 6px; border-radius: 3px; background: var(--c); }
-.map-legend .lg b { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 600; }
-.map-legend .lg-note { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--ink-3); display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.dot-written, .dot-planned { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2.5px solid var(--ink-2); }
-.dot-planned { opacity: 0.4; margin-left: 6px; }
-.map-zoom { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
-.map-zoom .icon-btn { width: 30px; height: 30px; font-size: 17px; font-weight: 600; line-height: 1; box-shadow: inset 0 0 0 1px var(--line-2); }
-.map-zoom span { margin-left: 6px; font-size: 11.5px; line-height: 1.3; }
-
-.map-view:not([data-lens="map"]) .map-legend :is(.lg, .lg-note) { display: none; }
-.map-view:not([data-lens="map"]) .map-zoom { margin: 0; padding: 0; border: 0; }
-
 /* the views: each one shows its own drawing; the stations are shared and glide between them */
 .metro .deco { transition: opacity 0.6s; }
 .metro:not([data-lens="map"]) .deco-map, .metro:not([data-lens="tree"]) .deco-tree, .metro:not([data-lens="unified"]) .deco-unified { opacity: 0; pointer-events: none; }
@@ -85,9 +118,8 @@
 .metro .credit { font: 500 11px var(--font); fill: var(--ink-3); }
 
 @media (max-width: 760px) {
-  .map-banner .muted, .map-legend, .mf-count { display: none; }
-  .map-banner .btn { margin-left: auto; padding: 8px 12px; font-size: 13px; }
-  .mf-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .lenses button { padding: 6px 9px; }
-  .map-banner .mb-row:first-child { flex-wrap: wrap; gap: 8px; }
+  .panel-toggle span { display: none; }
+  .panel-toggle { padding: 10px; }
+  .map-panel { width: min(320px, calc(100vw - 24px)); }
+  .map-cta { left: 72px; right: 16px; text-align: center; justify-content: center; padding: 9px 12px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
