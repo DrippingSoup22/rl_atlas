@@ -64,6 +64,20 @@
     };
   }
 
+  // ---- a fixed policy, followed and never changed: for the stories that show what a policy does before any learning ----
+  function* follow({ env, m, rng, p }) {
+    const P = lab.policy(env, p), { theta } = m;
+    let s = env.reset(rng);
+    yield { line: "start", type: "start", s };
+    for (let t = 0; !env.terminal(s) && t < p.maxSteps; t++) {
+      const a = P.sample(theta, s, rng);
+      yield { line: "choose", type: "choose", s, a };
+      const o = env.step(s, a, rng);
+      yield { line: "act", type: "move", s, a, ...o };
+      s = o.s2;
+    }
+  }
+
   // ---- actor–critic: the critic's TD error judges every action as soon as it is taken ----
   // I = γᵗ discounts the actor's steps along the episode, as the gradient of the start state's value requires.
   function* actorCritic({ env, m, rng, p }) {
@@ -356,6 +370,8 @@
   const GAE = { ...ACTOR, lambda: { name: "GAE λ: how far advantages look ahead" } };
 
   lab.algorithms = Object.assign(lab.algorithms || {}, {
+    // not a station: a policy that never learns (the stories' fixed policies)
+    "fixed-policy": { id: "fixed-policy", title: "A fixed policy", unit: "episode", run: follow, memory, init, show: show(false) },
     reinforce: {
       id: "reinforce", title: "REINFORCE", unit: "episode", run: reinforce(false), memory, init, show: show(false), actor: true, knobs: ACTOR,
       rule: "\\boldsymbol\\theta \\leftarrow \\boldsymbol\\theta + \\alp\\,\\gam^t\\,\\rew{G_t}\\,\\nabla \\ln \\pol{\\pi(A_t \\mid S_t, \\boldsymbol\\theta)}",

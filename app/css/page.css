@@ -303,7 +303,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .surface-cell figcaption { font: italic 13.5px var(--serif); color: var(--ink-2); }
 .fig-knob { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 4px 0 0; font: 600 14px var(--font); color: var(--ink-2); }
 .fig-knob span { font: italic 18px var(--serif); color: var(--ink); }
-.fig-knob input { width: min(260px, 60%); }
+.fig-knob input { width: min(260px, 60%); accent-color: var(--ink); }
 .fig-knob output { min-width: 3em; font-variant-numeric: tabular-nums; }
 .fig-panel + .fig-panel { margin-top: 10px; }
 /* Part 10: interactive policies, trust regions, pairs of panels */

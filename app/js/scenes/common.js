@@ -97,6 +97,9 @@
     steps: { label: "Steps per episode", log: true },
     ve: { label: "Value error √VE", zero: true },
     weights: { label: "Size of the weights ‖w‖", log: true },
+    "policy-value": { label: "Value of the policy from the start, J(θ)" },
+    right: { label: "Chance of stepping right, π(right)", percent: true },
+    aim: { label: "Where the policy aims: its mean angle (degrees)" },
   };
   function curves(host, cfg, runOf) {
     const cache = new Map();
@@ -109,7 +112,8 @@
       clearTimeout(timer);
       chart?.destroy();
       host.innerHTML = `<div class="scene-chart-title">${METRIC[metric].label}<span class="faint"></span></div><div class="scene-chart-host"></div>`;
-      const first = runOf(names[0]), unit = first.env.unitName, noun = unit === "pull" || unit === "step" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : ["episode", "episodes"];
+      const first = runOf(names[0]), unit = first.env.unitName || first.algorithm.unit;
+      const noun = unit === "pull" || unit === "step" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : unit === "round" ? ["round", "rounds"] : unit === "throw" ? ["throw", "throws"] : ["episode", "episodes"];
       chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, log: METRIC[metric].log, noun });
       const total = cfg.average || 200, status = host.querySelector(".faint");
       const acc = cache.get(key) || { done: 0, sums: names.map(() => new Float64Array(first.units)) };
