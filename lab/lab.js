@@ -203,7 +203,8 @@
       const View = RL.labViews[env.kind];
       const box = q(".stages");
       box.className = `stages n${racers.length}`;
-      box.dataset.shape = env.kind === "grid" && env.cols / env.rows < 2 ? "boxy" : ""; // boxy grids sit side by side
+      // boxy grids sit side by side, and so do recorded worlds in pairs, each view stacking its two panes
+      box.dataset.shape = env.kind === "grid" && env.cols / env.rows < 2 ? "boxy" : env.recorded && racers.length % 2 === 0 ? "pair" : "";
       box.innerHTML = racers.map((r, i) => `
         <figure class="stage card" data-i="${i}">
           <figcaption><i class="key" style="--k: var(--s${i + 1})"></i><b>${esc(r.name)}</b><span class="stat"></span></figcaption>

@@ -20,7 +20,7 @@
 .lab-flow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .stages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 @media (min-width: 900px) {
-  .stages[data-shape="boxy"].n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stages[data-shape="boxy"].n2, .stages[data-shape="pair"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stages[data-shape="boxy"].n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .stages[data-shape="boxy"].n3 .stat { flex-basis: 100%; margin-left: 0; }
 }
