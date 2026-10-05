@@ -59,6 +59,8 @@ table (`name = { algorithm, <knobs> }`); a step then picks a run and a moment (`
 (`play`, `pace`), or only the first few updates of one (`updates`), and can chart runs averaged over many seeds (`curves`,
 `metric`, and `domain` to fix the range). Grid steps can paint a batch's advantages on the move triangles (`advantages`),
 and a `[story.numbers]` table names lines of numbers that steps show under the formula (`numbers = "name"`).
+A story runs on a seed picked because it proves its point clearly; how often settings succeed over many seeds is
+the Lab's job. Every number in a story comes from its runs.
 [q-learning.md](content/05-temporal-difference/q-learning.md) is a complete algorithm,
 [bellman.md](content/01-problem/bellman.md) a complete concept, and [epsilon-greedy.md](content/02-bandits/epsilon-greedy.md)
 a story on Lab runs.

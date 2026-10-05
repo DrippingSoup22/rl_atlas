@@ -14,6 +14,10 @@ you learn by watching things happen, not only by reading.
 - Every algorithm is read three ways, in this order: **Story** (get the idea), **Textbook** (the theory, like a book
   chapter: complete, dry, section by section, building on the stations before it on its line), **Card** (the summary,
   for a quick look). Then the **Lab** shows it learning. Concepts use the same views where they help.
+- A story shows a very good run: a seed picked because it proves the point clearly.
+- The Lab shows the odds. Everything here is stochastic, so each experiment says how often its settings succeed over
+  many seeds, and a sweep shows how that rate moves with a knob: where the good settings are, and what a bad one
+  costs. Bad settings are run on purpose, to be understood, not as warnings.
 - The tabular / function-approximation split is a visible line on the map ("Learning with tables" / "Learning at scale").
 - Sources: Sutton & Barto (2018), OpenAI Spinning Up and the original papers, in our own words.
 
@@ -92,10 +96,16 @@ animations and hover effects this guide relies on would not be smooth.
   and Figures 13.1 and 13.2, single-episode gradient estimates, softmax and Gaussian scores to play with, the critic's
   step size, the entropy bonus, GAE's weights and λ, and TRPO's trust region and PPO's clip on the corridor. Stories
   gained chart legends and partial replays.
-- [ ] **M6 · Recorded runs**: the recorder; DQN, A2C, TRPO and PPO on CartPole, Mountain Car and Pendulum.
-  In progress. Done: the recorder (`recorder/`: NumPy networks checked against numerical gradients, DQN with switchable
+- [ ] **M6 · Odds and recorded runs**: every experiment shows how often its settings succeed; the recorder; DQN, A2C,
+  TRPO and PPO on CartPole and Pendulum. Mountain Car is dropped from the deep runs: with random exploration the car
+  almost never reaches the flag, so a network has nothing to learn from.
+  Next, in order: (1) the odds in the Lab: a success rule per preset, a tally over many seeds and a sweep of any knob
+  (success rate against its value); (2) fixes from profiling every preset over many seeds: Frozen Lake's shown seed,
+  prioritized sweeping's chart, the deadly triad's run length, failure rates in the PPO, TRPO and REINFORCE stories;
+  (3) Mountain Car without optimism: how often the car never gets out; (4) a sweep of each deep algorithm's main knob
+  over 5 seeds before recording it, then the Lab's player, the remaining recordings and Part 9.
+  Done: the recorder (`recorder/`: NumPy networks checked against numerical gradients, DQN with switchable
   replay, target network, double, dueling and prioritized replay; A2C, PPO and TRPO with exact Fisher-vector products),
-  tuned settings (DQN balances CartPole with a squared loss and lr 5·10⁻⁴; A2C, PPO and TRPO in 20–40% of their
-  runs; PPO on Pendulum), the first two recordings, their decoder and a CartPole view. Next: the Lab's player for
-  recorded presets, the Pendulum view, Mountain Car (DQN still to tune), the remaining recordings, and Part 9.
+  tuned settings (DQN balances CartPole with a squared loss and lr 5·10⁻⁴; A2C, PPO and TRPO balance it within the
+  first 20–40% of their training; PPO swings Pendulum up), the first two recordings, their decoder and a CartPole view.
 - [ ] **M7 · The rest**: continuous control, toolbox, where next, quizzes everywhere, polish.
