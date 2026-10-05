@@ -349,6 +349,7 @@
     // The values a sweep tries: a knob's choices or its sweep list. Tiny step sizes (linear methods, policy gradients)
     // try the ladder around the ones in use; averaging methods also try 1/n.
     function sweepValues(k) {
+      if (preset.sweep?.[k]) return preset.sweep[k]; // a preset can pick the values that matter in its world
       const now = [...(k in preset.params ? [knobs[k]] : []), ...racers.filter((r) => k in r.params).map((r) => r.params[k])];
       if ((k === "alpha" || k === "alphaW") && Math.max(...now) < 0.01) return ALPHA_LADDER.filter((a) => a >= Math.min(...now) / 30 && a <= Math.max(...now) * 30);
       const list = knobOf(k).choices || knobOf(k).sweep || [];

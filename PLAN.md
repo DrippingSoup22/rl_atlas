@@ -99,9 +99,10 @@ animations and hover effects this guide relies on would not be smooth.
 - [ ] **M6 · Odds and recorded runs**: every experiment shows how often its settings succeed; the recorder; DQN, A2C,
   TRPO and PPO on CartPole and Pendulum. Mountain Car is dropped from the deep runs: with random exploration the car
   almost never reaches the flag, so a network has nothing to learn from.
-  Next, in order: (1) Mountain Car without optimism: how often the car never gets out; (2) a sweep of each deep
-  algorithm's main knob over 5 seeds before recording it, then the Lab's player, the remaining recordings and Part 9.
-  Done: the odds in the Lab (success rules on 26 presets, calibrated over 30 to 100 seeds; a tally of the runs that end
+  Next: a sweep of each deep algorithm's main knob over 5 seeds before recording it, then the Lab's player, the
+  remaining recordings and Part 9.
+  Done: Mountain Car without optimism (a Lab, linked from Part 8: with γ = 0.99 the car gets out in every run when
+  the values start above −100, the value of paying 1 forever, and in none when they start at or below it); the odds in the Lab (success rules on 26 presets, calibrated over 30 to 100 seeds; a tally of the runs that end
   well; a sweep of any knob, charting the share of runs that end well and their score against its values); fixes
   from profiling every preset over many seeds (Frozen Lake's shown seed, two intros, the odds of the failures the
   PPO, TRPO and REINFORCE stories show); the recorder (`recorder/`: NumPy networks checked against numerical gradients, DQN with switchable

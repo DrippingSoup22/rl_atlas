@@ -449,6 +449,28 @@ film = [1, 10, 100, 300]
 intro = "The n-step return reaches eight steps ahead, so each disappointment travels back faster: the landscape fills in sooner, and the first episodes are shorter."
 success = { metric = "steps", max = 300, window = [1, 30], text = "average under 300 steps over the first 30 episodes" }
 
+
+[mountain-car-optimism]
+title = "Mountain Car: where the values start"
+env = "mountain-car"
+racers = [
+  { algorithm = "semi-gradient-sarsa", name = "values start at 0", q0 = 0.0 },
+  { algorithm = "semi-gradient-sarsa", name = "values start at −150", q0 = -150.0 },
+]
+units = 200
+seed = 1
+alpha = 0.06
+epsilon = 0.1
+gamma = 0.99
+maxSteps = 1000
+features = "tiles"
+tilings = 8
+cells = 8
+charts = ["steps"]
+film = [1, 10, 50, 200]
+intro = "Both take a random move 10% of the time and discount by γ = 0.99, so paying 1 forever is worth −100: no real value is lower. Only the start differs. At 0 the values are above every real one: each move the car tries disappoints, the untried ones get their turn, and it rocks its way out. At −150 they are below every real one: each move it tries looks better than before, so it keeps repeating them, and random moves alone almost never build the swing the hill needs. Sweep q0: the line is −100."
+sweep = { q0 = [-300.0, -200.0, -150.0, -120.0, -100.0, -80.0, -50.0, 0.0] }
+success = { metric = "steps", max = 300, text = "end up getting out in under 300 steps" }
 [deadly-triad]
 title = "The deadly triad on Baird's counterexample"
 env = "baird"

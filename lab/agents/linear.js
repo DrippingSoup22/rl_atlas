@@ -119,7 +119,8 @@
   const linear = (control) => ({
     unit: "episode",
     memory: (env, p) => ({ w: lab.features(env, p).n * (control ? env.nA : 1) }),
-    init: (m, env, p) => { m.w.fill(p.w0 || 0); lab.features(env, p).init?.(m.w); },
+    // q0: where every estimate starts (each of the k features on at once carries its share), or w0 for each weight
+    init: (m, env, p) => { const F = lab.features(env, p); m.w.fill(p.q0 !== undefined ? p.q0 / F.k : p.w0 || 0); F.init?.(m.w); },
     show(m, env, p) {
       const F = lab.features(env, p), d = { w: m.w, F };
       if (env.continuous) return d;
