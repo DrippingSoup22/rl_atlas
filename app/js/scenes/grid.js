@@ -138,6 +138,11 @@
         view.glow([]);
         view.path(null);
         showRun(view, r, t);
+        // advantages: how the batch of the round just played judged each move (batch methods only)
+        if (st.advantages && t > 0) {
+          const ev = [...r.replay(t - 1).events].find((e) => e.type === "advantage");
+          if (ev) view.showAdvantages(ev.list, st.range);
+        }
         const focus = st.focus ? tile(st.focus) : -1;
         view.mark(focus < 0 ? [] : [focus], "focus");
         view.mark(focus < 0 || !st.next ? [] : successors(focus), "next");

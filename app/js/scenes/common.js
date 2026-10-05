@@ -91,7 +91,7 @@
   // Averages are kept, so scrolling back and forth does not compute them again.
   const METRIC = {
     optimal: { label: "How often the best arm is pulled", percent: true },
-    return: { label: (noun) => (noun[0] === "step" ? "Reward per step" : `Total reward per ${noun[0]}`) },
+    return: { label: (noun) => (noun[0] === "step" ? "Reward per step" : noun[0] === "round" ? "Total reward per episode (average of each round)" : `Total reward per ${noun[0]}`) },
     left: { label: "How often the agent goes left from A", percent: true },
     error: { label: "Error: distance from the true values (RMS)", zero: true },
     match: { label: "States where the greedy action is optimal", percent: true },

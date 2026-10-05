@@ -190,6 +190,22 @@
       this._paintAll();
     }
 
+    // A batch's advantages, at rest: each move's triangle colored by its average advantage over the batch (blue: better
+    // than expected, orange: worse), on a scale of ±range. The moves the batch never took stay neutral. null: back to
+    // what the algorithm knows (call show again).
+    showAdvantages(list, range) {
+      const { nA } = this.env, sum = new Float64Array(this.env.nS * nA), n = new Float64Array(this.env.nS * nA);
+      for (const u of list || []) { const k = u.s * nA + (u.a ?? 0); sum[k] += u.adv; n[k]++; }
+      let top = 0;
+      for (let k = 0; k < sum.length; k++) if (n[k]) { sum[k] /= n[k]; top = Math.max(top, Math.abs(sum[k])); }
+      this.Q.set(sum);
+      this.hasQ = true;
+      this.o.tiles = "q";
+      this.o.range = range || top || 1;
+      this.svg.dataset.tiles = "q";
+      this._paintAll();
+    }
+
     // A world whose walls moved: draw the tiles that changed again.
     retile() {
       for (let s = 0; s < this.env.nS; s++) {
@@ -617,6 +633,7 @@
 
     _draw(pathEl, states, animate) {
       pathEl.setAttribute("d", states ? this._line(states) : "");
+      pathEl.classList.toggle("long", !!states && states.length > 150); // a long wander is drawn fainter, to keep the tiles readable
       pathEl.classList.remove("draw");
       if (states && animate && !RL.reducedMotion()) { pathEl.getBoundingClientRect(); pathEl.classList.add("draw"); }
     }

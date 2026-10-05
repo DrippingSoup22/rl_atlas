@@ -430,6 +430,8 @@
 .gridview .bot.worker .badge { fill: var(--pol); stroke: var(--surface); stroke-width: 1.5; }
 .gridview .bot.worker .badge-n { font: 800 9px var(--font); text-anchor: middle; fill: #fff; }
 .gridview .trail.worker { stroke-opacity: 0.22; stroke-width: 2.5; }
+.gridview .trail.long { stroke-opacity: 0.18; stroke-width: 2.5; }
+.gridview .trail.worker.long { stroke-opacity: 0.1; }
 .gridview .spark.k-adv-pos { stroke: var(--v-pos); stroke-width: 2.5; }
 .gridview .spark.k-adv-neg { stroke: var(--v-neg); stroke-width: 2.5; }
 
