@@ -27,21 +27,25 @@ python build.py
 node --test
 ```
 
-`build.py` (Python 3.11+, standard library only) checks `content/`, writes `app/content.js` and bundles
-`rl_atlas.html`. It stops on broken links and lists what is still missing. `node --test` (Node 22+)
+`build.py` (Python 3.11+, standard library only) checks `content/`, writes `app/content.js` and `app/recordings.js`,
+and bundles `rl_atlas.html`. It stops on broken links and lists what is still missing. `node --test` (Node 22+)
 checks the Lab against the textbook results it teaches. After a build, `app/index.html` also opens
 directly, which is handier while editing.
+
+The three generated files are committed with their sources, so build before committing. `main` is always the guide
+as it stands: work happens on one short-lived branch at a time, which is merged into `main` and then deleted (or just
+deleted, if the work is dropped).
 
 ## Folders
 
 | Folder | What is in it |
 | --- | --- |
-| `content/` | `map.toml` (every station in reading order, with each algorithm's parent and labels), `lab.toml` (Lab presets), `notation.toml` (symbols page), and one Markdown file per written entry |
-| `app/` | the page: `index.html`, `css/` and `js/` (shell, map, pages, stories and their scenes, textbook, diagrams, figures, demos, math) |
-| `lab/` | worlds, features, algorithms, runs and dynamic programming (no DOM, also used by the tests), and their views |
+| `content/` | `map.toml` (every station in reading order, with each algorithm's parent and labels), `lab.toml` (Lab presets), `notation.toml` (symbols page), one Markdown file per written entry, and `recordings/` (what the recorder wrote) |
+| `app/` | the page: `index.html`, `css/` and `js/` (shell, map, pages, stories and their scenes, textbook, diagrams, figures, demos, math), and the generated `content.js` and `recordings.js` |
+| `lab/` | worlds, features, algorithms, runs (computed live, or played back from recordings) and dynamic programming (no DOM, also used by the tests), and their views |
 | `vendor/` | KaTeX 0.19 (MIT license) |
 | `tests/` | `lab.test.js` |
-| `recorder/` | the recorder of the runs with neural networks (NumPy and Gymnasium): `python recorder/record.py [name …]` writes `content/recordings/<name>.json`, which `build.py` bundles |
+| `recorder/` | the recorder of the runs with neural networks (NumPy 2.4 and Gymnasium 1.4, the versions the recordings were made with): `python recorder/record.py [name …]` writes `content/recordings/<name>.json`, which `build.py` bundles |
 
 ## Writing an entry
 
@@ -65,7 +69,7 @@ shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of 
 - `$…$` and `$$…$$` math with the color macros `\val \rew \pol \err` and `\alp \gam \eps \lam \del`;
 - `{{demo arg}}` for a diagram, figure or demo: `backup` (bandit, mc, mc-q, td0, sarsa, q-learning, expected-sarsa,
   double-q, n-step-td, n-step-sarsa, lambda, lambda-q, v-pi, q-pi, v-star, q-star, reinforce, baseline, actor-critic, a2c, gae), `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `cliff-alpha`,
-  `loop`, `mdp-graph`, `discount`, `be-the-agent`, `testbed`, `sample-average`, `step-weights`, `step-sizes`,
+  `loop`, `mdp-graph` (robot), `discount`, `be-the-agent`, `testbed`, `sample-average`, `step-weights`, `step-sizes`,
   `bandit-curves` (epsilon, optimistic, ucb, gradient, drift), `bandit-study`, `dp-sweeps`, `frozen` (pi, optimal),
   `dp-race`, `gpi`, `blackjack-values`, `blackjack-policy`, `blackjack-match`, `frozen-mc`, `is-blackjack`,
   `is-infinite`, `random-walk` (values, error, batch), `max-bias`, `n-step-study`, `lambda-study` (offline, online),
