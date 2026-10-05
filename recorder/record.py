@@ -2,12 +2,17 @@
 
     python recorder/record.py              # every recording in the catalog
     python recorder/record.py dqn-cartpole # some of them
+    python recorder/record.py --sweep      # the sweeps: each recording's knobs over several values, curves only
 
 Trains small networks on Gymnasium's worlds and writes what the Lab and the stories play back, to
 content/recordings/<name>.json: for every seed, the average return of the training episodes in each block of steps;
 for one seed, a snapshot after every block: what the network thinks of a grid of states (values, and the action it
 prefers), one test episode played with it, and the block's statistics. Needs Python 3.11+, NumPy and Gymnasium; every
 run is reproducible from its seed. Seeds run in parallel, one process each.
+
+A sweep trains a recording's settings again with one knob changed, for each of several values and every seed, and
+keeps only the training curves, in content/recordings/sweeps/<name>.json: how often a setting ends well, and how
+that moves with the knob.
 """
 
 from __future__ import annotations
@@ -78,7 +83,7 @@ GRID = 31  # points per side of a snapshot's map
 # ---- the catalog: what to record ----
 # DQN on CartPole: tuned until most seeds balance for the full 500 steps. A squared loss, not Huber's: CartPole's values
 # run up to 1/(1 − γ) = 100, and clipped errors learn them too slowly. Each comparison of Part 9 changes one thing.
-DQN_CARTPOLE = dict(lr=5e-4, buffer=100_000, batch=128, train_every=4, target_every=500, eps=(1.0, 0.05, 20_000), huber=False)
+DQN_CARTPOLE = dict(lr=5e-4, buffer=10_000, batch=128, train_every=4, target_every=500, eps=(1.0, 0.05, 20_000), huber=False)
 CARTPOLE = dict(world="cartpole", learner="dqn", steps=200_000, block=5_000, seeds=[1, 2, 3, 4, 5])
 CATALOG = {
     "dqn-cartpole": dict(CARTPOLE, cfg=DQN_CARTPOLE, station="dqn", title="DQN"),
@@ -96,6 +101,17 @@ CATALOG = {
                           cfg=dict(algo="trpo", workers=8, steps=256, delta=0.01, lam=0.95, v_epochs=10, minibatch=64)),
     "ppo-pendulum": dict(world="pendulum", learner="pg", station="ppo", title="PPO", steps=200_000, block=5_000, seeds=[1, 2, 3, 4, 5],
                          cfg=dict(algo="ppo", workers=4, steps=512, epochs=10, minibatch=64, lr=1e-3, gamma=0.9, lam=0.95, reward_scale=0.1)),
+}
+
+# The knobs each recording's sweep tries, with the recording's own value among them. target_every = 0: no target
+# network; buffer = 128 (the batch size): no replay, each batch is the latest experience. DQN's memory is 10,000 steps:
+# a sweep found 100,000 left 3 of 5 seeds unable to keep the pole up, and 10,000 none.
+SWEEPS = {
+    "dqn-cartpole": {"lr": [1e-4, 2.5e-4, 5e-4, 1e-3, 2.5e-3], "target_every": [0, 100, 500, 2000], "buffer": [128, 1_000, 10_000, 100_000]},
+    "a2c-cartpole": {"lr": [3e-4, 1e-3, 3e-3, 1e-2], "steps": [1, 5, 20]},
+    "ppo-cartpole": {"clip": [0.0, 0.1, 0.2, 0.3, 0.5], "epochs": [1, 4, 10, 30], "lr": [1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2]},
+    "trpo-cartpole": {"delta": [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0]},
+    "ppo-pendulum": {"lr": [3e-4, 1e-3, 3e-3], "gamma": [0.9, 0.95, 0.99], "clip": [0.0, 0.1, 0.2, 0.3, 0.5], "epochs": [1, 4, 10, 30]},
 }
 
 
@@ -140,7 +156,9 @@ def test_episode(world: dict, choose, seed: int, rng: np.random.Generator) -> tu
         # 8 bits are plenty to draw a state or a bar: CartPole's angle to a tenth of a degree, its values to 0.2
         "s": [pack(S[:, j], lo, hi) for j, (lo, hi) in enumerate(world["ranges"])],
         "a": pack(np.array(actions, dtype=float).ravel()),
-        "x": pack(np.array(extra)),  # per step: the action values (DQN), or the probabilities and the value (PG)
+        # per step: the action values (DQN), or the probability and the value (PG); each column on its own scale, so a
+        # probability keeps its precision next to a value of 90
+        "x": [pack(col) for col in np.array(extra, dtype=float).T],
     }
     return ep, ret
 
@@ -279,17 +297,39 @@ def record(name: str, spec: dict) -> None:
     log.info("%s: %.0f s, %d KB; test returns %s", name, time.time() - t0, path.stat().st_size // 1024, " ".join(f"{x:.0f}" for x in tests))
 
 
+def sweep(name: str, knobs: dict) -> None:
+    """Every value of every knob, every seed, all at once over the processes; the training curves only."""
+    t0, spec = time.time(), CATALOG[name]
+    jobs = [(knob, v, s) for knob, values in knobs.items() for v in values for s in spec["seeds"]]
+    specs = [dict(spec, cfg=dict(spec["cfg"], **{knob: v})) for knob, v, _ in jobs]
+    with ProcessPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(RUNNERS[spec["learner"]], specs, [s for *_, s in jobs], [False] * len(jobs)))
+    train = {job: r["train"] for job, r in zip(jobs, results)}
+    out = {"name": name, "world": spec["world"], "steps": spec["steps"], "block": spec["block"], "seeds": spec["seeds"],
+           "config": spec["cfg"], "knobs": {knob: {"values": values, "train": [[train[(knob, v, s)] for s in spec["seeds"]] for v in values]}
+                                           for knob, values in knobs.items()}}
+    path = OUT / "sweeps" / f"{name}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(out, separators=(",", ":")), encoding="utf-8")
+    for knob, values in knobs.items():  # the last tenth of training, averaged, per value: a first look at the odds
+        ends = [[np.mean([x for x in c[-max(1, len(c) // 10):] if x is not None] or [np.nan]) for c in row] for row in out["knobs"][knob]["train"]]
+        log.info("%s %s: %s", name, knob, " · ".join(f"{v}: {' '.join(f'{e:.0f}' for e in row)}" for v, row in zip(values, ends)))
+    log.info("%s: %d runs, %.0f s, %d KB", name, len(jobs), time.time() - t0, path.stat().st_size // 1024)
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
     parser = argparse.ArgumentParser(description="Record training runs for RL Atlas.")
-    parser.add_argument("names", nargs="*", help="recordings to make (default: all)")
+    parser.add_argument("names", nargs="*", help="recordings (or sweeps) to make (default: all)")
+    parser.add_argument("--sweep", action="store_true", help="make the sweeps instead of the recordings")
     args = parser.parse_args()
-    unknown = [n for n in args.names if n not in CATALOG]
+    known = SWEEPS if args.sweep else CATALOG
+    unknown = [n for n in args.names if n not in known]
     if unknown:
-        log.error("unknown recordings: %s (known: %s)", ", ".join(unknown), ", ".join(CATALOG))
+        log.error("unknown %s: %s (known: %s)", "sweeps" if args.sweep else "recordings", ", ".join(unknown), ", ".join(known))
         return 1
-    for name in args.names or CATALOG:
-        record(name, CATALOG[name])
+    for name in args.names or known:
+        sweep(name, SWEEPS[name]) if args.sweep else record(name, CATALOG[name])
     return 0
 
 

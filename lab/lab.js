@@ -15,7 +15,7 @@
   };
 
   // What one unit is called, in this world and for this algorithm.
-  const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"], round: ["round", "rounds"], throw: ["throw", "throws"] };
+  const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"], round: ["round", "rounds"], throw: ["throw", "throws"], block: ["block", "blocks"] };
   // Walking speeds replay a unit event by event ("step" stops at each update); rates jump between snapshots.
   const walking = (step, every) => [{ id: "line", label: "Line by line", every: every[0] }, { id: "step", label: step, every: every[1] }];
   const rates = (...list) => list.map((rate) => ({ id: `r${rate}`, rate }));
@@ -24,6 +24,7 @@
     sweep: [...walking("State by state", [380, 130]), ...rates(1, 4, 20)],
     step: [...walking("Pull by pull", [480, 300]), ...rates(10, 50, 250)],
     round: [...walking("Step by step", [520, 200]), ...rates(1, 4, 20)], // every worker steps at once
+    block: [{ id: "line", label: "Step by step", every: 80 }, { id: "step", label: "Quickly", every: 12 }, ...rates(1, 4, 10)], // a recorded test episode
   };
   // The knobs a preset can show as sliders. alpha = 0 means sample averages (1/n), where an algorithm allows it.
   // sweep: the values a sweep of the odds tries for a slider (a knob with choices tries its choices).
@@ -49,7 +50,7 @@
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);
   // What a chart can plot.
   const METRICS = {
-    return: { title: (n) => `Reward per ${n}`, smooth: 10 },
+    return: { title: (n, env) => (env.recorded ? "Training episodes: their average return in each block" : `Reward per ${n}`), smooth: 10 },
     steps: { title: (n) => `Steps per ${n}`, smooth: 10, log: true }, // a first episode of 1000 steps would flatten the rest
     optimal: { title: () => "How often the best arm is pulled", percent: true },
     left: { title: () => "How often the agent goes left from A", percent: true },
@@ -65,6 +66,12 @@
     aim: { title: () => "Where the policy aims: its mean angle μ (degrees)" },
     kl: { title: () => "How far each update moved the policy: KL divergence (log scale)", log: true },
     clipped: { title: () => "Samples the clip left alone in the last pass", percent: true },
+    // what recorded runs chart (one seed: the one played back)
+    test: { title: (n, env) => (env.kind === "cartpole" ? "Test episode after each block: steps balanced" : "Test episode after each block: its return") },
+    loss: { title: () => "Loss: the squared TD error, averaged over the block", log: true },
+    td: { title: () => "Size of the TD error |δ|, averaged over the block", log: true },
+    q: { title: () => "The largest Q-value of each state in the batches, on average" },
+    eps: { title: () => "Exploration ε at the end of the block", percent: true },
   };
   const LADDER = [10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
   const signed = (v, d = 2) => (v < 0 ? "−" : v > 0 ? "+" : "") + Math.abs(v).toFixed(d);
@@ -82,11 +89,14 @@
     const sandbox = preset.env === "sandbox" ? RL.sandbox(sandboxHost()) : null;
     const make = () => (sandbox ? lab.grid(sandbox.spec()) : lab.make(preset.env));
     let env = make();
-    let racers = preset.racers.map((r) => ({ ...r, algorithm: lab.algorithms[r.algorithm] }));
+    // Racers that name a recording play back runs trained offline (recorder/record.py) instead of computing them.
+    const recRuns = preset.racers.map((r) => (r.recording ? lab.recordedRun(RL.recordings[r.recording]) : null));
+    const recorded = recRuns.some(Boolean), rec0 = recorded ? RL.recordings[preset.racers[0].recording] : null, sweepData = rec0 ? RL.sweeps?.[rec0.name] : null;
+    let racers = preset.racers.map((r, i) => ({ ...r, algorithm: recRuns[i] ? recRuns[i].algorithm : lab.algorithms[r.algorithm] }));
     const unitOf = () => racers[0].algorithm.unit;
     const noun = () => NOUNS[env.unitName || (unitOf() === "step" ? "pull" : unitOf())];
     // Shared knobs: the preset's, minus those every racer sets for itself.
-    const knobs = { units: preset.units, seed: preset.seed, runs: preset.runs, ...preset.params };
+    const knobs = { units: recorded ? recRuns[0].units : preset.units, seed: recorded ? recRuns[0].seed : preset.seed, runs: preset.runs, ...preset.params };
     const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && racers.some((r) => !(k in r.params)));
     const paramsOf = (r) => ({ ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...r.params });
     const view = { seeds: false, show: {} };
@@ -158,6 +168,10 @@
     // ---- building the page around the current world and racers ----
     function knobPanel() {
       const box = q(".knobs");
+      if (recorded) { // nothing to turn: the runs were trained offline
+        box.innerHTML = `<p class="rec-note">Trained offline on Gymnasium's ${esc(env.title)}: ${rec0.steps.toLocaleString("en")} steps in ${plural(knobs.units, noun())} of ${rec0.block.toLocaleString("en")}, ${plural(rec0.seeds.length, ["seed", "seeds"])}. After each block the network played one test episode, from the same start every time: that is what plays here.</p>`;
+        return;
+      }
       const slider = (k) => {
         // an algorithm can name a knob its own way (A2C's n is the steps between updates, PPO's λ belongs to GAE)
         const own = racers.find((r) => r.algorithm.knobs?.[k])?.algorithm.knobs[k], d = { ...KNOBS[k], ...own }, v = knobs[k];
@@ -199,7 +213,8 @@
       view.show.agent = unitOf() !== "sweep"; // dynamic programming has no agent walking about
       views = stages.map((st) => new View(st.querySelector(".view-host"), env, view.show));
       stages.forEach((st, i) => st.addEventListener("click", () => focus(i)));
-      const displays = racers.map((r) => {
+      const displays = racers.map((r, i) => {
+        if (recRuns[i]) return { ...recRuns[i].at(0) };
         const p = paramsOf(r), { m } = lab.memory(r.algorithm.memory(env, p));
         return { ...r.algorithm.show(m, env, p, 0), sweeps: r.algorithm.unit === "sweep" };
       });
@@ -215,7 +230,8 @@
       if (!speeds.some((s) => s.id === P.speed)) P.speed = "step";
       q(".speed").innerHTML = speeds.map((s) => `<option value="${s.id}"${s.id === P.speed ? " selected" : ""}>${s.rate ? `${s.rate} ${noun()[s.rate === 1 ? 0 : 1]} / s` : s.label}</option>`).join("");
       // The note is rewritten whole: stepping replaces its contents, so its parts cannot be looked up later.
-      liveNote.innerHTML = `Play <b>line by line</b> or <b>${speeds[1].label.toLowerCase()}</b> to see every update with its numbers.`;
+      liveNote.innerHTML = recorded ? "Play <b>step by step</b> to see, at every step of a test episode, what the network makes of each move."
+        : `Play <b>line by line</b> or <b>${speeds[1].label.toLowerCase()}</b> to see every update with its numbers.`;
       liveNote.classList.add("faint");
       q(".legend").innerHTML = racers.map((r, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${esc(r.name)}</span>`).join("");
       knobPanel();
@@ -236,7 +252,7 @@
     function simulate() {
       job?.cancel();
       P.walkers = null;
-      runs = racers.map((r) => lab.simulate({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: knobs.seed, measures: preset.measures }));
+      runs = racers.map((r, i) => recRuns[i] || lab.simulate({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: knobs.seed, measures: preset.measures }));
       views.forEach((v, i) => { v.env = runs[i].env; }); // each view looks at its own run's world (its bandit's machines, its cards)
       scrub.max = knobs.units;
       filmstrip();
@@ -251,6 +267,7 @@
     // Many runs in the background, a few at a time, so the page stays responsive; the charts fill in as they come.
     // They also count the runs that end as the preset's success rule asks (20 of them when the charts show one run).
     function average() {
+      if (recorded) return averageRecorded();
       const n = knobs.runs > 1 ? knobs.runs : preset.success ? 20 : 10, seeds = Array.from({ length: n }, (_, k) => knobs.seed + k);
       const sums = racers.map(() => ({})), lines = racers.map(() => []), wins = racers.map(() => 0);
       let done = 0, cancelled = false;
@@ -280,6 +297,16 @@
       job = { cancel() { cancelled = true; clearTimeout(timer); } };
     }
 
+    // A recording keeps the training curve of every seed: the average, the thin lines and the odds come at once.
+    function averageRecorded() {
+      const per = recRuns.map((r) => lab.recordedCurves(r.rec)), n = Math.min(...per.map((c) => c.seeds.length));
+      const sums = per.map((c) => ({ return: c.mean.map((v) => v * n) })), lines = per.map((c) => c.seeds.map((v) => ({ return: v })));
+      const wins = per.map((c) => (preset.success ? c.seeds.filter((v) => lab.success(preset.success, { return: v }).ok).length : 0));
+      avg = { sums, lines, wins, done: n, n };
+      if (knobs.runs > 1 || view.seeds) { drawCharts(avg); q(".chart-note").textContent = chartNote(n); }
+      tally();
+    }
+
     // ---- charts ----
     function chartsFor() {
       charts.forEach((c) => c.destroy());
@@ -293,23 +320,25 @@
       }));
       const mode = q(".chart-mode");
       mode.innerHTML = preset.runs > 1 ? "" : `<div class="seg" role="group" aria-label="How many runs the charts show">
-        <button type="button" data-seeds="0" class="${view.seeds ? "" : "on"}">This run</button><button type="button" data-seeds="1" class="${view.seeds ? "on" : ""}">10 seeds</button></div>`;
+        <button type="button" data-seeds="0" class="${view.seeds ? "" : "on"}">This run</button><button type="button" data-seeds="1" class="${view.seeds ? "on" : ""}">${recorded ? rec0.seeds.length : 10} seeds</button></div>`;
     }
 
     function chartNote(n) {
       if (knobs.runs > 1) return `Each line is the average of ${n} runs, each with its own seed; the views above play the run with seed ${knobs.seed}. Click a chart to jump there.`;
+      if (view.seeds && recorded) return `Thin lines: the ${n} seeds the recording trained, the same settings each time. Thick line: their average. The other charts follow the seed played above, ${knobs.seed}. Click a chart to jump there.`;
       if (view.seeds) return `Thin lines: ${Math.min(10, n)} runs with seeds ${knobs.seed} to ${knobs.seed + Math.min(10, n) - 1}, the same settings each time. Thick lines: ${n > 10 ? `the average of all ${n}, seeds ${knobs.seed} to ${knobs.seed + n - 1}` : "their average"}. Click a chart to jump there.`;
-      const smooth = preset.charts.some((k) => METRICS[k].smooth);
+      const smooth = !recorded && preset.charts.some((k) => METRICS[k].smooth);
       return `${smooth ? "Smoothed over 10 " + noun()[1] + ". " : ""}Click a chart to jump there.`;
     }
 
     function drawCharts(avg) {
       const many = knobs.runs > 1, n = avg ? avg.done : 0;
       preset.charts.forEach((k, j) => {
-        const m = METRICS[k], series = [];
+        const m = { ...METRICS[k], smooth: recorded ? 1 : METRICS[k].smooth }, series = [];
         racers.forEach((r, i) => {
           const color = `--s${i + 1}`;
-          if (many) {
+          if (avg && !avg.sums[i][k]) series.push({ name: r.name, color, values: runs[i].metrics[k], smooth: m.smooth }); // the other seeds have no such details
+          else if (many) {
             if (n) series.push({ name: r.name, color, values: avg.sums[i][k].map((v) => v / n), smooth: k === "return" && unitOf() === "episode" ? 5 : 1 });
           } else if (view.seeds && avg) {
             for (const metrics of avg.lines[i]) series.push({ name: r.name, color, values: metrics[k], smooth: m.smooth, faint: true });
@@ -341,21 +370,28 @@
         return [{ value: best, label: `the optimal policy: ${(100 * best).toFixed(0)}%` }];
       }
       if (k === "match" || k === "optimal") return [{ value: 1, label: "" }];
+      if (k === "q" && env.kind === "cartpole") return [{ value: 99.3, label: "the most a state can be worth with γ = 0.99: 99.3" }];
+      if (k === "test" && env.kind === "cartpole") return [{ value: 500, label: "the longest an episode lasts: 500" }];
       return [];
     }
 
     // ---- the odds: how often runs end well, and how that moves with a knob ----
-    const knobOf = (k) => ({ ...KNOBS[k], ...racers.find((r) => r.algorithm.knobs?.[k])?.algorithm.knobs[k] });
+    // The knobs of recorded runs (recorder/record.py), as their sweeps name them.
+    const DEEP_KNOBS = { lr: { sym: "α", name: "learning rate" }, target_every: { sym: "C", name: "steps between target updates (0: none)" },
+      buffer: { sym: "N", name: "replay memory (128: none)" }, clip: { sym: "ε", name: "clip range (0: no clip)" }, epochs: { sym: "K", name: "passes over each batch" },
+      steps: { sym: "n", name: "steps per worker between updates" }, delta: { sym: "δ", name: "trust region (KL)" }, gamma: { sym: "γ", name: "discount" } };
+    const knobOf = (k) => (recorded ? DEEP_KNOBS[k] || { sym: k, name: k } : { ...KNOBS[k], ...racers.find((r) => r.algorithm.knobs?.[k])?.algorithm.knobs[k] });
     // The values a sweep tries: a knob's choices or its sweep list. Tiny step sizes (linear methods, policy gradients)
     // try the ladder around the ones in use; averaging methods also try 1/n.
     function sweepValues(k) {
+      if (recorded) return sweepData?.knobs[k]?.values || [];
       if (preset.sweep?.[k]) return preset.sweep[k]; // a preset can pick the values that matter in its world
       const now = [...(k in preset.params ? [knobs[k]] : []), ...racers.filter((r) => k in r.params).map((r) => r.params[k])];
       if ((k === "alpha" || k === "alphaW") && Math.max(...now) < 0.01) return ALPHA_LADDER.filter((a) => a >= Math.min(...now) / 30 && a <= Math.max(...now) * 30);
       const list = knobOf(k).choices || knobOf(k).sweep || [];
       return k === "alpha" && racers.every((r) => AVERAGING.has(r.algorithm.id)) ? [0, ...list] : list;
     }
-    const sweepable = () => Object.keys(KNOBS).filter((k) => (k in preset.params || racers.some((r) => k in r.params)) && sweepValues(k).length > 1);
+    const sweepable = () => (recorded ? Object.keys(sweepData?.knobs || {}) : null) || Object.keys(KNOBS).filter((k) => (k in preset.params || racers.some((r) => k in r.params)) && sweepValues(k).length > 1);
     const fmtSweep = (k, v) => (k === "alpha" && v === 0 ? "1/n" : v > 0 && v < 0.001 ? v.toExponential(0) : String(v));
     const sweepIdle = () => `Run the sweep to see how ${preset.success ? "the odds move" : "the final score moves"} with a knob; every value gets the same seeds.`;
 
@@ -365,7 +401,7 @@
       q(".odds-tally").hidden = !preset.success;
       q(".sweep-bar").hidden = !ks.length;
       q(".sweep-knob").innerHTML = ks.map((k) => `<option value="${k}">${esc(knobOf(k).sym)} · ${esc(knobOf(k).name)}</option>`).join("");
-      clearSweep(sweepIdle());
+      clearSweep(ks.length ? sweepIdle() : "");
     }
 
     // How many of the runs so far ended as the success rule asks, for each racer.
@@ -398,7 +434,7 @@
         if (same) same.name = r.algorithm.title;
         else groups.push({ key, r, i, base, name: k in r.params ? r.algorithm.title : r.name }); // its own value is overridden
       });
-      const kinds = preset.success ? ["ok", "score"] : ["score"], current = k in preset.params ? knobs[k] : null;
+      const kinds = preset.success ? ["ok", "score"] : ["score"], current = recorded ? rec0.config[k] ?? null : k in preset.params ? knobs[k] : null;
       const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}` };
       const grid = q(".sweep-grid");
       grid.className = `chart-grid sweep-grid n${kinds.length}`;
@@ -414,6 +450,18 @@
         points: res[gi].map((x) => (c === "ok" ? (x.runs ? x.wins / x.runs : NaN) : x.scored ? x.sum / x.scored : NaN)),
         notes: res[gi].map((x) => (c === "ok" ? `${x.wins} of ${x.runs} runs` : x.scored ? `average ${sweepCharts[j].fmt(x.sum / x.scored)} over ${x.scored} runs` : "")),
       }))));
+      if (recorded) { // trained offline: every value's seeds are in the sweep file
+        const d = sweepData.knobs[k];
+        d.train.forEach((curves, vi) => curves.forEach((c) => {
+          const { ok, score } = lab.success(rule, { return: Float64Array.from(c, (x) => x ?? NaN) }), x = res[0][vi];
+          x.runs++;
+          if (ok) x.wins++;
+          if (!Number.isNaN(score)) { x.sum += score; x.scored++; }
+        }));
+        draw();
+        q(".sweep-note").textContent = `${plural(d.train[0].length, ["seed", "seeds"])} per value, ${sweepData.steps.toLocaleString("en")} steps each, trained offline with the recording's other settings. The shaded value is the recording's. Hover a dot for its numbers.`;
+        return;
+      }
       const chunk = () => {
         if (cancelled) return;
         const t0 = performance.now();
@@ -440,6 +488,11 @@
       const out = [], last = Math.min(100, Math.max(1, Math.floor(knobs.units / 2))); // the second half at most: early episodes are a search
       const each = (f) => runs.map((r, i) => `<b>${esc(racers[i].name)}</b> ${f(r, i)}`).join(" · ");
       const pct = (v) => `${Math.round(100 * v)}%`;
+      if (recorded) {
+        const end = knobs.units - 1;
+        out.push(`After the last block, the test episode lasts ${each((r) => plural(r.metrics.steps[end], ["step", "steps"]))}${env.kind === "cartpole" ? " (500 at most)" : `, return ${each((r) => signed(r.metrics.test[end], 0))} (0 is the best there is)`}.`);
+        out.push(`Training episodes in the last block, on average: ${each((r) => signed(r.metrics.return[end], 0))}.`);
+      }
       if (env.kind === "bandit") {
         out.push(`This run's last ${last} pulls: ${each((r) => `${lab.mean(r.metrics.return, knobs.units - last).toFixed(2)} per pull, a best arm ${pct(lab.mean(r.metrics.optimal, knobs.units - last))} of the time`)}.`);
       }
@@ -552,11 +605,12 @@
       else if (env.kind === "car") text = `${plural(M.steps[t], ["step", "steps"])} to the flag${M.steps[t] >= runs[i].params.maxSteps ? " (cut short)" : ""}`;
       else if (env.kind === "graph") text = `${M.left?.[t] ? "went left" : "went right"} · return ${signed(M.return[t])}`;
       else if (env.kind === "throw") text = `thrown at ${M.angle[t].toFixed(1)}°: ${M.return[t].toFixed(1)} m`;
+      else if (recorded) text = `test episode: ${plural(M.steps[t], ["step", "steps"])}${env.kind === "cartpole" ? "" : `, return ${signed(M.test[t], 0)}`}`;
       else if (unitOf() === "round") text = `${plural(paramsOf(racers[i]).workers ?? 4, ["episode", "episodes"])}, ${M.steps[t].toFixed(M.steps[t] < 100 ? 1 : 0)} steps on average · reward ${signed(M.return[t], env.rewards?.small !== undefined ? 2 : 0)}`;
       else text = `${signed(M.return[t], 0)} · ${plural(M.steps[t], ["step", "steps"])}${M.falls[t] ? ` · ${plural(M.falls[t], ["fall", "falls"])}` : ""}`;
       stat.textContent = `${cap(one)} ${P.e}: ${text}`;
     }
-    const live = (w) => (unitOf() === "sweep" ? `state ${w.n}` : env.kind === "bandit" ? "pulling" : env.kind === "star" ? "one step" : env.kind === "throw" ? "throwing"
+    const live = (w) => (recorded ? `step ${w.n} of the test episode` : unitOf() === "sweep" ? `state ${w.n}` : env.kind === "bandit" ? "pulling" : env.kind === "star" ? "one step" : env.kind === "throw" ? "throwing"
       : env.kind === "car" ? `${plural(w.n, ["step", "steps"])} so far` : unitOf() === "round" ? `${plural(w.n, ["move", "moves"])} so far, all workers together`
         : `${signed(w.G, env.kind === "grid" ? 0 : 2)} so far · ${plural(w.n, ["step", "steps"])}`);
 
@@ -565,6 +619,7 @@
       if (!P.walkers) {
         if (P.e >= knobs.units) { pause(); return; }
         P.walkers = runs.map((r, i) => ({ ...r.replay(P.e), done: false, G: 0, n: 0, p: paramsOf(racers[i]) }));
+        if (recorded) P.walkers.forEach((w, i) => views[i].show(w.m, w.p)); // the network that plays this test episode
       }
       let wait = 0;
       P.walkers.forEach((w, i) => {
@@ -598,6 +653,7 @@
         if (ev.type === "update") explain(ev, w.p);
         else if (ev.type === "plan") planned(ev);
         else if (ev.type === "advantage") batchAdvantages(ev);
+        else if (ev.type === "choose" && a.recorded) { texInto(liveNum, a.numbers(ev)); liveNote.innerHTML = a.note(ev); liveNote.classList.remove("faint"); }
       }
       caption(i, w);
       return pauseFor;

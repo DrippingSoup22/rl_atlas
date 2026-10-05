@@ -15,15 +15,14 @@
   const deg = (r) => (r * 180) / Math.PI;
   const sgn = (v, d = 1) => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(d)}`;
 
-  // The colors of a map: values from the value scale; a policy's preference as chevrons, fainter when unsure.
-  function mapColors(box, d, top) {
-    const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), pos = css.getPropertyValue("--v-pos"), neg = css.getPropertyValue("--v-neg");
-    return (v) => {
-      const t = Math.max(-1, Math.min(1, v / top));
-      return `color-mix(in oklab, ${t < 0 ? neg : pos} ${Math.round(100 * Math.abs(t) ** 0.8)}%, ${mid})`;
-    };
+  // The colors of a map, over the range its values span, so that small differences show even when every state is worth
+  // about the same: the lowest gray (orange below zero), the highest blue (gray below zero).
+  const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
+  function rangeColor(box, lo, hi) {
+    const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
+    return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
   }
-  const niceTop = (v) => { for (const n of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]) if (v <= n) return n; return v; };
+  const num = (v) => (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)).replace("-", "−");
 
   class CartPoleView {
     constructor(host, env, options = {}) {
@@ -104,9 +103,7 @@
       if (!d || !d.v) return;
       this.d = d;
       this.kind = d.kind;
-      let hi = 1;
-      for (const v of d.v) hi = Math.max(hi, Math.abs(v));
-      const top = niceTop(hi), color = mapColors(this.box, d, top), valueMode = this.o.map !== "action";
+      const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action";
       for (let k = 0; k < this.cellEls.length; k++) {
         const pr = d.act ? d.act[k] : d.mean ? d.mean[k] : 0.5; // 1 or 0: right or left (DQN); P(right) (a policy)
         this.cellEls[k].setAttribute("fill", valueMode ? color(d.v[k]) : `color-mix(in oklab, var(--pol) ${Math.round(Math.abs(pr - 0.5) * 140)}%, var(--v-mid))`);
@@ -117,7 +114,7 @@
         e.style.opacity = (0.25 + 1.5 * Math.abs(pr - 0.5)).toFixed(2);
       }
       this.box.querySelector(".map-head span").textContent = valueMode
-        ? `color: the value of each angle and spin, the cart at rest in the middle (top of the scale: ${top}); chevrons: the push it prefers`
+        ? `color: the value of each angle and spin, from ${num(lo)} (gray) to ${num(hi)} (blue), the cart at rest in the middle; chevrons: the push it prefers`
         : "color and chevrons: the push it prefers, paler where it is unsure; the cart at rest in the middle";
     }
 
@@ -217,12 +214,10 @@
     static thumb(env, d) {
       if (!d?.v) return "";
       const N = 31, c = 4;
-      let hi = 1;
-      for (const v of d.v) hi = Math.max(hi, Math.abs(v));
-      const top = niceTop(hi);
+      const [lo, hi] = span(d.v);
       let cells = "";
       for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-        const t = Math.max(0, Math.min(1, d.v[j * N + i] / top));
+        const t = Math.max(0, Math.min(1, (d.v[j * N + i] - lo) / Math.max(1e-9, hi - lo)));
         cells += `<rect x="${i * c}" y="${(N - 1 - j) * c}" width="${c + 0.3}" height="${c + 0.3}" fill="color-mix(in oklab, var(--v-pos) ${Math.round(100 * t ** 0.8)}%, var(--v-mid))"/>`;
       }
       return `<svg viewBox="0 0 ${N * c} ${N * c}" class="cart-thumb" role="img" aria-label="Values over angle and spin">${cells}</svg><span class="thumb-note">test: ${d.steps} steps</span>`;

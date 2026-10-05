@@ -2,7 +2,8 @@
    A recording keeps, for one seed, a snapshot after every block of training steps (what the network thinks of a grid of
    states, and one test episode played with it, always from the same start) and, for every seed, the average return of
    the training episodes in each block. A recorded run has the shape of a live one (lab.simulate): its units are the
-   blocks, at(t) is the snapshot after t blocks, and replay(t) plays that snapshot's test episode, event by event. */
+   blocks, at(t) is the snapshot after t blocks, and replay(t) plays the test episode of the network at the end of
+   block t (the snapshot after t + 1 blocks), event by event. */
 (function (RL) {
   "use strict";
   const lab = RL.lab;
@@ -29,11 +30,12 @@
   // A snapshot, unpacked: the grid's values and actions, and the test episode as states, actions and numbers per step.
   function decode(rec, snap) {
     const n = rec.grid.x[3] * rec.grid.y[3], t = snap.test, dims = t.s.map(lab.unpack), steps = t.steps;
-    const width = lab.unpack(t.x).length / steps;
+    // the numbers of each step: one packed column each (older recordings packed them all together, step by step)
+    const cols = Array.isArray(t.x) ? t.x.map(lab.unpack) : null, width = cols ? cols.length : lab.unpack(t.x).length / steps;
     return {
       t: snap, kind: rec.learner === "dqn" ? "dqn" : "pg", grid: rec.grid, v: lab.unpack(snap.v), act: snap.act ? lab.unpack(snap.act) : null, mean: snap.mean ? lab.unpack(snap.mean) : null,
       n, eps: snap.eps, stats: snap.stats || {}, steps, ret: t.return,
-      state: (k) => dims.map((d) => d[k]), action: (k) => lab.unpack(t.a)[k], numbers: (k) => lab.unpack(t.x).subarray(k * width, (k + 1) * width),
+      state: (k) => dims.map((d) => d[k]), action: (k) => lab.unpack(t.a)[k], numbers: (k) => (cols ? Float64Array.from(cols, (c) => c[k]) : lab.unpack(t.x).subarray(k * width, (k + 1) * width)),
     };
   }
 
@@ -90,15 +92,15 @@
     const stat = (k) => per((t) => rec.snapshots[t + 1].stats?.[k] ?? NaN);
     const metrics = {
       return: per((t) => shown.train[t] ?? NaN), // the training episodes of block t (exploring, and learning as they go)
-      test: per((t) => rec.snapshots[t].test.return), // the test episode played by the network after t blocks
-      steps: per((t) => rec.snapshots[t].test.steps),
+      test: per((t) => rec.snapshots[t + 1].test.return), // block t's test episode, played by the network at its end
+      steps: per((t) => rec.snapshots[t + 1].test.steps),
       loss: stat("loss"), td: stat("td"), q: stat("q"), kl: stat("kl"), clipped: stat("clipped"),
-      eps: per((t) => rec.snapshots[t].eps ?? NaN),
+      eps: per((t) => rec.snapshots[t + 1].eps ?? NaN),
     };
     return {
       env, algorithm, params: { ...rec.config, block: rec.block }, units, seed: rec.shown, metrics, recorded: true, rec,
       at,
-      replay(t) { const m = at(t); return { m, events: algorithm.run({ m }) }; },
+      replay(t) { const m = at(t + 1); return { m, events: algorithm.run({ m }) }; }, // unit t: the network at its end
     };
   };
 

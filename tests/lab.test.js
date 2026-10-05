@@ -4,8 +4,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "envs/approx", "envs/policy", "dp", "run", "measures", "features",
-  "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy"];
+  "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy",
+  "envs/deep", "recorded"];
 for (const file of FILES) require(`../lab/${file}.js`);
+require("../app/recordings.js"); // recorded runs (recorder/record.py), bundled by build.py
 const { lab } = globalThis.RL;
 const A = lab.algorithms;
 const seeds = (n) => Array.from({ length: n }, (_, i) => i + 1);
@@ -292,6 +294,11 @@ test("every Lab preset runs: its world, algorithms and measures exist", () => {
   require("../app/content.js");
   for (const [id, preset] of Object.entries(globalThis.RL.content.presets)) {
     for (const racer of preset.racers) {
+      if (racer.recording) { // played back, not computed: the recording must exist and decode
+        const r = lab.recordedRun(globalThis.RL.recordings[racer.recording]);
+        assert.equal(r.metrics.return.length, r.units, id);
+        continue;
+      }
       const algorithm = A[racer.algorithm];
       assert.ok(algorithm, `${id}: no algorithm '${racer.algorithm}' in the lab`);
       const r = lab.simulate({ world: preset.env, algorithm, params: { ...preset.params, ...racer.params }, units: 3, seed: 1, measures: preset.measures });
@@ -311,7 +318,8 @@ test("every preset's success rule judges its runs", () => {
   for (const [id, p] of Object.entries(globalThis.RL.content.presets)) {
     if (!p.success) continue;
     for (const r of p.racers) {
-      const { metrics } = lab.simulate({ world: p.env, algorithm: A[r.algorithm], params: { ...p.params, ...r.params }, units: p.units, seed: p.seed, snapshots: false, measures: p.measures });
+      const { metrics } = r.recording ? lab.recordedRun(globalThis.RL.recordings[r.recording])
+        : lab.simulate({ world: p.env, algorithm: A[r.algorithm], params: { ...p.params, ...r.params }, units: p.units, seed: p.seed, snapshots: false, measures: p.measures });
       const { ok, score } = lab.success(p.success, metrics);
       assert.equal(typeof ok, "boolean", id);
       assert.ok(!Number.isNaN(score), `${id}: ${r.name} has no score`);
@@ -328,4 +336,16 @@ test("the odds the Lab shows: exploring finds the best arm more often; the entro
   assert.ok(greedy < 0.55 && explore > 0.75, `greedy ${greedy}, ε = 0.1 ${explore}`);
   const plain = odds("entropy-gems", 0, 20), bonus = odds("entropy-gems", 1, 20);
   assert.ok(plain <= 0.15 && bonus >= 0.8, `no bonus ${plain}, bonus ${bonus}`);
+});
+
+
+test("recorded runs play back what was recorded: each block's test episode, step by step, as long as it lasted", () => {
+  for (const [name, rec] of Object.entries(globalThis.RL.recordings)) {
+    const r = lab.recordedRun(rec);
+    for (let t = 0; t < r.units; t++) {
+      const moves = [...r.replay(t).events].filter((ev) => ev.type === "move");
+      assert.equal(moves.length, r.metrics.steps[t], `${name}, block ${t + 1}`);
+      assert.ok(moves.at(-1).end, `${name}, block ${t + 1}: the last move ends the episode`);
+    }
+  }
 });

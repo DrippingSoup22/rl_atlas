@@ -85,6 +85,35 @@
 .thumb .t-line { fill: none; stroke: var(--val); stroke-width: 1.6; }
 .thumb .t-dot { fill: var(--val); }
 
+/* ---- CartPole (recorded runs): the cart on its track, the network's numbers, its map of the pole's states ---- */
+.cartview { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px 20px; align-items: start; }
+.cartview svg { display: block; width: 100%; height: auto; overflow: visible; }
+.cartview text { font-family: var(--font); }
+.cartview .rail { stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round; }
+.cartview .stop { stroke: var(--err); stroke-width: 2; }
+.cartview .track-note, .cartview .tick { font-size: 11px; fill: var(--ink-3); }
+.cartview .fan { fill: var(--surface-3); opacity: 0.7; }
+.cartview .cart-body { fill: var(--ink-2); }
+.cartview .wheel { fill: var(--ink); }
+.cartview .pole-rod { stroke: var(--pol); stroke-width: 5; stroke-linecap: round; }
+.cartview .pivot { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.5; }
+.cartview .push { fill: var(--val); }
+.cartview .readout, .cartview .bar-num { font-size: 12px; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+.cartview .bar-name { font-size: 12px; fill: var(--ink-3); }
+.cartview .bar-bg { fill: var(--surface-3); }
+.cartview .bar-fill { fill: var(--val); opacity: 0.45; }
+.cartview .chosen .bar-fill { opacity: 1; }
+.cartview .chosen .bar-name, .cartview .chosen .bar-num { fill: var(--ink); font-weight: 600; }
+.cartview .map-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 4px; }
+.cartview .map-head span { color: var(--ink-3); }
+.cartview .zero { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+.cartview .axis-name { font-size: 11px; fill: var(--ink-2); }
+.cartview .chev { fill: none; stroke: var(--ink); stroke-width: 1.4; opacity: 0.55; }
+.cartview .phase-path { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; opacity: 0.75; }
+.cartview .phase-dot { fill: var(--rew); stroke: var(--surface); stroke-width: 2; }
+.cart-thumb { display: block; width: 100%; height: auto; }
+.knobs .rec-note { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 52ch; }
+
 /* ---- charts ---- */
 .chart-card { padding: 14px 16px; }
 .chart-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
@@ -103,6 +132,7 @@
 .odds-tally { margin: 6px 0 0; font-size: 14px; }
 .sweep-bar { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-top: 10px; font-size: 13.5px; color: var(--ink-2); }
 .sweep-bar label { display: inline-flex; align-items: center; gap: 6px; }
+.sweep-bar[hidden] { display: none; }
 .sweep-note { margin: 6px 0 0; font-size: 12.5px; }
 .linechart .now-band { fill: var(--ink); opacity: 0.05; }
 .linechart .tick.now { fill: var(--ink); font-weight: 600; }

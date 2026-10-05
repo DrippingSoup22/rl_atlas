@@ -683,3 +683,14 @@ charts = ["steps"]
 film = [1, 5, 20, 60]
 intro = "Each step's advantage is a weighted sum of the TD errors after it, with weights that fade by γλ per step. With λ = 0 it is the one-step TD error, steady but only as good as the critic; with λ = 1 it is the whole return minus the critic, honest but noisy. In between does best."
 success = { metric = "steps", max = 100, text = "end up reaching the goal in under 100 steps" }
+
+# ---- recorded runs: networks trained offline by recorder/record.py, played back ----
+[ppo-cartpole]
+title = "PPO balances a pole"
+env = "cartpole"
+racers = [{ recording = "ppo-cartpole" }]
+charts = ["return", "test", "kl"]
+film = [0, 2, 6, 20, 40]
+intro = "Eight workers play at once; every 128 of their steps, PPO takes ten clipped passes over the batch. After every block of 2,500 steps the policy plays one test episode, always from the same start: the pole stays up at most 500 steps. On the right, the critic's values over the pole's angle and spin, with the push the policy prefers."
+success = { metric = "return", min = 450, text = "end up balancing the pole in training, 450 steps or more on average" }
+
