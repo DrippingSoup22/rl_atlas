@@ -306,6 +306,14 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .fig-knob input { width: min(260px, 60%); }
 .fig-knob output { min-width: 3em; font-variant-numeric: tabular-nums; }
 .fig-panel + .fig-panel { margin-top: 10px; }
+/* Part 10: interactive policies, trust regions, pairs of panels */
+.fig-knobs { display: grid; gap: 2px; margin-top: 4px; }
+.fig-formula { margin: 0 0 4px; text-align: center; font-size: 16px; color: var(--ink-2); }
+.fig-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
+.fig .region { fill: color-mix(in oklab, var(--ink) 7%, transparent); }
+.fig .bell-fill { fill: color-mix(in oklab, var(--ink) 7%, transparent); stroke: var(--ink); stroke-width: 1.6; }
+.fig .sd-bar { stroke: var(--ink); stroke-width: 1.4; }
+.fig-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px 18px; }
 .fig.dp .cell { fill: transparent; }
 .fig.dp .cell.shade { fill: var(--surface-3); }
 .fig.dp .cell.hole { fill: var(--hole); }

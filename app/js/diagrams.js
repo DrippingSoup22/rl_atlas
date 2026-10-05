@@ -93,6 +93,49 @@
       { kind: "more" },
       { kind: "end", label: "end: what is left", edge: "R" },
     ] },
+    // Policy gradients: the action is drawn from π, and the update writes to the policy. REINFORCE waits for the return;
+    // with a baseline, the return is compared with the critic's estimate of where the step started.
+    reinforce: { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′", edge: "π" },
+      { kind: "more" },
+      { kind: "end", label: "end: the return G", edge: "R" },
+    ] },
+    baseline: { gap: 50, levels: [
+      { kind: "state", label: "S: baseline v̂(S)" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′", edge: "π" },
+      { kind: "more" },
+      { kind: "end", label: "end: G − v̂(S)", edge: "R" },
+    ] },
+    // Actor–critic: one step, then the critic's estimate of where it led; the TD error judges the action.
+    "actor-critic": [
+      { kind: "state", label: "S: v̂(S)" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′: v̂(S′)", edge: "R" },
+    ],
+    // A2C: n steps of each worker, then the critic's estimate.
+    a2c: { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′", edge: "π" },
+      { kind: "more" },
+      { kind: "state", label: "n steps later: v̂", edge: "R" },
+    ] },
+    // GAE (TRPO, PPO): every TD error along the episode, the k-th weighted (γλ)ᵏ.
+    gae: { gap: 50, levels: [
+      { kind: "state", label: "S" },
+      { kind: "action", label: "A, drawn from π", edge: "π" },
+      { kind: "state", label: "S′: δ, weight 1", edge: "R" },
+      { kind: "action", label: "A′", edge: "π" },
+      { kind: "state", label: "S″: δ, weight γλ", edge: "R" },
+      { kind: "more" },
+      { kind: "end", label: "end of the episode", edge: "R" },
+    ] },
     "v-pi": [
       { kind: "state", label: "s" },
       { kind: "action", label: "a", fan: 3, edge: "π" },
