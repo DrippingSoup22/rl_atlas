@@ -41,7 +41,7 @@ The guide's Pendulum runs show the trade between the two families of continuous-
 
 | method | family | steps of experience, median | seeds |
 | --- | --- | --- | --- |
-| PPO | on-policy | 35,000 | 5 |
+| PPO | on-policy | 35,000 | 20 |
 | DDPG | off-policy | 6,000 | 20 |
 | TD3 | off-policy | 9,000 | 20 |
 | SAC | off-policy | 7,500 | 20 |

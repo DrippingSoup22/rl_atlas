@@ -379,7 +379,7 @@
         return [{ value: best, label: `the optimal policy: ${(100 * best).toFixed(0)}%` }];
       }
       if (k === "match" || k === "optimal") return [{ value: 1, label: "" }];
-      if (k === "q" && env.kind === "cartpole") return [{ value: 99.3, label: "the most a state can be worth with γ = 0.99: 99.3" }];
+      if (k === "q" && env.kind === "cartpole") return [{ value: 100, label: "the most a state can be worth: 1/(1 − γ) = 100" }];
       if (k === "test" && env.kind === "cartpole") return [{ value: 500, label: "the longest an episode lasts: 500" }];
       return [];
     }

@@ -42,15 +42,15 @@ notarget = { recording = "dqn-cartpole-no-target", name = "without a target netw
 :::
 
 ::: step {run = "learn", at = 30}
-**Block 30, after 150,000 steps: 500 steps**, the most an episode lasts. The values now reach $99.0$. That is almost exactly the most a state can be worth when the pole stays up forever: $1 + 0.99 + 0.99^2 + \dots$, up to step 500, is $99.3$. The cart still wanders, as far as 2.17 m from the middle, but it now stops short of the end.
+**Block 30, after 150,000 steps: 500 steps**, the most an episode lasts. The values now reach $99.0$, close to the most a state can be worth to this learner. Episodes are cut at 500 steps, but the learner bootstraps through the cut, as it should, so it values a pole that stays up forever: $1 + 0.99 + 0.99^2 + \dots = 100$. The cart still wanders, as far as 2.17 m from the middle, but it now stops short of the end.
 :::
 
 ::: step {run = "learn", at = 40, map = "value"}
-**At the end, block 40:** still 500, with the cart now within 16 cm of the middle the whole time. The highest value on the map is $101.6$. That is a little above the 99.3 that any state can really be worth. The max in the target picks up the estimates' noise, and the copy passes it on: on three of the five seeds, the average of the largest values goes past 99.3 for a block or two. A small overestimation here, a large one on harder games: [[dqn-extensions|Double DQN]] is the cure.
+**At the end, block 40:** still 500, with the cart now within 16 cm of the middle the whole time. The highest value on the map is $101.6$, above the 100 that any state can be worth. The max in the target picks up the estimates' noise, and the copy passes it on: on 15 of the 20 seeds, the average of the largest values goes past 100 for some blocks, by up to 29%. A modest overestimation here, a large one on harder games: [[dqn-extensions|Double DQN]] is the cure.
 :::
 
 ::: step {run = "learn", at = 40, curves = ["learn", "noreplay", "notarget"], metric = "return"}
-**Take away either remedy.** Each line averages five seeds, trained with the same settings except one. Without replay, each batch is the last 128 steps. The runs still learn, but they wobble: they end at 387 steps on average in the last block, and only two of the five reach 450. Without a target network, the targets come from the weights being changed: no run of five ends above 242, and the average ends at 188. With both, all five end between 493 and 500.
+**Take away either remedy.** Each line averages 20 seeds, trained with the same settings except one. Without replay, each batch is the last 128 steps. The runs still learn, but they wobble: the last block averages 374 steps, and only 7 of the 20 runs end well, averaging 450 or more over their last four blocks. Without a target network, the targets come from the weights being changed: no run of 20 ends well, and the last block averages 140. With both, 16 of the 20 end well, and the last block averages 480.
 :::
 
 ## Textbook
@@ -195,7 +195,7 @@ Falling off the track happens hundreds of steps after the drift that causes it b
 :::
 
 ::: question
-Why are the values of CartPole bounded by about 99.3, and what does a value of 101.6 mean?
+Why are DQN's values on CartPole bounded by 100, and what does a value of 101.6 mean?
 ---
-Each step pays at most 1 and an episode lasts at most 500 steps, so a state is worth at most $1 + \gam + \dots + \gam^{499} = (1 - 0.99^{500})/(1 - 0.99) \approx 99.3$. An estimate above that is an overestimate, the bias the max in the target introduces.
+Each step pays at most 1, and the learner bootstraps through the 500-step time limit, which the state does not show, so to it a state is worth at most $1 + \gam + \gam^2 + \dots = 1/(1 - 0.99) = 100$. An estimate above that is an overestimate, the bias the max in the target introduces.
 :::
