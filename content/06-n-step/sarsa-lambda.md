@@ -5,6 +5,7 @@ prereqs = ["sarsa", "td-lambda", "n-step-sarsa"]
 lab = "sarsa-lambda"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §12.7 and §12.10", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Munos, Stepleton, Harutyunyan & Bellemare (2016), Safe and efficient off-policy reinforcement learning, Advances in Neural Information Processing Systems 29", url = "https://arxiv.org/abs/1606.02647" },
   { text = "Rummery & Niranjan (1994), On-line Q-learning using connectionist systems, Technical Report CUED/F-INFENG/TR 166, Cambridge University", url = "https://www.researchgate.net/publication/2500611" },
   { text = "Singh & Sutton (1996), Reinforcement learning with replacing eligibility traces, Machine Learning 22", url = "https://doi.org/10.1007/BF00114726" },
   { text = "Watkins (1989), Learning from delayed rewards, PhD thesis, University of Cambridge", url = "https://www.cs.rhul.ac.uk/~chrisw/thesis.html" },
@@ -100,7 +101,7 @@ With replacing traces, a further option is to clear the traces of the other acti
 
 ### Off-policy traces: Watkins's Q(λ) {#watkins}
 
-Traces combine less easily with off-policy learning. [[q-learning]] learns about the greedy policy while behaving otherwise; a trace that runs back through an exploratory action would credit earlier moves for a future the greedy policy would not have produced. **Watkins's Q(λ)** therefore uses the Q-learning TD error, $\rew{R} + \gam \max_a \val{Q(S', a)} - \val{Q(S, A)}$, and **cuts all traces to zero** whenever the action taken is not greedy. Its traces are short when exploration is frequent, and it loses much of the benefit of traces early in learning. **Peng's Q(λ)** does not cut the traces, at the price of learning something between the values of the behavior and the greedy policies (Peng & Williams, 1996). Later methods (tree backup, Retrace) cut traces gradually, in proportion to how likely the target policy was to take each action.
+Traces combine less easily with off-policy learning. [[q-learning]] learns about the greedy policy while behaving otherwise; a trace that runs back through an exploratory action would credit earlier moves for a future the greedy policy would not have produced. **Watkins's Q(λ)** therefore uses the Q-learning TD error, $\rew{R} + \gam \max_a \val{Q(S', a)} - \val{Q(S, A)}$, and **cuts all traces to zero** whenever the action taken is not greedy. Its traces are short when exploration is frequent, and it loses much of the benefit of traces early in learning. **Peng's Q(λ)** does not cut the traces, at the price of learning something between the values of the behavior and the greedy policies (Peng & Williams, 1996). Later methods cut traces gradually instead of all at once. Tree backup multiplies each step's trace by $\pol{\pi(A \mid S)}$, the target policy's probability of the action taken. Retrace multiplies it by $\lambda \min\big(1, \pol{\pi(A \mid S)} / \pol{b(A \mid S)}\big)$: no cut at all when the behavior took an action the target would take at least as often, a full cut only when the target would never take it. It converges for any behavior policy and keeps traces long when the two policies are close (Munos et al., 2016).
 
 ### True online SARSA(λ) {#true-online}
 
