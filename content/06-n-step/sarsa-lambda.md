@@ -32,7 +32,7 @@ rep = { algorithm = "sarsa-lambda", lambda = 0.9, trace = "replacing", alpha = 0
 **The maze where only the gem pays**, and an agent that knows nothing yet. This time it keeps a trace of **every move it makes**: the move glows, and the glow fades by $\gamma\lambda$ with each step after.
 :::
 
-::: step {run = "lam", at = 0, play = 1, pace = 110, arrows = false}
+::: step {run = "lam", at = 0, play = 1, pace = 150, arrows = false}
 The first episode, with $\lambda = 0.9$: watch the green trail of moves build up behind the agent and fade toward its start. No reward yet, so every TD error is 0 and nothing is learned.
 :::
 

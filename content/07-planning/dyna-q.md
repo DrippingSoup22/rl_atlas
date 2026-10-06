@@ -31,12 +31,8 @@ none = { algorithm = "dyna-q", planning = 0, alpha = 0.1, epsilon = 0.1, gamma =
 **The maze where only the gem pays**, again. Every value starts at 0, and this time the agent also keeps a **notebook**, its model: for every move it has tried, where it led and what it paid.
 :::
 
-::: step {run = "fifty", at = 0, play = 1, pace = 45, arrows = false, fog = true, formula = 1}
-The first episode is a blind search. The fog marks the tiles the notebook knows nothing about; watch it lift as the agent explores. Between real steps it already replays remembered moves, the dashed sparks, but with no reward seen yet they teach nothing.
-:::
-
-::: step {run = "fifty", at = 1, arrows = false, fog = true}
-It found the gem after 120 steps. That last move earned the first real reward, and the 50 imagined moves right after it already passed the news back a few steps: 5 values are now above zero.
+::: step {run = "fifty", at = 1, arrows = false, fog = true, formula = 1}
+**The first episode is a blind search.** The fog marks the tiles the notebook still knows nothing about; it has lifted wherever the agent went. Between real steps the agent already replayed remembered moves, but with no reward seen yet they taught nothing. It found the gem after 120 steps. That last move earned the first real reward, and the 50 imagined moves right after it already passed the news back a few steps: 5 values are now above zero.
 :::
 
 ::: step {run = "fifty", at = 1, play = 1, pace = 140, arrows = false, fog = true, formula = 2}

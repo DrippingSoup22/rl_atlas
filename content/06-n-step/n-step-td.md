@@ -30,16 +30,12 @@ many = { algorithm = "n-step-td", n = 32, alpha = 0.4, gamma = 1.0, units = 20, 
 **Nineteen states in a row** this time, A to S, between an exit that pays $\rew{-1}$ on the left and one that pays $\rew{+1}$ on the right. The walk starts in the middle, at J, and steps left or right at random. The true values, the dashed steps, climb from −0.9 to +0.9. Every estimate starts at 0.
 :::
 
-::: step {run = "one", at = 0, play = 1, pace = 70}
-First, one-step TD, $n = 1$. Watch a whole walk: it wanders for 104 steps before leaving on the right.
-:::
-
 ::: step {run = "one", at = 1}
-All that walking, and **one state** learned something: S, the last one before the exit. Inside the row every target was $0 + 0$, equal to the estimate. A reward has to travel back one state per visit, and nineteen states is a long way.
+First, one-step TD, $n = 1$. The first walk wandered for 104 steps before leaving on the right. All that walking, and **one state** learned something: S, the last one before the exit. Inside the row every target was $0 + 0$, equal to the estimate. A reward has to travel back one state per visit, and nineteen states is a long way.
 :::
 
-::: step {run = "four", at = 0, play = 1, pace = 70, formula = 3, fine = true}
-Now $n = 4$. Each state waits **four steps** before it is updated, and uses the four real rewards it collected on the way, then the estimate of where it got to. The bracket under the row shows the stretch that makes each target.
+::: step {run = "four", at = 0, play = 1, updates = 3, pace = 320, formula = 3, fine = true}
+Now $n = 4$. Each state waits **four steps** before it is updated, and uses the four real rewards it collected on the way, then the estimate of where it got to. Watch the first three updates of the walk: the bracket under the row shows the stretch that makes each target. Inside the row every reward is 0, so nothing moves yet.
 :::
 
 ::: step {run = "four", at = 1, formula = 4, numbers = true}

@@ -31,8 +31,8 @@ mid = { algorithm = "td-lambda", lambda = 0.4, alpha = 0.4, gamma = 1.0, units =
 **The 19-state walk again**, everything at 0. [[n-step-td|n-step TD]] made each state wait $n$ steps to see what followed it. TD(λ) never waits. Instead, the agent keeps a **memory of where it has been**: every state it passes starts to glow, and the glow fades a little with every step.
 :::
 
-::: step {run = "lam", at = 0, play = 1, pace = 70, formula = 2}
-Watch the green glow trail the agent: the **eligibility trace**. With $\lambda = 0.8$, a state's glow fades by a factor 0.8 per step, so it lasts a few steps. Inside the row nothing is learned yet: every TD error is 0.
+::: step {run = "lam", at = 0, play = 1, updates = 12, pace = 260, formula = 2}
+Watch the green glow trail the agent over its first twelve steps: the **eligibility trace**. With $\lambda = 0.8$, a state's glow fades by a factor 0.8 per step, so it lasts a few steps. Inside the row nothing is learned yet: every TD error is 0.
 :::
 
 ::: step {run = "lam", at = 1, formula = 3}
