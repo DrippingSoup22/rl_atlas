@@ -7,7 +7,49 @@ sources = [
   { text = "Munos, Stepleton, Harutyunyan & Bellemare (2016), Safe and efficient off-policy reinforcement learning (Retrace), NeurIPS", url = "https://arxiv.org/abs/1606.02647" },
   { text = "Espeholt et al. (2018), IMPALA: scalable distributed deep-RL with importance weighted actor-learner architectures (V-trace), ICML", url = "https://arxiv.org/abs/1802.01561" },
 ]
+
+[story]
+scene = "grid"
+env = "cliff"
+seed = 4
+average = 20
+formula = '\step{1}{\text{Q-learning: } \rew{R} + \gam \max_a \val{Q(S^\prime\!, a)} \qquad} \step{2}{\text{SARSA: } \rew{R} + \gam\,\val{Q(S^\prime\!, A^\prime)}}'
+
+[story.runs]
+walker = { algorithm = "q-learning", alpha = 0.5, epsilon = 1.0, gamma = 1.0, maxSteps = 100000, units = 50, name = "Q-learning, walking at random" }
+sarsa = { algorithm = "sarsa", alpha = 0.5, epsilon = 0.1, gamma = 1.0, units = 500, seed = 7, name = "SARSA (on-policy)" }
+q = { algorithm = "q-learning", alpha = 0.5, epsilon = 0.1, gamma = 1.0, units = 500, seed = 7, name = "Q-learning (off-policy)" }
 +++
+
+## Story
+
+::: step {run = "walker", at = 0, trail = false}
+**Two policies.** Every learner has a policy that acts, the **behavior** policy, and a policy it learns about, the **target** policy. Here they could not be more different. On the cliff (start at the bottom left, the gem at the bottom right, $\rew{-1}$ a step, $\rew{-100}$ and back to the start for a fall), this agent picks every move at random, and it never stops doing so. What it learns about is the greedy policy: the best move from each tile.
+:::
+
+::: step {run = "walker", at = 1}
+Its first episode lasts 5,010 steps. 409 of them are falls into the cliff, until a random move happens to land on the gem. Nothing in this walk looks like a way to the gem.
+:::
+
+::: step {run = "walker", checkpoints = [2, 5, 10], path = true, arrows = false, trail = false, formula = 1}
+**Q-learning learns from these walks.** Its target is the reward plus the value of the **best** move from the next tile, whatever the walker does next: it asks what the greedy policy would get from there. After 5 episodes, the greedy path runs along the edge of the cliff to the gem in 13 steps, the shortest way. The values count the steps down: about $\val{-13}$ at the start, $\val{-1}$ next to the gem.
+:::
+
+::: step {run = "walker", at = 50, path = true, arrows = false, trail = false}
+The walker never once walked that path. This is **off-policy** learning: the data came from one policy, and the answer is about another. Of 20 runs, 18 have the shortest path after 10 random episodes, and all 20 after 50. Learning from someone else's behavior is what lets an agent reuse old experience, as DQN's replay memory does ([[experience-replay]]), or learn from other agents and from people.
+:::
+
+::: step {run = "sarsa", at = 500, path = true, formula = 2}
+**On-policy** learning could not do this. SARSA's target uses the move the agent will actually make next: fed these random walks, it would learn what walking at random is worth, about $\val{-65{,}000}$ from the start, and nothing about the way to the gem. On-policy pays off when the exploring never stops. With $\eps = 0.1$, as in [[sarsa]], SARSA's values count its own random steps, so they warn it off the edge: its greedy path takes the top row, 17 steps, two rows clear of the cliff.
+:::
+
+::: step {run = "q", at = 500, path = true, formula = 1}
+Q-learning with the same $\eps = 0.1$ and the same seed learns the edge path, 13 steps. It is the better policy, but the agent does not follow it: it still takes a random step one time in ten, and next to the edge a random step down is a fall.
+:::
+
+::: step {run = "q", at = 500, path = true, curves = ["sarsa", "q"], metric = "return", domain = [-100, 0]}
+**What each one earns while it learns**, averaged over 20 runs: over the last 100 episodes, about $\rew{-27}$ per episode for SARSA and $\rew{-52}$ for Q-learning. Off-policy learns the best policy; on-policy learns the best way to behave while still exploring. Which one you want depends on whether the exploring ever stops. [Race them in the Lab](lab:cliff-race).
+:::
 
 ## Textbook
 

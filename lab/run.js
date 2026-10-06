@@ -98,7 +98,7 @@
     }
 
     return {
-      env: shown, algorithm, params: p, units, seed, metrics, every, stopped,
+      env: shown, world, algorithm, params: p, units, seed, metrics, every, stopped,
       // What the algorithm knew at the start of unit t (t = units: at the end), as a fresh copy.
       at(t) {
         if (!snapshots) throw new Error("this run kept no snapshots");

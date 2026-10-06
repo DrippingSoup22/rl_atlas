@@ -11,7 +11,52 @@ sources = [
   { text = "Burda, Edwards, Storkey & Klimov (2019), Exploration by random network distillation, ICLR", url = "https://arxiv.org/abs/1810.12894" },
   { text = "Fortunato et al. (2018), Noisy networks for exploration, ICLR", url = "https://arxiv.org/abs/1706.10295" },
 ]
+
+[story]
+scene = "grid"
+env = "two-gems"
+seed = 3
+average = 40
+
+[story.runs]
+dither = { algorithm = "q-learning", alpha = 0.5, epsilon = 0.1, gamma = 0.95, maxSteps = 500, units = 500, name = "ε-greedy, ε = 0.1" }
+dither3 = { algorithm = "q-learning", alpha = 0.5, epsilon = 0.3, gamma = 0.95, maxSteps = 500, units = 500, name = "ε-greedy, ε = 0.3" }
+optimism = { algorithm = "q-learning", alpha = 0.5, epsilon = 0.0, q0 = 1.0, gamma = 0.95, maxSteps = 500, units = 500, name = "optimistic start, Q = 1" }
 +++
+
+## Story
+
+::: step {run = "dither", at = 0}
+**An agent only learns about what it tries.** The two gems again: a small one two steps from the start pays $\rew{0.3}$, a big one seven steps away pays $\rew{1}$. Even discounted by $\gam = 0.95$ for the walk, the big gem is worth more than twice as much. A Q-learner starts with every value at 0 and has to find that out.
+:::
+
+::: step {run = "dither", at = 1}
+**Exploring by chance.** This learner is ε-greedy: one move in ten at random, the rest the move that looks best. At first every move looks the same, so its first episode is a random walk, 73 steps long, and it happens to end on the big gem. One value learns from it: the last move, into the gem. The news has six more steps to travel back to the start.
+:::
+
+::: step {run = "dither", at = 5, path = true}
+The small gem is two steps from the start, so random walks find it far more often, and its news reaches the start first. Once a move toward it is worth more than 0, the greedy choice takes it nine times in ten. After 5 episodes, the greedy path leads to the small gem.
+:::
+
+::: step {run = "dither", at = 500, path = true}
+**After 500 episodes**, it still does. This run reached the big gem four times, in episodes 1, 3, 34 and 51, each time at the end of a string of random moves, and each visit carried the news a little further back. After 500 episodes, it has traveled two steps from the gem. Of 40 runs, 24 touch the big gem at least once, and none ends up going for it. More randomness hardly helps: with $\eps = 0.3$, 4 of 40 do.
+:::
+
+::: step {run = "optimism", at = 1, arrows = false}
+**Exploring on purpose.** The same learner with no random moves at all, $\eps = 0$, but every value starts at 1, the most any move can be worth here: blue everywhere. A move that has been tried falls toward what it actually earned, so the untried moves look best, and the greedy choice tries them one after another. Its first episode ends at the small gem after 12 steps. Each move it tried dropped a little below 1, and the move into the small gem fell to 0.65: from now on, any move not yet tried looks better.
+:::
+
+::: step {run = "optimism", at = 3, arrows = false}
+The small gem's 0.3 is far less than the 1 promised everywhere else, so the agent keeps looking. In its third episode, after 62 steps through tiles it had not seen, it reaches the big gem. From the seventh episode on, every episode ends there.
+:::
+
+::: step {run = "optimism", at = 200, path = true}
+**After 200 episodes** the values have settled at what the moves are really worth: $\val{0.74}$ at the start, the big gem's 1 discounted for six moves. Since its 110th episode, every episode has taken the seven steps to the big gem. All 40 runs reach the big gem within five episodes, and from the tenth on, every episode of every run ends there.
+:::
+
+::: step {run = "optimism", at = 500, curves = ["dither", "dither3", "optimism"], metric = "return"}
+**The return per episode, averaged over 40 runs.** Random moves spread exploration thinly everywhere, so a discovery several deliberate steps deep needs luck, and the news needs more luck to come back. Optimism sends the agent where it has not been. In a table, “not tried yet” is easy to know; in a large world, the methods below estimate it with counts, prediction errors or uncertainty. [Race them in the Lab](lab:gems-optimism).
+:::
 
 ## Textbook
 

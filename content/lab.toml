@@ -601,6 +601,24 @@ film = [1, 5, 20, 60]
 intro = "Four workers explore copies of the maze at once, all with the same policy. Every n steps, all their experience makes one update. Each step is judged by the rewards of the steps after it, up to the update, and the critic's estimate beyond: the longer the stretch, the sooner the gem's news reaches the start."
 success = { metric = "steps", max = 25, text = "end up reaching the gem in under 25 steps" }
 
+[gems-optimism]
+title = "Exploring by chance or on purpose: two gems"
+env = "two-gems"
+racers = [
+  { algorithm = "q-learning", name = "ε-greedy, ε = 0.1", epsilon = 0.1, q0 = 0.0 },
+  { algorithm = "q-learning", name = "optimistic start, Q = 1", epsilon = 0.0, q0 = 1.0 },
+]
+units = 500
+seed = 3
+alpha = 0.5
+gamma = 0.95
+maxSteps = 500
+charts = ["return"]
+film = [1, 3, 10, 500]
+sweep = { q0 = [0.0, 0.25, 0.5, 1.0, 2.0] }
+intro = "Q-learning on the two gems, twice. One explores by chance: one move in ten at random. The other never moves at random, but starts with every value at 1, the most a move can be worth here, so whatever it has not tried yet looks best. Sweep ε or the starting value to see how often each finds the big gem."
+success = { metric = "return", min = 0.9, text = "end up going for the big gem, 0.9 or more per episode on average" }
+
 [entropy-gems]
 title = "The entropy bonus: two gems"
 env = "two-gems"

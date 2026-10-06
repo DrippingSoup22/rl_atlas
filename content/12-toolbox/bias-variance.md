@@ -8,7 +8,40 @@ sources = [
   { text = "Schulman, Moritz, Levine, Jordan & Abbeel (2016), High-dimensional continuous control using generalized advantage estimation, ICLR", url = "https://arxiv.org/abs/1506.02438" },
   { text = "van Hasselt (2010), Double Q-learning, NeurIPS", url = "https://papers.nips.cc/paper/3964-double-q-learning" },
 ]
+
+[story]
+scene = "chain"
+env = "random-walk"
+seed = 1
+average = 200
+formula = '\step{1}{\text{Monte Carlo: } \val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\rew{G_t} - \val{V(S_t)}\big] \qquad} \step{2}{\text{TD: } \val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\rew{R_{t+1}} + \gam\,\val{V(S_{t+1})} - \val{V(S_t)}\big]}'
+
+[story.runs]
+mc = { algorithm = "mc-prediction", alpha = 0.1, gamma = 1.0, v0 = 0.0, units = 100, measures = ["error"], name = "Monte Carlo" }
+td = { algorithm = "td0", alpha = 0.1, gamma = 1.0, v0 = 0.0, units = 100, measures = ["error"], name = "TD(0)" }
 +++
+
+## Story
+
+::: step {run = "mc", at = 0, seeds = 20, note = "faint: 20 runs · bold: their average · dashed: the true values"}
+**Two ways to be wrong.** The random walk of [[td0]]: five states, a walk that steps left or right at random, $\rew{+1}$ for leaving on the right. The true values are the dashed steps, $\tfrac16$ to $\tfrac56$. Twenty learners estimate them, each from its own walks, and each starts every estimate at 0, well below the truth, so that their errors have room to show. Each faint line is one learner; the bold line is their average.
+:::
+
+::: step {run = "mc", at = 30, seeds = 20, formula = 1, note = "faint: 20 runs · bold: their average · dashed: the true values"}
+**Monte Carlo after 30 walks.** Each estimate moves toward the return that followed the visit, a 0 or a 1 and nothing in between. On average those returns are exactly right, so the average of the 20 learners already sits close to the truth: little **bias**. But each learner moves with its own last few walks, and they scatter: for C, from 0.36 to 0.70. That scatter is **variance**.
+:::
+
+::: step {run = "td", at = 30, seeds = 20, formula = 2, note = "faint: 20 runs · bold: their average · dashed: the true values"}
+**TD(0) after the same 30 walks.** The learners agree with one another far more: for C, from 0.11 to 0.33. But every one of them is below the truth, in every state. A TD target is the next reward plus the neighbor's estimate, and the neighbors still remember the 0 they started from. That is **bias**: averaging more learners would not remove it, because they all lean on the same kind of wrong guess.
+:::
+
+::: step {run = "td", at = 100, seeds = 20, note = "faint: 20 runs · bold: their average · dashed: the true values"}
+**After 100 walks**, TD's bias has nearly gone: as the neighbors' estimates improved, so did the targets built on them. Its learners still agree more closely than Monte Carlo's: their spread around their average is about 0.055, against Monte Carlo's 0.094, which a constant step size never averages away.
+:::
+
+::: step {run = "td", at = 100, seeds = 20, curves = ["mc", "td"], metric = "error", note = "faint: 20 runs · bold: their average · dashed: the true values"}
+**The error, averaged over 200 learners**, counts both kinds. For the first 73 walks Monte Carlo is ahead, because TD's bias, inherited from the starting guesses, costs more than Monte Carlo's scatter. Then TD's bias has faded while Monte Carlo's scatter stays, and TD pulls ahead. Starting from better guesses, as in [[mc-vs-td]], TD leads from the first walks. Every dial in this entry trades the two kinds of error, and the best setting is rarely at either end.
+:::
 
 ## Textbook
 

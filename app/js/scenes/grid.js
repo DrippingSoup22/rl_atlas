@@ -131,7 +131,8 @@
       }
 
       // A step that names a run shows it at a moment (st.at) and can replay some of it (st.play), as in the Lab:
-      // sweeps of dynamic programming, or Monte Carlo episodes walked and then added up backward.
+      // sweeps of dynamic programming, or Monte Carlo episodes walked and then added up backward. With path, the
+      // greedy policy's walk from the start is drawn too.
       function fromRun(st) {
         const r = runOf(st.run), t = Math.min(st.at ?? 0, r.units);
         view.setOptions({ arrows: st.arrows !== false, tiles: st.tiles || (r.algorithm.show(r.at(0), env, r.params).Q ? "q" : "v"), numbers: !!st.values, range: st.range || cfg.range, trail: st.trail !== false, agent: r.algorithm.unit !== "sweep", traces: st.traces !== false, fog: !!st.fog });
@@ -148,8 +149,11 @@
         view.mark(focus < 0 || !st.next ? [] : successors(focus), "next");
         showFormula(st);
         note.textContent = st.note || "";
+        // path: where the greedy policy of the moment walks from the start
+        const greedy = (u) => { if (st.path) view.path(lab.greedyPath(env, r.at(u).Q).path, false); };
+        greedy(t);
         const unit = r.algorithm.unit;
-        if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${unit}${n === 1 ? "" : "s"}` });
+        if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${unit}${n === 1 ? "" : "s"}`, each: greedy });
         else if (st.play) play(view, r, t, st.play, { pace: st.pace || 200, fine: !!st.fine, updates: st.updates, instant: !!st.instant, after: (u) => { if (!st.note) note.textContent = `${u} ${unit}${u === 1 ? "" : "s"} done`; } });
       }
 
