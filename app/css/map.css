@@ -120,6 +120,8 @@
 .metro .edge { fill: none; stroke: var(--c); stroke-width: 3; stroke-linecap: round; opacity: 0.75; transition: stroke-width 0.2s, opacity 0.2s; }
 .metro .edge.hot { stroke-width: 5.5; opacity: 1; }
 .metro.tracing .edge:not(.hot) { opacity: 0.3; }
+/* hovering a station, what it builds on stays lit and the rest steps back */
+.metro.tracing .st:not(.hot):not(.rel):not(.out) { opacity: 0.3; }
 .metro .tree-hub rect { fill: var(--c); }
 .metro .tree-hub text { font: 750 13px var(--font); fill: var(--bg); text-anchor: middle; }
 .metro .tree-hub.hot rect { stroke: var(--c); stroke-width: 6; stroke-opacity: 0.25; }

@@ -9,7 +9,7 @@
   const COL = 178, STEP = 27, FIRST = 50, LEFT = 40, TOP = 96, ROW_GAP = 132;
   const LENSES = {
     map: { name: "Metro", caption: "Every station is one idea, in reading order. Start at the top left: first the problem, then methods that keep a table, then methods that scale." },
-    tree: { name: "Tree", caption: "One tree per line, read from the top. Each station grows from the one it builds on; an algorithm from the algorithm it changes. Hover a station to see the path that leads to it." },
+    tree: { name: "Tree", caption: "One tree per line, read from the top. Each station grows from the one it builds on; an algorithm from the algorithm it changes. Point at a station to light up everything it builds on." },
     unified: { name: "Unified", caption: "Every algorithm, by how far its update looks ahead (down) and whether it samples one outcome or averages over all of them (across)." },
   };
   const cameras = {}; // one camera per view, kept between visits
@@ -466,8 +466,21 @@
       zoomAt(svg.clientWidth / 2, svg.clientHeight / 2, b.dataset.zoom === "in" ? 1.3 : 1 / 1.3);
     }));
 
-    // ---- hover: a station's family, its parent and its children ----
-    // In the tree, the whole path from the line's badge lights up: everything this station builds on.
+    // ---- hover: everything a station builds on ----
+    // Its path up its line's tree, and, for an algorithm whose parent lives in another line, that parent's path too.
+    // In every view those stations stay lit while the rest fade; in the tree their branches light up as well.
+    function lineage(id) {
+      const T = layouts.tree, seen = new Set(), cross = [];
+      const walk = (k) => {
+        for (; T.up.has(k); k = T.up.get(k)) {
+          const p = station(k).parent;
+          if (p && station(p).line !== station(k).line) { cross.push([k, p]); if (!seen.has(p)) { seen.add(p); walk(p); } }
+          if (station(T.up.get(k))) seen.add(T.up.get(k));
+        }
+      };
+      walk(id);
+      return { seen, cross };
+    }
     const curve = (a, b) => `<path d="M${a.x - 9} ${a.y} Q${Math.min(a.x, b.x) - 46 - Math.abs(a.y - b.y) * 0.15} ${(a.y + b.y) / 2} ${b.x - 9} ${b.y}"/>`;
     svg.addEventListener("pointerover", (e) => {
       if (drag?.moved) return;
@@ -475,23 +488,16 @@
       if (!g || g.classList.contains("hot")) return;
       clear();
       g.classList.add("hot");
-      const id = g.dataset.id, pos = L().pos, a = pos.get(id);
-      const family = [station(id).parent, ...algorithms.filter((s) => s.parent === id).map((s) => s.id)].filter((r) => r && pos.has(r));
-      for (const r of family) nodes.get(r)?.classList.add("rel");
-      if (lens === "tree") {
-        const T = layouts.tree;
-        svg.querySelectorAll(`.edge[data-from="${id}"]`).forEach((p) => p.classList.add("hot"));
-        for (let k = id; T.up.has(k); k = T.up.get(k)) {
-          svg.querySelector(`.edge[data-to="${k}"]`)?.classList.add("hot");
-          nodes.get(T.up.get(k))?.classList.add("rel");
-        }
-        svg.querySelector(`.tree-hub[data-line="${station(id).line}"]`)?.classList.add("hot");
-        svg.classList.add("tracing");
-        // A parent from another line has no branch here: a dashed link reaches across to it.
-        links.innerHTML = family.filter((r) => T.up.get(r) !== id && T.up.get(id) !== r).map((r) => curve(a, pos.get(r))).join("");
-        return;
+      const id = g.dataset.id, pos = L().pos, { seen, cross } = lineage(id);
+      for (const r of seen) nodes.get(r)?.classList.add("rel");
+      svg.classList.add("tracing");
+      if (lens !== "tree") return;
+      for (const k of [id, ...seen]) {
+        svg.querySelector(`.edge[data-to="${k}"]`)?.classList.add("hot");
+        svg.querySelector(`.tree-hub[data-line="${station(k).line}"]`)?.classList.add("hot");
       }
-      links.innerHTML = family.map((r) => curve(a, pos.get(r))).join("");
+      // A parent from another line has no branch here: a dashed link reaches across to it.
+      links.innerHTML = cross.map(([k, p]) => curve(pos.get(k), pos.get(p))).join("");
     });
     svg.addEventListener("pointerout", (e) => {
       const g = e.target.closest?.(".st");
