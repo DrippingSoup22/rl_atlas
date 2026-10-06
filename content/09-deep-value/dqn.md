@@ -26,31 +26,31 @@ notarget = { recording = "dqn-cartpole-no-target", name = "without a target netw
 ## Story
 
 ::: step {run = "learn", at = 0, map = "action"}
-**A pole on a cart**, and two moves: push the cart left or right. Every step the pole stays within 12° of upright and the cart on its track pays $\rew{+1}$, for at most 500 steps. The state is four numbers: where the cart is, how fast it moves, the pole's angle and how fast it turns. On the right is a slice of that state space, the cart at rest in the middle: the pole's angle across, its spin up and down. Before any learning, a network of 4,610 random weights gives each push a value. The values are small and mean nothing, but the network does prefer one push in every state, and here it is the same one everywhere: push left.
+**A pole on a cart**, and two moves: push left or push right. Every step the pole stays up pays $\rew{+1}$, for at most 500 steps. The state is four numbers; the map on the right is a slice of them, the pole's angle across and its spin up and down, with the cart at rest. A network gives each push a value. Before any learning the values are noise, and here it pushes left everywhere.
 :::
 
 ::: step {run = "learn", at = 1, formula = 2}
-**5,000 steps later.** ε started at 1, every move random, and has fallen to 0.76. Every step went into the replay memory. After 1,000 steps of play, the network started learning: every 4 steps, one gradient step on a batch of 128 transitions drawn from the memory at random, so 1,000 steps by now. Played greedily, from the same start as every test, the pole now stays up for 87 steps.
+**Play, remember, replay.** The agent acts ε-greedily, at first almost always at random, and keeps every step in a **replay memory**. Every few steps the network learns from a random batch of old steps, not just the latest. After 5,000 steps, played greedily, the pole stays up for 87 steps.
 :::
 
 ::: step {run = "learn", at = 2, formula = 1}
-**After 10,000 steps: 311.** Each target comes from the target network, a copy refreshed every 500 steps, so the values climb in stages: they now run from $-5.3$ to $21.1$. The map has split in two. Where the pole leans or spins to the right, the network pushes right, under it; where it leans left, it pushes left. That is the whole trick of balancing, found from the reward alone.
+**After 10,000 steps: 311.** The map has split in two. Where the pole leans or spins right, push right, under it; where it leans left, push left. That is the whole trick of balancing, found from the reward alone. The targets come from a **frozen copy** of the network, refreshed every 500 steps, so the network chases something that holds still.
 :::
 
 ::: step {run = "learn", at = 10}
-**Then a long plateau.** From block 3 to block 28, the 26 test episodes last between 172 and 353 steps; ε reaches its floor, 0.05, along the way, after 20,000 steps. The pole is no longer the problem. In 23 of those 26 episodes, the cart drifts until it runs off the end of the track. The map shows why: it is a slice with the cart at rest in the middle. The network has learned to keep the pole up, but where the cart is barely matters to it yet. Running off the track costs only the steps that are lost, 200 steps away, and $\gam^{200} \approx 0.13$ makes that hard to see.
+**Then a long plateau.** For most of training the tests last between 170 and 350 steps, and almost always end the same way: the cart drifts off the end of its track. Keeping the pole up pays at once; where the cart is matters only hundreds of steps later, and discounting makes that faint.
 :::
 
 ::: step {run = "learn", at = 30}
-**Block 30, after 150,000 steps: 500 steps**, the most an episode lasts. The values now reach $99.0$, close to the most a state can be worth to this learner. Episodes are cut at 500 steps, but the learner bootstraps through the cut, as it should, so it values a pole that stays up forever: $1 + 0.99 + 0.99^2 + \dots = 100$. The cart still wanders, as far as 2.17 m from the middle, but it now stops short of the end.
+**After 150,000 steps: 500**, the most an episode lasts. The values now approach 100, what a pole that stays up forever is worth with $\gam = 0.99$: $1 + 0.99 + 0.99^2 + \dots = 100$.
 :::
 
 ::: step {run = "learn", at = 40, map = "value"}
-**At the end, block 40:** still 500, with the cart now within 16 cm of the middle the whole time. The highest value on the map is $101.6$, above the 100 that any state can be worth. The max in the target picks up the estimates' noise, and the copy passes it on: on 15 of the 20 seeds, the average of the largest values goes past 100 for some blocks, by up to 29%. A modest overestimation here, a large one on harder games: [[dqn-extensions|Double DQN]] is the cure.
+**At the end**, the highest value on the map is $101.6$, more than any state can be worth. The max in the target picks up the noise of the estimates, and the copy passes it on. Modest here, large on harder games: [[dqn-extensions|Double DQN]] is the cure.
 :::
 
 ::: step {run = "learn", at = 40, curves = ["learn", "noreplay", "notarget"], metric = "return"}
-**Take away either remedy.** Each line averages 20 seeds, trained with the same settings except one. Without replay, each batch is the last 128 steps. The runs still learn, but they wobble: the last block averages 374 steps, and only 7 of the 20 runs end well, averaging 450 or more over their last four blocks. Without a target network, the targets come from the weights being changed: no run of 20 ends well, and the last block averages 140. With both, 16 of the 20 end well, and the last block averages 480.
+**Take away either remedy**, 20 seeds each. Without replay the runs still learn but wobble, and only 7 of 20 end well. Without a target network, none does. With both, 16 of 20. [The runs, in the Lab](lab:dqn-cartpole).
 :::
 
 ## Textbook

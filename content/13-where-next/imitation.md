@@ -31,11 +31,11 @@ dagger = { algorithm = "dagger", gamma = 0.95, judge = 1.0, maxSteps = 100, calm
 :::
 
 ::: step {run = "clone", at = 1, fog = true, formula = 1}
-**The clone learns from it.** It now knows eight tiles, each with the expert's move: right. The fog covers everything else. Where it was shown nothing, it does what a network does: it copies the move of the nearest tile it was shown. But the clone is no expert: one move in ten, it slides to a side. Played with those slides, the expert's own policy still reaches the gem 89% of the time, because it knows how to come back. The clone gets there 49% of the time.
+**The clone learns from it.** It knows eight tiles, each with the expert's move: right. Under the fog, it copies the move of the nearest tile it was shown, as a network would. But the clone is no expert: one move in ten, it slides to a side. Played with those slides, the expert's own policy still reaches the gem 89% of the time, because it knows how to come back. The clone, 49%.
 :::
 
 ::: step {run = "dagger", at = 1, play = 1, pace = 320, fog = true}
-**Here is the clone on the ice.** Two tiles in, it slides down onto the lower row, onto a tile no demonstration ever showed. The nearest tile it knows says right, so right it goes, along the edge, six tiles, and off the end into the water. Each step takes it further from anything it was shown. More demonstrations would not help: they all walk the middle row. After twenty of them, the clone still knows eight tiles, and still reaches the gem 49% of the time.
+**Here is the clone on the ice.** Two tiles in, it slides onto the lower row, a tile no demonstration ever showed. The nearest tile it knows says right, so right it goes, along the edge and off the end into the water. More demonstrations would not help: they all walk the middle row, and none shows a recovery.
 :::
 
 ::: step {run = "dagger", at = 2, fog = true, formula = 2}

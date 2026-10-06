@@ -40,7 +40,7 @@ After 200 rounds, 97% of the policy at the start points right or down, toward th
 :::
 
 ::: step {run = "big", at = 200, curves = ["mean"], metric = "return"}
-**The average of 40 seeds** climbs smoothly to $\rew{0.66}$. No run behaves like that. Of the 40 runs behind the line, 18 end below $\rew{0.4}$, on the small gem, and 18 above $\rew{0.9}$, on the big one; the last 4 are still switching. No run ends between $\rew{0.42}$ and $\rew{0.79}$, the band the average lands in. When outcomes split, the average describes none of them. Count them instead: here, 18 of 40 runs go for the big gem. [See ten seeds side by side in the Lab](lab:seeds-gems).
+**The average of 40 seeds** climbs smoothly to $\rew{0.66}$. No run behaves like that: 18 end on the small gem, below $\rew{0.4}$, 18 on the big one, above $\rew{0.9}$, and none in between, where the average lands. When outcomes split, the average describes none of them. Count them instead: 18 of 40 runs go for the big gem. [Ten seeds side by side, in the Lab](lab:seeds-gems).
 :::
 
 ## Textbook

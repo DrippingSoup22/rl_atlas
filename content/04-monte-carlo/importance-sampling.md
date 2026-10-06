@@ -26,7 +26,7 @@ wt = { rule = "weighted", label = "weighted" }
 ## Story
 
 ::: step {upto = 1, mark = 1, rules = ["ord"], formula = 1}
-**One state, two moves.** Going left, you come back to the same state nine times in ten, and one time in ten you leave with $\rew{+1}$. Going right, you leave with nothing. We want the value of the policy that always goes left: 1, sooner or later. But the episodes we get come from another policy, which picks each move half the time. The first one went left, then out with $\rew{+1}$. That episode is twice as likely under the policy we care about as under the one that played it, so it counts double: $\rho = 1 / \tfrac12 = 2$, and the sample is $\rho\,\rew G = 2$.
+**One state, two moves.** Left returns to the same state nine times in ten, and one time in ten leaves with $\rew{+1}$; right leaves with nothing. We want the value of always going left: 1, sooner or later. But the episodes come from another policy, which picks each move half the time. The first went left and out with $\rew{+1}$: twice as likely under the policy we care about, so it counts double, $\rho = 2$.
 :::
 
 ::: step {upto = 12, mark = 12, rules = ["ord", "wt"], formula = 2}
@@ -42,7 +42,7 @@ wt = { rule = "weighted", label = "weighted" }
 :::
 
 ::: step {upto = 1000, rules = ["ord", "wt"]}
-**After 1,000 episodes, the ordinary estimate says 0.80,** still sinking back from that one episode. On average it is exactly right: the expectation of $\rho\,\rew G$ is the target policy's value, 1. But episodes with ever longer runs to the left are ever rarer and ever heavier, and their spread is infinite: the estimate never settles. The weighted estimate is biased, its first answer is just one episode's return, but its spread is bounded, and here it is exactly right. That is why off-policy Monte Carlo methods prefer it ([[off-policy-mc]]).
+**After 1,000 episodes, the ordinary estimate says 0.80**, still sinking back from that one episode. On average it is exactly right, but ever longer runs to the left are ever rarer and ever heavier, and it never settles. The weighted estimate is biased, its first answer is one episode's return, but its spread is bounded, and here it is exactly right. That is why off-policy Monte Carlo prefers it ([[off-policy-mc]]).
 :::
 
 ## Textbook

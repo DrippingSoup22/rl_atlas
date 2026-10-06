@@ -35,15 +35,15 @@ free = { algorithm = "ppo", clip = 0.0, alpha = 0.3, alphaW = 0.1, workers = 4, 
 :::
 
 ::: step {run = "clip", at = 1, formula = 2}
-Round 1: episodes of 903, 726, 344 and 100 steps, 2073 moves in all, judged by GAE advantages ([[gae]]). In each pass, every move nudges the policy: toward its action if its advantage is positive, away if negative. The **ratio** $r$ tracks how much more, or less, likely the policy now makes each move than when it was collected.
+**Round 1:** four long episodes, 2073 moves in all, judged by GAE advantages ([[gae]]). In each pass, every move nudges the policy: toward its action if its advantage is positive, away if negative. The **ratio** $r$ tracks how much more, or less, likely the policy now makes each move than when it was collected.
 :::
 
 ::: step {run = "clip", at = 1, formula = 1, numbers = "clip"}
-The clip: once a move's ratio has left the band $1 \pm \epsilon$, $\epsilon = 0.2$, in the direction its advantage favors, that move stops pushing. In the first pass 7% of the moves are already past the band and are left alone; by the tenth, 32%. After ten passes the policy is 0.051 (in average KL) from the one that collected the data: a trust region, without the second-order mathematics.
+**The clip:** once a move's ratio has left the band $1 \pm \epsilon$, with $\epsilon = 0.2$, in the direction its advantage favors, that move stops pushing. In the first pass 7% of the moves are already past the band; by the tenth, 32%. After ten passes the policy has moved only a little (KL 0.05): a trust region, without the second-order mathematics.
 :::
 
 ::: step {run = "free", at = 1, formula = 1, numbers = "free"}
-The same round and the same ten passes, **without the clip**. Every pass pushes the same lucky moves further, and the policy drifts away from the one the advantages were measured for: KL 0.11 after one pass, 1.08 after ten, twenty times further than with the clip.
+**The same round and the same ten passes, without the clip.** Every pass pushes the same lucky moves further, and the policy drifts away from the one the advantages were measured for: twenty times further after ten passes (KL 1.08).
 :::
 
 ::: step {run = "free", at = 2}
@@ -51,7 +51,7 @@ Round 2 is worse, not better: three of the four episodes run 860 steps or more. 
 :::
 
 ::: step {run = "free", at = 40, values = true}
-After 40 rounds, the four workers bounce between the start and the tile to its right, 500 times each way: right from the start, left from the next tile, both practically certain. The policy overfit one batch and collapsed into a loop it cannot learn its way out of. Not every run without the clip ends this way: over 40 seeds, 6 collapsed, against 1 with the clip. The drift behind it is the rule, though: on average the first round moves the policy 13 times further without the clip, KL 0.88 against 0.07.
+**After 40 rounds** the four workers bounce between the start and the tile to its right, 500 times each way, both moves practically certain. The policy overfit one batch and collapsed into a loop it cannot learn its way out of. Not every run without the clip ends like this, 6 of 40 did, but the drift behind it is the rule.
 :::
 
 ::: step {run = "clip", at = 40, values = true}
@@ -59,7 +59,7 @@ With the clip, the same 40 rounds end at 15 steps per episode; the shortest path
 :::
 
 ::: step {run = "clip", at = 40, curves = ["clip", "free"], metric = "steps"}
-Averaged over 12 runs: with the clip, 21 steps per episode after 10 rounds, and every run ends between 14 and 17. Without it, learning is slower and less reliable: 99 steps per episode after 10 rounds, and the run above never recovers. [Race them in the Lab](lab:ppo-maze).
+**Averaged over 12 runs:** with the clip, every run ends between 14 and 17 steps per episode. Without it, learning is slower and less reliable. [Race them in the Lab](lab:ppo-maze).
 :::
 
 ## Textbook

@@ -25,7 +25,7 @@ still = { algorithm = "dpg", alpha = 1.0, alphaW = 0.2, noise = 0.0, gamma = 1.0
 ## Story
 
 ::: step {run = "learn", at = 0}
-**An aim, not a bell.** The throw of [[policy-parameterization]]: one decision per episode, the angle, and the ball flies $40 \sin 2a$ meters, give or take a couple of meters of wind; 40 m at best, at 45°. There, the policy was a bell over angles, and it learned from how each random draw turned out. A **deterministic** policy is just its aim, $\pol{\mu} = 20°$ here: one angle, nothing drawn. On its own it would throw at 20° forever. To learn which way is better, it needs a critic.
+**An aim, not a bell.** The throw of [[policy-parameterization]]: one angle per episode, best at 45°. There the policy was a bell over angles, learning from how each random draw turned out. A **deterministic** policy is just its aim, $\pol{\mu} = 20°$ here: one angle, nothing drawn. On its own it would throw at 20° forever. To learn which way is better, it needs a critic.
 :::
 
 ::: step {run = "learn", at = 0, play = 6, pace = 300, formula = 1}
@@ -33,7 +33,7 @@ still = { algorithm = "dpg", alpha = 1.0, alphaW = 0.2, noise = 0.0, gamma = 1.0
 :::
 
 ::: step {run = "learn", at = 10, recent = 10}
-**After 10 throws**, all between 10° and 34°, the critic has a shape where they landed: it rises to the right, from 7 m at 0° to 31 m at the aim. Beyond them it knows little: it says 20 m at 45°, where a throw flies 40, and nearly 0 above 70°. It does not need to be right there. The actor will only ask it about the angle it aims at.
+**After 10 throws**, all between 10° and 34°, the critic has a shape where they landed: it rises to the right. Beyond them it knows little, saying 20 m at 45°, where a throw flies 40. It does not need to be right there: the actor will only ask it about the angle it aims at.
 :::
 
 ::: step {run = "learn", at = 10, recent = 10, formula = 2}
@@ -45,7 +45,7 @@ As the aim climbs, the throws follow it, and the critic learns the curve where t
 :::
 
 ::: step {run = "learn", at = 300, recent = 20}
-**At the top the slope is flat**, and the aim stays near 45°: 45.3° after 300 throws, nudged a degree or two either way as the wind jostles the critic. The critic is right where it was asked, 40.3 m at 45°, and rough where it was not: 5.8 m at 0°, where a throw goes nowhere. Of 100 runs, every one ends between 43° and 49°.
+**At the top the slope is flat**, and the aim stays near 45°, nudged a degree or two either way as the wind jostles the critic. The critic is right where it was asked and rough where it was not. Of 100 runs, every one ends between 43° and 49°.
 :::
 
 ::: step {run = "still", at = 50, recent = 20}

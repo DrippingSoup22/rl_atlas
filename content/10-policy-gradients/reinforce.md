@@ -36,7 +36,7 @@ The first episode: 29 steps. Eighteen of them bump into the wall of cell 1; then
 :::
 
 ::: step {run = "learn", at = 1}
-Then 29 updates, one per step. Every return is negative, so every action taken becomes a little *less* likely. Each left step raises the chance of right a little; each right step lowers it more, $(1 - p)/p = 19$ times more for the same return, because it was the rarer action. The balance after this episode: from 5.000% to 5.011%. The step size is tiny, $\alp = 2^{-13}$, for a reason the end of this story shows.
+Then 29 updates, one per step. Every return is negative, so every action taken becomes a little *less* likely; the rarer right steps lose more per step, and the balance tips: from 5.000% to 5.011%. The step size is tiny, $\alp = 2^{-13}$, for a reason the end of this story shows.
 :::
 
 ::: step {run = "learn", checkpoints = [2, 3, 4, 5]}
@@ -60,11 +60,11 @@ Its 12th episode is long: 426 steps, 404 of them left. The updates go back over 
 :::
 
 ::: step {run = "thrown", at = 20}
-Now it steps right in every cell, and from cell 2 that leads back to cell 1: it never reaches the goal, and every episode is cut after 1000 steps. It is stuck for good. Each update is scaled by the chance of the actions *not* taken, now almost zero, so nothing moves: out there the landscape is flat. Such a throw is rare: over 400 runs of 1000 episodes, 8 ended thrown off like this with $\alp = 2^{-12}$, and 3 with $\alp = 2^{-13}$. A bigger step makes it likelier, not certain.
+Now it steps right in every cell, and from cell 2 that leads back to cell 1: it never reaches the goal again. It is stuck for good. Each update is scaled by the chance of the actions *not* taken, now almost zero, so nothing moves: out here the landscape is flat. Such a throw is rare, a few runs in a hundred, but a bigger step makes it likelier.
 :::
 
 ::: step {run = "learn", at = 1000, curves = ["a12", "a13", "a14"], metric = "steps"}
-Averaged over 100 runs. With $\alp = 2^{-12}$, three runs out of 100 were thrown off like this one, all within their first 20 episodes, and their 1000-step episodes keep the average above 40 steps for good. With $2^{-13}$ the average ends near 12 steps, close to the best 11.7; $2^{-14}$ is safe but slower. [Try the step sizes in the Lab](lab:corridor-reinforce).
+**Averaged over 100 runs.** With $\alp = 2^{-12}$, the runs thrown off like this keep the average high for good. With $2^{-13}$ it ends near 12 steps, close to the best 11.7; $2^{-14}$ is safe but slower. [Try the step sizes in the Lab](lab:corridor-reinforce).
 :::
 
 ## Textbook

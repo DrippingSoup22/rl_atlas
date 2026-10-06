@@ -24,11 +24,11 @@ td3 = { recording = "td3-pendulum", name = "TD3" }
 ## Story
 
 ::: step {run = "learn", at = 0, map = "action"}
-**Random on purpose.** SAC's actor does not name one torque: for each angle and spin it gives a mean and a spread, and the agent draws its torque from them. It is also paid for staying random: each step's reward comes with a bonus of $\alpha$ times the policy's entropy there. Before learning, the spread along the test states is 1.75, on a range of −2 to 2: very wide. The map shows the mean; the test episodes are played with the mean, without drawing.
+**Random on purpose.** SAC's actor does not name one torque: for each angle and spin it gives a mean and a spread, and the torque is drawn from them. It is also paid for staying random: each reward comes with a bonus of $\alpha$ times the policy's entropy. Before learning, the spread is very wide. The map shows the mean, which is what the test episodes play.
 :::
 
 ::: step {run = "learn", at = 3, formula = 1}
-**Soft values.** Two critics, as in [[td3]], learn the reward to come *plus* the entropy to come. In the target, formula (1), the next action is drawn from the current policy, and its surprise, $-\ln\pol\pi$, adds to the value. After 4,500 steps the test still fails, at −1,132. But the entropy weight has already moved on its own, from 0.2 to 0.073: the policy is more random than it needs to be, so the bonus shrinks.
+**Soft values.** Two critics, as in [[td3]], learn the reward to come *plus* the entropy to come (formula 1). After 4,500 steps the test still fails. But the entropy weight has already moved on its own, from 0.2 to 0.07: the policy is more random than it needs to be, so the bonus shrinks.
 :::
 
 ::: step {run = "learn", at = 4, map = "action"}
@@ -36,11 +36,11 @@ td3 = { recording = "td3-pendulum", name = "TD3" }
 :::
 
 ::: step {run = "learn", at = 40, formula = 2}
-**The entropy weight tunes itself,** formula (2): it rises when the policy's entropy falls below a target, here $\bar{\mathcal H} = -1$, one per action dimension, and falls when the entropy is above it. By block 40, $\alpha = 0.0005$, and the spread along the test is 0.26. Where it stays random tells what matters: 0.30 near the top, where any small torque will hold the pendulum, and 0.11 during the swing, where the torque must be right. Along the tests of blocks 11 to 40, the critic's estimate is, on average, within 1 of the return that actually followed.
+**The entropy weight tunes itself** (formula 2): it rises when the policy is less random than a target, and falls when it is more. By the end, $\alpha$ is tiny and the policy narrow, but not evenly: it stays widest near the top, where any small torque holds the pendulum, and narrowest during the swing, where the torque must be right.
 :::
 
 ::: step {run = "learn", at = 40, curves = ["ddpg", "td3", "learn"], metric = "test"}
-**Three methods, 20 seeds each.** All three swing the pendulum up on every seed. SAC is nearly as quick as DDPG, without its overestimation; at the end its tests are the tightest: every seed's last four tests average between −121 and −128. [Try it in the Lab](lab:sac-pendulum).
+**Three methods, 20 seeds each.** All three swing the pendulum up on every seed. SAC is nearly as quick as DDPG, without its overestimation, and its final tests are the tightest. [Try it in the Lab](lab:sac-pendulum).
 :::
 
 ## Textbook

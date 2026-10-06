@@ -29,19 +29,19 @@ prio = { recording = "prioritized-dqn-cartpole", name = "prioritized replay" }
 ## Story
 
 ::: step {run = "double", at = 20, formula = 1}
-**One change in the target.** DQN's target takes the largest of the target network's values at the next state. If those values are noisy, the largest one is usually one that was overestimated, so the max picks up the noise ([[double-q]]). Double DQN splits the job between its two networks. The online network, the one being trained, chooses the next action; the target network says what that action is worth. The two err in different ways, so a choice that the online network overrated is valued more soberly by the copy. Here is Double DQN at block 20: its test episode lasts 343 steps, and its values reach 95.3.
+**One change in the target.** A max over noisy values usually picks one that was overestimated ([[double-q]]). Double DQN splits the job: the network being trained chooses the next action, and the target network says what it is worth. The two err differently, so an overrated choice gets a soberer price. Here at block 20, its pole stays up for 343 steps.
 :::
 
 ::: step {run = "double", at = 40, curves = ["dqn", "double"], metric = "q"}
-**The largest value in each batch**, averaged over 20 seeds. A state here is worth at most $1 / (1 - \gam) = 100$ to a learner that bootstraps through the time limit. DQN's average passes it at block 39 and ends at 101; Double DQN's peaks at 97. Seed by seed, DQN's estimates went past 100 on 15 of its 20 seeds, in 86 blocks in all and up to 129; Double DQN's on 7 seeds, in 28 blocks, up to 104. With 20 seeds, a difference of 15 against 7 is unlikely to be luck (Fisher's exact test: 2.5%; [[seeds]]). The two learn about as fast: half the seeds first averaged 450 steps per training episode by block 21 for Double DQN, by block 23 for DQN, and each ends well on 16 seeds of 20.
+**The largest value in each batch**, 20 seeds each. No state here is worth more than 100. DQN's estimates went past it on 15 seeds, by up to 29%; Double DQN's on 7, by at most 4%. Otherwise the two are alike: they learn as fast, and 16 runs of 20 end well for each.
 :::
 
 ::: step {run = "prio", at = 20, curves = ["dqn", "prio"], metric = "return"}
-**Prioritized replay** draws a transition more often the larger its last TD error: the memory's surprises, as prioritized sweeping did for a model. It does speed learning up. Every seed's training episodes reach 450 steps by block 28, where DQN's take until block 37, and the run shown here already balances its test episode for 500 steps at block 20. But it does not hold: only 8 of 20 seeds end well, against DQN's 16, and averaged over the 20 seeds the last block is at 405 steps against DQN's 480. That gap is unlikely to be luck (2.3%). The memory is sampled away from the uniform mix that replay was there to provide, and the importance weights only partly correct for it.
+**Prioritized replay** replays surprises more often: steps with a large TD error, as [[prioritized-sweeping]] did with a model. It learns faster, every seed reaching 450 steps by block 28 against DQN's 37. But it does not hold: only 8 of 20 runs end well, against 16. Sampling away from the uniform mix undoes part of what replay was for.
 :::
 
 ::: step {run = "dueling", at = 40, curves = ["dqn", "double", "dueling", "prio"], metric = "return"}
-**All four**, 20 seeds each. A dueling network learns a state's value and each action's advantage in two separate streams. That pays when most actions are worth about the same, as in the many Atari states where most of the 18 joystick moves change nothing. CartPole has two actions, and the wrong one always matters. Here the split brings no benefit: 11 of 20 runs end well, against DQN's 16, though with 20 seeds that gap could still be luck (18%). Its estimates went past 100 on 12 seeds, up to 124. An extension answers a particular weakness. Where that weakness is absent, it costs without paying.
+**Dueling heads** learn a state's value and each action's advantage separately, a gain where most actions do the same, as in many Atari states. CartPole has two actions and the wrong one always matters, so here the split only costs: 11 runs of 20 end well. An extension answers one weakness; where that weakness is absent, it costs without paying.
 :::
 
 ## Textbook

@@ -23,23 +23,23 @@ none = { recording = "dqn-cartpole-no-replay", name = "no replay" }
 ## Story
 
 ::: step {run = "none", at = 0, formula = 1}
-**The same DQN, with a memory of 128 steps.** Same pole, same seed, same network and settings as the [[dqn]] story, but the memory now holds exactly one batch: every 4 steps, the network takes a gradient step on the last 128 transitions, nothing older. Each transition is still used in 32 batches before it drops out, as many times as with a memory of 10,000. What changes is only what it is mixed with: 128 consecutive steps of a single stretch of play.
+**The same DQN, with a memory of 128 steps**: exactly one batch. Every 4 steps the network learns from the last 128 transitions, nothing older. Each transition is still used as many times as before; what changes is what it is mixed with: 128 consecutive moments of a single stretch of play.
 :::
 
 ::: step {run = "none", checkpoints = [12, 13, 14], hold = 2200}
-**It learns, and unlearns.** Block by block, the training episodes swing: 34 steps on average in block 11, 207 in block 12, 28 in block 13, 247 in block 14. The test episodes after blocks 12, 13 and 14 last 103, 459 and 148 steps. Each stretch of batches pulls the whole network toward the states it has just been in. With the memory of 10,000 steps, the same seed's training episodes stayed between 206 and 242 steps over the same blocks.
+**It learns, and unlearns.** The training episodes swing from block to block: 34 steps on average, then 207, then 28, then 247. Each stretch of batches pulls the whole network toward the states it has just been in, and away from everything else. With the memory of 10,000, the same seed stayed between 206 and 242.
 :::
 
 ::: step {run = "none", at = 39}
-**Block 39: it has it.** The test episode lasts the full 500 steps, the cart never more than 10 cm from the middle, and the training episodes have averaged 500 steps for four blocks in a row. Nothing on the map looks wrong.
+**Block 39: it has it.** The test episode lasts the full 500 steps, the cart never more than 10 cm from the middle. Nothing on the map looks wrong.
 :::
 
 ::: step {run = "none", at = 40}
-**5,000 steps later, it has lost it.** The test episode lets the cart drift 1.93 m to the left, and the pole falls after 234 steps; the training episodes of this last block average 161. While the pole stays up, the last 128 steps are 128 moments of the same balanced episode, a few seconds of nearly identical states. A network trained only on those has no reason to keep what it knew about the rest.
+**5,000 steps later, it has lost it.** The cart drifts 1.93 m and the pole falls after 234 steps. While the pole stays up, the last 128 steps are 128 moments of the same balanced episode, nearly identical states. A network trained only on those has no reason to keep what it knew about the rest.
 :::
 
 ::: step {run = "replay", at = 40, formula = 2, curves = ["replay", "none"], metric = "return"}
-**Twenty seeds each.** Without replay, 19 of the 20 runs average 450 steps per training episode in some block, but only 7 still do over their last four blocks, and the last block averages 374. With a memory of 10,000 steps, each batch mixes moments of about 20 episodes: all 20 runs get there, 16 stay, and the last block averages 480. A much larger memory is not better: the textbook below and the [Lab](lab:dqn-replay) show how the odds move with its size.
+**Twenty seeds each.** Without replay, almost every run balances the pole at some point, but only 7 of 20 still do at the end. With a memory of 10,000 steps, each batch mixes moments from about 20 episodes, and 16 of 20 hold on. Bigger is not always better: [the Lab](lab:dqn-replay) shows how the odds move with the size of the memory.
 :::
 
 ## Textbook

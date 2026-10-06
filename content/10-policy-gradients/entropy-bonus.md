@@ -53,7 +53,7 @@ Around round 100 the big gem starts to win: its advantage, larger each time it i
 :::
 
 ::: step {run = "bonus", at = 200, curves = ["greedy", "bonus"], metric = "return"}
-Averaged over 20 runs: without the bonus, every run settles on the small gem, $\rew{0.30}$ per episode. With $\beta = 0.1$, 18 runs go for the big one after 200 rounds and the last two get there by round 240: $\rew{0.91}$ per episode after 200 rounds. [Change β in the Lab](lab:entropy-gems).
+**Averaged over 20 runs:** without the bonus, every run settles on the small gem. With $\beta = 0.1$, every run finds the big one, most within 200 rounds. [Change β in the Lab](lab:entropy-gems).
 :::
 
 ## Textbook

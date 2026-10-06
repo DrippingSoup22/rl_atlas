@@ -25,7 +25,7 @@ high = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta 
 ## Story
 
 ::: step {run = "low", at = 200, values = true}
-**One knob, three values.** A small gem two steps from the start pays 0.3; a big one seven steps away pays 1. Four A2C workers learn a policy here, and the only knob that changes is β, the weight of the entropy bonus ([[entropy-bonus]]). With **β = 0** there is no bonus. The first gem the policy finds is the small one, and it learns to go there and stop looking. Over its last 20 rounds, its episodes take 2 steps and earn $\rew{0.3}$. Of the 40 runs averaged at the end of this story, none ends up going for the big gem.
+**One knob, three values.** A small gem two steps from the start pays 0.3; a big one seven steps away pays 1. Four A2C workers learn a policy, and the only knob that changes is β, the weight of the entropy bonus ([[entropy-bonus]]). With **β = 0**, the first gem found is the small one, and the policy learns to go there and stop looking: 2 steps, $\rew{0.3}$ an episode. None of 40 runs ends up at the big gem.
 :::
 
 ::: step {run = "right", at = 200, values = true}
@@ -37,7 +37,7 @@ high = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta 
 :::
 
 ::: step {run = "right", at = 200, curves = ["low", "right", "high"], metric = "return"}
-**The average of 40 runs per value.** Too little bonus and the policy commits too early; too much and it never commits. Between them is a narrow band: at β = 0.05, 18 of 40 runs go for the big gem, and at β = 0.2 none does, for $\rew{0.82}$ per episode. That shape, failure on both sides of a sweet spot, is the rule for knobs in reinforcement learning, not the exception. The Lab's sweep draws it for any knob of any preset.
+**The average of 40 runs per value.** Too little bonus and the policy commits too early; too much and it never commits. In between is a narrow band. That shape, failure on both sides of a sweet spot, is the rule for knobs in reinforcement learning, not the exception. The Lab's sweep draws it for any knob of any preset.
 :::
 
 ## Textbook

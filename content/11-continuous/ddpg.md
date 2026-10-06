@@ -22,23 +22,23 @@ learn = { recording = "ddpg-pendulum", name = "DDPG" }
 ## Story
 
 ::: step {run = "learn", at = 0, map = "action"}
-**A pendulum, and a motor too weak to lift it.** Gymnasium's Pendulum: the torque goes from −2 to 2, and from more than about 25° away from the top, gravity pulls harder than the motor can push. To get up, the pendulum has to swing. Every step costs its angle from upright, its spin and a little of the torque, so 0 is the best a step can do. The map shows the **actor**: for each angle and spin, the torque it would apply. Before learning, its torques are small and arbitrary: half a unit on average, and nowhere at the limit.
+**A pendulum, and a motor too weak to lift it.** The torque goes from −2 to 2; far from the top, gravity wins, so the pendulum has to swing up. Every step costs its distance from upright, its spin and a little torque: 0 is the best a step can do. The map shows the **actor**: for each angle and spin, the torque it would apply. Before learning, those torques are small and arbitrary.
 :::
 
 ::: step {run = "learn", at = 2, formula = 1}
-**A critic learns what each torque is worth,** from batches of 128 transitions replayed from memory. Its targets, formula (1), come from slow copies of both networks: the copy of the actor picks the next torque, the copy of the critic values it. The first 1,000 steps are random torques, to fill the memory. After 3,000 steps the test episode, which always starts 63° from the top, swings back and forth seven times and ends near the bottom, at −842.
+**A critic learns what each torque is worth**, from batches replayed from memory, with targets from slow copies of both networks (formula 1). After 3,000 steps the test episode still swings back and forth and ends near the bottom, at −842.
 :::
 
 ::: step {run = "learn", at = 3, map = "action", formula = 2}
-**The actor follows the critic's slope,** formula (2): at each state it nudges its torque in the direction the critic says the value rises. After 4,500 steps the test changes completely: one swing back, upright by step 35, and held there to the end, at −131. The map shows the plan. Below the horizontal, the torque follows the spin in 81% of the states, pumping energy into the swing. Near the top it pushes against the lean in 94%.
+**The actor follows the critic's slope** (formula 2): in each state it nudges its torque the way the critic says the value rises. After 4,500 steps the test changes completely: one swing back, upright by step 35, held to the end. The map shows the plan: below the horizontal, push with the spin to pump the swing; near the top, push against the lean.
 :::
 
 ::: step {run = "learn", at = 40, map = "value"}
-**The critic after 60,000 steps.** Its values range from −224 to **+30**. A positive value is impossible here: every step costs something, so no state can be worth more than 0. DDPG's critic overestimates, and the actor, following its slope, goes wherever it is most wrong. This run still holds the pendulum up, at −138, but chatters: in its last test the torque is at its limit in 80% of the steps. [[td3]] attacks the overestimation.
+**The critic after 60,000 steps** rates some states at **+30**, though every step costs something and no state can be worth more than 0. DDPG's critic overestimates, and the actor, following its slope, goes where it is most wrong. Here the pendulum still holds; [[td3]] attacks the overestimation.
 :::
 
 ::: step {run = "learn", at = 40, curves = ["learn"], metric = "test"}
-**Twenty seeds.** The test return after each block, averaged over the 20 seeds the recording trained. Every seed swings the pendulum up: its first test at −250 or better comes after 3 to 6 blocks (4,500 to 9,000 steps), and its last four tests average between −121 and −132. [Play it in the Lab](lab:ddpg-pendulum).
+**Twenty seeds**, the test return after each block. Every seed swings the pendulum up within 4,500 to 9,000 steps and holds it to the end. [Play it in the Lab](lab:ddpg-pendulum).
 :::
 
 ## Textbook

@@ -65,7 +65,7 @@ After 500 episodes: worth $\rew{-15.2}$ per episode. The most likely path, now f
 :::
 
 ::: step {run = "learn", at = 500, curves = ["ac", "mc"], metric = "steps"}
-Averaged over 30 runs: the actor–critic needs 16 steps per episode after 200 episodes. [[baseline|REINFORCE with baseline]], which waits for whole returns, drowns in them: the first episodes cost thousands, and with a step size of 0.001, 29 runs of 30 get stuck. Even with 0.0001 it still takes 565 steps per episode after 300 episodes, and half its runs still hit the 1000-step limit. [Watch the critic and the actor in the Lab](lab:cliff-actor-critic).
+**Averaged over 30 runs:** the actor–critic needs 16 steps per episode after 200 episodes. [[baseline|REINFORCE with baseline]], which waits for whole returns, drowns in them: the first episodes cost thousands, and most of its runs are still stuck at the 1000-step limit long after the actor–critic has learned. [Watch the critic and the actor in the Lab](lab:cliff-actor-critic).
 :::
 
 ## Textbook

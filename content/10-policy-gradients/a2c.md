@@ -36,7 +36,7 @@ All four step at the same time, each its own way. Every $n = 5$ steps the worker
 :::
 
 ::: step {run = "learn", at = 0, play = 1, updates = 10, instant = true, formula = 2}
-The next seven updates go the same way. Then, at step 47, the first worker steps into the goal. In the tenth update its last two steps get positive advantages: the step up into the goal $\err{+1}$, and the one before it, a bump into the right wall, $\err{+0.95}$. The $n$-step return credits every step of the stretch, useful or not; later updates will sort them out. Up, from the tile below the goal, goes from 25% to 36% by the end of the round.
+The next seven updates go the same way. Then the first worker steps into the goal, and the tenth update gives its last steps positive advantages: the step up into the goal, and the one before it, a bump into the wall. The $n$-step return credits every step of the stretch, useful or not; later updates sort them out. Up, below the goal, is already likelier: 36% instead of 25%.
 :::
 
 ::: step {run = "learn", at = 1, trail = false}

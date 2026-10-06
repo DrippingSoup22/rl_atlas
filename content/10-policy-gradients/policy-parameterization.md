@@ -26,7 +26,7 @@ learn = { algorithm = "baseline", alpha = 0.003, alphaW = 0.1, gamma = 1.0, feat
 ## Story
 
 ::: step {run = "learn", at = 0, formula = 1}
-**A throw.** One decision per episode: the angle at which to throw a ball. The ball flies $40 \sin 2a$ meters, 40 m at best, at 45° (the gold curve, which the learner never sees), and the wind adds or takes away a couple of meters. The reward is the distance. An angle is a real number, so there is no list of actions to score one by one. Instead the policy is a **bell curve** over angles, a normal distribution with an aim $\pol{\mu}$ and a spread $\pol{\sigma}$, here 20° and 10°. Each throw is drawn from it, and learning means moving the bell.
+**A throw.** One decision per episode: the angle. The ball flies $40 \sin 2a$ meters, best at 45° (the gold curve, which the learner never sees), plus or minus a little wind, and the reward is the distance. An angle is a real number, so there is no list of actions to score. Instead the policy is a **bell curve** over angles, with an aim $\pol{\mu}$ and a spread $\pol{\sigma}$, here 20° and 10°. Each throw is drawn from it; learning means moving the bell.
 :::
 
 ::: step {run = "learn", at = 0, play = 1, pace = 400}
@@ -42,7 +42,7 @@ The spread learns the same way. For a throw more than one spread from the aim, $
 :::
 
 ::: step {run = "learn", at = 1, play = 7}
-The next throws. The baseline is still far behind, so almost every throw counts as good, even the second, thrown low at 15.9°: the aim follows it down a little, to 21.4°, and the bell narrows, because that throw fell within one spread. But throws above the aim fly farther and pull harder, so on balance the aim climbs. The eighth, 9.7° for 14.5 m, is the first worse than expected: the aim moves away from it.
+**The next throws.** The baseline is still far behind, so almost every throw counts as good. Throws above the aim fly farther and pull harder, so on balance the aim climbs. The eighth, 9.7° for 14.5 m, is the first worse than expected, and the aim moves away from it.
 :::
 
 ::: step {run = "learn", at = 50}

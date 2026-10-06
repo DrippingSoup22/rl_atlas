@@ -37,7 +37,7 @@ Round 1, with a policy that picks directions at random and a critic that knows n
 :::
 
 ::: step {run = "lam1", at = 1, advantages = true, trail = false, arrows = false}
-**λ = 1**: each move is judged by everything that followed it, the whole rest of its episode, minus the critic's 0. A move early in a 1000-step episode carries the blame for the hundreds of steps after it, down to $\rew{-10\,207}$, whatever it did; moves near the end of an episode look good by comparison. The verdict is honest, but it says more about *when* a move happened than about what it did.
+**λ = 1**: each move is judged by everything that followed it, the whole rest of its episode. A move early in a 1000-step episode carries the blame for the hundreds of steps after it, whatever it did; moves near the end look good by comparison. Honest, but it says more about *when* a move happened than about what it did.
 :::
 
 ::: step {run = "lam9", at = 1, advantages = true, trail = false, arrows = false}

@@ -29,7 +29,7 @@ groups = { algorithm = "gradient-mc", features = "groups", cells = 10, alpha = 0
 :::
 
 ::: step {run = "table", at = 1, formula = 1}
-First, the method of Part 4: [[mc-prediction|Monte Carlo]] with **a table**, one number per state. At the end of a walk, each state it visited moves toward the return, on its own: the thin needle in the strip under the plot is how far the last update moved each state. After this first walk, which left on the right, 114 states moved up. The other 886 still say 0, however close they are to states that have. No state learns anything from its neighbors.
+**First, a table**, one number per state, learned by [[mc-prediction|Monte Carlo]]. At the end of a walk, each state it visited moves toward the return, on its own: the needles in the strip under the plot. After this first walk, 114 states moved up. The other 886 still say 0, however close they are to states that have. No state learns anything from its neighbors.
 :::
 
 ::: step {run = "table", checkpoints = [10, 100]}

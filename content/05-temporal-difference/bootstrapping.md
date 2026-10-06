@@ -38,7 +38,7 @@ formula = '''\step{1}{\text{Monte Carlo: } \val{V(s)} \leftarrow \text{average o
 :::
 
 ::: step {show = 8, mc = true, td = true, link = ["B", "A"], formula = 2}
-**Which is right?** If what happens after B does not depend on how B was reached, the world is Markov, and TD's answer is the better bet: the next visit to A will likely lead to B again, and B pays 1 three times in four. Monte Carlo's 0 rests on one unlucky episode. Run on a batch until they settle, TD finds the values of the most likely model of the data, and Monte Carlo the values that best fit the returns seen. The price of bootstrapping is the other side of the same coin: if B's guess is wrong, A inherits the error.
+**Which is right?** If what happens after B does not depend on how B was reached, the world is Markov, and TD's answer is the better bet: the next visit to A will likely lead to B, and B pays three times in four. Monte Carlo's 0 rests on one unlucky episode. The price of bootstrapping is the other side of the coin: if B's guess is wrong, A inherits the error.
 :::
 
 ## Textbook

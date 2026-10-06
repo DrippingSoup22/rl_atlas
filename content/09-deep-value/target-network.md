@@ -23,31 +23,31 @@ none = { recording = "dqn-cartpole-no-target", name = "no target network" }
 ## Story
 
 ::: step {run = "none", at = 0}
-**The same DQN, one thing taken away.** Same pole, same seed, same network of 4,610 weights, the same memory of 10,000 steps and the same batches of 128 every 4 steps. The only change: the targets are computed with the weights being trained, not with a copy. Before any learning, the values on the map run from 0 to 1.8.
+**The same DQN, one thing taken away.** Same pole, same seed, same network, memory and batches. The only change: the targets are computed with the weights being trained, not with a frozen copy. Before any learning, the values on the map run from 0 to 1.8.
 :::
 
 ::: step {run = "none", at = 1, formula = 1}
-**5,000 steps later**, after 1,000 gradient steps, the values on the map run from 140 to 323. No state here is worth more than 100: one reward per step, discounted by $\gam = 0.99$, adds up to at most $1/(1-\gam)$. Each update raises $\val{\hat q(s, a)}$ toward its target, and $s'$, a fiftieth of a second later, looks almost the same to the network, so its values rise too, and so does the target. The map has lost its shape: the network pushes right everywhere, and the pole falls after 9 steps. With the copy, the same seed at the same moment had values from 1.9 to 9.9 and kept the pole up for 87 steps.
+**5,000 steps later, the values run from 140 to 323**, though no state here is worth more than 100. Each update raises $\val{\hat q(s, a)}$ toward its target; but $s'$, a fiftieth of a second later, looks almost the same to the network, so its values rise too, and with them the target. The network chases its own tail. The pole falls after 9 steps; with the copy, the same seed kept it up for 87.
 :::
 
 ::: step {run = "none", at = 3}
-**And yet, after 15,000 steps, it balances:** the test episode lasts the full 500 steps, with values up to 206. A greedy policy only needs the right *order* of the two pushes in each state, not the right values. Two estimates that are both far too high can still say which push is better.
+**And yet, after 15,000 steps, it balances** for the full 500 steps, with values up to 206. A greedy policy needs only the right *order* of the two pushes in each state: two estimates that are both far too high can still say which push is better.
 :::
 
 ::: step {run = "none", checkpoints = [5, 8, 11], hold = 2200}
-**It does not last.** The loop keeps feeding itself: after 25,000 steps the values reach 630 and the pole falls in 15 steps; after 40,000, 2,325; after 55,000, 14,306. On numbers that large, the gap between the two pushes is lost in the errors, and which push wins changes from one update to the next. The test episodes last 15, 222 and 92 steps.
+**It does not last.** The loop keeps feeding itself: the values reach 630, then 2,325, then 14,306. On numbers that large, the gap between the two pushes drowns in the errors, and which push wins changes from one update to the next. The test episodes last 15, 222 and 92 steps.
 :::
 
 ::: step {run = "none", at = 40, map = "action"}
-**At the end of 200,000 steps**, the values run from $-389$ to $171$, though every step pays $\rew{+1}$ and no state can be worth less than 1: at the start of the test episode, the two pushes are valued at $-42.8$ and $-45.7$. The map's dividing line has gone flat: the push follows the spin alone and ignores the lean, so the pole drifts over and falls after 81 steps. The training episodes of the last 20,000 steps average 79. The run balanced the pole for 500 steps once, early on, and has lost it ever since.
+**At the end**, the values run from $-389$ to $171$, though every step pays $\rew{+1}$. The map's dividing line has gone flat: the pushes follow the spin alone, the pole drifts over and falls after 81 steps. The run balanced the pole once, early on, and lost it for good.
 :::
 
 ::: step {run = "copy", at = 40, curves = ["copy", "none"], metric = "q", log = true, ref = [100, "the most a state is worth"]}
-**Twenty seeds each**, on a log scale. With targets from the current weights, every one of the 20 seeds has its largest values past 100 within 15,000 steps, and their peaks range from 1,550 to 109,320. With the copy, the average creeps up from below and reaches 100 only at block 38: each period can move the values one backup further, never more.
+**Twenty seeds each**, on a log scale. Without the copy, every seed's values pass 100 within 15,000 steps, and peak between 1,550 and 109,320. With the copy, the values creep up from below and reach 100 only near the end: each period moves them one backup further, never more.
 :::
 
 ::: step {run = "copy", at = 40, formula = 2, curves = ["copy", "none"], metric = "return"}
-**The copy holds the target still.** Between copies, the targets are fixed numbers and each period is a plain regression: the loop is cut. Without it, 13 of the 20 runs average 450 steps per training episode at some point, and none ends well. With a copy every 500 steps, 16 of 20 end well, averaging 450 or more over their last four blocks. The [[dqn]] entry puts this run next to the one without replay; the [Lab](lab:dqn-target) sweeps the copy period.
+**The copy holds the target still.** Between copies, the targets are fixed numbers and each period is a plain regression: the loop is cut. Without it, no run of 20 ends well; with a copy every 500 steps, 16 do. [The Lab sweeps the copy period](lab:dqn-target).
 :::
 
 ## Textbook

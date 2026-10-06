@@ -28,7 +28,7 @@ fourier = { algorithm = "gradient-mc", features = "fourier", order = 5, alpha = 
 ## Story
 
 ::: step {run = "groups", at = 0, formula = 1}
-**A thousand states, five numbers.** The walk of [[why-approximate]] has a thousand states, and a table would keep a thousand values. Instead, describe each state by a few numbers, its **features**, and estimate its value as a weighted sum of them, formula (1). The simplest features are yes-or-no questions: is the state in the first fifth of the line? In the second? Each answer is 1 or 0, and every state answers yes to exactly one of the five. Five weights to learn, all at 0 for now.
+**A thousand states, five numbers.** Instead of a table of a thousand values, describe each state by a few numbers, its **features**, and estimate its value as a weighted sum of them, formula (1). The simplest features are yes-or-no questions: is the state in the first fifth of the line? In the second? Every state answers yes to exactly one of the five. Five weights to learn, all at 0 for now.
 :::
 
 ::: step {run = "groups", at = 1, formula = 2}

@@ -36,7 +36,7 @@ doubt = { algorithm = "model-planner", gamma = 1.0, doubt = 1.0, maxSteps = 500,
 :::
 
 ::: step {run = "trust", at = 1, play = 1, pace = 300, fog = true}
-**Second episode: the agent plans before every move** (the dashed sparks) and takes the first step of its plan. The plan runs straight across: 10 steps, in the model. Four steps in, a cliff: the agent falls back to the start. The model learns that tile, and the agent plans again: along the second row, 12 steps; a cliff there too. Then a third plan, and a fourth. Each falls into a cliff the model had guessed was ground. The fifth plan weaves between them, 12 steps, and it is real.
+**Second episode: the agent plans before every move** (the dashed sparks) and takes the first step of its plan, straight across. Four steps in, a cliff: back to the start. The model learns that tile, and the agent plans again, along another row, and meets another cliff. Four plans, four falls, each into a tile the model had guessed was ground. The fifth plan weaves between them, and it is real.
 :::
 
 ::: step {run = "trust", at = 2, fog = true, values = true, path = true}
@@ -44,7 +44,7 @@ doubt = { algorithm = "model-planner", gamma = 1.0, doubt = 1.0, maxSteps = 500,
 :::
 
 ::: step {run = "doubt", at = 2, fog = true, values = true, path = true, formula = 2}
-**The same agent, doubting:** every planned step onto a tile it has never seen costs 1 extra. Straight across now costs about twice what it did, more than the 14 steps it knows, so it keeps to the known way round. It never falls, and never finds the 12-step path either. Any doubt of 0.5 or more gives the same; with no doubt, four falls. Deep model-based methods make the same choice with an ensemble of models, whose disagreement marks where the data is thin, or by trusting the model only a few steps from real states.
+**The same agent, doubting:** every planned step onto a tile it has never seen costs 1 extra. Straight across now looks worse than the 14 steps it knows, so it keeps to the known way. It never falls, and never finds the shorter path either. Deep model-based methods make the same choice with ensembles of models, whose disagreement marks where data is thin, or by trusting a model only a few steps from real states.
 :::
 
 ::: step {run = "doubt", at = 20, curves = ["trust", "doubt"], metric = "return", domain = [-450, 0]}

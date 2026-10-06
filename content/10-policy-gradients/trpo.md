@@ -32,15 +32,15 @@ d01 = { algorithm = "trpo", delta = 0.01, lambda = 0.9, alphaW = 0.1, workers = 
 :::
 
 ::: step {run = "mid", at = 1, advantages = true, arrows = false, trail = false, formula = 1}
-Round 1, with a random policy: two workers wander for the full 1000 steps, two reach the gem, and 253 times someone falls. From these four episodes TRPO builds a **surrogate**: how much better the new policy would do, estimated from the old episodes by reweighting each move's advantage by how much more, or less, likely the new policy makes it.
+**Round 1**, with a random policy: two workers wander for the full 1000 steps, two reach the gem, and there are 253 falls. From these episodes TRPO estimates how much better a new policy would do, by reweighting each move's advantage by how much more, or less, likely the new policy makes it: the **surrogate**.
 :::
 
 ::: step {run = "mid", at = 1, formula = 2}
-The surrogate is only trustworthy near the old policy, which collected the data. So TRPO limits the step by its effect on **behavior**: the KL divergence between the old and the new policy, averaged over the states of the round, may not exceed $\delta = 0.05$. The step goes to the edge of this trust region, KL = 0.046, and the moves into the cliff are already less likely: right from the start, for one, from 25% to 14%.
+The surrogate is only trustworthy near the policy that collected the data. So TRPO limits each step by its effect on **behavior**: the average KL divergence between old and new policy may not exceed $\delta = 0.05$. The step goes to the edge of this trust region, and the moves into the cliff are already less likely: right from the start, from 25% to 14%.
 :::
 
 ::: step {run = "mid", at = 3}
-Round 2 has 96 falls, round 3 only 9. Every round the step goes as far as the trust region allows, unless a line search finds that the full step does not really improve the surrogate, and halves it; that happens for the first time in round 4.
+Round 2 has 96 falls, round 3 only 9. Every round the step goes as far as the trust region allows, unless a line search finds that the full step does not really help, and halves it.
 :::
 
 ::: step {run = "mid", at = 60, values = true}
@@ -52,11 +52,11 @@ The same first round with a trust region four times larger, $\delta = 0.2$. The 
 :::
 
 ::: step {run = "big", at = 20}
-But each round's four episodes are a noisy sample, and a large step trusts them too far. From round 5 on, the policy circles in the top-left corner, bumping against its walls, until each episode is cut off at 1000 steps. It never leaves: no tile there sends it right any more, the way out, and a policy can only learn from the moves it still makes. Not every run is caught: over 40 seeds, 11 runs with $\delta = 0.2$ end stuck like this, against 1 with $\delta = 0.05$ and none with $\delta = 0.01$. The Lab's sweep of $\delta$ draws the whole curve.
+**But each round's four episodes are a noisy sample**, and a large step trusts them too far. From round 5 on, this policy circles in the top-left corner until each episode is cut off. It never leaves: no tile there sends it right any more, and a policy only learns from the moves it still makes. Over 40 seeds, 11 runs with $\delta = 0.2$ end stuck like this, against 1 with $\delta = 0.05$.
 :::
 
 ::: step {run = "mid", at = 60, curves = ["d01", "mid", "big"], metric = "steps"}
-Averaged over 12 runs. $\delta = 0.01$ learns steadily; $\delta = 0.05$ learns fastest, 31 steps per episode after 10 rounds; both end near 16. With $\delta = 0.2$, two runs of 12 get stuck like this one, and the average stays at 181. [Size the trust region in the Lab](lab:trpo-cliff).
+**Averaged over 12 runs.** $\delta = 0.01$ learns steadily, $\delta = 0.05$ fastest, and both end near 16 steps per episode. With $\delta = 0.2$, the stuck runs keep the average far above. [Size the trust region in the Lab](lab:trpo-cliff).
 :::
 
 ## Textbook

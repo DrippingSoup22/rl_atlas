@@ -37,11 +37,11 @@ hundredN = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, b
 :::
 
 ::: step {run = "hundred", at = 1, range = 100}
-**Now the gem pays 100.** In the first round, three workers find the gem, after 47, 95 and 135 steps. Below it, one worker bumped into the wall on its left, bumped into the edge on its right, then went up twice and reached the gem, all within one five-step stretch. Each of those moves shared the prize: advantages of 70 to 95, where with a gem worth 1 they would be at most 1. Steps that large overshoot. By the end of the round, bumping right into the edge, below the gem, has probability 1.0000, and the fourth worker spends its 1,000 steps there.
+**Now the gem pays 100.** In the first round, a worker reaches the gem a few moves after bumping into the edge below it, and that bump shares the prize: an advantage near 90, where with a gem worth 1 it would be at most 1. Steps that large overshoot. By the end of the round, bumping into that edge has probability 1.0000.
 :::
 
 ::: step {run = "hundred", at = 2, range = 100}
-**Round two never ends.** All four workers end up on that tile and stay there, bumping into the edge, until its 1,000 steps run out: 3,563 of the round's moves are that one bump. The advantages of the bump now come out negative, but a move with probability 1 cannot unlearn itself: the gradient of $\ln \pol{\pi}$ for it is $1 - \pol{\pi} = 0$. The run stays stuck for all 60 rounds.
+**Round two never ends.** All four workers end up on that tile, bumping into the edge until their 1,000 steps run out. The bump's advantages now come out negative, but a move with probability 1 cannot unlearn itself: the gradient of $\ln \pol{\pi}$ for it is $1 - \pol{\pi} = 0$. The run is stuck for good.
 :::
 
 ::: step {run = "one", at = 60, curves = ["cent", "one", "hundred"], metric = "steps"}
@@ -49,7 +49,7 @@ hundredN = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, b
 :::
 
 ::: step {run = "hundredN", at = 60, range = 100, formula = 2, curves = ["centN", "oneN", "hundredN"], metric = "steps"}
-**One line fixes it: normalize each batch's advantages**, subtracting their mean and dividing by their spread. The units cancel out, and the three lines lie on top of each other: in cents, euros or hundreds, all 60 runs learn the way, in 14 to 16 steps. Normalization even speeds things up here: five rounds in, the normalized runs average about 33 steps; with the gem paying 1 and no normalization, 211. [Try the units in the Lab](lab:reward-units).
+**One line fixes it: normalize each batch's advantages**, subtracting their mean and dividing by their spread. The units cancel, and the three lines lie on top of each other: in cents, euros or hundreds, all 60 runs learn the way, in 14 to 16 steps. [Try the units in the Lab](lab:reward-units).
 :::
 
 ## Textbook

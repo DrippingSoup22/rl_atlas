@@ -39,11 +39,11 @@ The small gem is two steps from the start, so random walks find it far more ofte
 :::
 
 ::: step {run = "dither", at = 500, path = true}
-**After 500 episodes**, it still does. This run reached the big gem four times, in episodes 1, 3, 34 and 51, each time at the end of a string of random moves, and each visit carried the news a little further back. After 500 episodes, it has traveled two steps from the gem. Of 40 runs, 24 touch the big gem at least once, and none ends up going for it. More randomness hardly helps: with $\eps = 0.3$, 4 of 40 do.
+**After 500 episodes**, it still does. It reached the big gem only four times, each at the end of a string of random moves, and each visit carried the news a single step further back. Of 40 runs, none ends up going for the big gem. More randomness hardly helps: with $\eps = 0.3$, 4 of 40 do.
 :::
 
 ::: step {run = "optimism", at = 1, arrows = false}
-**Exploring on purpose.** The same learner with no random moves at all, $\eps = 0$, but every value starts at 1, the most any move can be worth here: blue everywhere. A move that has been tried falls toward what it actually earned, so the untried moves look best, and the greedy choice tries them one after another. Its first episode ends at the small gem after 12 steps. Each move it tried dropped a little below 1, and the move into the small gem fell to 0.65: from now on, any move not yet tried looks better.
+**Exploring on purpose.** The same learner with no random moves at all, but every value starts at 1, the most any move can be worth here: blue everywhere. A move that has been tried falls toward what it actually earned, so untried moves look best, and the greedy choice tries them one after another. Its first episode ends at the small gem, whose move falls to 0.65: now anything untried looks better.
 :::
 
 ::: step {run = "optimism", at = 3, arrows = false}

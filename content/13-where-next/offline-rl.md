@@ -33,11 +33,11 @@ constrained = { algorithm = "offline-bcq", alpha = 0.5, epsilon = 0.1, gamma = 1
 :::
 
 ::: step {run = "plain", at = 1, arrows = false, fog = true}
-**The log: 207 moves.** The walker never fell, and its crossings cost between 17 and 27 steps. The fog covers the 13 open tiles it never stood on. On the 24 it did, it mostly tried one move, sometimes two: 41 pairs of a tile and a move, out of the 148 on the open tiles. Every value still starts at 0.
+**The log: 207 moves.** The walker never fell, and the fog covers the tiles it never stood on. On the tiles it did, it mostly tried one move, sometimes two. Most pairs of a tile and a move were never tried at all. Every value still starts at 0.
 :::
 
 ::: step {run = "plain", at = 41, values = true, range = 2, path = true, fog = true, formula = 1}
-**Forty passes of Q-learning over the log.** Every tried move's value now sits between $-1$ and $-2$, though the start is 17 steps from the goal. Each target takes the max at the next tile, and the max picks a move the log never tried, still at its starting 0. So every tile says 0: the goal looks one step away from everywhere. From the start, three moves were never tried. The first of them, right, wins, and the policy walks into the cliff.
+**Forty passes of Q-learning over the log.** Every tried move's value sits near $-1$, though the start is 17 steps from the goal. Each target takes the max at the next tile, and the max picks a move the log never tried, still at its starting 0: the goal looks one step away from everywhere. From the start, the winner is an untried move, right, and the policy walks into the cliff.
 :::
 
 ::: step {run = "constrained", at = 41, values = true, path = true, fog = true, formula = 2}
@@ -45,7 +45,7 @@ constrained = { algorithm = "offline-bcq", alpha = 0.5, epsilon = 0.1, gamma = 1
 :::
 
 ::: step {run = "constrained", at = 41, curves = ["plain", "constrained"], metric = "deployed", domain = [-100, 0]}
-**A hundred logs each.** Each line plays the learned policy once from the start, until the goal, a fall, or 100 steps. Plain Q-learning never finds the goal from any of the 100 logs. Two hundred crossings instead of ten help it only on 9 logs of 100. Starting every value at $-17$ or below works; at $-15$, it works on 4 logs of 100. The constrained learner walks the 17 steps from every log, even from a walker so random that it averaged $-88$. It takes its time: each pass carries the goal's news only a little way back, and the policy settles on the route after 30 passes on a typical log, 34 at most. It cannot find the 13-step path along the edge, because nobody ever walked it. [Try it in the Lab](lab:offline-cliff).
+**A hundred logs each.** Each line plays the learned policy once from the start. Plain Q-learning never reaches the goal, from any log; even twenty times more data hardly helps. The constrained learner walks the careful route from every log. What it cannot do is find the shorter path along the edge: nobody ever walked it. [Try it in the Lab](lab:offline-cliff).
 :::
 
 ## Textbook

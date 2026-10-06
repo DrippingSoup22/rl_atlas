@@ -24,7 +24,7 @@ q = { algorithm = "q-learning", alpha = 0.5, epsilon = 0.1, gamma = 1.0, units =
 ## Story
 
 ::: step {run = "walker", at = 0, trail = false}
-**Two policies.** Every learner has a policy that acts, the **behavior** policy, and a policy it learns about, the **target** policy. Here they could not be more different. On the cliff (start at the bottom left, the gem at the bottom right, $\rew{-1}$ a step, $\rew{-100}$ and back to the start for a fall), this agent picks every move at random, and it never stops doing so. What it learns about is the greedy policy: the best move from each tile.
+**Two policies.** Every learner has a policy that acts, the **behavior** policy, and a policy it learns about, the **target** policy. Here they could not be more different. On the cliff, this agent picks every move at random, forever. What it learns about is the greedy policy: the best move from each tile.
 :::
 
 ::: step {run = "walker", at = 1}
@@ -36,11 +36,11 @@ Its first episode lasts 5,010 steps. 409 of them are falls into the cliff, until
 :::
 
 ::: step {run = "walker", at = 50, path = true, arrows = false, trail = false}
-The walker never once walked that path. This is **off-policy** learning: the data came from one policy, and the answer is about another. Of 20 runs, 18 have the shortest path after 10 random episodes, and all 20 after 50. Learning from someone else's behavior is what lets an agent reuse old experience, as DQN's replay memory does ([[experience-replay]]), or learn from other agents and from people.
+**The walker never once walked that path.** This is **off-policy** learning: the data came from one policy, the answer is about another. All 20 runs find the shortest path within 50 random episodes. Learning from someone else's behavior is what lets an agent reuse old experience, as DQN's replay memory does ([[experience-replay]]), or learn from other agents and from people.
 :::
 
 ::: step {run = "sarsa", at = 500, path = true, formula = 2}
-**On-policy** learning could not do this. SARSA's target uses the move the agent will actually make next: fed these random walks, it would learn what walking at random is worth, about $\val{-65{,}000}$ from the start, and nothing about the way to the gem. On-policy pays off when the exploring never stops. With $\eps = 0.1$, as in [[sarsa]], SARSA's values count its own random steps, so they warn it off the edge: its greedy path takes the top row, 17 steps, two rows clear of the cliff.
+**On-policy learning could not do this.** SARSA's target uses the move the agent will actually make next: fed these random walks, it would learn what walking at random is worth, and nothing about the way to the gem. It pays off when the exploring never stops: with $\eps = 0.1$, SARSA's values count its own random steps and warn it off the edge, so its greedy path keeps two rows clear of the cliff.
 :::
 
 ::: step {run = "q", at = 500, path = true, formula = 1}

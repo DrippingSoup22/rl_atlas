@@ -30,7 +30,7 @@ small = { algorithm = "gradient-mc", features = "groups", cells = 10, alpha = 0.
 :::
 
 ::: step {run = "big", at = 1, formula = 2}
-**The first walk** takes 40 jumps and leaves on the right: every visited state's return is $\rew{+1}$. Then come the updates, one per visited state, each nudging that state's estimate toward its return. With weights instead of a table, nudging an estimate means moving the weights that compute it: here, the weight of its group, the box in the strip under the plot. The six groups the walk passed through have risen, most of all the group just right of the start, which got 13 of the 40 updates. The four groups on the left were never visited and have not moved. With a step size $\alpha = 0.01$ each update is small: a single walk is one noisy example, not the answer.
+**The first walk** takes 40 jumps and leaves on the right: every visited state's return is $\rew{+1}$. Then one update per visited state, each nudging its estimate toward that return. With weights instead of a table, nudging an estimate means moving the weight that computes it, the weight of its group (the strip under the plot). The groups the walk passed through rise; the four on the left, never visited, stay at 0. With $\alpha = 0.01$ each nudge is small: one walk is one noisy example, not the answer.
 :::
 
 ::: step {run = "big", at = 2}

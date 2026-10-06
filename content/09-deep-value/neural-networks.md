@@ -26,23 +26,23 @@ learn = { recording = "dqn-cartpole", name = "DQN's network" }
 ## Story
 
 ::: step {run = "learn", at = 0, formula = 1}
-**A network reads a state.** CartPole's state is four numbers: the cart's position and speed, the pole's angle and spin. Two hidden layers of 64 units each turn them into 64 features: each unit adds up its inputs with its own weights and bends the sum with $\max(0, z)$. Nobody chooses these features. They start random, like every one of the network's 4,610 weights.
+**A network reads a state.** CartPole's state is four numbers: the cart's position and speed, the pole's angle and spin. Two hidden layers of 64 units turn them into features: each unit adds up its inputs with its own weights and bends the sum with $\max(0, z)$. Nobody chooses these features. Like all 4,610 weights, they start random.
 :::
 
 ::: step {run = "learn", at = 0, formula = 2, map = "action"}
-**Two outputs, one per push.** The last layer is a linear method on the 64 features: one weighted sum for “push left”, one for “push right”. Before any training, the values are small, between 0 and 1.8 over this slice of states, the cart at rest in the middle. They are random but not noisy: a network is a smooth function of its input, so states close together get close values. This one happens to prefer pushing left in every state of the map.
+**Two outputs, one per push.** The last layer is a linear method on the features: one weighted sum for “push left”, one for “push right”. Before training the values are small, but not noisy: a network is a smooth function, so nearby states get nearby values. This one happens to prefer pushing left everywhere on the map.
 :::
 
 ::: step {run = "learn", at = 1, formula = 2}
-**One update moves everything.** DQN has taken 1,000 gradient steps, each on a batch of 128 transitions. Not one of them updated a single state the way a table would: each step changed weights that every state uses. The whole map has moved, its values now between 1.9 and 9.9, including states the cart never visited.
+**One update moves everything.** Each gradient step changes weights that every state uses. After 1,000 of them, the whole map has moved, its values now between 1.9 and 9.9, including states the cart has never visited. A table would only have changed the states it saw.
 :::
 
 ::: step {run = "learn", at = 2}
-**Features appear.** After 2,250 steps of learning, the map has a shape: high values in a band through the middle, low ones in two opposite corners, where the pole leans one way and spins further that way. No feature says “leaning and spinning the same way is dangerous”: the hidden units found it because it predicts the targets. The pushes found something too. They follow the spin rather than the angle: right wherever the pole turns right, left wherever it turns left, even where it still leans the other way.
+**Features appear.** After 2,250 steps of learning the map has a shape: low values in the two corners where the pole leans one way and spins further that way. No one told the network that this is dangerous: the hidden units found it because it predicts the targets.
 :::
 
 ::: step {run = "learn", at = 40}
-**After 200,000 steps**, the values run from 18.5 to 101.6. The same two corners are still the worst, about 43 and 45 on average against 99 in the middle, the pushes still follow the spin, and the test episode balances the pole for its full 500 steps. Tile coding would have needed someone to choose the tiles. The network's features were grown for this problem by the same gradient steps that fit the values.
+**After 200,000 steps** those corners are still the worst, about 44 against 99 in the middle, and the pole stays up for the full 500 steps. Tile coding would have needed someone to choose the tiles. The network grew its own features, with the same gradient steps that fit the values.
 :::
 
 ## Textbook

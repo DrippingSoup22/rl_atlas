@@ -22,11 +22,11 @@ td3 = { recording = "td3-pendulum", name = "TD3" }
 ## Story
 
 ::: step {run = "ddpg", at = 40, map = "value"}
-**Overestimation, measured.** On Pendulum every reward is 0 or less, so every true value is too. DDPG's critic after 60,000 steps rates some states at **+30**. Along the greedy test episodes of blocks 11 to 40, it rates the states it passes, on average, 52 above the discounted return that actually followed. The actor follows the critic's slope, so it goes where these errors are largest ([[ddpg]]).
+**Overestimation, measured.** On Pendulum every reward is 0 or less, so every true value is too. DDPG's critic rates some states at **+30**, and along its test episodes it rates the states it passes 52 above the return that actually followed. The actor follows the critic's slope, straight to these errors ([[ddpg]]).
 :::
 
 ::: step {run = "td3", at = 0, formula = 1}
-**TD3 changes the target.** It trains two critics on the same batches. The target, formula (1), takes the *smaller* of their two estimates, so a value one critic got too high is checked by the other. And it evaluates the target actor's torque with a little clipped noise $\epsilon$ added, so the target cannot rest on a narrow, lucky peak of the critic. Everything else, the memory, the networks and the step sizes, is DDPG's.
+**TD3 changes the target.** It trains two critics on the same batches, and the target takes the *smaller* of their estimates (formula 1): a value one critic got too high is checked by the other. It also adds a little clipped noise to the next torque, so the target cannot rest on a narrow, lucky peak. Everything else is DDPG's.
 :::
 
 ::: step {run = "td3", at = 40, map = "value"}
@@ -34,15 +34,15 @@ td3 = { recording = "td3-pendulum", name = "TD3" }
 :::
 
 ::: step {run = "td3", at = 40, curves = ["ddpg", "td3"], metric = "q"}
-**The critics' targets, averaged over 20 seeds each.** DDPG's average rises above 0 at block 12 and stays there to the end, 29 of the 40 blocks; in its last 10 blocks, 11 of the 20 seeds average above 0. TD3's average never comes near: −52 at the end, and no seed of 20 averages above 0 over its last 10 blocks.
+**The critics' targets, averaged over 20 seeds each.** DDPG's average climbs above 0, an impossible value, and stays there for most of training. TD3's never comes near: −52 at the end.
 :::
 
 ::: step {run = "td3", at = 5, map = "action", formula = 2}
-**The actor waits for the critic.** TD3 moves the actor and the target copies only once every two critic steps, formula (2), so the critic's errors shrink before the actor follows them. Caution costs some speed: this run first swings up and holds in the test after 7,500 steps, at −128; DDPG's did it after 4,500. Averaged over 20 seeds, after 5 blocks DDPG's tests are at −145 and TD3's at −274.
+**The actor waits for the critic.** TD3 moves the actor only once every two critic steps (formula 2), so the critic's errors shrink before the actor follows them. Caution costs some speed: this run holds the pendulum up after 7,500 steps, DDPG's after 4,500.
 :::
 
 ::: step {run = "td3", at = 40, curves = ["ddpg", "td3"], metric = "test"}
-**Both learn, on every seed.** By block 8 TD3's average test catches up, and at the end both hold the pendulum: the last four tests of every seed average between −121 and −132 for DDPG and between −122 and −139 for TD3. On Pendulum, DDPG's overestimation does no visible harm. On harder tasks, such as the walking robots of the original paper, Fujimoto et al. found it does, and TD3 learned better there. [Race them in the Lab](lab:td3-pendulum).
+**Both learn, on every seed**, and end about equal. On Pendulum DDPG's overestimation does no visible harm; on harder tasks, such as the walking robots of the original paper, it does, and TD3 learned better there. [Race them in the Lab](lab:td3-pendulum).
 :::
 
 ## Textbook
