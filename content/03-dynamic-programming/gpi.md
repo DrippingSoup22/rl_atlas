@@ -7,7 +7,40 @@ sources = [
   { text = "Bertsekas & Tsitsiklis (1996), Neuro-Dynamic Programming, Athena Scientific, §6.2" },
   { text = "Konda & Tsitsiklis (2000), Actor-critic algorithms, Advances in Neural Information Processing Systems 12" },
 ]
+
+[story]
+scene = "grid"
+env = "frozen-lake"
+digits = 2
+formula = '''\step{1}{\text{evaluate: } \val{V} \to \val{v_{\pi}} \qquad} \step{2}{\text{improve: } \pol{\pi} \to \operatorname{greedy}(\val{V})}'''
+
+[story.runs]
+pi = { algorithm = "policy-iteration", gamma = 0.99, theta = 0.001, judge = 1.0, units = 120 }
+vi = { algorithm = "value-iteration", gamma = 0.99, theta = 0.001, judge = 1.0, units = 120 }
+ql = { algorithm = "q-learning", gamma = 0.99, alpha = 0.1, epsilon = 0.3, judge = 1.0, units = 5000, seed = 6 }
 +++
+
+## Story
+
+::: step {run = "pi", at = 13, values = true, formula = 1}
+**Two jobs, taken in turn.** The first: work out what the current policy is worth. Policy iteration has done it for the random policy on Frozen Lake, sweep after sweep, until the values settled: they are tiny, because walking at random the agent reaches the gem about once in a hundred tries.
+:::
+
+::: step {run = "pi", at = 14, values = true, formula = 2}
+**The second job: make the policy greedy for those values.** Every arrow changes, and at once the values on the tiles are out of date: they are what the random policy was worth, and that policy no longer exists. Each job undoes part of the other's work. The new policy, already, reaches the gem 78% of the time.
+:::
+
+::: step {run = "pi", at = 120, values = true}
+**Turn after turn, the undoing shrinks,** until neither job changes anything: the values are the policy's own, and the policy is greedy for them. A pair that satisfies both is optimal, and this one reaches the gem 82.4% of the time, starting with the famous move left, into the wall. (The start shows 0.53 because the values are discounted by $\gam = 0.99$ per step, and on this ice the gem is many steps away.)
+:::
+
+::: step {run = "vi", at = 14, values = true}
+**The same two jobs, finely interleaved.** Value iteration evaluates for one sweep only, and folds the improvement into every update, through the max. It never finishes evaluating anything, yet after 14 sweeps its greedy policy reaches the gem 78% of the time, and after 99 sweeps the same 82.4%.
+:::
+
+::: step {run = "ql", at = 5000, values = true}
+**Finer still: one sample at a time, with no model.** Q-learning evaluates with a single TD update per step and improves with the ε-greedy choice at every step. Its values are noisier, but after 1,509 episodes its greedy policy was already the optimal one, left into the wall included, and it still is after 5,000. Three grains of the same pattern, and the same answer: that pattern, **generalized policy iteration**, is behind nearly every method in this atlas.
+:::
 
 ## Textbook
 
