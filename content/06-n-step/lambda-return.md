@@ -8,7 +8,46 @@ sources = [
   { text = "Watkins (1989), Learning from delayed rewards, PhD thesis, University of Cambridge", url = "https://www.cs.rhul.ac.uk/~chrisw/thesis.html" },
   { text = "Cichosz (1995), Truncating temporal differences: on the efficient implementation of TD(λ) for reinforcement learning, Journal of Artificial Intelligence Research 2", url = "https://doi.org/10.1613/jair.135" },
 ]
+
+[story]
+scene = "chain"
+env = "random-walk-19"
+seed = 4
+average = 100
+formula = '''\step{1}{\rew{G_t^{(n)}} = \rew{R_{t+1}} + \dots + \gam^{n-1} \rew{R_{t+n}} + \gam^n \val{V(S_{t+n})} \qquad} \step{2}{\rew{G_t^\lambda} = (1 - \lam) \sum_{n \ge 1} \lam^{n-1} \rew{G_t^{(n)}}}'''
+
+[story.runs]
+zero = { algorithm = "offline-lambda", alpha = 0.2, gamma = 1.0, units = 10, measures = ["error"], lambda = 0.0, name = "λ = 0" }
+half = { algorithm = "offline-lambda", alpha = 0.2, gamma = 1.0, units = 10, measures = ["error"], lambda = 0.5, name = "λ = 0.5" }
+high = { algorithm = "offline-lambda", alpha = 0.2, gamma = 1.0, units = 10, measures = ["error"], lambda = 0.8, name = "λ = 0.8" }
+mc = { algorithm = "offline-lambda", alpha = 0.2, gamma = 1.0, units = 10, measures = ["error"], lambda = 1.0, name = "λ = 1" }
 +++
+
+## Story
+
+::: step {run = "high", at = 0, play = 1, pace = 70, truth = false}
+**The 19-state walk, every estimate at 0.** This first walk wanders back and forth for about a hundred steps before it leaves on the right. The only reward, $\rew{+1}$, comes at the very end. Once the walk is over, every state it visited gets a target. Which target?
+:::
+
+::: step {run = "zero", at = 1, truth = false, formula = 1}
+**One step ahead, then trust the estimate.** Each state's target is its one-step return: the next reward plus the next state's estimate. Inside the row every reward and every estimate is still 0, so only S, the last state before the exit, has anything to learn: it moves a fifth of the way toward 1, to 0.20. That is TD(0), and it is the λ-return with $\lam = 0$.
+:::
+
+::: step {run = "mc", at = 1, truth = false, formula = 1}
+**All the way to the end.** With the full return as target, every visit of every state sees the $\rew{+1}$ at the end, and the states the walk passed many times move furthest: L, visited again and again, reaches 0.97. That is Monte Carlo, the λ-return with $\lam = 1$. It learns from one walk what was true of that walk only: the left half of the row is worth much less than it now says.
+:::
+
+::: step {run = "half", at = 1, truth = false, formula = 2}
+**The λ-return averages every n.** Its target gives the one-step return a weight of $1 - \lam$, the two-step return $(1 - \lam)\lam$, and so on, the weights shrinking by $\lam$ each step further out, all adding up to 1. With $\lam = 0.5$, half the target is the one-step return, a quarter the two-step return. The exit's news reaches back a few states: P, Q and R move a little, S the most.
+:::
+
+::: step {run = "high", at = 1, truth = false, formula = 2}
+**With λ = 0.8, the news reaches back further,** to N, five states before the exit, but fading as it goes, instead of lifting the whole path to 1 as Monte Carlo did.
+:::
+
+::: step {run = "high", at = 10, curves = ["zero", "half", "high", "mc"], metric = "error"}
+**Ten walks each, averaged over 100 runs.** With this step size, $\lam = 0.8$ ends closest to the true values, at about 0.18; one step ($\lam = 0$) learns too slowly, at about 0.42, and whole returns ($\lam = 1$) are too noisy, at about 0.62. Somewhere in between beats both ends, and where depends on the step size: the textbook's study maps it. [Traces that compute it online, in the Lab](lab:td-lambda-walk).
+:::
 
 ## Textbook
 
