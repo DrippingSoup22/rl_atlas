@@ -34,6 +34,8 @@ REQUIRED = {
 }
 FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story"}
 # The keys of a Lab preset (content/lab.toml); any other key is a knob, and what its charts may plot.
+# Concept stations whose idea the Lab's engine also runs, in a small world of its own: DPG on the throw.
+RUNNABLE_CONCEPTS = {"dpg"}
 PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds"}
 CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights",
           "policy-value", "right", "aim", "kl", "clipped"}
@@ -433,7 +435,7 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
                 racers.append({"recording": r["recording"], "algorithm": rec["station"], "name": r.get("name") or rec["title"], "params": {}})
             continue
         algo = r.get("algorithm", "")
-        if stations.get(algo, {}).get("kind") != "algorithm":
+        if stations.get(algo, {}).get("kind") != "algorithm" and algo not in RUNNABLE_CONCEPTS:
             problems.error(where, f"runs '{algo}', which is not an algorithm station")
             continue
         own = {k: v for k, v in r.items() if k not in ("algorithm", "name")}

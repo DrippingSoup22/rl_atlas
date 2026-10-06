@@ -5,7 +5,7 @@
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
   const SUB = "₀₁₂₃₄₅₆₇₈₉";
-  const SHOWN = new Set(["update", "improve", "trace", "plan", "world"]); // events after which a view redraws what the algorithm knows
+  const SHOWN = new Set(["update", "improve", "trace", "plan", "world", "critic"]); // events after which a view redraws what the algorithm knows
   RL.scenes = RL.scenes || {};
 
   // Timers a scene cancels whenever its step changes.
@@ -114,7 +114,7 @@
     weights: { label: "Size of the weights ‖w‖", log: true },
     "policy-value": { label: "Value of the policy from the start, J(θ)" },
     right: { label: "Chance of stepping right, π(right)", percent: true },
-    aim: { label: "Where the policy aims: its mean angle (degrees)" },
+    aim: { label: "Where the policy aims, in degrees" },
     test: { label: "Test episode after each block: its return" },
     q: { label: (noun, learner) => (learner === "ac" ? "The critics' targets in each batch, on average" : "The largest Q-value in each batch, on average") },
   };

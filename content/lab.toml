@@ -562,6 +562,24 @@ film = [0, 50, 200, 1000]
 intro = "The action is an angle, a real number: the policy is a bell curve around its aim. Each throw is drawn from the bell; a throw that flies farther than expected pulls the aim toward its angle, and the bell narrows as the policy grows sure. The best angle is 45°, but the learner is never told."
 success = { metric = "return", min = 39, text = "end up throwing 39 or farther on average, close to the longest throw" }
 
+[dpg-throw]
+title = "A deterministic aim learns to throw"
+env = "throw"
+racers = [
+  { algorithm = "dpg", name = "noise σ = 10°", noise = 10.0 },
+  { algorithm = "dpg", name = "noise σ = 2°", noise = 2.0 },
+]
+units = 300
+seed = 1
+alpha = 1.0
+alphaW = 0.2
+gamma = 1.0
+charts = ["aim", "return"]
+measures = ["aim"]
+film = [0, 10, 50, 300]
+intro = "The policy is one angle, the aim; each throw adds noise to it, so that the critic sees how far other angles fly. The critic's curve is fitted to the throws, and the aim climbs its slope. Compare a wide noise with a narrow one, and sweep the noise to see how much exploration the critic needs."
+success = { metric = "aim", min = 40, text = "end up aiming at 40° or more, near the best angle, 45°" }
+
 [cliff-actor-critic]
 title = "Actor–critic on the cliff"
 env = "cliff"

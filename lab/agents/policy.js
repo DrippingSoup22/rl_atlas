@@ -10,6 +10,8 @@
                             divergence between the old and the new policy below δ
    PPO                      a batch of episodes, then several passes over it, pushing each action's probability ratio
                             only while it stays within 1 ± ε
+   DPG                      (one-step worlds: the throw) a deterministic aim μ, thrown with added noise; a critic q̂(a)
+                            learns how far each angle flies, and the aim climbs its slope at μ
 
    Same conventions as the other agents: generators that pause at every line of the pseudocode (the line ids match
    the {#ids} of the entries' pseudocode), with what the views need in each event. The batch methods play a round:
@@ -315,6 +317,34 @@
     return totals(team, { kl });
   }
 
+  // ---- the deterministic policy gradient, on a one-step world with one continuous action (the throw) ----
+  // The policy is one number, the aim μ (degrees). The behavior throws at μ plus Gaussian noise of p.noise degrees: the
+  // aim alone would never try anything else. The critic q̂(a) = Σ w_k φ_k(a) is a sum of bumps centered every 10°,
+  // fitted to how far each throw flew; then the aim moves along the critic's slope at the aim, α ∂q̂/∂a.
+  const BUMPS = Array.from({ length: 10 }, (_, k) => 10 * k), WIDE = 10;
+  const bumpsAt = (a) => BUMPS.map((c) => Math.exp(-0.5 * ((a - c) / WIDE) ** 2));
+  lab.dpgCritic = (w, a) => bumpsAt(a).reduce((sum, x, k) => sum + w[k] * x, 0);
+  lab.dpgSlope = (w, a) => bumpsAt(a).reduce((sum, x, k) => sum + w[k] * x * ((BUMPS[k] - a) / WIDE ** 2), 0);
+  function* dpg({ env, m, rng, p }) {
+    const { mu, w } = m, aim = mu[0];
+    yield { line: "start", type: "start", s: 0 };
+    const a = aim + (p.noise ?? 10) * rng.normal();
+    yield { line: "choose", type: "choose", s: 0, a, mu: aim };
+    const o = env.step(0, a, rng);
+    yield { line: "act", type: "move", s: 0, a, ...o };
+    const x = bumpsAt(a), old = lab.dpgCritic(w, a), delta = o.r - old;
+    for (let k = 0; k < w.length; k++) w[k] += p.alphaW * delta * x[k];
+    yield { line: "critic", type: "critic", s: 0, a, r: o.r, old, delta, value: lab.dpgCritic(w, a) };
+    const slope = lab.dpgSlope(w, aim);
+    mu[0] = Math.max(0, Math.min(90, aim + p.alpha * slope));
+    yield { line: "update", type: "update", s: 0, a, slope, mu: aim, mu2: mu[0], sd: p.noise ?? 10, sd2: p.noise ?? 10 };
+  }
+  const showDpg = (m, env, p) => {
+    const critic = new Float64Array(91);
+    for (let a = 0; a <= 90; a++) critic[a] = lab.dpgCritic(m.w, a);
+    return { mu: m.mu[0], sd: p.noise ?? 10, critic, slope: lab.dpgSlope(m.w, m.mu[0]), deterministic: true };
+  };
+
   // ---- what they show: the policy, as probabilities (or a mean and a spread), and the critic's values ----
   function show(critic) {
     return (m, env, p) => {
@@ -406,6 +436,15 @@
       rule: "\\max_{\\boldsymbol\\theta}\\ \\hat{\\mathbb E}\\Big[\\tfrac{\\pol{\\pi_{\\boldsymbol\\theta}(A \\mid S)}}{\\pol{\\pi_{\\text{old}}(A \\mid S)}}\\,\\err{\\hat A}\\Big] \\ \\text{ with }\\ \\overline{D}_{\\mathrm{KL}}(\\pol{\\pi_{\\text{old}}} \\,\\|\\, \\pol{\\pi_{\\boldsymbol\\theta}}) \\le \\delta",
       numbers: (ev) => (ev.accepted ? `\\overline{D}_{\\mathrm{KL}} = ${ev.kl.toFixed(4)} \\le ${ev.delta} \\qquad L: ${tex(ev.L0, 3)} \\to ${tex(ev.L1, 3)}` : "\\text{no step}"),
       note: (ev) => batchNote(ev),
+    },
+    dpg: {
+      id: "dpg", title: "DPG", unit: "episode", run: dpg, show: showDpg, actor: true,
+      memory: () => ({ mu: 1, w: BUMPS.length }),
+      init: (m, env, p) => { m.mu[0] = p.mu0 ?? 20; m.w.fill(0); },
+      knobs: { alpha: { sym: "αμ", name: "aim step size" } },
+      rule: "\\pol{\\mu} \\leftarrow \\pol{\\mu} + \\alp\\,\\frac{\\partial \\val{\\hat q(a)}}{\\partial a}\\Big|_{a = \\pol{\\mu}}",
+      numbers: (ev) => `\\frac{\\partial \\val{\\hat q}}{\\partial a} = ${tex(ev.slope, 3)}\\ \\text{m per degree} \\qquad \\pol{\\mu}: ${ev.mu.toFixed(2)}^\\circ \\to ${ev.mu2.toFixed(2)}^\\circ`,
+      note: (ev) => `The critic's slope at the aim: <b>${ev.slope >= 0 ? "+" : "−"}${Math.abs(ev.slope).toFixed(3)} m</b> per degree · the aim moved from <b>${ev.mu.toFixed(1)}°</b> to <b>${ev.mu2.toFixed(1)}°</b>`,
     },
     ppo: {
       id: "ppo", title: "PPO", unit: "round", run: ppo, memory, init, show: show(true), actor: true, batch: true, knobs: GAE,

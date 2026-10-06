@@ -546,6 +546,13 @@
 .throwview .mu { stroke: var(--pol); stroke-width: 1.6; stroke-dasharray: 4 3; }
 .throwview .mu-text { font-size: 12px; font-weight: 800; fill: var(--pol-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; }
 .throwview .sd { fill: none; stroke: var(--pol); stroke-width: 1.6; }
+.throwview[data-deterministic] .bell { fill: color-mix(in oklab, var(--pol) 10%, transparent); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.throwview .critic { fill: none; stroke: var(--val); stroke-width: 2.4; stroke-linejoin: round; transition: d 0.3s var(--ease); }
+.throwview .critic-name { font-size: 11px; font-weight: 700; fill: var(--val-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.throwview .slope { fill: var(--pol); stroke: var(--pol); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.throwview .slope-dot { fill: var(--surface); stroke: var(--pol); stroke-width: 2.2; }
+.throwview .pt { fill: var(--ink-2); }
+.throwview .pt.last { fill: var(--ink); }
 .throwview .atick { stroke: var(--pol); stroke-width: 2; }
 .throwview .atick.last { stroke: var(--ink); stroke-width: 2.5; }
 .throwview .baseline line { stroke: var(--val); stroke-width: 1.6; stroke-dasharray: 6 4; }

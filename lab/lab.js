@@ -45,6 +45,7 @@
     epochs: { sym: "K", name: "passes over each batch", choices: [1, 2, 4, 10, 20] },
     clip: { sym: "ε", name: "clip range (0: no clip)", choices: [0, 0.1, 0.2, 0.3, 0.5] },
     delta: { sym: "δ", name: "trust region (KL)", choices: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2] },
+    noise: { sym: "σ", name: "exploration noise (degrees)", min: 0, max: 30, step: 1, sweep: [0, 1, 2, 5, 10, 20, 30] },
   };
   const ALPHA_LADDER = [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05];
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);
@@ -63,7 +64,7 @@
     weights: { title: () => "Size of the weights ‖w‖", log: true },
     "policy-value": { title: (n, env) => (env.kind === "corridor" ? "Value of the start under the current policy, J(θ)" : "Value of the current policy from the start, J(θ)") },
     right: { title: () => "Chance of stepping right, π(right)", percent: true },
-    aim: { title: () => "Where the policy aims: its mean angle μ (degrees)" },
+    aim: { title: () => "Where the policy aims: its angle μ, in degrees" },
     kl: { title: () => "How far each update moved the policy: KL divergence (log scale)", log: true },
     clipped: { title: () => "Samples the clip left alone in the last pass", percent: true },
     // what recorded runs chart (one seed: the one played back)
@@ -536,7 +537,7 @@
         out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 1))} (the best possible is ${signed(env.bestValue, 1)}).`);
       }
       if (env.kind === "throw") {
-        out.push(`Where the policy aims at the end: ${each((r) => { const d = r.algorithm.show(r.at(knobs.units), r.env, r.params); return `${d.mu.toFixed(1)}° ± ${d.sd.toFixed(1)}°`; })}; average distance over the last ${last} throws: ${each((r) => `${lab.mean(r.metrics.return, knobs.units - last).toFixed(1)} m`)} (40 m at best).`);
+        out.push(`Where the policy aims at the end: ${each((r) => { const d = r.algorithm.show(r.at(knobs.units), r.env, r.params); return d.deterministic ? `${d.mu.toFixed(1)}°, thrown with ±${d.sd.toFixed(0)}° of noise` : `${d.mu.toFixed(1)}° ± ${d.sd.toFixed(1)}°`; })}; average distance over the last ${last} throws: ${each((r) => `${lab.mean(r.metrics.return, knobs.units - last).toFixed(1)} m`)} (40 m at best).`);
       }
       if (env.kind === "grid" && unitOf() === "round") {
         out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} ${preset.charts.includes("steps") ? "steps" : "reward"} per episode over the last ${last} rounds: ${each((r) => (preset.charts.includes("steps") ? lab.mean(r.metrics.steps, knobs.units - last).toFixed(1) : lab.mean(r.metrics.return, knobs.units - last).toFixed(2)))}.`);

@@ -2,7 +2,9 @@
    thrower, the ball's arc for the angle the policy drew, where it lands (the reward), and where the last throws
    landed. Below, on one axis of angles: how far a throw at each angle flies (the world, which the learner never sees),
    and the Gaussian policy, a bell around its aim μ with spread σ, with the angles of the last throws under it. A
-   learned baseline is a dashed line at the distance it expects. */
+   learned baseline is a dashed line at the distance it expects. A deterministic policy (DPG) is only its aim: the bell is
+   then the noise its throws are made with, and a critic's curve q̂(a) is drawn over the last throws' landings, with its
+   slope at the aim. */
 (function (RL) {
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
@@ -58,7 +60,12 @@
       this.truth = g("truth", pane);
       el("path", { class: "reach", d }, this.truth);
       el("text", { class: "reach-name", x: this.ax(76) + 6, y: this.dy(env.distance(76)) - 6, "text-anchor": "start" }, this.truth).textContent = "how far a throw flies";
+      this.gPoints = g("points", pane); // a critic's data: where the last throws landed, by angle
       this.bell = el("path", { class: "bell" }, pane);
+      this.criticEl = el("path", { class: "critic" }, pane);
+      this.criticText = el("text", { class: "critic-name", "text-anchor": "start" }, pane);
+      this.slopeEl = el("path", { class: "slope" }, pane);
+      this.slopeDot = el("circle", { class: "slope-dot", r: 4 }, pane);
       this.muLine = el("line", { class: "mu", y1: PT - 8, y2: PB }, pane);
       this.muText = el("text", { class: "mu-text", y: PT - 12, "text-anchor": "middle" }, pane);
       this.sdBar = el("path", { class: "sd" }, pane);
@@ -85,19 +92,26 @@
     // The policy: a bell around μ with spread σ (in degrees); its height grows as it narrows, up to the top of the pane.
     show(d) {
       if (d.mu === undefined) return;
+      const redraw = !!d.critic !== !!this.d.critic;
       this.d = d;
-      const { mu, sd } = d, top = Math.min(PB - PT + 6, 640 / Math.max(0.5, sd)), y = (a) => PB - top * Math.exp(-0.5 * ((a - mu) / sd) ** 2);
+      const { mu } = d, det = !!d.deterministic, sd = Math.max(0, d.sd);
+      this.svg.toggleAttribute("data-deterministic", det);
+      const top = Math.min(PB - PT + 6, 640 / Math.max(0.5, sd)), y = (a) => PB - top * Math.exp(-0.5 * ((a - mu) / Math.max(1e-6, sd)) ** 2);
       // drawn from −4° to 94°: a little of the tails the world clips, as far as the labels allow
       let path = `M${this.ax(-4)} ${PB}`;
       for (let a = -4; a <= 94; a += 0.5) path += `L${this.ax(a).toFixed(1)} ${y(a).toFixed(1)}`;
-      this.bell.setAttribute("d", `${path}L${this.ax(94)} ${PB}Z`);
+      this.bell.setAttribute("d", sd > 0 ? `${path}L${this.ax(94)} ${PB}Z` : "");
       const x = this.ax(mu);
       this.muLine.setAttribute("x1", x);
       this.muLine.setAttribute("x2", x);
       this.muText.setAttribute("x", Math.max(AX + 40, Math.min(AX + AW - 40, x)));
-      this.muText.textContent = `aim μ = ${mu.toFixed(1)}°, spread σ = ${sd.toFixed(1)}°`;
+      this.muText.textContent = det
+        ? `aim μ = ${mu.toFixed(1)}°, ${sd > 0 ? `thrown with noise σ = ${sd.toFixed(0)}°` : "no noise"}`
+        : `aim μ = ${mu.toFixed(1)}°, spread σ = ${sd.toFixed(1)}°`;
       const half = PB - top * Math.exp(-0.5);
-      this.sdBar.setAttribute("d", `M${this.ax(mu - sd)} ${half}H${this.ax(mu + sd)}M${this.ax(mu - sd)} ${half - 4}v8M${this.ax(mu + sd)} ${half - 4}v8`);
+      this.sdBar.setAttribute("d", sd > 0 ? `M${this.ax(mu - sd)} ${half}H${this.ax(mu + sd)}M${this.ax(mu - sd)} ${half - 4}v8M${this.ax(mu + sd)} ${half - 4}v8` : "");
+      this._critic(d);
+      if (redraw) this._ticks();
       const hasBase = d.base !== undefined;
       this.baseEl.style.display = hasBase ? "" : "none";
       if (hasBase) {
@@ -107,6 +121,34 @@
         this.baseText.setAttribute("y", yb - 5);
         this.baseText.textContent = `baseline: ${d.base.toFixed(1)} m expected`;
       }
+    }
+
+    // A critic's estimate of how far each angle flies, and its slope at the aim: the line the aim climbs.
+    _critic(d) {
+      const on = !!d.critic;
+      for (const e of [this.criticEl, this.criticText, this.slopeEl, this.slopeDot]) e.style.display = on ? "" : "none";
+      if (!on) return;
+      const c = d.critic, clamp = (m) => Math.max(-2, Math.min(44, m));
+      let path = "";
+      for (let a = 0; a < c.length; a++) path += `${a ? "L" : "M"}${this.ax(a).toFixed(1)} ${this.dy(clamp(c[a])).toFixed(1)}`;
+      this.criticEl.setAttribute("d", path);
+      this.criticText.setAttribute("x", this.ax(1));
+      this.criticText.setAttribute("y", this.dy(clamp(c[0])) - 8);
+      this.criticText.textContent = "the critic, q̂(a)";
+      const lo = Math.floor(d.mu), f = d.mu - lo, q = c[lo] + f * ((c[Math.min(90, lo + 1)] ?? c[lo]) - c[lo]);
+      const at = (a) => [this.ax(a), this.dy(clamp(q + d.slope * (a - d.mu)))];
+      const [x1, y1] = at(d.mu - 9), [x2, y2] = at(d.mu + 9), up = d.slope >= 0, [tx, ty] = up ? [x2, y2] : [x1, y1], [fx, fy] = up ? [x1, y1] : [x2, y2];
+      const len = Math.hypot(tx - fx, ty - fy) || 1, ux = (tx - fx) / len, uy = (ty - fy) / len;
+      const head = `M${tx.toFixed(1)} ${ty.toFixed(1)}L${(tx - 9 * ux - 4.5 * uy).toFixed(1)} ${(ty - 9 * uy + 4.5 * ux).toFixed(1)}L${(tx - 9 * ux + 4.5 * uy).toFixed(1)} ${(ty - 9 * uy - 4.5 * ux).toFixed(1)}Z`;
+      this.slopeEl.setAttribute("d", `M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}${Math.abs(d.slope) > 0.05 ? head : ""}`);
+      this.slopeDot.setAttribute("cx", this.ax(d.mu));
+      this.slopeDot.setAttribute("cy", this.dy(clamp(q)));
+    }
+
+    // The last throws, all at once (a story shows a moment of a run without replaying them).
+    recent(list) {
+      this.throws = list.slice(-24);
+      this._ticks();
     }
 
     _arm(angle) {
@@ -143,6 +185,11 @@
       this.throws.forEach((t, i) => {
         if (i === n - 1) return;
         el("circle", { class: "landed", cx: this.fx(t.land), cy: GY, r: 3, style: `opacity:${(0.15 + 0.5 * (i / n)).toFixed(2)}` }, this.gLand);
+      });
+      // with a critic: each throw as a point, its angle and how far it flew, the data the critic is fitted to
+      this.gPoints.replaceChildren();
+      if (this.d.critic) this.throws.forEach((t, i) => {
+        el("circle", { class: `pt${i === n - 1 ? " last" : ""}`, cx: this.ax(t.angle), cy: this.dy(Math.max(-2, Math.min(44, t.land))), r: i === n - 1 ? 4 : 3, style: `opacity:${i === n - 1 ? 1 : (0.25 + 0.6 * (i / n)).toFixed(2)}` }, this.gPoints);
       });
     }
 
@@ -200,10 +247,12 @@
     _hover(e) {
       const box = this.svg.getBoundingClientRect(), px = ((e.clientX - box.left) / box.width) * W, py = ((e.clientY - box.top) / box.height) * H;
       if (py < PT - 30 || px < AX || px > AX + AW) { RL.tip.hide(); return; }
-      const a = ((px - AX) / AW) * 90, { mu, sd } = this.d, dens = Math.exp(-0.5 * ((a - mu) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI));
+      const a = ((px - AX) / AW) * 90, { mu, sd, critic, deterministic } = this.d, dens = sd > 0 ? Math.exp(-0.5 * ((a - mu) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI)) : 0;
+      const q = critic ? critic[Math.max(0, Math.min(critic.length - 1, Math.round(a)))] : null;
       RL.tip.show(e.clientX, e.clientY, `<div class="head">A throw at ${a.toFixed(1)}°</div>
         <div class="row"><b>${this.env.distance(a).toFixed(1)} m</b><span>how far it flies, without wind</span></div>
-        <div class="row"><b>${(100 * dens).toFixed(2)}%</b><span>chance per degree of the policy throwing here</span></div>`);
+        ${q !== null ? `<div class="row"><b>${q.toFixed(1)} m</b><span>what the critic expects</span></div>` : ""}
+        <div class="row"><b>${(100 * dens).toFixed(2)}%</b><span>chance per degree of ${deterministic ? "a throw, the aim plus noise, going" : "the policy throwing"} here</span></div>`);
     }
 
     destroy() { this.flight?.cancel(); RL.tip.hide(); this.svg.remove(); }
