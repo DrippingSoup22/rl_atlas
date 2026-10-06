@@ -96,11 +96,9 @@ animations and hover effects this guide relies on would not be smooth.
   and Figures 13.1 and 13.2, single-episode gradient estimates, softmax and Gaussian scores to play with, the critic's
   step size, the entropy bonus, GAE's weights and λ, and TRPO's trust region and PPO's clip on the corridor. Stories
   gained chart legends and partial replays.
-- [ ] **M6 · Odds and recorded runs**: every experiment shows how often its settings succeed; the recorder; DQN, A2C,
+- [x] **M6 · Odds and recorded runs**: every experiment shows how often its settings succeed; the recorder; DQN, A2C,
   TRPO and PPO on CartPole and Pendulum. Mountain Car is dropped from the deep runs: with random exploration the car
   almost never reaches the flag, so a network has nothing to learn from.
-  Next: a sweep of each deep algorithm's main knob over 5 seeds before recording it, then the Lab's player, the
-  remaining recordings and Part 9.
   Done: Mountain Car without optimism (a Lab, linked from Part 8: with γ = 0.99 no run ends up getting out when the values
   start at or below −100, the value of paying 1 forever; just above it the push to explore is feeble, and from −80 up every
   run gets out); the odds in the Lab (success rules on 26 presets, calibrated over 30 to 100 seeds; a tally of the runs that end
@@ -114,15 +112,12 @@ animations and hover effects this guide relies on would not be smooth.
   Done: Parts 11–13 written (95 of 95 stations); every story reviewed for calm visuals and concept first (checkpoints
   instead of fast replays); new stories for DPG (a deterministic aim on the throw, with a Lab), on/off-policy,
   exploration and bias–variance; deep recordings over 20 seeds, and their sweeps for DQN, PPO on Pendulum and TRPO.
+  Then: stories for experience replay, the target network, offline RL, imitation, normalization, model-based deep RL
+  and MCTS (UCT on a tic-tac-toe position, with a tree view and the odds of flat Monte Carlo against the tree); sweeps over
+  10 to 20 seeds per value for every recorded algorithm, folded into the texts that quote them (A2C and PPO on CartPole,
+  DQN's Huber knob, DDPG's τ, noise and reward scale, TD3's delay and target noise; SAC's α and τ to follow); a third quiz question
+  wherever an entry had two; a one-by-one review of every textbook against Sutton & Barto and newer sources.
   Still open:
-  - Sweeps over 20 seeds still to fold in (`recorder/record.py --sweep`, then the texts that quote them): A2C and PPO on
-    CartPole (a2c.md, the toolbox table), DDPG, TD3 and SAC (their odds paragraphs; DDPG's reward scale in
-    normalization.md), and DQN's Huber knob (dqn.md says the squared loss did better).
-  - Stories still to write, each on a run that shows the idea: experience replay and the target network (from the
-    recorded runs: the no-replay run learns and forgets; without a target the values pass 100, the most a state can be
-    worth, within 5,000 steps), offline RL (Q-learning from a fixed log prefers the moves the log never tried),
-    imitation (behavior cloning drifts off the expert's path after a slip; DAgger asks the expert there), normalization
-    (the same A2C with rewards in other units), model-based deep RL (a planner exploiting a learned model's blind spots).
   - No story, on purpose: which-algorithm (a decision guide, not a run), pg-theorem (a derivation; REINFORCE and the
     baseline show it at work), multi-agent and RLHF (they need worlds with several learners or a learned reward, beyond
-    the guide's), MCTS unless a tree view is built, debugging until a fair bug-hunt run is found.
+    the guide's), debugging until a fair bug-hunt run is found.
