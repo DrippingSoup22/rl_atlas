@@ -31,7 +31,7 @@ a14 = { algorithm = "reinforce", alpha = 0.00006103515625, right0 = 0.05, gamma 
 **REINFORCE** on the short corridor ([[why-policy]]): three cells that look alike, a swapped middle cell, $\rew{-1}$ per step. The policy starts by stepping right 5% of the time. It learns from whole episodes: play to the end, then go back over every step and nudge the weights so that the action taken there becomes more likely, by an amount proportional to the return that followed it.
 :::
 
-::: step {run = "learn", at = 0, play = 1, pace = 40, formula = 2}
+::: step {run = "learn", at = 0, play = 1, pace = 140, formula = 2}
 The first episode: 29 steps. Eighteen of them bump into the wall of cell 1; then the agent bounces between cells 2 and 3 four times before stepping right into the goal. The return from each step is minus the number of steps still to go: $\rew{G_0} = -29$ down to $\rew{G_{28}} = -1$.
 :::
 
@@ -39,7 +39,7 @@ The first episode: 29 steps. Eighteen of them bump into the wall of cell 1; then
 Then 29 updates, one per step. Every return is negative, so every action taken becomes a little *less* likely. Each left step raises the chance of right a little; each right step lowers it more, $(1 - p)/p = 19$ times more for the same return, because it was the rarer action. The balance after this episode: from 5.000% to 5.011%. The step size is tiny, $\alp = 2^{-13}$, for a reason the end of this story shows.
 :::
 
-::: step {run = "learn", at = 1, play = 4, pace = 10}
+::: step {run = "learn", checkpoints = [2, 3, 4, 5]}
 Episodes 2 to 5. The first three move the chance by a few hundredths of a percent, one of them down. Then episode 5 takes 227 steps, 150 of them in cell 1, with only 4 steps right. Its left steps carry returns as large as $\rew{-227}$, and they push hard: the chance of right jumps from 5.01% to 6.58%. One bad episode taught more than all the others together.
 :::
 
@@ -55,7 +55,7 @@ After 1000 episodes the agent steps right 48.8% of the time, worth $\rew{-12.1}$
 Why so small a step size? Here is another run with twice the step size, $\alp = 2^{-12}$. After 11 episodes it steps right 5.36% of the time, an ordinary start.
 :::
 
-::: step {run = "thrown", at = 11, play = 1, pace = 6}
+::: step {run = "thrown", at = 12}
 Its 12th episode is long: 426 steps, 404 of them left. The updates go back over it, each left step with a large return, and push the chance of right up, past 50% by the 133rd update. By the end of the episode the policy steps right with probability $1 - 10^{-8}$.
 :::
 

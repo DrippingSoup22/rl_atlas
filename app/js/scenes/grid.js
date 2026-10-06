@@ -150,7 +150,7 @@
         note.textContent = st.note || "";
         const unit = r.algorithm.unit;
         if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${unit}${n === 1 ? "" : "s"}` });
-        else if (st.play) play(view, r, t, st.play, { pace: st.pace || 200, fine: !!st.fine, updates: st.updates, after: (u) => { if (!st.note) note.textContent = `${u} ${unit}${u === 1 ? "" : "s"} done`; } });
+        else if (st.play) play(view, r, t, st.play, { pace: st.pace || 200, fine: !!st.fine, updates: st.updates, instant: !!st.instant, after: (u) => { if (!st.note) note.textContent = `${u} ${unit}${u === 1 ? "" : "s"} done`; } });
       }
 
       return {

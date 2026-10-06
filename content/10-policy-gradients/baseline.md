@@ -30,7 +30,7 @@ plain9 = { algorithm = "reinforce", alpha = 0.001953125, right0 = 0.05, gamma = 
 The short corridor once more, from the same start: right 5% of the time. Plain [[reinforce|REINFORCE]] suffers because every return is negative: every action taken is pushed down, and learning rests on small differences. The fix is to judge each return against what was **expected** from that state, a **baseline**. Here it is a learned estimate of the value of the state, $\val{\hat v(s, \mathbf w)}$; the cells look alike, so it is a single number, the dashed line on the landscape.
 :::
 
-::: step {run = "learn", at = 0, play = 1, pace = 40, formula = 2}
+::: step {run = "learn", at = 1, formula = 2}
 The first episode: 62 steps, 57 of them bumping into the wall of cell 1. The baseline starts at 0 and learns from each return as it goes over the episode, like Monte Carlo prediction ([[gradient-mc]]); by the end it expects $\val{-16.5}$.
 :::
 
@@ -38,7 +38,7 @@ The first episode: 62 steps, 57 of them bumping into the wall of cell 1. The bas
 The early steps, with returns down to $\rew{-62}$, did worse than the baseline expected: their actions become less likely. The last 18, near the end of the episode, did better: theirs become more likely. Better or worse than expected, not good or bad, decides the direction. On balance the chance of right rises from 5.0% to 6.9%.
 :::
 
-::: step {run = "learn", at = 1, play = 2, pace = 60}
+::: step {run = "learn", checkpoints = [2, 3]}
 Episode 3 takes only 9 steps, and every return, from $\rew{-9}$ to $\rew{-1}$, beats the baseline of about $\val{-15}$: all nine actions become more likely, the four steps right among them, and the chance of right rises from 7.2% to 8.0%. Short episodes now teach as much as long ones.
 :::
 

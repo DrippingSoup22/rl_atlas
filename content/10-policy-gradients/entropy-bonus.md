@@ -28,8 +28,8 @@ bonus = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta
 **Two gems.** A small one, two steps from the start, pays $\rew{0.3}$; a big one, seven steps away, pays $\rew{1}$. Either ends the episode, and with $\gam = 0.95$ the big gem is still worth much more from the start: $0.95^6 \approx 0.74$, against $0.95 \times 0.3 \approx 0.29$. Four [[a2c|A2C]] workers share one policy, all directions equally likely.
 :::
 
-::: step {run = "greedy", at = 0, play = 1, pace = 25, formula = 1}
-The first round: three workers stumble on the small gem, one on the big gem. The small gem is close, so it is found often and early, and every time, the moves that led to it become more likely.
+::: step {run = "greedy", at = 1, formula = 1}
+The first round, and the four paths it took: three workers stumbled on the small gem, one on the big gem. The small gem is close, so it is found often and early, and every time, the moves that led to it become more likely.
 :::
 
 ::: step {run = "greedy", at = 20}

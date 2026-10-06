@@ -21,10 +21,17 @@
     const pieces = Array.from(sym.querySelectorAll("[data-step]"));
     pieces.forEach((p) => p.style.setProperty("--k", p.dataset.step));
     const lines = typeof cfg.numbers === "string" ? { main: cfg.numbers } : cfg.numbers || {};
+    // too wide for the card: shrink it, down to 70% (the pieces stay side by side, as the steps reveal them)
+    const fit = () => {
+      sym.style.fontSize = "";
+      const room = sym.clientWidth, need = sym.scrollWidth;
+      if (room && need > room + 1) sym.style.fontSize = `${Math.max(0.7, (room - 4) / need).toFixed(3)}em`;
+    };
     return (st) => {
       const n = st.formula || 0;
       pieces.forEach((p) => p.classList.toggle("shown", +p.dataset.step <= n));
       sym.classList.toggle("on", n > 0);
+      if (n > 0) fit();
       const line = st.numbers === true ? lines.main : st.numbers ? lines[st.numbers] : null;
       if (line) num.innerHTML = RL.math.tex(line, true);
       num.classList.toggle("on", !!line);
@@ -67,24 +74,28 @@
   }
 
   // Replay units of a run on a view, event by event, the way the Lab walks: the agent moves, values update.
-  // With updates = n, only the first n updates of the unit are played, and the replay stops there.
+  // With updates = n, only the first n updates of the unit are played, and the replay stops there. With instant, the
+  // events are played without animation: the view jumps to where they lead (a moment inside a unit, say).
   function player(later) {
-    return function play(view, run, from, count, { pace = 240, fine = false, after, updates = 0 } = {}) {
+    return function play(view, run, from, count, { pace = 240, fine = false, after, updates = 0, instant = false } = {}) {
       let t = from, w = null, seen = 0;
       const end = Math.min(run.units, from + count);
-      const next = () => {
+      // one event; returns how long to wait before the next, or -1 when the replay is over
+      const one = () => {
         if (!w) {
-          if (t >= end) { after?.(t); return; }
+          if (t >= end) { after?.(t); return -1; }
           w = run.replay(t);
         }
         const { value: ev, done } = w.events.next();
-        if (done) { w = null; t++; after?.(t, true); later(next, 700); return; }
+        if (done) { w = null; t++; after?.(t, true); return 700; }
         if (SHOWN.has(ev.type)) view.show(run.algorithm.show(w.m, run.env, run.params, t), run.params);
         const wait = view.event(ev, { line: fine, p: run.params }) || 0;
-        if (updates && ev.type === "update" && ++seen >= updates) return;
+        if (updates && ev.type === "update" && ++seen >= updates) return -1;
         const quiet = ev.type === "info" || ev.type === "next" || ev.type === "skip";
-        later(next, quiet ? 40 : ev.type === "choose" ? pace / 2 : pace + wait);
+        return quiet ? 40 : ev.type === "choose" ? pace / 2 : pace + wait;
       };
+      if (instant) { while (one() >= 0); return; }
+      const next = () => { const ms = one(); if (ms >= 0) later(next, ms); };
       next();
     };
   }
@@ -206,7 +217,7 @@
             const noun = r.env.unitName || (r.algorithm.unit === "sweep" ? "sweep" : "episode");
             if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${noun}${n === 1 ? "" : "s"}`, each: (u) => more?.(st, view, r, u) });
             else if (st.play) {
-              play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, updates: st.updates, after: (u) => { if (!st.note) note.textContent = `${u.toLocaleString("en")} ${noun}${u === 1 ? "" : "s"} played`; } });
+              play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, updates: st.updates, instant: !!st.instant, after: (u) => { if (!st.note) note.textContent = `${u.toLocaleString("en")} ${noun}${u === 1 ? "" : "s"} played`; } });
             }
             chart(st);
             showFormula(st);

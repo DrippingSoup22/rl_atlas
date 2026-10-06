@@ -31,12 +31,12 @@ n20 = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 20, beta 
 **Four workers in a maze.** The goal G pays $\rew{+1}$ and ends the episode; every other step pays nothing, but with $\gam = 0.95$ a later reward is worth less, so shorter is better. Four copies of the agent start together. They share one actor, a softmax policy per tile (the arrows), and one critic, a value per tile (the colors). Each explores on its own.
 :::
 
-::: step {run = "learn", at = 0, play = 1, updates = 10, pace = 18, formula = 1}
-All four step at the same time, each its own way. Every $n = 5$ steps the workers pool their last five steps each into **one** update of the shared weights, each step judged by its $n$-step advantage. The first nine updates change nothing: no worker has found the goal yet, and the critic expects nothing anywhere. At step 47 the first worker steps into the goal.
+::: step {run = "learn", at = 0, play = 1, updates = 2, pace = 90, formula = 1}
+All four step at the same time, each its own way. Every $n = 5$ steps the workers pool their last five steps each into **one** update of the shared weights, each step judged by its $n$-step advantage. Watch the first two updates: they change nothing. No worker has found the goal yet, and the critic expects nothing anywhere, so every advantage is 0.
 :::
 
-::: step {run = "learn", at = 0, play = 1, updates = 10, pace = 18, formula = 2}
-In the tenth update its last two steps get positive advantages: the step up into the goal $\err{+1}$, and the one before it, a bump into the right wall, $\err{+0.95}$. The $n$-step return credits every step of the stretch, useful or not; later updates will sort them out. Up, from the tile below the goal, goes from 25% to 36% by the end of the round.
+::: step {run = "learn", at = 0, play = 1, updates = 10, instant = true, formula = 2}
+The next seven updates go the same way. Then, at step 47, the first worker steps into the goal. In the tenth update its last two steps get positive advantages: the step up into the goal $\err{+1}$, and the one before it, a bump into the right wall, $\err{+0.95}$. The $n$-step return credits every step of the stretch, useful or not; later updates will sort them out. Up, from the tile below the goal, goes from 25% to 36% by the end of the round.
 :::
 
 ::: step {run = "learn", at = 1, trail = false}

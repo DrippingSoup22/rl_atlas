@@ -36,11 +36,11 @@ learn = { algorithm = "baseline", alpha = 0.001953125, alphaW = 0.015625, right0
 A learner that estimates the value of each action and takes the best one does the same thing everywhere. Say right is best: from cell 1 to cell 2, where right means left, and back to cell 1, again and again. This episode was cut short after 40 steps; it would never end. Always left is no better: the agent never leaves cell 1.
 :::
 
-::: step {run = "right", at = 1, play = 1, pace = 40, formula = 1}
+::: step {run = "right", at = 2, formula = 1}
 **ε-greedy** adds a little randomness: right 95% of the time, left 5%. Now the agent escapes, but only when the 5% comes up in cell 2: this episode took 102 steps. On average the policy is worth $\rew{-44.2}$ per episode, the hollow point on the landscape below.
 :::
 
-::: step {run = "left", at = 0, play = 1, pace = 40}
+::: step {run = "left", at = 1}
 Preferring left with the same 5% of randomness is worse: $\rew{-82.1}$ on average. This episode took 62 steps, most of them spent bumping into the wall.
 :::
 
@@ -48,8 +48,8 @@ Preferring left with the same 5% of randomness is worse: $\rew{-82.1}$ on averag
 Now forget values, and choose the **chance** of stepping right directly. The landscape below is the value of the start for every chance $p$, worked out exactly. Its top is at $p = 2 - \sqrt 2 \approx 59\%$, worth $\rew{-11.7}$: a coin that lands right a little more often than left, far better than either ε-greedy policy. In this corridor the best policy is random, and no policy that commits to one action per cell can come close.
 :::
 
-::: step {run = "learn", at = 0, play = 4, pace = 25}
-A learner whose weights *are* the policy can climb this landscape. It starts at 5%, the ε-greedy policy that prefers left, and after every episode nudges its chance in the direction that worked better than expected. Watch the dot after each episode.
+::: step {run = "learn", checkpoints = [1, 2, 3, 4, 5, 20, 50], hold = 1300}
+A learner whose weights *are* the policy can climb this landscape. It starts at 5%, the ε-greedy policy that prefers left, and after every episode nudges its chance in the direction that worked better than expected. Watch the dot: over the first five episodes it moves between 4.6% and 15.8%, most after the fourth, a long one of 269 steps. After 20 episodes it is at 17%, after 50 at 34%.
 :::
 
 ::: step {run = "learn", at = 100}
