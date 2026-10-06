@@ -111,3 +111,18 @@ animations and hover effects this guide relies on would not be smooth.
   tuned settings (DQN balances CartPole with a squared loss and lr 5·10⁻⁴; A2C, PPO and TRPO balance it within the
   first 20–40% of their training; PPO swings Pendulum up), the first two recordings, their decoder and a CartPole view.
 - [ ] **M7 · The rest**: continuous control, toolbox, where next, quizzes everywhere, polish.
+  Done: Parts 11–13 written (95 of 95 stations); every story reviewed for calm visuals and concept first (checkpoints
+  instead of fast replays); new stories for DPG (a deterministic aim on the throw, with a Lab), on/off-policy,
+  exploration and bias–variance; deep recordings over 20 seeds, and their sweeps for DQN, PPO on Pendulum and TRPO.
+  Still open:
+  - Sweeps over 20 seeds still to fold in (`recorder/record.py --sweep`, then the texts that quote them): A2C and PPO on
+    CartPole (a2c.md, the toolbox table), DDPG, TD3 and SAC (their odds paragraphs; DDPG's reward scale in
+    normalization.md), and DQN's Huber knob (dqn.md says the squared loss did better).
+  - Stories still to write, each on a run that shows the idea: experience replay and the target network (from the
+    recorded runs: the no-replay run learns and forgets; without a target the values pass 100, the most a state can be
+    worth, within 5,000 steps), offline RL (Q-learning from a fixed log prefers the moves the log never tried),
+    imitation (behavior cloning drifts off the expert's path after a slip; DAgger asks the expert there), normalization
+    (the same A2C with rewards in other units), model-based deep RL (a planner exploiting a learned model's blind spots).
+  - No story, on purpose: which-algorithm (a decision guide, not a run), pg-theorem (a derivation; REINFORCE and the
+    baseline show it at work), multi-agent and RLHF (they need worlds with several learners or a learned reward, beyond
+    the guide's), MCTS unless a tree view is built, debugging until a fair bug-hunt run is found.
