@@ -5,6 +5,9 @@ prereqs = ["dqn", "double-q", "prioritized-sweeping"]
 lab = "dqn-extensions"
 sources = [
   { text = "van Hasselt (2010), Double Q-learning, NIPS", url = "https://papers.nips.cc/paper/2010/hash/091d584fced301b442654dd8c23b3fc9-Abstract.html" },
+  { text = "Bellemare, Dabney & Munos (2017), A distributional perspective on reinforcement learning, Proceedings of the 34th International Conference on Machine Learning", url = "https://arxiv.org/abs/1707.06887" },
+  { text = "Fortunato et al. (2018), Noisy networks for exploration, International Conference on Learning Representations", url = "https://arxiv.org/abs/1706.10295" },
+  { text = "Badia, Piot, Kapturowski, Sprechmann, Vitvitskyi, Guo & Blundell (2020), Agent57: outperforming the Atari human benchmark, Proceedings of the 37th International Conference on Machine Learning", url = "https://arxiv.org/abs/2003.13350" },
   { text = "van Hasselt, Guez & Silver (2016), Deep reinforcement learning with double Q-learning, AAAI", url = "https://arxiv.org/abs/1509.06461" },
   { text = "Wang, Schaul, Hessel, van Hasselt, Lanctot & de Freitas (2016), Dueling network architectures for deep reinforcement learning, ICML", url = "https://arxiv.org/abs/1511.06581" },
   { text = "Schaul, Quan, Antonoglou & Silver (2016), Prioritized experience replay, ICLR", url = "https://arxiv.org/abs/1511.05952" },
@@ -70,6 +73,14 @@ $$P(i) = \frac{p_i^{\,\alpha}}{\sum_k p_k^{\,\alpha}}, \label{eq-per}$$
 with $\alpha = 0.6$ here ($\alpha = 0$ is uniform sampling). New transitions enter with the highest priority, so each is replayed at least once soon. Skewing the sampling biases the updates toward the transitions drawn most often, which importance weights correct: each sample's loss is scaled by $\big(N \cdot P(i)\big)^{-\beta}$, divided by the largest weight in the batch, with $\beta$ raised from 0.4 to 1 over the run, so that the correction is complete by the end. A sum tree finds and updates priorities in logarithmic time.
 
 This is prioritized sweeping ([[prioritized-sweeping]]) for a memory instead of a model: spend updates where the news is. On Atari it was one of the two most valuable of Rainbow's components. On CartPole it was the quickest to first average 450 steps (every seed by block 28, against block 37 for DQN), but it did not hold: 12 of its 20 runs fell back below 450 by the end, some as low as 240.
+
+### Rainbow's other three {#rainbow}
+
+- **Multi-step returns.** The target sums $n$ rewards before bootstrapping, $n = 3$ in Rainbow, so news travels $n$ steps per update ([[n-step-td]]). The replayed steps came from an older policy and Rainbow does not correct for it; with small $n$ the error is tolerable.
+- **Distributional values.** Instead of the mean return, the network predicts its whole distribution, as probabilities over 51 fixed values, and learns it with a distributional Bellman update (Bellemare, Dabney & Munos, 2017). The greedy action still maximizes the mean, but learning the full shape gives the network richer targets.
+- **Noisy networks.** ε-greedy is replaced by learned noise in the weights of the last layers (Fortunato et al., 2018): the network decides how much to randomize, state by state, and the noise shrinks where it stops paying off.
+
+Agent57 (Badia et al., 2020), which adds learned exploration bonuses, recurrent memory and a choice among many discount and exploration settings to this family, was the first to beat the human benchmark on all 57 Atari games, Montezuma's Revenge included.
 
 ### Historical remarks {#history}
 

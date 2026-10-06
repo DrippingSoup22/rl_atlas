@@ -61,7 +61,7 @@ The semi-gradient update moves $\val{\hat q(S, A, \mathbf w)}$ toward $\rew{R} +
 ::: definition {#def-target} Target network
 A second set of weights $\mathbf w^-$, used only to compute targets. Every $C$ steps it is overwritten with the current weights, $\mathbf w^- \leftarrow \mathbf w$. The loss is
 $$L(\mathbf w) = \mathbb E\Big[\big(\rew{r} + \gam \max_{a'} \val{\hat q(s', a', \mathbf w^-)} - \val{\hat q(s, a, \mathbf w)}\big)^2\Big]. \label{loss}$$
-A soft version moves the copy a little every step instead, $\mathbf w^- \leftarrow \tau \mathbf w + (1 - \tau)\,\mathbf w^-$ with a small $\tau$.
+A soft version moves the copy a little every step instead, $\mathbf w^- \leftarrow \tau \mathbf w + (1 - \tau)\,\mathbf w^-$ with a small $\tau$. The copy is then an average of past weights about $1/\tau$ steps old; a hard copy every $C$ steps is on average $C/2$ steps old, so $\tau = 0.005$ behaves roughly like $C = 400$.
 :::
 
 Between two copies the targets are fixed functions of the data, and learning is ordinary regression: fit $\val{\hat q(s, a, \mathbf w)}$ to $\rew{r} + \gam \max_{a'} \val{\hat q(s', a', \mathbf w^-)}$ on the transitions at hand. Each period then performs, approximately, one step of value iteration ([[value-iteration]]): the network fits the Bellman optimality backup of the frozen copy, and the next copy starts from the result. Done in large batches, this is fitted Q iteration (Ernst et al., 2005; Riedmiller, 2005); DQN does it incrementally, a minibatch at a time, with replayed transitions ([[experience-replay]]).

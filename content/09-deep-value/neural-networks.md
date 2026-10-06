@@ -4,6 +4,8 @@ prereqs = ["features", "semi-gradient-td", "deadly-triad"]
 lab = "ppo-cartpole"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §9.7", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Dohare, Hernandez-Garcia, Lan, Rahman, Mahmood & Sutton (2024), Loss of plasticity in deep continual learning, Nature 632", url = "https://doi.org/10.1038/s41586-024-07711-7" },
+  { text = "Nikishin, Schwarzer, D'Oro, Bacon & Courville (2022), The primacy bias in deep reinforcement learning, Proceedings of the 39th International Conference on Machine Learning", url = "https://arxiv.org/abs/2205.07802" },
   { text = "Goodfellow, Bengio & Courville (2016), Deep Learning, MIT Press, chapters 6 and 8", url = "https://www.deeplearningbook.org/" },
   { text = "Rumelhart, Hinton & Williams (1986), Learning representations by back-propagating errors, Nature 323", url = "https://doi.org/10.1038/323533a0" },
   { text = "Cybenko (1989), Approximation by superpositions of a sigmoidal function, Mathematics of Control, Signals and Systems 2", url = "https://doi.org/10.1007/BF02551274" },
@@ -90,6 +92,7 @@ With tiles, an update touched the few weights of the tiles a state lit, and the 
 - **The data are not independent.** Consecutive steps of an episode look alike, so a run of updates all pull in the same direction, and the network can drift away from what it learned elsewhere and forget it.
 - **The targets move.** A bootstrapped target uses the same network that is being updated, so every step changes the target it is chasing.
 - **The guarantees are gone.** Even on-policy, semi-gradient TD with a nonlinear approximator can diverge; off-policy, the deadly triad is fully armed ([[deadly-triad]]).
+- **Plasticity fades.** Trained for long on a stream whose targets keep changing, a network slowly loses the ability to learn new things: units stop responding, weights grow, and later updates achieve less (Dohare et al., 2024). Resetting part of the network now and then, while keeping the replay memory, is a simple remedy (Nikishin et al., 2022).
 
 [[dqn|DQN]] is Q-learning with a network plus two remedies aimed at the first two points: [[experience-replay]] breaks up the correlations, and a [[target-network]] holds the targets still for a while. Neither restores a guarantee; together they made learning from raw pixels work.
 
