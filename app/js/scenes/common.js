@@ -105,7 +105,7 @@
     right: { label: "Chance of stepping right, π(right)", percent: true },
     aim: { label: "Where the policy aims: its mean angle (degrees)" },
     test: { label: "Test episode after each block: its return" },
-    q: { label: "The largest Q-value in each batch, on average" },
+    q: { label: (noun, learner) => (learner === "ac" ? "The critics' targets in each batch, on average" : "The largest Q-value in each batch, on average") },
   };
   function curves(host, cfg, runOf) {
     const cache = new Map();
@@ -119,9 +119,10 @@
       chart?.destroy();
       const first = runOf(names[0]), unit = first.env.unitName || first.algorithm.unit;
       const noun = unit === "pull" || unit === "step" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : unit === "round" ? ["round", "rounds"] : unit === "throw" ? ["throw", "throws"] : unit === "block" ? ["block", "blocks"] : ["episode", "episodes"];
-      const label = typeof METRIC[metric].label === "function" ? METRIC[metric].label(noun) : METRIC[metric].label;
+      const learner = RL.recordings?.[cfg.runs[names[0]].recording]?.learner;
+      const label = typeof METRIC[metric].label === "function" ? METRIC[metric].label(noun, learner) : METRIC[metric].label;
       const legend = names.length > 1 ? `<div class="scene-chart-legend">${names.map((n, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${RL.esc(cfg.runs[n].name || n)}</span>`).join("")}</div>` : "";
-      host.innerHTML = `<div class="scene-chart-title">${label}<span class="faint"></span></div>${legend}<div class="scene-chart-host"></div>`;
+      host.innerHTML = `<div class="scene-chart-title">${RL.asIs(label)}<span class="faint"></span></div>${legend}<div class="scene-chart-host"></div>`;
       chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, log: METRIC[metric].log, domain: st.domain || null, noun });
       const total = cfg.average || 200, status = host.querySelector(".faint");
       const acc = cache.get(key) || { done: 0, sums: names.map(() => new Float64Array(first.units)) };

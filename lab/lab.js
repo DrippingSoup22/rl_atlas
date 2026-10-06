@@ -70,7 +70,8 @@
     test: { title: (n, env) => (env.kind === "cartpole" ? "Test episode after each block: steps balanced" : "Test episode after each block: its return") },
     loss: { title: () => "Loss: the squared TD error, averaged over the block", log: true },
     td: { title: () => "Size of the TD error |δ|, averaged over the block", log: true },
-    q: { title: () => "The largest Q-value of each state in the batches, on average" },
+    // DQN logs the largest Q-value of each state in a batch; the actor–critics, the target of each sample
+    q: { title: (n, env, alg) => (alg?.kind === "ac" ? "The critics' targets in the batches, on average" : "The largest Q-value of each state in the batches, on average") },
     eps: { title: () => "Exploration ε at the end of the block", percent: true },
   };
   const LADDER = [10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
@@ -319,10 +320,10 @@
     function chartsFor() {
       charts.forEach((c) => c.destroy());
       const grid = q(".chart-grid");
-      grid.innerHTML = preset.charts.map((k) => `<div class="chart-box"><h3>${esc(METRICS[k].title(noun()[0], env))}</h3><div class="chart-host"></div></div>`).join("");
+      grid.innerHTML = preset.charts.map((k) => `<div class="chart-box"><h3>${RL.asIs(METRICS[k].title(noun()[0], env, racers[0].algorithm))}</h3><div class="chart-host"></div></div>`).join("");
       grid.className = `chart-grid n${preset.charts.length}`;
       charts = preset.charts.map((k, j) => new RL.LineChart(grid.querySelectorAll(".chart-host")[j], {
-        label: METRICS[k].title(noun()[0], env), percent: METRICS[k].percent, log: METRICS[k].log, zero: METRICS[k].zero,
+        label: METRICS[k].title(noun()[0], env, racers[0].algorithm), percent: METRICS[k].percent, log: METRICS[k].log, zero: METRICS[k].zero,
         domain: k === "return" || k === "policy-value" ? preset.params.domain : null, noun: noun(), logX: knobs.units > 20000,
         onSeek: (t) => { pause(); seek(t); },
       }));
@@ -555,7 +556,7 @@
       for (const k of preset.measures) {
         if (k === "aim" && env.kind === "throw") continue; // said above, with the spread
         const f = METRICS[k].percent ? (v) => `${(100 * v).toFixed(0)}%` : (v) => `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(Math.abs(v) >= 10 ? 1 : 3)}${k === "aim" ? "°" : ""}`;
-        out.push(`${METRICS[k].title(noun()[0], env)}, at the end: ${each((r) => f(r.metrics[k][knobs.units - 1]))}.`);
+        out.push(`${METRICS[k].title(noun()[0], env, racers[0].algorithm)}, at the end: ${each((r) => f(r.metrics[k][knobs.units - 1]))}.`);
       }
       q(".summary").innerHTML = out.join("<br>");
     }

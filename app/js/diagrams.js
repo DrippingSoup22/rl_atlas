@@ -57,6 +57,24 @@
       { kind: "state", label: "S′", edge: "R" },
       { kind: "action", label: "best by Q₁,\nvalued by Q₂", fan: 3, max: true },
     ],
+    // DDPG: no max over actions; the target actor names the one next action, the target critic values it.
+    ddpg: [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "μ′(S′), valued by q̂′", edge: "μ′" },
+    ],
+    // TD3: the same, with the target action blurred by clipped noise and the smaller of two critics.
+    td3: [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "μ′(S′) + clipped noise,\nvalued by min(q̂′₁, q̂′₂)", edge: "μ′" },
+    ],
+    // SAC: a next action drawn from the policy, valued by the smaller critic minus α ln π (its surprise).
+    sac: [
+      { kind: "action", label: "S, A" },
+      { kind: "state", label: "S′", edge: "R" },
+      { kind: "action", label: "A′ drawn from π,\nmin q̂′ − α ln π(A′|S′)", edge: "π" },
+    ],
     // n-step methods: n sampled steps, then the estimate of where they led.
     "n-step-td": { gap: 50, levels: [
       { kind: "state", label: "S" },

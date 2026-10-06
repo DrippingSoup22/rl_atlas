@@ -762,6 +762,33 @@ film = [0, 3, 5, 10, 40]
 intro = "The motor is too weak to lift the pendulum straight up: it has to swing. Four workers play at once; every 512 of their steps, PPO takes ten clipped passes over the batch. The policy is a bell curve over the torque, and the critic learns what each angle and spin is worth. After every block of 5,000 steps the policy plays one test episode of 200 steps, from the same start every time; every step costs the angle from upright, the spin and the torque, so 0 is the best there is."
 success = { metric = "return", min = -250, text = "end up swinging it up and holding it, −250 or better per training episode" }
 
+[ddpg-pendulum]
+title = "DDPG swings a pendulum up"
+env = "pendulum"
+racers = [{ recording = "ddpg-pendulum" }]
+charts = ["return", "test", "q"]
+film = [0, 2, 3, 5, 40]
+intro = "The actor names one torque for each angle and spin; the critic says what that choice is worth, and the actor follows the critic's slope. Exploration is noise added to the actor's torque. Every step is stored in a memory of 100,000, and each step a batch of 128 is replayed, with targets from slowly following copies of both networks. After every block of 1,500 steps the actor plays one test episode of 200 steps without noise, from the same start every time; every step costs the angle from upright, the spin and the torque, so 0 is the best there is."
+success = { metric = "test", min = -250, text = "end up swinging it up and holding it in the test episodes, −250 or better" }
+
+[td3-pendulum]
+title = "TD3 against DDPG: twin critics"
+env = "pendulum"
+racers = [{ recording = "ddpg-pendulum" }, { recording = "td3-pendulum" }]
+charts = ["test", "q"]
+film = [0, 3, 5, 40]
+intro = "The same pendulum, the same memory and networks. TD3 changes three things: two critics, and the target uses the smaller of their estimates; the actor and the target copies move only every second critic step; and the target action is blurred with clipped noise. Watch the critics' targets: every reward here is 0 or less, so no value can be above 0."
+success = { metric = "test", min = -250, text = "end up swinging it up and holding it in the test episodes, −250 or better" }
+
+[sac-pendulum]
+title = "SAC: random on purpose"
+env = "pendulum"
+racers = [{ recording = "sac-pendulum" }]
+charts = ["return", "test", "q"]
+film = [0, 3, 4, 10, 40]
+intro = "The actor gives a mean torque and a spread, and the agent draws its torque from them; every reward comes with a bonus for the policy's randomness, weighted by α, which tunes itself toward a target. Two critics learn the reward and the randomness still to come, and the target takes the smaller. After every block of 1,500 steps the policy plays one test episode with its mean torque, from the same start every time; every step costs the angle from upright, the spin and the torque, so 0 is the best there is. The numbers show the spread the policy would draw with."
+success = { metric = "test", min = -250, text = "end up swinging it up and holding it in the test episodes, −250 or better" }
+
 [a2c-cartpole]
 title = "A2C balances a pole"
 env = "cartpole"

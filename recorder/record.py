@@ -5,14 +5,15 @@
     python recorder/record.py --sweep      # the sweeps: each recording's knobs over several values, curves only
 
 Trains small networks on Gymnasium's worlds and writes what the Lab and the stories play back, to
-content/recordings/<name>.json: for every seed, the average return of the training episodes in each block of steps;
+content/recordings/<name>.json: for every seed, the average return of the training episodes in each block of steps
+and the return of one test episode after each block (the same start each time, played as the snapshots play it);
 for one seed, a snapshot after every block: what the network thinks of a grid of states (values, and the action it
 prefers), one test episode played with it, and the block's statistics. Needs Python 3.11+, NumPy and Gymnasium; every
 run is reproducible from its seed. Seeds run in parallel, one process each.
 
 A sweep trains a recording's settings again with one knob changed, for each of several values and every seed, and
-keeps only the training curves, in content/recordings/sweeps/<name>.json: how often a setting ends well, and how
-that moves with the knob.
+keeps only the curves (training and test returns), in content/recordings/sweeps/<name>.json: how often a setting ends
+well, and how that moves with the knob.
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ from pg import PG, PGConfig, gae  # noqa: E402
 from ac import AC, ACConfig  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "content" / "recordings"
+OUT = Path(os.environ.get("RECORDINGS_OUT", ROOT / "content" / "recordings"))  # elsewhere, to compare before replacing
 TEST_SEED = 2024  # every snapshot's test episode starts from the same state, so snapshots compare like with like
 log = logging.getLogger("record")
 
@@ -85,7 +86,8 @@ GRID = 31  # points per side of a snapshot's map
 # DQN on CartPole: tuned until most seeds balance for the full 500 steps. A squared loss, not Huber's: CartPole's values
 # run up to 1/(1 − γ) = 100, and clipped errors learn them too slowly. Each comparison of Part 9 changes one thing.
 DQN_CARTPOLE = dict(lr=5e-4, buffer=10_000, batch=128, train_every=4, target_every=500, eps=(1.0, 0.05, 20_000), huber=False)
-CARTPOLE = dict(world="cartpole", learner="dqn", steps=200_000, block=5_000, seeds=[1, 2, 3, 4, 5])
+SEEDS = list(range(1, 21))  # 20 seeds per recording: enough to tell a setting that works 9 times in 10 from one that works 6
+CARTPOLE = dict(world="cartpole", learner="dqn", steps=200_000, block=5_000, seeds=SEEDS)
 CATALOG = {
     "dqn-cartpole": dict(CARTPOLE, cfg=DQN_CARTPOLE, station="dqn", title="DQN"),
     "dqn-cartpole-no-replay": dict(CARTPOLE, cfg=dict(DQN_CARTPOLE, buffer=128), station="dqn", title="DQN without replay"),
@@ -94,20 +96,20 @@ CATALOG = {
     "dueling-dqn-cartpole": dict(CARTPOLE, cfg=dict(DQN_CARTPOLE, dueling=True), station="dqn-extensions", title="Dueling DQN"),
     "prioritized-dqn-cartpole": dict(CARTPOLE, cfg=dict(DQN_CARTPOLE, prioritized=True), station="dqn-extensions", title="Prioritized replay"),
     # Policy gradients with networks, the deep versions of Part 10's methods
-    "a2c-cartpole": dict(world="cartpole", learner="pg", station="a2c", title="A2C", steps=120_000, block=3_000, seeds=[1, 2, 3, 4, 5],
+    "a2c-cartpole": dict(world="cartpole", learner="pg", station="a2c", title="A2C", steps=120_000, block=3_000, seeds=SEEDS,
                          cfg=dict(algo="a2c", workers=8, steps=5, lr=1e-3, lam=1.0, v_epochs=1, minibatch=40, lr_v=1e-3)),
-    "ppo-cartpole": dict(world="cartpole", learner="pg", station="ppo", title="PPO", steps=100_000, block=2_500, seeds=[1, 2, 3, 4, 5],
+    "ppo-cartpole": dict(world="cartpole", learner="pg", station="ppo", title="PPO", steps=100_000, block=2_500, seeds=SEEDS,
                          cfg=dict(algo="ppo", workers=8, steps=128, epochs=10, minibatch=64, lr=3e-4, clip=0.2, lam=0.95)),
-    "trpo-cartpole": dict(world="cartpole", learner="pg", station="trpo", title="TRPO", steps=100_000, block=2_500, seeds=[1, 2, 3, 4, 5],
+    "trpo-cartpole": dict(world="cartpole", learner="pg", station="trpo", title="TRPO", steps=100_000, block=2_500, seeds=SEEDS,
                           cfg=dict(algo="trpo", workers=8, steps=256, delta=0.01, lam=0.95, v_epochs=10, minibatch=64)),
-    "ppo-pendulum": dict(world="pendulum", learner="pg", station="ppo", title="PPO", steps=200_000, block=5_000, seeds=[1, 2, 3, 4, 5],
+    "ppo-pendulum": dict(world="pendulum", learner="pg", station="ppo", title="PPO", steps=200_000, block=5_000, seeds=SEEDS,
                          cfg=dict(algo="ppo", workers=4, steps=512, epochs=10, minibatch=64, lr=1e-3, gamma=0.9, lam=0.95, reward_scale=0.1)),
     # Off-policy actor-critics for continuous actions (Part 11)
-    "ddpg-pendulum": dict(world="pendulum", learner="ac", station="ddpg", title="DDPG", steps=60_000, block=1_500, seeds=[1, 2, 3, 4, 5],
+    "ddpg-pendulum": dict(world="pendulum", learner="ac", station="ddpg", title="DDPG", steps=60_000, block=1_500, seeds=SEEDS, sweep_seeds=SEEDS[:10],
                           cfg=dict(algo="ddpg", reward_scale=0.1)),
-    "td3-pendulum": dict(world="pendulum", learner="ac", station="td3", title="TD3", steps=60_000, block=1_500, seeds=[1, 2, 3, 4, 5],
+    "td3-pendulum": dict(world="pendulum", learner="ac", station="td3", title="TD3", steps=60_000, block=1_500, seeds=SEEDS, sweep_seeds=SEEDS[:10],
                          cfg=dict(algo="td3", reward_scale=0.1)),
-    "sac-pendulum": dict(world="pendulum", learner="ac", station="sac", title="SAC", steps=60_000, block=1_500, seeds=[1, 2, 3, 4, 5],
+    "sac-pendulum": dict(world="pendulum", learner="ac", station="sac", title="SAC", steps=60_000, block=1_500, seeds=SEEDS, sweep_seeds=SEEDS[:10],
                          cfg=dict(algo="sac", reward_scale=0.1)),
 }
 
@@ -120,7 +122,7 @@ SWEEPS = {
     "ppo-cartpole": {"clip": [0.0, 0.1, 0.2, 0.3, 0.5], "epochs": [1, 4, 10, 30], "lr": [1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2]},
     "trpo-cartpole": {"delta": [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0]},
     "ppo-pendulum": {"lr": [3e-4, 1e-3, 3e-3], "gamma": [0.9, 0.95, 0.99], "clip": [0.0, 0.1, 0.2, 0.3, 0.5], "epochs": [1, 4, 10, 30]},
-    "ddpg-pendulum": {"tau": [0.001, 0.005, 0.02, 0.1], "noise": [0.0, 0.1, 0.3, 0.6]},
+    "ddpg-pendulum": {"tau": [0.001, 0.005, 0.02, 0.1], "noise": [0.0, 0.1, 0.3, 0.6], "reward_scale": [0.01, 0.1, 1.0]},
     "td3-pendulum": {"delay": [1, 2, 4, 8], "policy_noise": [0.0, 0.2, 0.5, 1.0]},
     "sac-pendulum": {"alpha": ["auto", 0.01, 0.05, 0.2, 1.0], "tau": [0.001, 0.005, 0.02, 0.1]},
 }
@@ -176,11 +178,14 @@ def test_episode(world: dict, choose, seed: int, rng: np.random.Generator) -> tu
     return ep, ret
 
 
+def test_dqn(agent: DQN, world: dict, rng: np.random.Generator) -> dict:
+    return test_episode(world, lambda o, r: (agent.act(o, greedy=True), agent.q(o[None])[0]), TEST_SEED, rng)[0]
+
+
 def snapshot_dqn(agent: DQN, world: dict, rng: np.random.Generator) -> dict:
     xs, ys = grid_axes(world)
     q = agent.q(world["grid"](xs, ys))
-    ep, _ = test_episode(world, lambda o, r: (agent.act(o, greedy=True), agent.q(o[None])[0]), TEST_SEED, rng)
-    return {"v": pack(q.max(axis=1)), "act": pack(q.argmax(axis=1), 0, agent.n - 1), "test": ep, "eps": round(agent.epsilon(), 4)}
+    return {"v": pack(q.max(axis=1)), "act": pack(q.argmax(axis=1), 0, agent.n - 1), "test": test_dqn(agent, world, rng), "eps": round(agent.epsilon(), 4)}
 
 
 # ---- training ----
@@ -192,7 +197,7 @@ def run_dqn(spec: dict, seed: int, snapshots: bool) -> dict:
     obs, _ = env.reset(seed=seed)
     agent = DQN(env.observation_space.shape[0], env.action_space.n, cfg, rng, spec["steps"])
     block, blocks = spec["block"], spec["steps"] // spec["block"]
-    per_block, qs = [[] for _ in range(blocks)], []
+    per_block, qs, tests = [[] for _ in range(blocks)], [], []
     shots = [snapshot_dqn(agent, world, np.random.default_rng(seed + 10_000))] if snapshots else []
     ret = 0.0
     for t in range(spec["steps"]):
@@ -213,18 +218,17 @@ def run_dqn(spec: dict, seed: int, snapshots: bool) -> dict:
                 shot["stats"] = rounded({"loss": np.mean(L["loss"]) if L["loss"] else 0.0, "td": np.mean(L["td"]) if L["td"] else 0.0,
                                          "q": np.mean(L["q"]) if L["q"] else 0.0})
                 shots.append(shot)
+            # every seed plays the shown seed's test episode: the greedy policy, judged apart from its exploration
+            tests.append(shots[-1]["test"]["return"] if snapshots else test_dqn(agent, world, np.random.default_rng(seed + 10_000 + k))["return"])
             agent.log = {"loss": [], "td": [], "q": []}
     return {"seed": seed, "train": [round(float(np.mean(b)), 2) if b else None for b in per_block],
-            "episodes": [len(b) for b in per_block], "q": qs, "snapshots": shots}
+            "episodes": [len(b) for b in per_block], "q": qs, "test": tests, "snapshots": shots}
 
 
-def snapshot_pg(agent: PG, world: dict, rng: np.random.Generator) -> dict:
-    """The critic's values over the grid, and the policy's choice: P(second action) for a softmax, the mean action for
-    a Gaussian; a test episode with actions drawn from the policy, keeping per step its probabilities (or its mean and
-    spread) and the critic's value."""
-    xs, ys = grid_axes(world)
-    g = world["grid"](xs, ys)
-    v, pi = agent.value(g), agent.pi
+def test_pg(agent: PG, world: dict, rng: np.random.Generator) -> dict:
+    """A test episode with actions drawn from the policy, keeping per step its probabilities (or its mean and spread)
+    and the critic's value."""
+    pi = agent.pi
 
     def choose(o, r):
         a = pi.sample(o[None], r)[0]
@@ -234,7 +238,16 @@ def snapshot_pg(agent: PG, world: dict, rng: np.random.Generator) -> dict:
         mu, sd = pi.dist(o[None])
         return pi.action_for_env(a), [float(mu[0, 0]), float(sd[0]), val]
 
-    ep, _ = test_episode(world, choose, TEST_SEED, rng)
+    return test_episode(world, choose, TEST_SEED, rng)[0]
+
+
+def snapshot_pg(agent: PG, world: dict, rng: np.random.Generator) -> dict:
+    """The critic's values over the grid, the policy's choice there (P(second action) for a softmax, the mean action for
+    a Gaussian), and a test episode."""
+    xs, ys = grid_axes(world)
+    g = world["grid"](xs, ys)
+    v, pi = agent.value(g), agent.pi
+    ep = test_pg(agent, world, rng)
     choice = pi.dist(g)[:, -1] if pi.discrete else pi.dist(g)[0][:, 0]
     return {"v": pack(v), "mean": pack(choice), "test": ep}
 
@@ -247,7 +260,7 @@ def run_pg(spec: dict, seed: int, snapshots: bool) -> dict:
     obs = np.stack([e.reset(seed=seed * 100 + k)[0] for k, e in enumerate(envs)])
     agent = PG(obs.shape[1], envs[0].action_space, cfg, rng)
     N, T, block, blocks = cfg.workers, cfg.steps, spec["block"], spec["steps"] // spec["block"]
-    per_block = [[] for _ in range(blocks)]
+    per_block, tests = [[] for _ in range(blocks)], []
     stats: list[dict] = []
     shots = [snapshot_pg(agent, world, np.random.default_rng(seed + 10_000))] if snapshots else []
     ep, t = np.zeros(N), 0
@@ -278,26 +291,30 @@ def run_pg(spec: dict, seed: int, snapshots: bool) -> dict:
                 shot["stats"] = rounded({k2: float(np.mean([s_[k2] for s_ in stats])) for k2 in (stats[0] if stats else {})})
                 shots.append(shot)
                 stats = []
+            if t % block < N and t // block <= blocks and len(tests) < t // block:  # every seed: the same test episode
+                tests.append(shots[-1]["test"]["return"] if snapshots else test_pg(agent, world, np.random.default_rng(seed + 10_000 + t // block))["return"])
         adv, ret = gae(R, V, VN, D, C, cfg.gamma, cfg.lam)
         A = np.array(A)
         agent.update(S.reshape(T * N, -1), A.reshape(T * N, *A.shape[2:]), adv.reshape(-1), ret.reshape(-1))
         stats.append(dict(agent.stats))
     return {"seed": seed, "train": [round(float(np.mean(b)), 2) if b else None for b in per_block],
-            "episodes": [len(b) for b in per_block], "snapshots": shots}
+            "episodes": [len(b) for b in per_block], "test": tests, "snapshots": shots}
 
 
-def snapshot_ac(agent: AC, world: dict, rng: np.random.Generator) -> dict:
-    """What the critic thinks of the grid (Q of the greedy action), the actor's greedy action there, and a test episode
-    played greedily, keeping per step the action, the spread the policy explores with, and the value."""
-    xs, ys = grid_axes(world)
-    g = world["grid"](xs, ys)
-
+def test_ac(agent: AC, world: dict, rng: np.random.Generator) -> dict:
+    """A test episode played greedily, keeping per step the action, the spread the policy explores with, and the value."""
     def choose(o, r):
         a = agent.policy(o[None], greedy=True)[0]
         return a, [float(a[0]), float(agent.spread(o[None])[0]), float(agent.value(o[None])[0])]
 
-    ep, _ = test_episode(world, choose, TEST_SEED, rng)
-    return {"v": pack(agent.value(g)), "mean": pack(agent.policy(g, greedy=True)[:, 0]), "test": ep}
+    return test_episode(world, choose, TEST_SEED, rng)[0]
+
+
+def snapshot_ac(agent: AC, world: dict, rng: np.random.Generator) -> dict:
+    """What the critic thinks of the grid (Q of the greedy action), the actor's greedy action there, and a test episode."""
+    xs, ys = grid_axes(world)
+    g = world["grid"](xs, ys)
+    return {"v": pack(agent.value(g)), "mean": pack(agent.policy(g, greedy=True)[:, 0]), "test": test_ac(agent, world, rng)}
 
 
 def run_ac(spec: dict, seed: int, snapshots: bool) -> dict:
@@ -308,7 +325,7 @@ def run_ac(spec: dict, seed: int, snapshots: bool) -> dict:
     obs, _ = env.reset(seed=seed)
     agent = AC(env.observation_space.shape[0], env.action_space, cfg, rng, spec["steps"])
     block, blocks = spec["block"], spec["steps"] // spec["block"]
-    per_block, qs = [[] for _ in range(blocks)], []
+    per_block, qs, tests = [[] for _ in range(blocks)], [], []
     shots = [snapshot_ac(agent, world, np.random.default_rng(seed + 10_000))] if snapshots else []
     ret = 0.0
     for t in range(spec["steps"]):
@@ -328,9 +345,10 @@ def run_ac(spec: dict, seed: int, snapshots: bool) -> dict:
                 shot["stats"] = rounded({"q": qs[-1] or 0.0, "loss": float(np.mean(L["loss"])) if L["loss"] else 0.0,
                                          **({"alpha": float(L["alpha"][-1])} if L["alpha"] else {})})
                 shots.append(shot)
+            tests.append(shots[-1]["test"]["return"] if snapshots else test_ac(agent, world, np.random.default_rng(seed + 10_000 + (t + 1) // block))["return"])
             agent.log = {"q": [], "loss": [], "alpha": []}
     return {"seed": seed, "train": [round(float(np.mean(b)), 2) if b else None for b in per_block],
-            "episodes": [len(b) for b in per_block], "q": qs, "snapshots": shots}
+            "episodes": [len(b) for b in per_block], "q": qs, "test": tests, "snapshots": shots}
 
 
 RUNNERS = {"dqn": run_dqn, "pg": run_pg, "ac": run_ac}
@@ -348,7 +366,7 @@ def record(name: str, spec: dict) -> None:
         "config": {k: v for k, v in spec["cfg"].items()},
         "steps": spec["steps"], "block": spec["block"], "seeds": seeds, "shown": shown,
         "grid": {"x": [world["x"][0], world["x"][1], world["x"][2], GRID], "y": [world["y"][0], world["y"][1], world["y"][2], GRID]},
-        "curves": [{"seed": r["seed"], "train": r["train"], "episodes": r["episodes"], **({"q": r["q"]} if "q" in r else {})} for r in results],
+        "curves": [{"seed": r["seed"], "train": r["train"], "test": r["test"], "episodes": r["episodes"], **({"q": r["q"]} if "q" in r else {})} for r in results],
         "snapshots": main["snapshots"],
     }
     OUT.mkdir(parents=True, exist_ok=True)
@@ -370,14 +388,17 @@ def current(spec: dict, knob: str):
 def sweep(name: str, knobs: dict) -> None:
     """Every value of every knob, every seed, all at once over the processes; the training curves only."""
     t0, spec = time.time(), CATALOG[name]
-    jobs = [(knob, v, s) for knob, values in knobs.items() for v in values for s in spec["seeds"]]
+    seeds = spec.get("sweep_seeds", spec["seeds"])  # each run of an actor-critic takes minutes: fewer seeds per value
+    jobs = [(knob, v, s) for knob, values in knobs.items() for v in values for s in seeds]
     specs = [dict(spec, cfg=dict(spec["cfg"], **(SWEEP_AS[knob](v) if knob in SWEEP_AS else {knob: v}))) for knob, v, _ in jobs]
     with ProcessPoolExecutor(max_workers=4) as pool:
         results = list(pool.map(RUNNERS[spec["learner"]], specs, [s for *_, s in jobs], [False] * len(jobs)))
     train = {job: r["train"] for job, r in zip(jobs, results)}
-    out = {"name": name, "world": spec["world"], "steps": spec["steps"], "block": spec["block"], "seeds": spec["seeds"],
+    test = {job: r["test"] for job, r in zip(jobs, results)}
+    out = {"name": name, "world": spec["world"], "steps": spec["steps"], "block": spec["block"], "seeds": seeds,
            "config": spec["cfg"], "knobs": {knob: {"values": values, "current": current(spec, knob),
-                                                   "train": [[train[(knob, v, s)] for s in spec["seeds"]] for v in values]}
+                                                   "train": [[train[(knob, v, s)] for s in seeds] for v in values],
+                                                   "test": [[test[(knob, v, s)] for s in seeds] for v in values]}
                                            for knob, values in knobs.items()}}
     path = OUT / "sweeps" / f"{name}.json"
     path.parent.mkdir(parents=True, exist_ok=True)

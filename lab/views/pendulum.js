@@ -163,7 +163,8 @@
           this._drawPath();
           this.readout.textContent = `step ${ev.k + 1} · angle ${sgn(deg(ev.s2[0]))}°`;
           if (ev.end) {
-            this.pop(Math.abs(ev.s2[0]) < 0.2 ? "held upright" : "200 steps: still swinging");
+            const last = this.points.slice(-50); // held: the last 50 steps all within about 30° of the top, wobble and all
+            this.pop(last.length && last.every((s) => Math.abs(s[0]) < 0.5) ? "held near the top" : "200 steps: still swinging");
             return 600;
           }
           return 0;

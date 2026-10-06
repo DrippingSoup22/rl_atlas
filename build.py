@@ -461,7 +461,13 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
         metric, window = success.get("metric"), success.get("window")
         if set(success) - {"metric", "min", "max", "window", "text"}:
             problems.error(where, f"success has unknown keys: {', '.join(sorted(set(success) - {'metric', 'min', 'max', 'window', 'text'}))}")
-        if metric not in CHARTS:
+        if recorded:  # only the curves every seed of a recording kept can be judged over seeds
+            kept = {"return": "train", "test": "test", "q": "q"}
+            if metric not in kept:
+                problems.error(where, f"success judges '{metric}', which recordings do not keep for every seed (one of: {', '.join(kept)})")
+            elif not all(kept[metric] in c for r in racers if r.get("recording") in recordings for c in recordings[r["recording"]]["curves"]):
+                problems.error(where, f"success judges '{metric}', but not every seed of its recordings kept it (record them again)")
+        elif metric not in CHARTS:
             problems.error(where, f"success judges '{metric}', which no run records (one of: {', '.join(sorted(CHARTS))})")
         elif metric in MEASURES and metric not in measures:
             problems.error(where, f"success judges '{metric}' but the preset does not measure it (add it to measures)")

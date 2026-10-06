@@ -6,6 +6,8 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  // Escaped text for an uppercase title: words with Greek letters or math signs keep their case (θ must not become Θ).
+  const asIs = (s) => esc(s).replace(/\S*[\u0370-\u03ff‖√∇|]\S*/g, (w) => `<span class="as-is">${w}</span>`);
   const warn = (...args) => console.warn("[RL Atlas]", ...args);
   const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   function h(html) {
@@ -99,7 +101,7 @@
     hide() { tipEl?.remove(); tipEl = null; },
   };
 
-  Object.assign(RL, { $, $$, h, esc, warn, reducedMotion, station, entry, stations, order, lineColor, store, hideCard, tip });
+  Object.assign(RL, { $, $$, h, esc, asIs, warn, reducedMotion, station, entry, stations, order, lineColor, store, hideCard, tip });
   RL.views = RL.views || {};
   RL.demos = RL.demos || {};
 })(globalThis.RL = globalThis.RL || {});

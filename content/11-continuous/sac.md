@@ -1,0 +1,181 @@
++++
+summary = "An off-policy actor–critic that is paid to stay random: every reward comes with a bonus for the policy's entropy, so the policy explores by itself and stays random wherever the choice does not matter. Twin critics from TD3, a stochastic actor trained through its own samples, and an entropy weight that tunes itself. On Pendulum it learns on all 20 seeds and ends with the tightest results of the three."
+change = "Replace TD3's deterministic actor and added noise by a stochastic actor (a squashed Gaussian, trained through its samples), add an entropy bonus to every target, and tune its weight α automatically toward a target entropy."
+prereqs = ["td3", "entropy-bonus"]
+lab = "sac-pendulum"
+sources = [
+  { text = "Haarnoja, Zhou, Abbeel & Levine (2018), Soft actor-critic: off-policy maximum entropy deep reinforcement learning with a stochastic actor, ICML", url = "https://arxiv.org/abs/1801.01290" },
+  { text = "Haarnoja et al. (2018), Soft actor-critic algorithms and applications", url = "https://arxiv.org/abs/1812.05905" },
+  { text = "Ziebart, Maas, Bagnell & Dey (2008), Maximum entropy inverse reinforcement learning, AAAI", url = "https://cdn.aaai.org/AAAI/2008/AAAI08-227.pdf" },
+  { text = "Fujimoto, van Hoof & Meger (2018), Addressing function approximation error in actor-critic methods, ICML", url = "https://arxiv.org/abs/1802.09477" },
+]
+
+[story]
+scene = "pendulum"
+env = "pendulum"
+formula = '''\step{1}{y = \rew{r} + \gam\Big(\min_{i} \val{\hat q'_i(s', a')} - \alpha \ln \pol{\pi(a' \mid s')}\Big),\ a' \sim \pol{\pi(\cdot \mid s')} \qquad} \step{2}{\ln\alpha \leftarrow \ln\alpha - \lambda\big(-\ln \pol{\pi(a \mid s)} - \bar{\mathcal H}\big)}'''
+
+[story.runs]
+learn = { recording = "sac-pendulum", name = "SAC" }
+ddpg = { recording = "ddpg-pendulum", name = "DDPG" }
+td3 = { recording = "td3-pendulum", name = "TD3" }
++++
+
+## Story
+
+::: step {run = "learn", at = 0, map = "action"}
+**Random on purpose.** SAC's actor does not name one torque: for each angle and spin it gives a mean and a spread, and the agent draws its torque from them. It is also paid for staying random: each step's reward comes with a bonus of $\alpha$ times the policy's entropy there. Before learning, the spread along the test states is 1.75, on a range of −2 to 2: very wide. The map shows the mean; the test episodes are played with the mean, without drawing.
+:::
+
+::: step {run = "learn", at = 3, formula = 1}
+**Soft values.** Two critics, as in [[td3]], learn the reward to come *plus* the entropy to come. In the target, formula (1), the next action is drawn from the current policy, and its surprise, $-\ln\pol\pi$, adds to the value. After 4,500 steps the test still fails, at −1,132. But the entropy weight has already moved on its own, from 0.2 to 0.073: the policy is more random than it needs to be, so the bonus shrinks.
+:::
+
+::: step {run = "learn", at = 4, map = "action"}
+**After 6,000 steps:** one swing back, upright by step 25, and held to the end, at −124. Every seed of the 20 gets its first test at −250 or better after 3 or 4 blocks.
+:::
+
+::: step {run = "learn", at = 40, formula = 2}
+**The entropy weight tunes itself,** formula (2): it rises when the policy's entropy falls below a target, here $\bar{\mathcal H} = -1$, one per action dimension, and falls when the entropy is above it. By block 40, $\alpha = 0.0005$, and the spread along the test is 0.26. Where it stays random tells what matters: 0.30 near the top, where any small torque will hold the pendulum, and 0.11 during the swing, where the torque must be right. Along the tests of blocks 11 to 40, the critic's estimate is, on average, within 1 of the return that actually followed.
+:::
+
+::: step {run = "learn", at = 40, curves = ["ddpg", "td3", "learn"], metric = "test"}
+**Three methods, 20 seeds each.** All three swing the pendulum up on every seed. SAC is nearly as quick as DDPG, without its overestimation; at the end its tests are the tightest: every seed's last four tests average between −121 and −128. [Try it in the Lab](lab:sac-pendulum).
+:::
+
+## Textbook
+
+### Maximum entropy reinforcement learning {#maxent}
+
+Ordinary RL maximizes the expected return. SAC maximizes the return plus the policy's entropy at every state it visits:
+$$J(\pol\pi) = \sum_t \mathbb E\Big[\rew{r(S_t, A_t)} + \alpha\,\mathcal H\big(\pol{\pi(\cdot \mid S_t)}\big)\Big], \label{objective}$$
+where $\mathcal H(\pol{\pi(\cdot \mid s)}) = -\mathbb E_{a \sim \pi}[\ln \pol{\pi(a \mid s)}]$ and $\alpha$ weighs the two. Compare the entropy bonus of [[entropy-bonus]]: there the bonus is a regularizer added to the policy's loss at the states just visited; here it is part of the objective, so the critic also values *future* entropy, and the agent seeks out states where it can afford to stay random. The optimal policy under this objective puts probability on every action, in proportion to $e^{\val{q}/\alpha}$ with the soft values $\val q$: most on the best, a little on the rest. A softened greedy policy.
+
+Why want that? Exploration comes from the objective, not from added noise. The policy does not collapse onto one action as soon as it looks best. And among near-equal choices it stays spread, which makes it more robust to errors in the critic and to changes in the world.
+
+### Soft values and the critics {#critics}
+
+The soft action value includes the entropy still to come, and its target is
+$$y = \rew{r} + \gam\Big(\min_{i = 1, 2} \val{\hat q_i(s', a', \mathbf w_i^-)} - \alpha \ln \pol{\pi(a' \mid s')}\Big), \qquad a' \sim \pol{\pi(\cdot \mid s')}. \label{soft-target}$$
+Like [[td3]], SAC trains twin critics and takes the min, against overestimation, with soft target copies. Unlike TD3 it has no target actor: the next action is drawn from the current policy, whose randomness already smooths the target.
+
+### The actor, trained through its samples {#actor}
+
+The policy is a Gaussian squashed into the allowed range: $a = a_{\max}\tanh(u)$, $u = \mu(s) + \sigma(s)\,\varepsilon$, $\varepsilon \sim \mathcal N(0, 1)$, with the network giving $\mu$ and $\ln\sigma$. Writing the action as a function of the parameters and an independent noise is the **reparameterization**: the actor's loss
+$$L(\boldsymbol\theta) = \mathbb E_{s,\,\varepsilon}\Big[\alpha \ln \pol{\pi(a_{\boldsymbol\theta} \mid s)} - \min_i \val{\hat q_i(s, a_{\boldsymbol\theta})}\Big] \label{actor-loss}$$
+can be differentiated straight through the sampled action, as DDPG differentiates through its deterministic one ([[dpg]]). The gradient has much less variance than a likelihood-ratio estimate. The squashing changes the density, so $\ln\pol\pi$ subtracts the log of the tanh's slope at $u$.
+
+### Tuning the entropy weight {#alpha}
+
+The right $\alpha$ depends on the scale of the rewards and changes as learning goes on, so the second version of SAC tunes it. It picks a target entropy $\bar{\mathcal H}$, by default minus the number of action dimensions, and adjusts $\ln\alpha$ by gradient steps on
+$$J(\alpha) = \mathbb E_{a \sim \pi}\big[-\alpha\,(\ln \pol{\pi(a \mid s)} + \bar{\mathcal H})\big]. \label{alpha-loss}$$
+When the policy is less random than the target, $\alpha$ grows and the bonus pushes randomness back up; when it is more random, $\alpha$ shrinks. In the recorded run, $\alpha$ fell from 0.2 to 0.034 within 7,500 steps and to 0.0005 by the end.
+
+### On Pendulum {#pendulum}
+
+The recording uses the settings of the DDPG and TD3 recordings: networks of 64 + 64, Adam at $10^{-3}$, a memory of 100,000, batches of 128, $\tau = 0.005$, rewards scaled by 0.1, and $\alpha$ starting at 0.2. Over 20 seeds of each method:
+
+| | DDPG | TD3 | SAC |
+| --- | --- | --- | --- |
+| seeds that hold the pendulum up at the end | 20 | 20 | 20 |
+| first test at −250 or better, median block | 3 | 5 | 4 |
+| steps until half the seeds train at −250 or better | 6,000 | 9,000 | 7,500 |
+| last four tests, range over seeds | −121 to −132 | −122 to −139 | −121 to −128 |
+| seeds whose average target ends above 0 | 11 | 0 | 0 |
+
+SAC combines the speed of DDPG with the honest values of TD3. On a task this small the differences are modest; on the harder locomotion tasks of the original papers, SAC's advantage in stability across seeds was the main result.
+
+### Historical remarks {#history}
+
+Maximum entropy RL grew out of work on inverse reinforcement learning and optimal control (Ziebart et al., 2008) and soft Q-learning. Haarnoja, Zhou, Abbeel and Levine (2018) made it practical with an off-policy actor–critic, SAC, which already took the smaller of two critics. A second version the same year dropped its separate state-value network, tuned $\alpha$ automatically, and showed it learning to walk on a real quadruped robot in about two hours.
+
+## Card
+
+### Idea
+
+Maximize reward plus entropy: a stochastic actor, trained through its own samples, that stays random wherever it can afford to, with TD3's twin critics, soft targets that include future entropy, and an entropy weight α tuned automatically.
+
+::: analogy
+A traveler who takes the best road when one is clearly best, but when several are about equally good, keeps varying the route: it costs almost nothing, and the traveler learns about all of them.
+:::
+
+### The update {#update}
+
+$$y = \rew{r} + \gam\Big(\min_i \val{\hat q'_i(s', a')} - \alpha \ln \pol{\pi(a' \mid s')}\Big), \quad a' \sim \pol\pi; \qquad \boldsymbol\theta \leftarrow \boldsymbol\theta - \alp\,\nabla_{\boldsymbol\theta}\Big(\alpha \ln \pol{\pi(a_{\boldsymbol\theta} \mid s)} - \min_i \val{\hat q_i(s, a_{\boldsymbol\theta})}\Big)$$
+
+the critics regress on soft targets; the actor's sampled action $a_{\boldsymbol\theta} = a_{\max}\tanh(\mu + \sigma\varepsilon)$ is differentiated through; $\ln\alpha$ moves toward the target entropy.
+
+### One change from TD3 {#change}
+
+A stochastic actor instead of a deterministic one with added noise, and an entropy bonus in every target, with its weight tuned toward a target entropy.
+
+### Backup diagram {#backup}
+
+{{backup sac}}
+
+One sampled transition, then a next action drawn from the current policy, valued by the smaller target critic minus α times its log-probability: the value of the rewards and the randomness still to come.
+
+### Pseudocode
+
+::: pseudocode
+Parameters: memory $N$, batch $B$, step sizes, $\tau$, target entropy $\bar{\mathcal H}$ (default: minus the number of action dimensions), initial $\alpha$
+Initialize actor $\boldsymbol\theta$ and critics $\mathbf w_1$, $\mathbf w_2$, their target copies, and $\ln\alpha$; memory $\mathcal D$ empty
+Repeat for each step:
+  Draw $A \sim \pol{\pi(\cdot \mid S, \boldsymbol\theta)}$; take it, observe $\rew{R}$, $S'$; store it in $\mathcal D$
+  Sample $B$ transitions; for each, draw $a'_j \sim \pol{\pi(\cdot \mid s'_j)}$
+  $y_j \leftarrow \rew{r_j} + \gam\big(\min_i \val{\hat q(s'_j, a'_j, \mathbf w_i^-)} - \alpha \ln \pol{\pi(a'_j \mid s'_j)}\big)$ (just $\rew{r_j}$ at the end)
+  Each critic: a gradient step on $\frac1B \sum_j (y_j - \val{\hat q(s_j, a_j, \mathbf w_i)})^2$
+  Actor: draw $a_j = a_{\max}\tanh(\mu(s_j) + \sigma(s_j)\varepsilon_j)$; a gradient step on $\frac1B \sum_j \big(\alpha \ln \pol{\pi(a_j \mid s_j)} - \min_i \val{\hat q(s_j, a_j, \mathbf w_i)}\big)$
+  $\ln\alpha \leftarrow \ln\alpha - \lambda\big(-\ln \pol{\pi(a_j \mid s_j)} - \bar{\mathcal H}\big)$, averaged over the batch
+  Target critics move by $\tau$ toward the critics
+  $S \leftarrow S'$
+:::
+
+### Perks
+
+- Explores by itself, from its objective; no noise schedule to tune.
+- Robust across seeds: on Pendulum, every seed's last tests within 7 of each other.
+- Honest values: twin critics, and along the shown run's tests a critic within 1 of the true return, on average.
+- The entropy weight tunes itself.
+
+### Flaws
+
+- More computation per step than TD3: two critics, sampling, and the α update.
+- The target entropy is still a choice, and the default does not suit every task.
+- Its values are soft values: they include future entropy, so they are not plain returns until α is small.
+
+### Knobs
+
+| Knob | Too low | Too high |
+| --- | --- | --- |
+| entropy weight $\alpha$ (if fixed) | collapses early, like a greedy policy | stays random, ignores the reward |
+| target entropy $\bar{\mathcal H}$ (if tuned) | too decisive too soon | too random for too long |
+| target speed $\tau$ | slow targets | moving targets |
+| reward scale | the entropy dominates | the entropy vanishes |
+| memory, batch, step sizes | as in DDPG | |
+
+### Pitfalls
+
+- Forgetting the tanh correction in $\ln\pol\pi$: the entropy is then wrong near the action limits.
+- A fixed α with rewards of a new scale: the balance between reward and entropy moves with the scale.
+- Testing with sampled actions: deploy the mean, or judge the stochastic policy for what it is.
+
+### Check yourself {#check}
+
+::: question
+How is SAC's entropy term different from the entropy bonus of A2C or PPO?
+---
+In A2C or PPO the bonus is added to the policy's loss at the states visited, to slow its collapse. In SAC the entropy is part of the objective and of the critic's targets, so the agent values future entropy too, and is drawn to states where it can afford to stay random.
+:::
+
+::: question
+Why can SAC's actor be trained by differentiating through a sampled action?
+---
+The action is written as a deterministic function of the parameters and an independent noise: a = a_max tanh(μ + σε). For a fixed ε, the critic's value and the log-probability are differentiable functions of θ, so the gradient passes straight through the sample, with much less variance than a likelihood-ratio estimate.
+:::
+
+::: question
+Near the top, SAC's final policy has a spread of 0.30; during the swing, 0.11. Why the difference?
+---
+Near the top, any small torque keeps the pendulum up, so the values of nearby actions are about equal and the entropy bonus keeps the policy spread. During the swing, the torque must push with the spin at full strength; spreading would cost reward. Maximum entropy policies stay random exactly where randomness is cheap.
+:::

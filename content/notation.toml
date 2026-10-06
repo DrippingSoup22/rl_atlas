@@ -205,3 +205,28 @@ station = "trpo"
 tex = 'r_t(\boldsymbol\theta),\ \epsilon'
 text = "the probability ratio of a sampled action under the new and the old policy, and PPO's clip range 1 ± ε"
 station = "ppo"
+
+[[symbol]]
+tex = '\pol{\mu(s, \boldsymbol\theta)}'
+text = "a deterministic policy: the one action it takes in state s, a point in a continuous range"
+station = "dpg"
+
+[[symbol]]
+tex = '\nabla_a \val{\hat q(s, a)}'
+text = "the critic's slope in action space: which way, and how steeply, a change of action raises the value; the deterministic actor follows it"
+station = "dpg"
+
+[[symbol]]
+tex = '\boldsymbol\theta^-,\ \tau'
+text = "the target actor's weights, and how far target copies move toward their networks at every step (a soft update; DDPG, TD3, SAC)"
+station = "ddpg"
+
+[[symbol]]
+tex = '\min_{i} \val{\hat q_i},\ \tilde\sigma,\ c,\ d'
+text = "TD3: the smaller of two critics, the spread of the noise on the target action and its clip, and how many critic steps pass between actor steps"
+station = "td3"
+
+[[symbol]]
+tex = '\alpha,\ \mathcal H,\ \bar{\mathcal H}'
+text = "SAC: the entropy weight (an ink α, not the step size), the policy's entropy, and the target entropy α is tuned toward"
+station = "sac"
