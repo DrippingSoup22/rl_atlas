@@ -25,7 +25,7 @@ mc = { algorithm = "offline-lambda", alpha = 0.2, gamma = 1.0, units = 10, measu
 
 ## Story
 
-::: step {run = "high", at = 0, play = 1, pace = 70, truth = false}
+::: step {run = "high", at = 0, play = 1, lead = 10, truth = false}
 **The 19-state walk, every estimate at 0.** This first walk wanders back and forth for about a hundred steps before it leaves on the right. The only reward, $\rew{+1}$, comes at the very end. Once the walk is over, every state it visited gets a target. Which target?
 :::
 

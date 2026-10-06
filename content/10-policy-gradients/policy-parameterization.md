@@ -41,7 +41,7 @@ Was that better than expected? The learner keeps a running average of how far it
 The spread learns the same way. For a throw more than one spread from the aim, $(a - \pol{\mu})^2/\pol{\sigma}^2 - 1$ is positive: after a good surprise the bell **widens**, to make such throws more likely. A good throw within one spread would narrow it. This one lay 1.4 spreads away, and the spread grows from 10.0° to 11.2°.
 :::
 
-::: step {run = "learn", at = 1, play = 7, pace = 160}
+::: step {run = "learn", at = 1, play = 7}
 The next throws. The baseline is still far behind, so almost every throw counts as good, even the second, thrown low at 15.9°: the aim follows it down a little, to 21.4°, and the bell narrows, because that throw fell within one spread. But throws above the aim fly farther and pull harder, so on balance the aim climbs. The eighth, 9.7° for 14.5 m, is the first worse than expected: the aim moves away from it.
 :::
 
@@ -49,7 +49,7 @@ The next throws. The baseline is still far behind, so almost every throw counts 
 After 50 throws the aim is 32.4°, the spread 11.8°, and the baseline, at 34.4 m, has caught up with what the throws achieve. From now on only throws that beat the average pull the aim toward them, and those are mostly the high ones.
 :::
 
-::: step {run = "learn", at = 200, play = 3, pace = 160}
+::: step {run = "learn", at = 200, play = 3}
 After 200 throws the aim is 44.1° and the spread has shrunk to 5.1°. Near the top of the curve, throws far from the aim on either side do worse than average and push the bell narrower; throws close to it do better and narrow it too. The policy is growing sure.
 :::
 

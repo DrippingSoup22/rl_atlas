@@ -27,7 +27,7 @@ doubt = { algorithm = "model-planner", gamma = 1.0, doubt = 1.0, maxSteps = 500,
 
 ## Story
 
-::: step {run = "trust", at = 0, play = 1, pace = 260, arrows = false}
+::: step {run = "trust", at = 0, play = 1, pace = 300, arrows = false}
 **A field with cliffs hidden in it**, and a goal on the far side. The agent is first shown a safe way: up to the top row, along it, and down to the goal, 14 steps. It learns a model as it goes. The model knows how moves work, one tile in their direction, and where the goal is. What each tile does, it learns only by stepping on it.
 :::
 
@@ -35,7 +35,7 @@ doubt = { algorithm = "model-planner", gamma = 1.0, doubt = 1.0, maxSteps = 500,
 **What the model knows: 15 tiles.** Everything under the fog is a guess, and the guess is the obvious one: an ordinary tile, like every tile it has seen. We can see the cliffs; the model cannot. That is how a network's model fails too: confident where it has no data. Planning in the model, with value iteration, gives these values. From the start, the goal looks 10 steps away, straight across.
 :::
 
-::: step {run = "trust", at = 1, play = 1, pace = 120, fog = true}
+::: step {run = "trust", at = 1, play = 1, pace = 300, fog = true}
 **Second episode: the agent plans before every move** (the dashed sparks) and takes the first step of its plan. The plan runs straight across: 10 steps, in the model. Four steps in, a cliff: the agent falls back to the start. The model learns that tile, and the agent plans again: along the second row, 12 steps; a cliff there too. Then a third plan, and a fourth. Each falls into a cliff the model had guessed was ground. The fifth plan weaves between them, 12 steps, and it is real.
 :::
 

@@ -32,7 +32,7 @@ learn = { algorithm = "baseline", alpha = 0.001953125, alphaW = 0.015625, right0
 **A short corridor.** Three cells, then the goal, and every step costs $\rew{-1}$. Stepping left in the first cell bumps into the wall. In the second cell the controls are swapped: right goes left and left goes right. And the catch: the agent cannot tell the cells apart. It sees the same thing in all three, so whatever it does, it does in every cell.
 :::
 
-::: step {run = "stuck", at = 0, play = 1, pace = 140}
+::: step {run = "stuck", at = 0, play = 1, lead = 10}
 A learner that estimates the value of each action and takes the best one does the same thing everywhere. Say right is best: from cell 1 to cell 2, where right means left, and back to cell 1, again and again. This episode was cut short after 40 steps; it would never end. Always left is no better: the agent never leaves cell 1.
 :::
 
@@ -44,7 +44,7 @@ A learner that estimates the value of each action and takes the best one does th
 Preferring left with the same 5% of randomness is worse: $\rew{-82.1}$ on average. This episode took 62 steps, most of them spent bumping into the wall.
 :::
 
-::: step {run = "best", at = 0, play = 1, pace = 120, formula = 2}
+::: step {run = "best", at = 0, play = 1, lead = 10, formula = 2}
 Now forget values, and choose the **chance** of stepping right directly. The landscape below is the value of the start for every chance $p$, worked out exactly. Its top is at $p = 2 - \sqrt 2 \approx 59\%$, worth $\rew{-11.7}$: a coin that lands right a little more often than left, far better than either ε-greedy policy. In this corridor the best policy is random, and no policy that commits to one action per cell can come close.
 :::
 

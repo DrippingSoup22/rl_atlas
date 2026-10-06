@@ -31,7 +31,7 @@ a14 = { algorithm = "reinforce", alpha = 0.00006103515625, right0 = 0.05, gamma 
 **REINFORCE** on the short corridor ([[why-policy]]): three cells that look alike, a swapped middle cell, $\rew{-1}$ per step. The policy starts by stepping right 5% of the time. It learns from whole episodes: play to the end, then go back over every step and nudge the weights so that the action taken there becomes more likely, by an amount proportional to the return that followed it.
 :::
 
-::: step {run = "learn", at = 0, play = 1, pace = 140, formula = 2}
+::: step {run = "learn", at = 0, play = 1, lead = 10, formula = 2}
 The first episode: 29 steps. Eighteen of them bump into the wall of cell 1; then the agent bounces between cells 2 and 3 four times before stepping right into the goal. The return from each step is minus the number of steps still to go: $\rew{G_0} = -29$ down to $\rew{G_{28}} = -1$.
 :::
 

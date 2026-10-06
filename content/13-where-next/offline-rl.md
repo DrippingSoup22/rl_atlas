@@ -28,8 +28,8 @@ constrained = { algorithm = "offline-bcq", alpha = 0.5, epsilon = 0.1, gamma = 1
 
 ## Story
 
-::: step {run = "plain", at = 0, play = 1, pace = 45, arrows = false}
-**The cliff, with no one to explore it.** All we have is a log: a careful walker crossed ten times, up the first column, along the top row and down to the goal, with a random move one time in ten. Watch it being written. From now on, nobody acts: whatever we learn must come from these moves alone.
+::: step {run = "plain", at = 0, play = 1, lead = 12, arrows = false}
+**The cliff, with no one to explore it.** All we have is a log: a careful walker crossed ten times, up the first column, along the top row and down to the goal, with a random move one time in ten. Watch the log begin; the rest is written at once. From now on, nobody acts: whatever we learn must come from these moves alone.
 :::
 
 ::: step {run = "plain", at = 1, arrows = false, fog = true}

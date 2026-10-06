@@ -31,7 +31,7 @@ n20 = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 20, beta 
 **Four workers in a maze.** The goal G pays $\rew{+1}$ and ends the episode; every other step pays nothing, but with $\gam = 0.95$ a later reward is worth less, so shorter is better. Four copies of the agent start together. They share one actor, a softmax policy per tile (the arrows), and one critic, a value per tile (the colors). Each explores on its own.
 :::
 
-::: step {run = "learn", at = 0, play = 1, updates = 2, pace = 90, formula = 1}
+::: step {run = "learn", at = 0, play = 1, updates = 2, formula = 1}
 All four step at the same time, each its own way. Every $n = 5$ steps the workers pool their last five steps each into **one** update of the shared weights, each step judged by its $n$-step advantage. Watch the first two updates: they change nothing. No worker has found the goal yet, and the critic expects nothing anywhere, so every advantage is 0.
 :::
 

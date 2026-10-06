@@ -35,7 +35,7 @@ none = { algorithm = "dyna-q", planning = 0, alpha = 0.1, epsilon = 0.1, gamma =
 **The first episode is a blind search.** The fog marks the tiles the notebook still knows nothing about; it has lifted wherever the agent went. Between real steps the agent already replayed remembered moves, but with no reward seen yet they taught nothing. It found the gem after 120 steps. That last move earned the first real reward, and the 50 imagined moves right after it already passed the news back a few steps: 5 values are now above zero.
 :::
 
-::: step {run = "fifty", at = 1, play = 1, pace = 140, arrows = false, fog = true, formula = 2}
+::: step {run = "fifty", at = 1, play = 1, lead = 6, arrows = false, fog = true, formula = 2}
 Now the second episode. After **every** real step come 50 imagined ones, drawn from the notebook, each one a Q-learning update. The news spreads from the gem through the whole known part of the maze while the agent is still walking.
 :::
 

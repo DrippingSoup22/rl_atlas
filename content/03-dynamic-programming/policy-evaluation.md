@@ -26,7 +26,7 @@ sweeps = { algorithm = "policy-evaluation", policy = "random", gamma = 1.0, thet
 **A 4 × 4 grid.** The two shaded corners end the episode. Every move costs $\rew{-1}$, and a move off the grid leaves the agent where it is. The policy to judge moves at random, each direction with probability ¼ (the arrows). How good is that? Its value $\val{v_\pi(s)}$ is minus the average number of steps it takes to reach a corner from $s$.
 :::
 
-::: step {run = "sweeps", at = 0, values = true, play = 1, pace = 260, fine = true, formula = 4}
+::: step {run = "sweeps", at = 0, values = true, play = 1, pace = 300, fine = true, formula = 4}
 We know the rules of this world, so we can compute the values without playing a single episode. **Policy evaluation** turns the Bellman equation into an update: each state's value becomes the average, over the moves, of the reward plus the current value of where the move lands. Watch one sweep through the 14 states. Every value becomes $\val{-1}$, since every neighbor is still 0.
 :::
 

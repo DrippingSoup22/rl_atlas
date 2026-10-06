@@ -31,7 +31,7 @@ ten = { algorithm = "n-step-sarsa", n = 10, alpha = 0.1, epsilon = 0.1, gamma = 
 **A maze where only the gem pays.** Every move earns nothing, except the one onto the gem, worth $\rew{+1}$; future rewards are discounted by $\gamma = 0.95$. The agent knows nothing yet: every action value is 0.
 :::
 
-::: step {run = "one", at = 0, play = 1, pace = 150, arrows = false}
+::: step {run = "one", at = 0, play = 1, lead = 8, arrows = false}
 Watch the first episode. Knowing nothing, the agent wanders; this time it finds the gem after 30 moves.
 :::
 

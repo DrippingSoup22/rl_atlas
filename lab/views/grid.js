@@ -386,10 +386,10 @@
           this.spark(ev.s, ev.a ?? -1, "trc");
           return 0;
         case "plan": { // planning: remembered moves replayed and learned from, in the order they were replayed
-          const list = ev.list.slice(0, 60), gap = ev.ordered ? 45 : 600 / Math.max(10, list.length);
+          const list = ev.list.slice(0, 60), gap = ev.ordered ? 110 : 600 / Math.max(10, list.length);
           list.forEach((u, k) => this.spark(u.s, u.a, "dream", k * gap));
           if (line && ev.list.length) this.pop(ev.s, `${ev.list.length} planning ${ev.list.length === 1 ? "update" : "updates"}`, "plan");
-          return ev.ordered ? Math.min(900, list.length * gap) : 0;
+          return ev.ordered ? Math.min(2200, list.length * gap) : 0;
         }
         case "world":
           this.retile();

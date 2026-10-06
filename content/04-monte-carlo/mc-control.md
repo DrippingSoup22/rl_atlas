@@ -28,11 +28,11 @@ q = { algorithm = "q-learning", epsilon = 0.1, alpha = 0.1, gamma = 0.99, judge 
 **Frozen Lake once more**, but now the agent does not know the rules, and it cannot choose where an episode starts: it always starts in the corner. It learns action values from whole episodes, as Monte Carlo ES does. To keep trying every move, it acts **ε-greedily**: one move in ten is random.
 :::
 
-::: step {run = "mc", at = 0, play = 1, pace = 150, formula = 2}
+::: step {run = "mc", at = 0, play = 1, pace = 300, formula = 2}
 Episode 1: the agent wanders for 8 steps and falls through the ice. Walking back, every move it tried is credited with the return that followed it, which is 0. The estimates stay at 0, but each now counts one visit.
 :::
 
-::: step {run = "mc", at = 52, play = 1, pace = 140, formula = 2}
+::: step {run = "mc", at = 52, play = 1, lead = 5, pace = 300, formula = 2}
 Episode 53 finally reaches the gem, after 27 slippery steps. Walking back, each move's first visit is credited with the return that followed it: $\rew{+1}$, discounted by 0.99 per step. The news travels all the way back to the start in this one episode.
 :::
 

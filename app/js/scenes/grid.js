@@ -79,7 +79,7 @@
             later(step, 1000);
           } else {
             view.move(s2, a);
-            later(step, 150);
+            later(step, 400);
           }
           s = s2;
           t += 1;
@@ -123,7 +123,7 @@
           s = s2;
           t += 1;
           tally();
-          later(step, jumped ? 420 : 130);
+          later(step, jumped ? 600 : 400);
         };
         view.place(from, -1, true);
         tally();
@@ -158,7 +158,7 @@
         greedy(t);
         const unit = r.algorithm.unit;
         if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${unit}${n === 1 ? "" : "s"}`, each: greedy });
-        else if (st.play) play(view, r, t, st.play, { pace: st.pace || 200, fine: !!st.fine, updates: st.updates, instant: !!st.instant, after: (u) => { if (!st.note) note.textContent = `${u} ${unit}${u === 1 ? "" : "s"} done`; } });
+        else if (st.play) play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, updates: st.updates, instant: !!st.instant, lead: st.lead, after: (u) => { if (!st.note) note.textContent = `${u} ${unit}${u === 1 ? "" : "s"} done`; } });
       }
 
       return {

@@ -28,7 +28,7 @@ pi = { algorithm = "policy-iteration", gamma = 0.99, theta = 0.001, units = 120 
 **Frozen Lake.** Reach the gem without falling through a hole. The ice is slippery: a move goes the intended way only one time in three, and otherwise slides to one side of it. Only the gem pays, $\rew{+1}$, and rewards are discounted by $\gam = 0.99$. Policy iteration knows these rules. It starts from the random policy: four arrows in every cell.
 :::
 
-::: step {run = "pi", at = 0, values = true, play = 3, pace = 120, formula = 1}
+::: step {run = "pi", at = 0, values = true, play = 2, pace = 300, formula = 1}
 **Evaluate.** Sweep the states with the Bellman equation of the random policy, as in [[policy-evaluation]]. Value seeps out from the gem, sweep after sweep.
 :::
 

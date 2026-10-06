@@ -37,7 +37,7 @@ dq = { algorithm = "dyna-q", planning = 5, alpha = 0.5, epsilon = 0.1, gamma = 0
 Prioritized sweeping keeps a **queue**. A move gets in only if its update would change its value, and the bigger the change, the higher its priority. For the whole first episode the queue is empty: no surprises. Then the gem, and the first entry.
 :::
 
-::: step {run = "ps", at = 1, play = 1, pace = 160, fine = true, arrows = false, formula = 2}
+::: step {run = "ps", at = 1, play = 1, lead = 6, fine = true, arrows = false, formula = 2}
 Now watch the dashed sparks in the second episode: they no longer pop up at random. Each update of a value queues the remembered moves that **lead into** that state, so the sparks march backward from the gem, along the ways the agent has come.
 :::
 

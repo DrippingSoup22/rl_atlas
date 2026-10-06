@@ -76,28 +76,41 @@
   }
 
   // Replay units of a run on a view, event by event, the way the Lab walks: the agent moves, values update.
+  // Human pace: one move takes at least MIN_PACE ms, a choice half of that, so the eye can follow every step.
   // With updates = n, only the first n updates of the unit are played, and the replay stops there. With instant, the
-  // events are played without animation: the view jumps to where they lead (a moment inside a unit, say).
+  // events are played without animation: the view jumps to where they lead (a moment inside a unit, say). With lead = n,
+  // a long episode shows its first n moves, then jumps to its last move and shows what follows at pace (the updates
+  // made at the end of an episode, say).
+  const MIN_PACE = 300;
   function player(later) {
-    return function play(view, run, from, count, { pace = 240, fine = false, after, updates = 0, instant = false } = {}) {
-      let t = from, w = null, seen = 0;
+    return function play(view, run, from, count, { pace = 400, fine = false, after, updates = 0, instant = false, lead = 0 } = {}) {
+      const P = Math.max(MIN_PACE, pace);
+      let t = from, w = null, seen = 0, moves = 0, total = 0;
       const end = Math.min(run.units, from + count);
       // one event; returns how long to wait before the next, or -1 when the replay is over
       const one = () => {
         if (!w) {
           if (t >= end) { after?.(t); return -1; }
           w = run.replay(t);
+          moves = 0;
+          total = 0;
+          if (lead) for (const ev of run.replay(t).events) if (ev.type === "move") total++;
         }
         const { value: ev, done } = w.events.next();
         if (done) { w = null; t++; after?.(t, true); return 700; }
+        const skipping = lead > 0 && moves >= lead && moves < total;
+        if (ev.type === "move") moves++;
         if (SHOWN.has(ev.type)) view.show(run.algorithm.show(w.m, run.env, run.params, t), run.params);
         const wait = view.event(ev, { line: fine, p: run.params }) || 0;
         if (updates && ev.type === "update" && ++seen >= updates) return -1;
+        // a team of workers moves together: their moves land at once, and each tick of the clock takes one beat
+        if (skipping || ev.w !== undefined) return 0;
         const quiet = ev.type === "info" || ev.type === "next" || ev.type === "skip";
-        return quiet ? 40 : ev.type === "choose" ? pace / 2 : pace + wait;
+        return quiet ? 40 : ev.type === "choose" ? P / 2 : ev.type === "plan" ? P / 2 : P + wait;
       };
       if (instant) { while (one() >= 0); return; }
-      const next = () => { const ms = one(); if (ms >= 0) later(next, ms); };
+      // waits of 0 run on at once, in one go, so the picture jumps instead of flickering through them
+      const next = () => { let ms = one(); while (ms === 0) ms = one(); if (ms >= 0) later(next, ms); };
       next();
     };
   }
@@ -223,7 +236,7 @@
             const noun = r.env.unitName || (r.algorithm.unit === "sweep" ? "sweep" : "episode");
             if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${noun}${n === 1 ? "" : "s"}`, each: (u) => more?.(st, view, r, u) });
             else if (st.play) {
-              play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, updates: st.updates, instant: !!st.instant, after: (u) => { if (!st.note) note.textContent = `${u.toLocaleString("en")} ${noun}${u === 1 ? "" : "s"} played`; } });
+              play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, updates: st.updates, instant: !!st.instant, lead: st.lead, after: (u) => { if (!st.note) note.textContent = `${u.toLocaleString("en")} ${noun}${u === 1 ? "" : "s"} played`; } });
             }
             chart(st);
             showFormula(st);
