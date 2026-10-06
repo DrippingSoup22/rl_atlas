@@ -75,7 +75,7 @@ A success rate measured on $n$ runs is itself uncertain. With $k$ successes, a 9
 
 These are exact binomial (Clopper–Pearson) intervals. Five runs that all succeed are consistent with a setting that fails half the time. Comparisons need even more care. Fisher's exact test asks how likely two counts this different would be if both settings had the same true rate: for 5 of 5 against 3 of 5, the chance is 44%, so the difference proves nothing. For 5 of 5 against 0 of 5 it is under 1%. For 35 of 40 against 18 of 40, it is 0.01%.
 
-Deep networks make seeds expensive. The recorded sweeps of Parts 9 and 10 train 5 seeds per setting on a CPU. That is enough to see a setting that fails every time, such as DQN without a target network, but not enough to rank two settings that both mostly work. The entries say how many runs each count rests on, so it can be read with this table in mind.
+Deep networks make seeds expensive, and this guide learned the lesson the hard way. Its first deep recordings trained 5 seeds each. DQN on CartPole ended well on all 5, and Double DQN seemed to learn faster: half its seeds first averaged 450 steps per training episode by block 21, against DQN's 33. Trained again with 20 seeds, DQN ends well on 16, and the two medians are 21 and 23, about the same. Five seeds were enough to see a setting that fails every time, such as DQN without a target network, but not to rank two settings that both mostly work. Every recording now has 20 seeds, and the entries say how many runs each count rests on.
 
 ### Fair comparisons {#fair}
 
