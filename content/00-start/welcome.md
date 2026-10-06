@@ -10,7 +10,7 @@ sources = [
 
 ### Idea
 
-The atlas is a map of reinforcement learning, from the agent–environment loop to PPO and SAC, and on to where the field goes next. Every **station** is one idea: a concept such as the [[discount]] factor, or an algorithm such as [[q-learning]]. Stations come in order along **lines**, and each one builds on the ones before it on its line, so the best way to read is from the top left, part by part. You can also jump anywhere: every underlined term explains itself when you hover it.
+The atlas is a map of reinforcement learning, from the agent–environment loop to PPO and SAC, and on to where the field goes next. Every **station** is one idea: a concept such as the [[discount|discount factor]], or an algorithm such as [[q-learning]]. Stations come in order along **lines**, and each one builds on the ones before it on its line, so the best way to read is from the top left, part by part. You can also jump anywhere: every underlined term explains itself when you hover it.
 
 ::: analogy
 A metro map of a city you are about to explore. You can ride the lines in order, or get off wherever something catches your eye; the map always shows where you are.
@@ -18,7 +18,7 @@ A metro map of a city you are about to explore. You can ride the lines in order,
 
 ### The map {#map}
 
-- **Bright** stations are written, faded ones are planned. Stations you have visited fill with color.
+- Stations you have visited fill with color, so the map shows how far you have come.
 - **Metro map** shows the curriculum in reading order: the foundations, then methods that keep a table, then methods that scale.
 - **Family tree** shows every algorithm under the one it changes. Most algorithms are their parent plus **one change**.
 - **Unified view** places the tabular methods by how far their updates look ahead and whether they sample or average.
