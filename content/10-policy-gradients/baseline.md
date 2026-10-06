@@ -5,6 +5,8 @@ prereqs = ["reinforce", "pg-theorem", "gradient-mc"]
 lab = "corridor-baseline"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §13.4 and Figure 13.2", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Kool, van Hoof & Welling (2019), Buy 4 REINFORCE samples, get a baseline for free!, ICLR Workshop on Deep Reinforcement Learning Meets Structured Prediction", url = "https://mlanthology.org/iclrw/2019/kool2019iclrw-buy/" },
+  { text = "Shao et al. (2024), DeepSeekMath: pushing the limits of mathematical reasoning in open language models, arXiv:2402.03300", url = "https://arxiv.org/abs/2402.03300" },
   { text = "Williams (1992), Simple statistical gradient-following algorithms for connectionist reinforcement learning, Machine Learning 8", url = "https://doi.org/10.1007/BF00992696" },
   { text = "Sutton (1984), Temporal credit assignment in reinforcement learning, PhD thesis, University of Massachusetts Amherst" },
   { text = "Greensmith, Bartlett & Baxter (2004), Variance reduction techniques for gradient estimates in reinforcement learning, Journal of Machine Learning Research 5", url = "https://www.jmlr.org/papers/v5/greensmith04a.html" },
@@ -102,6 +104,8 @@ Repeat for each episode:
     $\mathbf w \leftarrow \mathbf w + \alp^{\mathbf w}\,\del\,\nabla \val{\hat v(S_t, \mathbf w)}$
     $\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp^{\boldsymbol\theta}\,\gam^t\,\del\,\nabla \ln \pol{\pi(A_t \mid S_t, \boldsymbol\theta)}$
 :::
+
+When the same situation can be tried several times, a baseline needs no learning at all. Sample $k$ episodes from the same start and judge each return against the average of the other $k - 1$: the **leave-one-out** baseline, unbiased because the other tries do not depend on this one's actions (Kool, van Hoof & Welling, 2019). It is a common choice for fine-tuning language models, where each prompt is answered several times; GRPO (Shao et al., 2024) also divides by the spread of the group's returns ([[rlhf]]).
 
 ### A baseline is not a critic {#not-critic}
 

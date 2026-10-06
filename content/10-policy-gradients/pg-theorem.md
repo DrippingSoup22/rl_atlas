@@ -5,6 +5,7 @@ prereqs = ["why-policy", "policy-parameterization", "value-functions", "bellman"
 lab = "corridor-reinforce"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §13.2, §13.3 and §13.6", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Agarwal, Kakade, Lee & Mahajan (2021), On the theory of policy gradient methods: optimality, approximation, and distribution shift, Journal of Machine Learning Research 22", url = "https://jmlr.org/papers/v22/19-736.html" },
   { text = "Sutton, McAllester, Singh & Mansour (2000), Policy gradient methods for reinforcement learning with function approximation, Advances in Neural Information Processing Systems 12" },
   { text = "Williams (1992), Simple statistical gradient-following algorithms for connectionist reinforcement learning, Machine Learning 8", url = "https://doi.org/10.1007/BF00992696" },
   { text = "Glynn (1990), Likelihood ratio gradient estimation for stochastic systems, Communications of the ACM 33" },
@@ -126,6 +127,10 @@ Single-episode estimates of the same slope, $\sum_t \rew{G_t}\,\partial \ln \pol
 :::
 
 The estimates are right on average and wrong one at a time. That is the price of not knowing the model, and the reason why every method after [[reinforce]] works to reduce their variance.
+
+### Local or global? {#landscape}
+
+$J$ is not concave in $\boldsymbol\theta$, so a gradient method could in principle stop on a hill that is not the highest. For a softmax policy with one preference per state and action, though, there are no such false summits: with exact gradients and a start distribution that gives every state some weight, gradient ascent converges to an optimal policy (Agarwal, Kakade, Lee & Mahajan, 2021). The reason is the performance difference lemma ([[policy-improvement]]): any policy that is not optimal has some state where some action has a positive advantage, and with full coverage the gradient feels it. The catch is speed. Where the policy has become nearly deterministic the gradient is tiny, and plateaus can be long. With function approximation, or with states the start distribution never reaches, true local optima return.
 
 ### The continuing case {#continuing}
 

@@ -4,6 +4,7 @@ prereqs = ["why-policy", "gradient-bandit", "features"]
 lab = "throw"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §13.1, §13.7 and Exercises 13.3 and 13.4", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Chou, Maturana & Scherer (2017), Improving stochastic policy gradients in continuous control with deep reinforcement learning using the Beta distribution, Proceedings of the 34th International Conference on Machine Learning", url = "https://proceedings.mlr.press/v70/chou17a.html" },
   { text = "Williams (1992), Simple statistical gradient-following algorithms for connectionist reinforcement learning, Machine Learning 8", url = "https://doi.org/10.1007/BF00992696" },
   { text = "Bridle (1990), Probabilistic interpretation of feedforward classification network outputs, with relationships to statistical pattern recognition, in Neurocomputing: Algorithms, Architectures and Applications, Springer" },
   { text = "Gullapalli (1990), A stochastic reinforcement learning algorithm for learning real-valued functions, Neural Networks 3" },
@@ -153,7 +154,7 @@ Real actions are usually bounded (a steering wheel turns so far), and a Gaussian
 
 1. **Clip** the sampled action at the bounds, and keep the score of the unclipped sample. The throw does this: its angles are clipped to 0°–90°. It is simple, but piles probability on the bounds and makes the gradient blind to them.
 2. **Squash** the sample through a bounded function, such as $\tanh$, and correct the log-probability for the change of variable, as [[sac|soft actor–critic]] does.
-3. **Use a bounded distribution**, such as a Beta distribution rescaled to the action range.
+3. **Use a bounded distribution**, such as a Beta distribution rescaled to the action range. Chou, Maturana and Scherer (2017) found it learned faster than a clipped Gaussian, whose gradient is biased near the bounds.
 
 ### Other parameterizations {#other}
 

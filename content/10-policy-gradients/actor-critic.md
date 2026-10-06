@@ -5,6 +5,7 @@ prereqs = ["baseline", "td0", "semi-gradient-td", "td-error"]
 lab = "cliff-actor-critic"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §13.5 and §13.6", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "O'Doherty, Dayan, Schultz, Deichmann, Friston & Dolan (2004), Dissociable roles of ventral and dorsal striatum in instrumental conditioning, Science 304", url = "https://doi.org/10.1126/science.1094285" },
   { text = "Barto, Sutton & Anderson (1983), Neuronlike adaptive elements that can solve difficult learning control problems, IEEE Transactions on Systems, Man, and Cybernetics 13" },
   { text = "Sutton (1984), Temporal credit assignment in reinforcement learning, PhD thesis, University of Massachusetts Amherst" },
   { text = "Konda & Tsitsiklis (2000), Actor-critic algorithms, Advances in Neural Information Processing Systems 12" },
@@ -147,7 +148,7 @@ On the cliff, with tabular features, $\alp^{\boldsymbol\theta} = \alp^{\mathbf w
 
 ### Historical remarks {#history}
 
-The actor–critic architecture predates the policy gradient theorem by almost two decades. Barto, Sutton and Anderson (1983) balanced a pole with an associative search element (the actor) trained by an adaptive critic element, which learned to predict reinforcement and turned it into an internal signal, in effect the TD error. Sutton (1984) studied such architectures and their credit assignment, and TD learning itself grew out of the critic. Konda and Tsitsiklis (2000) proved convergence of actor–critic methods with linear critics on two time scales, and Bhatnagar, Sutton, Ghavamzadeh and Lee (2009) did so for natural-gradient versions. Asynchronous and batched actor–critics with neural networks ([[a2c]]) made the architecture central to deep reinforcement learning.
+The actor–critic architecture predates the policy gradient theorem by almost two decades. Barto, Sutton and Anderson (1983) balanced a pole with an associative search element (the actor) trained by an adaptive critic element, which learned to predict reinforcement and turned it into an internal signal, in effect the TD error. Sutton (1984) studied such architectures and their credit assignment, and TD learning itself grew out of the critic. Konda and Tsitsiklis (2000) proved convergence of actor–critic methods with linear critics on two time scales, and Bhatnagar, Sutton, Ghavamzadeh and Lee (2009) did so for natural-gradient versions. Asynchronous and batched actor–critics with neural networks ([[a2c]]) made the architecture central to deep reinforcement learning. The split has a counterpart in the brain: in imaging studies, the ventral striatum tracks reward-prediction errors whether or not a choice is involved, like a critic, while the dorsal striatum is engaged only when actions must be chosen, like an actor (O'Doherty et al., 2004).
 
 ## Card
 
