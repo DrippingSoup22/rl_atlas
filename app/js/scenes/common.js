@@ -21,6 +21,8 @@
     const pieces = Array.from(sym.querySelectorAll("[data-step]"));
     pieces.forEach((p) => p.style.setProperty("--k", p.dataset.step));
     const lines = typeof cfg.numbers === "string" ? { main: cfg.numbers } : cfg.numbers || {};
+    // a story without lines of numbers keeps room for the formula alone
+    card.querySelector(".scene-formula")?.classList.toggle("bare", !Object.keys(lines).length);
     // too wide for the card: shrink it, down to 70% (the pieces stay side by side, as the steps reveal them)
     const fit = () => {
       sym.style.fontSize = "";

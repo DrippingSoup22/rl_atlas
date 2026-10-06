@@ -86,7 +86,7 @@
 .thumb .t-dot { fill: var(--val); }
 
 /* ---- CartPole (recorded runs): the cart on its track, the network's numbers, its map of the pole's states ---- */
-.cartview { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px 20px; align-items: start; }
+.cartview { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px 20px; align-items: center; }
 .cartview svg { display: block; width: 100%; height: auto; overflow: visible; }
 .cartview text { font-family: var(--font); }
 .cartview .rail { stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round; }
