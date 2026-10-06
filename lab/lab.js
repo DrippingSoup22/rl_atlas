@@ -231,10 +231,7 @@
       const speeds = speedList();
       if (!speeds.some((s) => s.id === P.speed)) P.speed = "step";
       q(".speed").innerHTML = speeds.map((s) => `<option value="${s.id}"${s.id === P.speed ? " selected" : ""}>${s.rate ? `${s.rate} ${noun()[s.rate === 1 ? 0 : 1]} / s` : s.label}</option>`).join("");
-      // The note is rewritten whole: stepping replaces its contents, so its parts cannot be looked up later.
-      liveNote.innerHTML = recorded ? "Play <b>step by step</b> to see, at every step of a test episode, what the network makes of each move."
-        : `Play <b>line by line</b> or <b>${speeds[1].label.toLowerCase()}</b> to see every update with its numbers.`;
-      liveNote.classList.add("faint");
+      idleNote();
       q(".legend").innerHTML = racers.map((r, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${esc(r.name)}</span>`).join("");
       knobPanel();
       oddsPanel();
@@ -390,7 +387,8 @@
       buffer: { sym: "N", name: "replay memory (128: none)" }, tau: { sym: "τ", name: "how fast the target copies follow" },
       noise: { sym: "σ", name: "exploration noise" }, delay: { sym: "d", name: "critic updates per actor update" },
       policy_noise: { sym: "σ′", name: "noise on the target action" }, alpha: { sym: "α", name: "entropy weight (auto: tuned)" }, clip: { sym: "ε", name: "clip range (0: no clip)" }, epochs: { sym: "K", name: "passes over each batch" },
-      steps: { sym: "n", name: "steps per worker between updates" }, delta: { sym: "δ", name: "trust region (KL)" }, gamma: { sym: "γ", name: "discount" } };
+      steps: { sym: "n", name: "steps per worker between updates" }, delta: { sym: "δ", name: "trust region (KL)" }, gamma: { sym: "γ", name: "discount" },
+      huber: { sym: "L", name: "loss (0: squared error, 1: Huber)" }, reward_scale: { sym: "c", name: "reward scale (rewards × c for learning)" } };
     const knobOf = (k) => (recorded ? DEEP_KNOBS[k] || { sym: k, name: k } : { ...KNOBS[k], ...racers.find((r) => r.algorithm.knobs?.[k])?.algorithm.knobs[k] });
     // The values a sweep tries: a knob's choices or its sweep list. Tiny step sizes (linear methods, policy gradients)
     // try the ladder around the ones in use; averaging methods also try 1/n.
@@ -594,12 +592,18 @@
       P.walkers = null;
       P.acc = 0;
       P.wait = 0;
+      let shown = [];
       runs.forEach((r, i) => {
-        const p = paramsOf(racers[i]);
+        const p = paramsOf(racers[i]), events = P.e > 0 ? [...r.replay(P.e - 1).events] : [];
         views[i].show(racers[i].algorithm.show(r.at(P.e), r.env, p, P.e), p);
-        views[i].rest(P.e > 0 ? [...r.replay(P.e - 1).events] : [], draw);
+        views[i].rest(events, draw);
         caption(i);
+        if (i === P.focus) shown = events;
       });
+      // The panel follows the jump: a recorded run's last step, whose numbers the view shows; otherwise its prompt.
+      const a = racers[P.focus].algorithm, last = a.recorded && shown.findLast((ev) => ev.type === "choose");
+      if (last) { texInto(liveNum, a.numbers(last)); liveNote.innerHTML = a.note(last); liveNote.classList.remove("faint"); }
+      else idleNote();
       mark(null);
       position();
       if (P.e >= knobs.units) pause();
@@ -702,6 +706,14 @@
     }
 
     // ---- the live formula ----
+    // At rest, the panel says how to fill it. The note is rewritten whole: stepping replaces its contents.
+    function idleNote() {
+      liveNum.innerHTML = "";
+      liveNote.innerHTML = recorded ? "Play <b>step by step</b> to see, at every step of a test episode, what the network makes of each move."
+        : `Play <b>line by line</b> or <b>${speedList()[1].label.toLowerCase()}</b> to see every update with its numbers.`;
+      liveNote.classList.add("faint");
+    }
+
     function explain(ev, p) {
       const a = racers[P.focus].algorithm;
       if (!a.numbers) return;

@@ -117,7 +117,8 @@ CATALOG = {
 # network; buffer = 128 (the batch size): no replay, each batch is the latest experience. DQN's memory is 10,000 steps:
 # a sweep found 100,000 left 3 of 5 seeds unable to keep the pole up, and 10,000 none.
 SWEEPS = {
-    "dqn-cartpole": {"lr": [1e-4, 2.5e-4, 5e-4, 1e-3, 2.5e-3], "target_every": [0, 100, 500, 2000], "buffer": [128, 1_000, 10_000, 100_000]},
+    "dqn-cartpole": {"lr": [1e-4, 2.5e-4, 5e-4, 1e-3, 2.5e-3], "target_every": [0, 100, 500, 2000], "buffer": [128, 1_000, 10_000, 100_000],
+                     "huber": [0, 1]},
     "a2c-cartpole": {"lr": [3e-4, 1e-3, 3e-3, 1e-2], "steps": [1, 5, 20]},
     "ppo-cartpole": {"clip": [0.0, 0.1, 0.2, 0.3, 0.5], "epochs": [1, 4, 10, 30], "lr": [1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2]},
     "trpo-cartpole": {"delta": [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0]},
@@ -382,11 +383,12 @@ def current(spec: dict, knob: str):
     if knob == "alpha" and getattr(cfg, "auto_alpha", False):
         return "auto"
     v = getattr(cfg, knob)
-    return list(v) if isinstance(v, tuple) else v
+    return list(v) if isinstance(v, tuple) else int(v) if isinstance(v, bool) else v  # a switch is swept as 0 and 1
 
 
-def sweep(name: str, knobs: dict) -> None:
-    """Every value of every knob, every seed, all at once over the processes; the training curves only."""
+def sweep(name: str, knobs: dict, merge: bool = False) -> None:
+    """Every value of every knob, every seed, all at once over the processes; the curves only. With merge, the knobs
+    join those already in the sweep's file instead of replacing it."""
     t0, spec = time.time(), CATALOG[name]
     seeds = spec.get("sweep_seeds", spec["seeds"])  # each run of an actor-critic takes minutes: fewer seeds per value
     jobs = [(knob, v, s) for knob, values in knobs.items() for v in values for s in seeds]
@@ -401,6 +403,9 @@ def sweep(name: str, knobs: dict) -> None:
                                                    "test": [[test[(knob, v, s)] for s in seeds] for v in values]}
                                            for knob, values in knobs.items()}}
     path = OUT / "sweeps" / f"{name}.json"
+    if merge and path.exists():
+        old = json.loads(path.read_text(encoding="utf-8"))
+        out["knobs"] = {**old["knobs"], **out["knobs"]}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(out, separators=(",", ":")), encoding="utf-8")
     for knob, values in knobs.items():  # the last tenth of training, averaged, per value: a first look at the odds
@@ -414,6 +419,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Record training runs for RL Atlas.")
     parser.add_argument("names", nargs="*", help="recordings (or sweeps) to make (default: all)")
     parser.add_argument("--sweep", action="store_true", help="make the sweeps instead of the recordings")
+    parser.add_argument("--knobs", help="with --sweep: only these knobs (comma-separated), merged into the sweep's file")
     args = parser.parse_args()
     known = SWEEPS if args.sweep else CATALOG
     unknown = [n for n in args.names if n not in known]
@@ -421,7 +427,12 @@ def main() -> int:
         log.error("unknown %s: %s (known: %s)", "sweeps" if args.sweep else "recordings", ", ".join(unknown), ", ".join(known))
         return 1
     for name in args.names or known:
-        sweep(name, SWEEPS[name]) if args.sweep else record(name, CATALOG[name])
+        if not args.sweep:
+            record(name, CATALOG[name])
+        elif args.knobs:
+            sweep(name, {k: SWEEPS[name][k] for k in args.knobs.split(",")}, merge=True)
+        else:
+            sweep(name, SWEEPS[name])
     return 0
 
 
