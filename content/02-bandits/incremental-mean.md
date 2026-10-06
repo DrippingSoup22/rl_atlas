@@ -7,7 +7,34 @@ sources = [
   { text = "Robbins & Monro (1951), A stochastic approximation method, Annals of Mathematical Statistics 22", url = "https://doi.org/10.1214/aoms/1177729586" },
   { text = "Welford (1962), Note on a method for calculating corrected sums of squares and products, Technometrics 4", url = "https://doi.org/10.1080/00401706.1962.10490022" },
 ]
+
+[story]
+scene = "stream"
+source = { kind = "normal", mean = 1.5, sd = 1.0, n = 200, seed = 3 }
+domain = [-1.5, 4.5]
+formula = '''\step{1}{\val{Q_{n+1}} = \val{Q_n} + \frac{1}{n}\big[\rew{R_n} - \val{Q_n}\big]}'''
+
+[story.rules]
+avg = { rule = "average", label = "the running average" }
 +++
+
+## Story
+
+::: step {upto = 1, mark = 1}
+**One slot machine, pulled again and again.** Each pull pays a random amount around a mean we do not know: the dashed line, 1.5, which the learner never sees. After one pull, the best guess is that pull itself, 3.05.
+:::
+
+::: step {upto = 3, mark = 3, formula = 1}
+**The second pull pays 2.48,** and the estimate moves half the way toward it, to 2.77. The third pays $-0.19$, and the estimate moves a third of the way, to 1.78. Each reward moves the estimate by $1/n$ of the surprise, the gap between the reward and the estimate. That keeps it exactly the average of everything seen so far, without storing any of it: one number and a count.
+:::
+
+::: step {upto = 10}
+**After 10 pulls: 1.53.** The early rewards were scattered between $-0.19$ and 3.05, and each one counts for exactly a tenth now. The steps get smaller as the count grows, which is what averaging means: the hundredth reward should not count for more than the first.
+:::
+
+::: step {upto = 200}
+**After 200 pulls: 1.51.** By then each new reward moves the estimate by a two-hundredth of its surprise, and the estimate hardly moves at all. The error of an average shrinks like $1/\sqrt n$: four times as many pulls halve it. That is right for an arm that never changes; for one that does, the shrinking step is the problem, and [[step-size|a constant step]] the cure.
+:::
 
 ## Textbook
 

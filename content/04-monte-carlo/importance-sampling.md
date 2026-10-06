@@ -10,7 +10,39 @@ sources = [
   { text = "Mahmood, van Hasselt & Sutton (2014), Weighted importance sampling for off-policy learning with linear function approximation, Advances in Neural Information Processing Systems 27" },
   { text = "Schulman, Wolski, Dhariwal, Radford & Klimov (2017), Proximal policy optimization algorithms, arXiv:1707.06347", url = "https://arxiv.org/abs/1707.06347" },
 ]
+
+[story]
+scene = "stream"
+source = { kind = "loop", n = 1000, seed = 3 }
+domain = [0.0, 4.0]
+formula = '''\step{1}{\rho = \prod_t \frac{\pol{\pi(A_t \mid S_t)}}{\pol{b(A_t \mid S_t)}} \qquad} \step{2}{\text{ordinary: } \frac{\sum \rho\,\rew G}{n} \qquad} \step{3}{\text{weighted: } \frac{\sum \rho\,\rew G}{\sum \rho}}'''
+
+[story.rules]
+ord = { rule = "ordinary", label = "ordinary importance sampling" }
+wt = { rule = "weighted", label = "weighted" }
 +++
+
+## Story
+
+::: step {upto = 1, mark = 1, rules = ["ord"], formula = 1}
+**One state, two moves.** Going left, you come back to the same state nine times in ten, and one time in ten you leave with $\rew{+1}$. Going right, you leave with nothing. We want the value of the policy that always goes left: 1, sooner or later. But the episodes we get come from another policy, which picks each move half the time. The first one went left, then out with $\rew{+1}$. That episode is twice as likely under the policy we care about as under the one that played it, so it counts double: $\rho = 1 / \tfrac12 = 2$, and the sample is $\rho\,\rew G = 2$.
+:::
+
+::: step {upto = 12, mark = 12, rules = ["ord", "wt"], formula = 2}
+**Most episodes say nothing.** Episodes 2 to 11 each went right at some point, something the target policy never does: their ratio is 0, and so are their samples. Episode 12 went left once and out, $\rho = 2$. The ordinary estimate averages the twelve samples, 4/12 = 0.33. The weighted one divides by the sum of the ratios instead of their number: 4/4 = 1.
+:::
+
+::: step {upto = 200, rules = ["ord", "wt"], formula = 3}
+**After 200 episodes.** The ordinary estimate wanders around 0.3, far from 1: most of its samples are 0, and the few that count are not yet large enough to make up for them. The weighted estimate has said exactly 1 since the first episode, because every episode it counts ended with $\rew{+1}$.
+:::
+
+::: step {upto = 212, mark = 212, rules = ["ord", "wt"]}
+**Episode 212 goes left nine times before leaving.** Each of those moves is twice as likely under the target policy: $\rho = 2^9 = 512$. One sample of 512 lifts the ordinary average of 212 samples from 0.44 to 2.85.
+:::
+
+::: step {upto = 1000, rules = ["ord", "wt"]}
+**After 1,000 episodes, the ordinary estimate says 0.80,** still sinking back from that one episode. On average it is exactly right: the expectation of $\rho\,\rew G$ is the target policy's value, 1. But episodes with ever longer runs to the left are ever rarer and ever heavier, and their spread is infinite: the estimate never settles. The weighted estimate is biased, its first answer is just one episode's return, but its spread is bounded, and here it is exactly right. That is why off-policy Monte Carlo methods prefer it ([[off-policy-mc]]).
+:::
 
 ## Textbook
 

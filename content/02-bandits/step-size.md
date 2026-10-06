@@ -9,7 +9,41 @@ sources = [
   { text = "Kushner & Yin (2003), Stochastic Approximation and Recursive Algorithms and Applications, 2nd ed., Springer" },
   { text = "Bertsekas & Tsitsiklis (1996), Neuro-Dynamic Programming, Athena Scientific, chapter 4" },
 ]
+
+[story]
+scene = "stream"
+source = { kind = "normal", mean = 1.0, sd = 1.0, drift = 0.08, n = 400, seed = 2 }
+domain = [-2.0, 5.5]
+formula = '''\step{1}{\val{Q_{n+1}} = \val{Q_n} + \alp\big[\rew{R_n} - \val{Q_n}\big]} \step{2}{\qquad \val{Q_{n+1}} = (1 - \alp)^n \val{Q_1} + \sum_{i=1}^{n} \alp (1 - \alp)^{n-i} \rew{R_i}}'''
+
+[story.rules]
+avg = { rule = "average", label = "average (1/n)" }
+slow = { rule = "constant", alpha = 0.1, q0 = 5.0, label = "α = 0.1, from 5" }
+fast = { rule = "constant", alpha = 0.5, q0 = 5.0, label = "α = 0.5, from 5" }
+fair = { rule = "unbiased", alpha = 0.1, q0 = 5.0, label = "α = 0.1 without the bias" }
 +++
+
+## Story
+
+::: step {upto = 10, rules = ["avg", "slow"], formula = 1}
+**An arm whose mean wanders** (the dashed line), and two learners that both start from a wild first guess, 5. The average's first step is $1/1$: it jumps onto the first reward and forgets the 5 at once. A constant step of 0.1 keeps a share of it: after 10 pulls, $0.9^{10}$, about a third, of the gap it started with. It says 2.61 where the mean is 1.13.
+:::
+
+::: step {upto = 40, rules = ["avg", "slow"], formula = 2}
+**The bias fades.** Unrolled, a constant step size is a weighted sum: the first estimate keeps the weight $(1 - \alp)^n$, and each reward gets $\alp(1 - \alp)^{n-i}$, more the more recent it is. After 40 pulls, the 5 weighs $0.9^{40}$, under 2%.
+:::
+
+::: step {upto = 300, rules = ["avg", "slow"], formula = 2}
+**Now the arm changes.** Its mean climbed to about 2.4 by pull 40, then fell back to 1.1 by pull 300. The average weighs all 300 pulls equally and still says 2.06. The constant step weighs the last 10 pulls at 65% between them, and says 1.20. For a world that changes, forgetting the old is the point.
+:::
+
+::: step {upto = 300, rules = ["slow", "fast"]}
+**A bigger step tracks faster, and never settles.** With $\alp = 0.5$, each reward pulls the estimate halfway to it, so the estimate is mostly the last two or three rewards: at pull 300 it says 0.67, at pull 400 1.61, while the mean drifts from 1.1 to 0.8. The noise of a constant step size never fades: it trades steadiness for speed of tracking.
+:::
+
+::: step {upto = 10, rules = ["slow", "fair"]}
+**Both, without the bias.** A step size that starts at 1 and slides down to $\alp$ takes the first reward whole, as the average does, and then forgets at the constant rate: $\beta_n = \alp / \bar o_n$, with $\bar o_n$ creeping from 0 toward 1. From the same wild 5, it says 1.34 after 10 pulls, against 2.61, and from then on it moves exactly as the constant step does. [Tracking a moving arm, in the Lab](lab:bandit-drift).
+:::
 
 ## Textbook
 

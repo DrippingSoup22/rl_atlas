@@ -34,6 +34,7 @@
     for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9 * step; v += step) out.push(Math.abs(v) < step * 1e-9 ? 0 : v);
     return out;
   }
+  RL.ticks = ticks;
   // Ticks on a log axis: the powers of ten in range, with 2 and 5 times them when the range is short, and both ends.
   function logTicks(lo, hi) {
     const short = Math.log10(hi / lo) <= 2.5, out = new Set(short ? [lo, hi] : []), mults = short ? [1, 2, 5] : [1];
