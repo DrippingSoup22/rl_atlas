@@ -105,3 +105,9 @@ What does asynchronous dynamic programming give up, and what does it gain?
 ---
 It gives up the orderly sweep. It gains the freedom to update states in any order and as often as useful, focusing on relevant states or on the ones the agent is visiting, while still converging if every state keeps being updated.
 :::
+
+::: question
+A real robot comes with no table of transition probabilities. Which requirement of dynamic programming does that break, and which methods get around it?
+---
+The perfect model, $p(s', r \mid s, a)$ for every state and action. Monte Carlo and TD methods get around it by learning from sampled experience instead of computing expectations over a model.
+:::

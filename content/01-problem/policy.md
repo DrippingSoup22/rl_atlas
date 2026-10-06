@@ -111,3 +111,9 @@ Why can an optimal policy for a discounted MDP ignore the history?
 ---
 The state is Markov, so the history adds nothing about the future; and with an infinite horizon, the future looks the same at every step.
 :::
+
+::: question
+Is a deterministic policy a special case of a stochastic one? When would you want a truly random one?
+---
+Yes: in every state one action gets probability 1. A random policy is needed when being predictable is exploited (rock, paper, scissors) or when different states look the same to the agent, as in the short corridor of [[why-policy]].
+:::

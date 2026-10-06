@@ -95,3 +95,9 @@ What is the main risk of planning with a learned model?
 ---
 Model bias: the planner exploits the model's mistakes, and a plan that looks good in the model can fail in the real world.
 :::
+
+::: question
+Dyna-Q learns a model and plans with it, and also makes ordinary Q-learning updates. Is it model-based or model-free?
+---
+Model-based, as the map labels it, because its planning updates come from a learned model. But it keeps the model-free update on real experience as well: it is the standard example of using both, so a wrong model slows it down rather than ruining it.
+:::

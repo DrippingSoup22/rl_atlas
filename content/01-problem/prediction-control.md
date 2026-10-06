@@ -100,3 +100,9 @@ Why does acting greedily with respect to $\val{q_\pi}$ never make a policy worse
 ---
 In every state the greedy action is worth at least the policy's average, $\val{v_\pi(s)}$. By the policy improvement theorem, the new policy is at least as good everywhere.
 :::
+
+::: question
+Without a model, why do control methods estimate action values rather than state values?
+---
+To improve a policy from $\val{v_\pi}$ you must know where each action leads and what it pays, which is a model. $\val{q_\pi(s, a)}$ already says what each action is worth, so the greedy action can be read off directly.
+:::

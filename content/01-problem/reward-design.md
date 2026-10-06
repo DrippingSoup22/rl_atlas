@@ -134,3 +134,9 @@ A cleaning robot is rewarded for every piece of dirt it picks up. What could go 
 ---
 It may learn to spill dirt and pick it up again. The reward pays for an activity, not for a clean room.
 :::
+
+::: question
+In the checkpoint world the gem pays 1, and entering the checkpoint pays 0.2 each time. With $\gam = 0.95$, why is stepping off and on forever worth more than the gem?
+---
+Starting next to the checkpoint, the loop pays 0.2 every second step: $0.2\,(1 + \gamma^2 + \gamma^4 + \dots) = 0.2/(1 - \gamma^2) \approx 2.05$, more than twice the gem's single payment. For that reward, circling forever is the optimal policy.
+:::

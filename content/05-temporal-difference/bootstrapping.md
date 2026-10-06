@@ -130,3 +130,9 @@ Why does a bootstrapped target usually have lower variance than a return?
 ---
 It depends on the randomness of one transition only. A return depends on every random action and transition until the end of the episode.
 :::
+
+::: question
+If bootstrapped targets have lower variance, why not always bootstrap after a single step?
+---
+One-step targets are biased while the estimates are wrong, and their news travels back only one step per update. With function approximation and off-policy data they can even diverge. An intermediate number of steps, or $\lambda$, is often best.
+:::

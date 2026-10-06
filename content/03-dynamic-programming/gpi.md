@@ -140,3 +140,9 @@ Why is a value function that is consistent with a policy that is greedy with res
 ---
 Then the policy's Bellman equation takes the max over actions, so it is the Bellman optimality equation, whose only solution is $\val{v_*}$.
 :::
+
+::: question
+Policy iteration and value iteration are both GPI. What is different about their grain?
+---
+Policy iteration evaluates the policy until its values settle before improving it. Value iteration cuts evaluation to a single backup per state and folds the improvement into it, through the max over actions.
+:::

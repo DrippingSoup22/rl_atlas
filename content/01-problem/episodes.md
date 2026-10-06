@@ -94,3 +94,9 @@ Why can't Monte Carlo methods learn in a continuing task?
 ---
 They need the full return, which only exists once an episode ends. In a continuing task it never does.
 :::
+
+::: question
+In a continuing task, why is the plain sum of rewards ($\gam = 1$) a problem?
+---
+It adds up infinitely many rewards and can grow without bound, so two policies may both have an infinite return. Discounting with $\gam < 1$ keeps it finite, at most $R_{\max}/(1-\gamma)$; the other way out is to judge policies by their average reward per step.
+:::
