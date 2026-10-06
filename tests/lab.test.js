@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 
 const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "envs/approx", "envs/policy", "dp", "run", "measures", "features",
   "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy", "agents/offline", "agents/model",
-  "envs/deep", "recorded"];
+  "envs/deep", "recorded", "mcts"];
 for (const file of FILES) require(`../lab/${file}.js`);
 require("../app/recordings.js"); // recorded runs (recorder/record.py), bundled by build.py
 const { lab } = globalThis.RL;
@@ -392,4 +392,16 @@ test("planning in a learned model: trusting its guesses costs four falls and fin
   const returns = (doubt) => Array.from(run("hidden-cliffs", "model-planner", { gamma: 1, doubt, maxSteps: 500 }, 6).metrics.return);
   assert.deepEqual(returns(0), [-14, -431, -12, -12, -12, -12]);
   for (const doubt of [0.5, 1, 3]) assert.deepEqual(returns(doubt), [-14, -14, -14, -14, -14, -14], `doubt ${doubt}`);
+});
+
+test("MCTS: random games prefer the center, but the tree search finds the one winning corner (the MCTS story)", () => {
+  const B = "O....X...", { ttt } = lab;
+  assert.equal(ttt.perfect(B), 1, "X wins this position with best play");
+  assert.deepEqual(ttt.moves(B).filter((i) => ttt.perfect(ttt.play(B, i, "X")) === 1), [2], "and only by the top-right corner");
+  assert.equal(lab.flatMC(B, 3000, { seed: 1 }).best, 4, "flat Monte Carlo picks the center");
+  for (let seed = 1; seed <= 20; seed++) {
+    const search = lab.mcts(B, { c: 1.4, seed });
+    search.run(3000);
+    assert.equal(search.best(), 2, `seed ${seed}: UCT picks the corner`);
+  }
 });

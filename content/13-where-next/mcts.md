@@ -10,7 +10,47 @@ sources = [
   { text = "Mankowitz et al. (2023), Faster sorting algorithms discovered using deep reinforcement learning, Nature 618", url = "https://www.nature.com/articles/s41586-023-06004-9" },
   { text = "Schrittwieser et al. (2020), Mastering Atari, Go, chess and shogi by planning with a learned model, Nature 588", url = "https://www.nature.com/articles/s41586-020-03051-4" },
 ]
+[story]
+scene = "tree"
+board = "O....X..."
+c = 1.4
+seed = 1
+formula = '\step{1}{\text{back up: } N(s,a) \leftarrow N(s,a) + 1,\ \ \val{Q(s,a)} \leftarrow \text{average of the results}} \step{2}{\qquad \text{select: } \arg\max_a \Big[\val{Q(s,a)} + c\sqrt{\ln N(s) / N(s,a)}\,\Big]}'
 +++
+
+## Story
+
+::: step {sims = 0}
+**X to move.** O holds a corner, X the middle of the right edge, and seven cells are free. One of them wins by force; the others draw or lose against an opponent who does not blunder. The agent knows the rules, so it can try moves in its head before playing one. Which move, and how should it spend its thinking?
+:::
+
+::: step {sims = 0, flat = 3000}
+The simplest plan: for each move, play 3000 games to the end at random and keep the average. **The center wins on average** (68%), the top-right corner comes second (65%). But the center only draws against careful play. Random games reward moves that a random opponent fumbles, and this opponent will not fumble. More random games only make the wrong answer more certain.
+:::
+
+::: step {sims = 0, play = 7, pace = 1300, formula = 1}
+Monte Carlo tree search keeps a tree of the positions it has thought about. The first seven simulations each add one move to it, then finish the game at random (the faint moves), and write the result into the new node: its visit count and its average. One game per move says almost nothing yet.
+:::
+
+::: step {sims = 50, formula = 2}
+From the eighth simulation on, every first move has been tried, so the search must choose which line to follow. At each node it picks by a bandit rule, as [[ucb]] picks an arm: the best average plus a bonus for moves tried rarely. After 50 simulations the tree is three moves deep, and the center leads with 11 visits: so far the search agrees with the random games.
+:::
+
+::: step {sims = 300, play = 3, pace = 1600, formula = 2}
+Each simulation now walks down the tree by the bandit rule (the red path), adds one node at its end, and only then plays at random. Inside the tree the replies are not random any more: at O's nodes the rule picks what is best **for O**. After 300 simulations the center still leads, 77 visits to the corner's 40.
+:::
+
+::: step {sims = 1000, mark = 2}
+After about 980 simulations the corner takes the lead for good. Under it, the tree has found O's only defense, blocking at the bottom right, and then X's reply in the center, which threatens two lines at once. The random games could not see that line: it needs O to answer correctly and X to follow up.
+:::
+
+::: step {sims = 2000, mark = 2}
+After 2000 simulations, the corner has 1249 of the visits and wins 83% of its games; the center has stalled at 257 visits and 66%. The search spends its effort where the decision is made and checks the rest just enough. It plays the most visited move: the winning corner.
+:::
+
+::: step {sims = 2000, chart = true}
+The same question asked of 100 searches, each with its own seed. With 1000 simulations, 89 of them choose the winning corner, and with 3000, all of them. Flat Monte Carlo with the same number of random games gets worse as it plays more: 3 of 100 at 3000. A search that models the opponent's best replies beats a pile of random games, and AlphaZero's networks make each simulation smarter still.
+:::
 
 ## Textbook
 
@@ -28,6 +68,13 @@ MCTS grows a tree rooted at the current state, one simulation at a time. Each no
 4. **Backup.** Pass the result up the path, updating each node's count and average.
 
 After the simulations, play the move visited most at the root, and keep the subtree below it for the next decision. With the bandit rule UCT, $\val{Q(s,a)} + c\sqrt{\ln N(s) / N(s, a)}$ (Kocsis and Szepesvári, 2006), the search concentrates on promising lines while still checking the others, and with enough simulations its choice converges to the best move. It needs no evaluation function, only the ability to simulate, which made it the method that first brought computer Go to strong amateur level.
+
+On the tic-tac-toe position of the story (X to move, O in a corner, X on an edge), playing each move out at random ranks the center first, though only the top-right corner wins against best play: after it, O must block, and X's center then threatens two lines. The tree finds that line because inside the tree each side picks its own best reply.
+
+::: figure {#fig-odds}
+{{mcts-odds}}
+How often a search from the story's position chooses the winning corner, against the number of simulations. Flat Monte Carlo spreads the same number of random games over the seven moves and grows more confident in the center; UCT's tree finds the corner after about a thousand simulations. Computed live from 100 seeded searches.
+:::
 
 ### AlphaGo and AlphaZero {#alphazero}
 
