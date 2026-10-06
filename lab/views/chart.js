@@ -46,6 +46,15 @@
     const a = Math.abs(v), d = a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : a >= 0.01 ? 3 : 4;
     return (v < 0 ? "−" : "") + (a === 0 ? "0" : a < 1e-4 ? a.toExponential(0) : trim(a.toFixed(d)));
   };
+  // Axis labels: the chart's own format, unless it rounds two ticks to the same text (−123.5 and −124.5 both "−124"
+  // on a narrow range); then as many decimals as the ticks need, the same for all.
+  const tickLabels = (vals, fmt) => {
+    const out = vals.map(fmt);
+    if (new Set(out).size === out.length) return out;
+    const places = (v) => { for (let d = 0; d < 4; d++) if (Math.abs(v - +v.toFixed(d)) < 1e-9) return d; return 4; };
+    const d = Math.max(0, ...vals.map(places));
+    return vals.map((v) => (v < 0 ? "−" : "") + Math.abs(v).toFixed(d));
+  };
 
   class LineChart {
     // label: what is plotted; percent: values are shares (0–1); log: a log scale for small positive numbers;
@@ -118,10 +127,11 @@
       // axes and grid
       const grid = el("g", { class: "grid" }, svg);
       const yt = this.log ? logTicks(lo, hi) : ticks(lo, hi, 4);
-      for (const v of yt) {
+      const yl = tickLabels(yt, (v) => this.fmt(v));
+      yt.forEach((v, i) => {
         el("line", { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v) }, grid);
-        el("text", { class: "tick", x: M.l - 8, y: y(v) + 4, "text-anchor": "end" }, grid).textContent = this.fmt(v);
-      }
+        el("text", { class: "tick", x: M.l - 8, y: y(v) + 4, "text-anchor": "end" }, grid).textContent = yl[i];
+      });
       const xt = this.logX ? Array.from({ length: Math.floor(lx) + 1 }, (_, k) => 10 ** k) : ticks(0, n, W < 520 ? 2 : 5).filter((u) => u <= n); // fewer ticks on narrow charts, so labels never collide
       xt.forEach((u, k) => {
         const last = k === xt.length - 1;
@@ -246,10 +256,11 @@
       const grid = el("g", { class: "grid" }, svg);
       const at = this.values.indexOf(this.current);
       if (at >= 0) el("rect", { class: "now-band", x: M.l + at * slot, y: M.t, width: slot, height: ph }, grid);
-      for (const v of this.log ? logTicks(lo, hi) : ticks(lo, hi, 4)) {
+      const yt = this.log ? logTicks(lo, hi) : ticks(lo, hi, 4), yl = tickLabels(yt, (v) => this.fmt(v));
+      yt.forEach((v, i) => {
         el("line", { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v) }, grid);
-        el("text", { class: "tick", x: M.l - 8, y: y(v) + 4, "text-anchor": "end" }, grid).textContent = this.fmt(v);
-      }
+        el("text", { class: "tick", x: M.l - 8, y: y(v) + 4, "text-anchor": "end" }, grid).textContent = yl[i];
+      });
       const every = slot < 34 ? 2 : 1; // crowded labels: every other one, always keeping the current value
       this.values.forEach((v, i) => {
         if (i % every && i !== at) return;

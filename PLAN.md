@@ -115,7 +115,7 @@ animations and hover effects this guide relies on would not be smooth.
   Then: stories for experience replay, the target network, offline RL, imitation, normalization, model-based deep RL
   and MCTS (UCT on a tic-tac-toe position, with a tree view and the odds of flat Monte Carlo against the tree); sweeps over
   10 to 20 seeds per value for every recorded algorithm, folded into the texts that quote them (A2C and PPO on CartPole,
-  DQN's Huber knob, DDPG's τ, noise and reward scale, TD3's delay and target noise; SAC's α and τ to follow); a third quiz question
+  DQN's Huber knob, DDPG's τ, noise and reward scale, TD3's delay and target noise, SAC's α and τ); a third quiz question
   wherever an entry had two; a one-by-one review of every textbook against Sutton & Barto and newer sources.
   Still open:
   - No story, on purpose: which-algorithm (a decision guide, not a run), pg-theorem (a derivation; REINFORCE and the

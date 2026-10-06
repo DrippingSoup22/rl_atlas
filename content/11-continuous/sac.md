@@ -117,6 +117,11 @@ The recording uses the settings of the DDPG and TD3 recordings: networks of 64 +
 | last four tests, range over seeds | −121 to −132 | −122 to −139 | −121 to −128 |
 | seeds whose average target ends above 0 | 11 | 0 | 0 |
 
+A sweep of two knobs, 10 seeds per value (the Lab's sweep panel shows every run), finds all 90 runs holding the pendulum up at the end.
+
+- **The entropy weight $\alpha$.** A fixed weight of 0.01, 0.05 or 0.2 learns as fast as the tuned one: half the seeds train at −250 or better within 6,750 to 7,500 steps. At $\alpha = 1$ the bonus outweighs the rewards: the training episodes stay near random, −264 in the median at the end, and half the seeds need 21,000 steps to train at −250. Yet the tests, which play the mean action, hold the pendulum up as well as any other setting. The policy has learned where to aim, and is paid to keep missing on purpose.
+- **Target speed $\tau$.** Slow copies slow learning, 15,000 steps at $\tau = 0.001$ against 7,500 at the recording's 0.005, while fast ones do no harm: 6,000 steps at 0.02 and at 0.1. At $\tau = 0.1$ DDPG lost one seed for good; SAC's twin critics and stochastic targets lose none.
+
 SAC combines the speed of DDPG with the honest values of TD3. On a task this small the differences are modest; on the harder locomotion tasks of the original papers, SAC's advantage in stability across seeds was the main result.
 
 ### Historical remarks {#history}
