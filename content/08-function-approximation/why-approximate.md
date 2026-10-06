@@ -28,20 +28,16 @@ groups = { algorithm = "gradient-mc", features = "groups", cells = 10, alpha = 0
 **A walk with a thousand states.** The agent starts in the middle, at state 500, and every step jumps up to 100 states left or right, at random. Leaving on the right pays $\rew{+1}$, leaving on the left $\rew{-1}$. The dashed line is the true value of each state; the gray hill underneath is how much time the walk spends in each, highest in the middle where it starts.
 :::
 
-::: step {run = "table", at = 0, play = 1, pace = 22, formula = 1}
-First, the method of Part 4: [[mc-prediction|Monte Carlo]] with **a table**, one number per state. Watch the walk, and then the updates at its end: each one moves exactly one state, the thin needle in the strip under the plot. No state learns anything from its neighbors.
+::: step {run = "table", at = 1, formula = 1}
+First, the method of Part 4: [[mc-prediction|Monte Carlo]] with **a table**, one number per state. At the end of a walk, each state it visited moves toward the return, on its own: the thin needle in the strip under the plot is how far the last update moved each state. After this first walk, which left on the right, 114 states moved up. The other 886 still say 0, however close they are to states that have. No state learns anything from its neighbors.
 :::
 
-::: step {run = "table", at = 1}
-After one walk, 114 states know something, each on its own: this walk left on the right, so they all moved up. The other 886 have not been visited and still say 0, however close they are to states that have.
+::: step {run = "table", checkpoints = [10, 100]}
+After 10 walks, 557 states have been visited; after 100, 972. But most of them only a handful of times (a median of 7), and the states near the ends barely twice: the table is a ragged cloud around the truth. With a million states it would still be waiting for most of its first visits.
 :::
 
-::: step {run = "table", at = 100}
-After 100 walks almost every state has been visited, but most only a handful of times (a median of 7), and the states near the ends barely twice: the table is a ragged cloud around the truth. With a million states it would still be waiting for most of its first visits.
-:::
-
-::: step {run = "groups", at = 0, play = 1, pace = 22, formula = 2}
-Now the same walks with **ten numbers**: the states are cut into ten groups of 100, and all the states of a group share one weight. Every update now moves a whole group: the strip shows a box. One visit teaches a hundred states at once.
+::: step {run = "groups", at = 1, formula = 2}
+Now the same walks with **ten numbers**: the states are cut into ten groups of 100, and all the states of a group share one weight. Every update now moves a whole group: after the same first walk, the strip shows a box. One visit teaches a hundred states at once.
 :::
 
 ::: step {run = "groups", at = 100}

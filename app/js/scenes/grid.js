@@ -2,7 +2,7 @@
 (function (RL) {
   "use strict";
   const { lab } = RL;
-  const { timers, formula, FORMULA, ACTION, signed, runs, player, showRun, curves } = RL.sceneKit;
+  const { timers, formula, FORMULA, ACTION, signed, runs, player, showRun, checkpoints, curves } = RL.sceneKit;
 
   // ---- grid: a grid world with values, a policy and the agent ----
   RL.scenes.grid = {
@@ -148,7 +148,9 @@
         view.mark(focus < 0 || !st.next ? [] : successors(focus), "next");
         showFormula(st);
         note.textContent = st.note || "";
-        if (st.play) play(view, r, t, st.play, { pace: st.pace || 200, fine: !!st.fine, updates: st.updates, after: (u) => { if (!st.note) note.textContent = `${u} ${r.algorithm.unit}${u === 1 ? "" : "s"} done`; } });
+        const unit = r.algorithm.unit;
+        if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${unit}${n === 1 ? "" : "s"}` });
+        else if (st.play) play(view, r, t, st.play, { pace: st.pace || 200, fine: !!st.fine, updates: st.updates, after: (u) => { if (!st.note) note.textContent = `${u} ${unit}${u === 1 ? "" : "s"} done`; } });
       }
 
       return {

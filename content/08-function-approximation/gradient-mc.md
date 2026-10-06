@@ -29,12 +29,8 @@ small = { algorithm = "gradient-mc", features = "groups", cells = 10, alpha = 0.
 **The 1000-state walk with ten weights**, one per group of 100 states ([[features]]). Every weight starts at 0, so every estimate is 0. The learner is [[mc-prediction|Monte Carlo]], almost unchanged: wait for the walk to end, then learn from the return.
 :::
 
-::: step {run = "big", at = 0, play = 1, pace = 45, formula = 2}
-The walk takes 40 jumps and leaves on the right: every visited state's return is $\rew{+1}$. Then come the updates, one per visited state, each nudging that state's estimate toward its return. With weights instead of a table, nudging an estimate means moving the weights that compute it: here, the weight of its group, the box in the strip.
-:::
-
-::: step {run = "big", at = 1}
-After one walk the six groups it passed through have risen, most of all the group just right of the start, which got 13 of the 40 updates. The four groups on the left were never visited and have not moved. With a step size $\alpha = 0.01$ each update is small; a single walk is one noisy example, not the answer.
+::: step {run = "big", at = 1, formula = 2}
+**The first walk** takes 40 jumps and leaves on the right: every visited state's return is $\rew{+1}$. Then come the updates, one per visited state, each nudging that state's estimate toward its return. With weights instead of a table, nudging an estimate means moving the weights that compute it: here, the weight of its group, the box in the strip under the plot. The six groups the walk passed through have risen, most of all the group just right of the start, which got 13 of the 40 updates. The four groups on the left were never visited and have not moved. With a step size $\alpha = 0.01$ each update is small: a single walk is one noisy example, not the answer.
 :::
 
 ::: step {run = "big", at = 2}

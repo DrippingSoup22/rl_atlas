@@ -58,7 +58,8 @@ and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline`, `mdp`,
 `chain`, `cards`, `graph`, `line`, `car`, `star`, `corridor`, `throw`, `cartpole`, `pendulum`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
 a Lab view, and grid stories that replay dynamic programming or Monte Carlo, name their runs in a `[story.runs]`
 table (`name = { algorithm, <knobs> }`, or `name = { recording }` for a run trained offline); a step then picks a run and a moment (`run`, `at`), can replay some units
-(`play`, `pace`), or only the first few updates of one (`updates`), and can chart runs averaged over many seeds (`curves`,
+(`play`, `pace`), or only the first few updates of one (`updates`), or hold a few moments of the run in turn (`checkpoints`, a list of units
+or a count for evenly spaced ones; `hold`, in milliseconds), and can chart runs averaged over many seeds (`curves`,
 `metric`, and `domain` to fix the range). Grid steps can paint a batch's advantages on the move triangles (`advantages`),
 and a `[story.numbers]` table names lines of numbers that steps show under the formula (`numbers = "name"`).
 A story runs on a seed picked because it proves its point clearly; how often settings succeed over many seeds is

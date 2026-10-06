@@ -25,7 +25,7 @@ many = { algorithm = "gradient-mc", features = "tiles", tilings = 20, cells = 4,
 
 ## Story
 
-::: step {run = "wide", at = 200, play = 1, pace = 20, formula = 1}
+::: step {run = "wide", at = 200, formula = 1}
 **Four wide groups** of 250 states each. An update moves every state that shares a feature with the visited one, by the share they have in common: the strip under the plot. Here that means a quarter of the walk at once. After 200 walks the four steps already have roughly the right shape.
 :::
 
@@ -33,7 +33,7 @@ many = { algorithm = "gradient-mc", features = "tiles", tilings = 20, cells = 4,
 And after 2000 walks they are still four steps. A group has one value for 250 states whose true values run from one end of a slope to the other: no amount of data can fix that. Wide features **generalize** well and **discriminate** poorly.
 :::
 
-::: step {run = "narrow", at = 200, play = 1, pace = 20}
+::: step {run = "narrow", at = 200}
 **Fifty narrow groups** of 20 states. Now each update touches a sliver, and each sliver needs its own visits. After 200 walks most slivers have barely moved: the line is ragged and close to 0 near the ends, which the walk rarely reaches.
 :::
 
@@ -41,7 +41,7 @@ And after 2000 walks they are still four steps. A group has one value for 250 st
 After 2000 walks the slivers have caught up and the line follows the curve, raggedly: each sliver has only its own visits to average. Narrow features discriminate well and generalize poorly: they need many more visits.
 :::
 
-::: step {run = "many", at = 200, play = 1, pace = 20}
+::: step {run = "many", at = 200}
 **Twenty tilings of the same wide tiles**, each shifted 12.5 states from the last. Each update still reaches 250 states either side, a tent in the strip, so learning starts as fast as with the four groups...
 :::
 

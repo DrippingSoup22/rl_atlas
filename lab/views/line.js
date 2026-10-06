@@ -115,11 +115,20 @@
       let self = 0;
       for (let i = 0; i < xs.k; i++) { dense[xs.idx[i]] += xs.val[i]; self += xs.val[i] * xs.val[i]; }
       const share = (t) => { const x = F.of(t); let v = 0; for (let i = 0; i < x.k; i++) v += dense[x.idx[i]] * x.val[i]; return v / self; };
+      const v = new Float64Array(this.env.n + 1);
+      let touched = 0;
+      for (let t = 1; t <= this.env.n; t++) if (Math.abs((v[t] = share(t))) > 1e-9) touched++;
+      if (touched <= 3) { // a table, or nearly: one state among a thousand is under a pixel wide, so draw a needle
+        const x = this.x(s), top = (FT + FH - clamp(v[s], 0, 1.2) * FH).toFixed(1);
+        this.foot.setAttribute("d", `M${(x - 1.5).toFixed(1)} ${FT + FH}V${top}H${(x + 1.5).toFixed(1)}V${FT + FH}Z`);
+        this.footNeg.setAttribute("d", "");
+        return;
+      }
       let pos = `M${L} ${FT + FH}`, neg = pos;
-      for (let t = 1; t <= this.env.n; t += 2) {
-        const v = share(t), xx = this.x(t).toFixed(1);
-        pos += `L${xx} ${(FT + FH - clamp(v, 0, 1.2) * FH).toFixed(1)}`;
-        neg += `L${xx} ${(FT + FH - clamp(v, -1, 0) * FH * 0.5).toFixed(1)}`;
+      for (let t = 1; t <= this.env.n; t++) {
+        const xx = this.x(t).toFixed(1);
+        pos += `L${xx} ${(FT + FH - clamp(v[t], 0, 1.2) * FH).toFixed(1)}`;
+        neg += `L${xx} ${(FT + FH - clamp(v[t], -1, 0) * FH * 0.5).toFixed(1)}`;
       }
       this.foot.setAttribute("d", `${pos}L${W - R} ${FT + FH}Z`);
       this.footNeg.setAttribute("d", `${neg}L${W - R} ${FT + FH}Z`);

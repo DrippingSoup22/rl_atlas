@@ -34,8 +34,8 @@ eight = { algorithm = "semi-gradient-sarsa", features = "tiles", tilings = 8, ce
 On the right, what the learner believes: for each position and speed, how many steps it expects before reaching the flag, the **cost-to-go**. It is computed from action values estimated with tile coding, eight tilings of 8 × 8 tiles over position and speed, one set of weights per action. All weights start at 0: the learner believes it is already there. The landscape is flat.
 :::
 
-::: step {run = "one", at = 0, play = 1, pace = 3, formula = 2}
-The first episode. Every step costs 1 and disappoints the estimate it came from, so the moves the car has tried sink below the untried ones, which still promise 0. Greedy on that optimism, with no random exploration at all ($\varepsilon = 0$), it keeps trying what it has not tried: watch the swings widen and the landscape rise under the path, until a swing carries it over the top. 1358 steps.
+::: step {run = "one", at = 1, formula = 2}
+**The first episode: 1,358 steps.** Every step costs 1 and disappoints the estimate it came from, so the moves the car has tried sink below the untried ones, which still promise 0. Greedy on that optimism, with no random exploration at all ($\varepsilon = 0$), it keeps trying what it has not tried. The path shows the swings widening, back and forth, until one carried it over the top; the landscape has risen under the path, where the disappointments were.
 :::
 
 ::: step {run = "one", at = 12}

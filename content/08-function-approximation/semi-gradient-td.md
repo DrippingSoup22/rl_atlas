@@ -32,8 +32,8 @@ mc = { algorithm = "gradient-mc", features = "groups", cells = 10, alpha = 0.000
 **The same walk, the same ten groups**, but the learner no longer waits for the end. After every jump it updates the state it just left, toward a target made of the reward and **its own estimate** of where it landed, as [[td0|TD(0)]] does with a table.
 :::
 
-::: step {run = "big", at = 0, play = 1, pace = 40, formula = 2}
-Forty jumps, forty updates. But every estimate is 0 and no jump inside the walk pays anything, so 39 targets are 0 and nothing moves. Only the last jump, out of the right exit, brings a surprise: $\rew{+1}$ against an estimate of 0. One group moves, the last one.
+::: step {run = "big", at = 1, formula = 2}
+**The first walk**: forty jumps, forty updates. But every estimate is 0 and no jump inside the walk pays anything, so 39 targets are 0 and nothing moves. Only the last jump, out of the right exit, brings a surprise: $\rew{+1}$ against an estimate of 0. One group moves, the last one: the box in the strip under the plot.
 :::
 
 ::: step {run = "big", at = 10}

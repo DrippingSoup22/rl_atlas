@@ -21,38 +21,37 @@ formula = '\step{1}{\val{\hat v(s, \mathbf w)} = w_1 x_1(s) + w_2 x_2(s) + \dots
 [story.runs]
 groups = { algorithm = "gradient-mc", features = "groups", cells = 5, alpha = 0.0005, gamma = 1.0, units = 2000, measures = ["ve"], name = "5 groups" }
 tiles = { algorithm = "gradient-mc", features = "tiles", tilings = 50, cells = 5, alpha = 0.00001, gamma = 1.0, units = 2000, measures = ["ve"], name = "50 tilings" }
-poly = { algorithm = "gradient-mc", features = "poly", order = 5, alpha = 0.0002, gamma = 1.0, units = 2000, measures = ["ve"], name = "polynomials up to s⁵" }
 fourier = { algorithm = "gradient-mc", features = "fourier", order = 5, alpha = 0.0001, gamma = 1.0, units = 2000, measures = ["ve"], name = "cosines up to 5" }
 +++
 
 ## Story
 
-::: step {run = "groups", at = 100, formula = 1}
-**The thousand-state walk** ([[why-approximate]]), learned by Monte Carlo from features. A feature is a number computed from the state, $x_i(s)$; the estimate is a weighted sum of them. Here, five features: “is the state in the first fifth?”, “in the second fifth?”, and so on, each 1 or 0. After 100 walks: five flat steps.
+::: step {run = "groups", at = 0, formula = 1}
+**A thousand states, five numbers.** The walk of [[why-approximate]] has a thousand states, and a table would keep a thousand values. Instead, describe each state by a few numbers, its **features**, and estimate its value as a weighted sum of them, formula (1). The simplest features are yes-or-no questions: is the state in the first fifth of the line? In the second? Each answer is 1 or 0, and every state answers yes to exactly one of the five. Five weights to learn, all at 0 for now.
 :::
 
-::: step {run = "groups", at = 100, play = 1, pace = 20, formula = 2}
-An update moves each weight **in proportion to its feature**. With groups, exactly one feature is on, so one weight moves, and with it all 200 states of the group: the box in the strip. The visited state and its group mates learn exactly as much.
+::: step {run = "groups", at = 1, formula = 2}
+**One walk, one lesson for many states.** After a walk, Monte Carlo moves each weight by the error times its feature, formula (2): only the weight whose feature is on moves. The strip under the chart shows how far each state's value moved with the last update. The whole fifth moved by the same amount, and nothing else. A lesson learned at one state is applied to every state that shares its features: that is **generalization**.
 :::
 
-::: step {run = "tiles", at = 100, play = 1, pace = 20}
-**Tile coding**: fifty such cuttings into fifths, each shifted 4 states from the last. A state lies in fifty tiles, one per cutting. An update moves those fifty weights, and a nearby state shares most of them, a farther one fewer: the footprint is a tent, highest at the visited state and gone 200 states away.
+::: step {run = "groups", checkpoints = [10, 100, 500, 2000]}
+**Lessons add up.** After 10, 100, 500 and 2,000 walks, the five weights settle, and the estimate becomes five flat steps along the true values, the dashed line. Within a fifth every state gets the same value, right or wrong: the features decide what the learner can tell apart.
 :::
 
-::: step {run = "poly", at = 100, play = 1, pace = 20}
-**Polynomials**: $1, s, s^2, \dots, s^5$, with $s$ scaled to run from 0 to 1. Every feature is nonzero almost everywhere, so every update moves every state, some up, some down (the blue part of the strip). Generalization is no longer local.
+::: step {run = "tiles", at = 1}
+**Overlapping features.** Tile coding cuts the line into fifths fifty times, each cutting shifted a little from the last. A state answers yes to fifty features, one per cutting, and a nearby state shares most of them. So an update's footprint is a tent: the closer a state is to the one visited, the more it learns, and states 200 or more away learn nothing.
 :::
 
-::: step {run = "fourier", at = 100, play = 1, pace = 20}
-**Fourier cosines**: $\cos(\pi c s)$ for $c = 0, 1, \dots, 5$, waves of rising frequency. Also global, but better balanced than powers of $s$, which all crowd together near $s = 1$.
+::: step {run = "fourier", at = 1}
+**Global features.** Cosines of rising frequency, $\cos(\pi c s)$ for $c = 0, \dots, 5$, with $s$ scaled to run from 0 to 1. Every feature is nonzero almost everywhere, so every lesson moves every state, some up and some down: the whole strip moves at once. Generalization is no longer local.
 :::
 
 ::: step {run = "fourier", at = 2000, ghosts = [100]}
-After 2000 walks the cosines trace the truth closely; the faint line is where they were after 100. Six numbers, a thousand states.
+After 2,000 walks, six weights trace the thousand values closely; the faint line is where they were after 100. Six numbers, a thousand states.
 :::
 
-::: step {run = "fourier", at = 2000, curves = ["groups", "tiles", "poly", "fourier"], metric = "ve"}
-Averaged over 20 runs: the cosines and the tiles end best, the five groups are stuck on a coarse staircase, and the polynomials learn slowest. Same learner, same data: the features made the difference. [Compare them in the Lab](lab:walk-features).
+::: step {run = "fourier", at = 2000, curves = ["groups", "tiles", "fourier"], metric = "ve"}
+**The features made the difference.** Averaged over 20 runs, with the same learner and the same walks, the cosines and the tiles end close to the truth, and the five groups stay stuck on their coarse staircase. The Textbook adds polynomials and radial bumps. [Compare them in the Lab](lab:walk-features).
 :::
 
 ## Textbook
