@@ -74,7 +74,7 @@ Some habits make the search cheaper:
 
 ### The ones that matter most {#most}
 
-Large studies agree on a short list. For on-policy methods (Andrychowicz et al., 2021), the step size, the discount and GAE's $\lambda$ matter most, followed by how advantages and observations are normalized and how the network is initialized; the clip range and the number of passes matter less once they are in their usual range. For value-based methods, the step size, the target period and the memory size. For all of them, the reward scale: it sets the size of every TD error and so of every step ([[normalization]]). And implementation details that papers rarely mention can matter as much as the knobs they do list (Engstrom et al., 2020).
+Large studies agree on a short list. For on-policy methods, Andrychowicz et al. (2021) single out the discount, the normalization of observations, and the initialization of the policy's last layer (small, so that the starting policy is close to uniform), with GAE's $\lambda$ and the step size next; many other choices mattered little once in their usual range. For value-based methods, the step size, the target period and the memory size. For all of them, the reward scale: it sets the size of every TD error and so of every step ([[normalization]]). And implementation details that papers rarely mention can matter as much as the knobs they do list (Engstrom et al., 2020).
 
 ### Historical remarks {#history}
 
