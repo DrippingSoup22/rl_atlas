@@ -112,8 +112,23 @@
 .tb-paper .disc, .tb-paper .bta { font: 15px/1.55 var(--font); }
 
 /* ---- the other story scenes: the loop, the timeline and the MDP ---- */
-.loop, .timeline, .mdp { display: block; width: 100%; height: auto; overflow: visible; }
-.loop text, .timeline text, .mdp text { font-family: var(--font); }
+.loop, .timeline, .mdp, .surprise { display: block; width: 100%; height: auto; overflow: visible; }
+.loop text, .timeline text, .mdp text, .surprise text { font-family: var(--font); }
+.surprise .moment { font-size: 12px; font-weight: 600; fill: var(--ink-3); }
+.surprise .moment.cue { fill: var(--ink); }
+.surprise .moment.rew { fill: var(--rew-ink); }
+.surprise .mark.cue { fill: var(--surface-3); opacity: 0.55; }
+.surprise .mark.rew { fill: var(--rew); opacity: 0.12; }
+.surprise .row { transition: opacity 0.4s; }
+.surprise .row.off { opacity: 0; }
+.surprise .row-name { font-size: 12.5px; font-weight: 700; fill: var(--ink-2); }
+.surprise .row.omit .row-name { fill: var(--err-ink); }
+.surprise .base { stroke: var(--line-2); stroke-width: 1.2; }
+.surprise .bar { fill: var(--err); transition: y 0.6s var(--ease), height 0.6s var(--ease); }
+.surprise .bar.neg { fill: color-mix(in oklab, var(--err) 45%, transparent); stroke: var(--err); stroke-width: 1.2; }
+.surprise .num { font-size: 10.5px; font-weight: 700; fill: var(--err-ink); }
+.surprise .pred { fill: var(--val); opacity: 0.85; }
+.surprise .pred-name { font-size: 11px; fill: var(--val-ink); }
 
 .loop .box { fill: var(--surface-2); stroke: var(--line-2); stroke-width: 1.5; }
 .loop .part-agent, .loop .part-env, .loop .wires { transition: opacity 0.5s; }

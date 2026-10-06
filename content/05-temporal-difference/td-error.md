@@ -8,7 +8,36 @@ sources = [
   { text = "Schultz, Dayan & Montague (1997), A neural substrate of prediction and reward, Science 275", url = "https://doi.org/10.1126/science.275.5306.1593" },
   { text = "Schulman, Moritz, Levine, Jordan & Abbeel (2016), High-dimensional continuous control using generalized advantage estimation, International Conference on Learning Representations", url = "https://arxiv.org/abs/1506.02438" },
 ]
+
+[story]
+scene = "surprise"
+delay = 4
+alpha = 0.4
+gamma = 1.0
+formula = '''\step{1}{\del_t = \rew{R_{t+1}} + \gam\,\val{V(S_{t+1})} - \val{V(S_t)}} \step{2}{\qquad \val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\del_t}'''
 +++
+
+## Story
+
+::: step {trials = [1], formula = 1}
+**A light comes on; four moments later, a reward.** The light comes at a moment nobody can foresee, so before it every prediction is 0. The learner, TD(0) with a step size of 0.4, predicts at each moment how much reward is still to come, and starts knowing nothing. On the first trial nothing surprises it until the reward itself: one TD error, $\del = 1 + 0 - 0 = +1$, at the moment of the reward.
+:::
+
+::: step {trials = [1, 2], values = 2, formula = 2}
+**The surprise teaches the moment before it.** That $+1$ raised the prediction at the last moment before the reward from 0 to 0.4 (the blue dot). On trial 2 the reward is less of a surprise, $+0.6$, and the step into that moment is a new one: $0 + 0.4 - 0 = +0.4$, one step earlier.
+:::
+
+::: step {trials = [1, 2, 4, 6, 10, 20]}
+**The surprise travels back toward the light.** Each trial, every prediction moves a step's worth toward the next one, so the bump of TD errors slides earlier, trial after trial, and the reward itself surprises less and less. By trial 20 almost all of the surprise, $+0.98$, comes when the light comes on, and almost none when the reward arrives.
+:::
+
+::: step {trials = [20, 60], values = 60}
+**After learning, only the light is news.** Every moment after it predicts the reward exactly (the dots, all at 1), so every step along the way has a TD error of 0, the reward included. The light still surprises, $+1.00$: it comes when nothing predicted it, and it announces a reward. The errors of a trial add up to the gap between what was first expected, 0, and what came, 1: at first all of it at the reward, at the end all of it at the light.
+:::
+
+::: step {trials = [60], omit = 60}
+**And if the reward does not come?** The light still brings its $+1$. Then, at the very moment the reward was due, nothing arrives where 1 was predicted: $\del = 0 + 0 - 1 = -1$, a disappointment, on time. In the 1990s, recordings of dopamine neurons in monkeys showed this exact pattern: a burst for an unexpected reward, a burst that moves to the cue as the cue is learned, and a dip, on time, when a predicted reward fails to come.
+:::
 
 ## Textbook
 
