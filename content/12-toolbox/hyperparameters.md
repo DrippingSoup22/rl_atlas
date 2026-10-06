@@ -55,6 +55,7 @@ Almost every knob in this guide has failure on both sides. The Lab's sweeps meas
 | entropy bonus $\beta$ (two gems) | 0 of 40 go for the big gem ($\beta = 0$) | 35 of 40 ($\beta = 0.1$) | 0 of 40 ($\beta = 0.2$) |
 | TRPO's trust region $\delta$ (CartPole) | 18 of 20 ($\delta = 0.001$) | 20 of 20 ($0.003$ to $0.03$) | 7 of 20 ($\delta = 1$) |
 | PPO's clip $\epsilon$ (Pendulum) | 0 of 20 (no clip) | 20 and 19 of 20 ($0.1$, $0.2$) | 0 of 20 ($\epsilon = 0.5$) |
+| PPO's step size $\alp$ (CartPole) | 20 of 20 ($10^{-4}$, no worse here) | 20 of 20 ($3 \cdot 10^{-4}$ to $3 \cdot 10^{-3}$) | 9 of 20 ($3 \cdot 10^{-2}$) |
 | PPO's passes per batch (Pendulum) | 18 of 20 (1 pass, no worse here) | 19 of 20 (4, 10) | 5 of 20 (30 passes) |
 | A2C's step size $\alp$ (CartPole) | 20 of 20 ($3 \cdot 10^{-4}$, no worse here) | 20 of 20 ($10^{-3}$) | 5 of 20 ($10^{-2}$) |
 | A2C's steps between updates $n$ (CartPole) | 13 of 20 ($n = 1$) | 20 of 20 ($n = 5$) | 20 of 20 ($n = 20$, no worse here) |
