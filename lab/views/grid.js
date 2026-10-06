@@ -271,9 +271,9 @@
       for (let a = 0; a < nA; a++) tris[a].style.fill = mode === "q" ? valueColor(Q[s * nA + a], range) : "";
       this.tiles[s].bg.style.fill = mode === "v" ? valueColor(v, range) : "";
       this._trace(s);
-      this._fog(s);
+      const fogged = this._fog(s);
       const num = this.nums[s];
-      num.textContent = this.o.numbers ? fmt(v, this.o.digits) : "";
+      num.textContent = this.o.numbers && !fogged ? fmt(v, this.o.digits) : ""; // a number on a tile nobody has seen would mislead
       if (!this.o.arrows) return;
       // With numbers on, the number owns the middle of the tile and the arrows become chevrons by its edges.
       const p = this._probs(s), edge = this.o.numbers;
@@ -309,14 +309,17 @@
     }
 
     // Fog over the tiles the model knows nothing about yet: planning can only use what the agent has seen.
+    // Returns whether the tile is under fog.
     _fog(s) {
       const M = this.o.fog !== false ? this.model : null, nA = this.env.nA;
-      if (!M && !this.fogs?.[s]) return;
+      if (!M && !this.fogs?.[s]) return false;
       this.fogs ||= [];
       if (!this.fogs[s]) { const [x, y] = this.origin(s); this.fogs[s] = el("rect", { class: "fog", x: x + 1.5, y: y + 1.5, width: T - 3, height: T - 3, rx: 7 }, this.gFog); }
       let known = false;
       if (M) for (let a = 0; a < nA; a++) if (M[s * nA + a] >= 0) { known = true; break; }
-      this.fogs[s].style.opacity = M && !known && this.env.tile(s) !== "G" ? 1 : 0;
+      const fogged = !!M && !known && this.env.tile(s) !== "G";
+      this.fogs[s].style.opacity = fogged ? 1 : 0;
+      return fogged;
     }
 
     // ---- the Lab: one event of a run, and the picture at rest after a jump ----
