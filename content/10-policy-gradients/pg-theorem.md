@@ -1,5 +1,6 @@
 +++
 summary = "The gradient of performance seems to need a model: changing the policy changes which states the agent visits, in ways only the world knows. The policy gradient theorem shows it does not. The gradient is an average, over the states and actions the policy itself produces, of how good each action is times how fast its log-probability grows. Experience from the policy is enough to estimate it."
+story_in = ["reinforce", "baseline"]
 prereqs = ["why-policy", "policy-parameterization", "value-functions", "bellman"]
 lab = "corridor-reinforce"
 sources = [

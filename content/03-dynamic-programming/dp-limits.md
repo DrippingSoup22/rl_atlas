@@ -1,5 +1,6 @@
 +++
 summary = "Dynamic programming needs a perfect model and touches every state in every sweep. Real problems have no model and astronomically many states: the rest of reinforcement learning is about getting around both."
+story_in = ["policy-iteration", "why-approximate"]
 prereqs = ["value-iteration", "policy-iteration", "model-based-free"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §4.5, §4.7–4.8 and §8.5", url = "http://incompleteideas.net/book/the-book-2nd.html" },

@@ -1,5 +1,6 @@
 +++
 summary = "With fewer weights than states, some estimates must be wrong; the value error decides which mistakes matter, weighing each state's squared error by how often the agent is there. Learning is gradient descent on it, one state at a time. With the return as target that is true stochastic gradient descent; with a bootstrapped target it becomes a semi-gradient method, which ignores that the target moves with the weights."
+story_in = ["gradient-mc"]
 prereqs = ["why-approximate", "features", "bootstrapping"]
 lab = "walk-aggregation"
 sources = [

@@ -1,5 +1,6 @@
 +++
 summary = "Some tasks end and start again (a game, a maze); others go on forever (a thermostat). The difference decides how rewards are added up."
+story_in = ["return", "dqn"]
 prereqs = ["agent-environment", "state-action-reward"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §3.3 and §3.4", url = "http://incompleteideas.net/book/the-book-2nd.html" },

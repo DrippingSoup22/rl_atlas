@@ -1,5 +1,6 @@
 +++
 summary = "Two jobs: prediction estimates how good a fixed way of acting is; control finds a better way. Control methods are built from prediction."
+story_in = ["td0", "q-learning", "gpi"]
 prereqs = ["value-functions", "optimality"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §4.1–4.3, §4.6 and §5.3", url = "http://incompleteideas.net/book/the-book-2nd.html" },

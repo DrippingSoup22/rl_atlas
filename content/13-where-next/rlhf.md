@@ -1,5 +1,6 @@
 +++
 summary = "When the goal is hard to write down but easy to judge, learn the reward from people's judgments. People compare pairs of an agent's outputs; a reward model learns to predict their preferences; the agent is then optimized against that model, with a penalty for drifting far from where it started. This is how large language models are tuned to be helpful, and it inherits every weakness of a learned reward."
+story_in = ["reward-design", "ppo"]
 prereqs = ["reward-design", "ppo", "imitation"]
 sources = [
   { text = "Christiano, Leike, Brown, Martic, Legg & Amodei (2017), Deep reinforcement learning from human preferences, NeurIPS", url = "https://arxiv.org/abs/1706.03741" },

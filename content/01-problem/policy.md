@@ -1,5 +1,6 @@
 +++
 summary = "The agent's way of choosing: for every state, a probability for every action. It is the thing reinforcement learning tries to improve."
+story_in = ["value-functions", "policy-iteration"]
 prereqs = ["agent-environment", "mdp"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §3.5", url = "http://incompleteideas.net/book/the-book-2nd.html" },

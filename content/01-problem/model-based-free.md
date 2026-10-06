@@ -1,5 +1,6 @@
 +++
 summary = "Some agents use a model of the world to think ahead before acting; others learn straight from experience and never predict what the world will do."
+story_in = ["dyna-q", "model-based-deep"]
 prereqs = ["mdp", "prediction-control"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §1.6, §8.1–8.3 and Example 8.1", url = "http://incompleteideas.net/book/the-book-2nd.html" },

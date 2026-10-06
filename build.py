@@ -32,7 +32,7 @@ REQUIRED = {
     },
     "concept": {"fields": ("summary", "sources"), "card": ("idea",)},
 }
-FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story"}
+FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story", "story_in"}
 # The keys of a Lab preset (content/lab.toml); any other key is a knob, and what its charts may plot.
 # Lab algorithms that teach a concept station, each with its station: DPG on the throw, offline RL on the cliff,
 # imitation on the ice bridge, planning in a learned model among hidden cliffs. Their pseudocode is the station's.
@@ -353,7 +353,7 @@ def compile_entry(path: Path, site: dict, problems: Problems) -> dict | None:
     for field in meta.keys() - FRONT_MATTER:
         note = " (parents and labels live in content/map.toml)" if field in ("parent", "labels") else ""
         problems.warn(where, f"unknown front matter field '{field}'{note}")
-    for ref in meta.get("prereqs", []):
+    for ref in meta.get("prereqs", []) + meta.get("story_in", []):
         if ref not in site["stations"]:
             problems.error(where, f"'{ref}' is not a station on the map")
     if station.get("parent") and not meta.get("change"):
@@ -409,6 +409,8 @@ def compile_entry(path: Path, site: dict, problems: Problems) -> dict | None:
         "summary": meta.get("summary", ""),
         "change": meta.get("change", ""),
         "prereqs": meta.get("prereqs", []),
+        # an entry without a story of its own can point to the stories that show its idea at work
+        "storyIn": meta.get("story_in", []),
         "lab": meta.get("lab"),
         "sources": meta.get("sources", []),
         "story": story,
@@ -547,6 +549,10 @@ def compile_content(problems: Problems) -> dict:
         entry = compile_entry(path, site, problems)
         if entry:
             entries[path.stem] = entry
+    for eid, entry in entries.items():
+        for ref in entry["storyIn"]:
+            if not entries.get(ref, {}).get("story"):
+                problems.error(f"content/{eid}.md", f"story_in names '{ref}', which has no story")
     for pid, preset in presets.items():
         for algo in sorted({r["algorithm"] for r in preset["racers"]}):
             if not entries.get(RUNNABLE_CONCEPTS.get(algo, algo), {}).get("pseudocode"):

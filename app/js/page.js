@@ -78,6 +78,7 @@
             </div>` : ""}
             ${e.lab ? `<a class="btn lab-btn" href="#/lab/${e.lab}">Open the Lab ▸</a>` : ""}
           </nav>
+          ${!e.story && e.storyIn?.length ? `<p class="story-in">See this idea at work in the ${e.storyIn.length > 1 ? "stories" : "story"} of ${e.storyIn.map((s) => `<a class="term" data-term="${s}" href="#/e/${s}">${esc(station(s).title)}</a>`).join(e.storyIn.length > 2 ? ", " : " and ").replace(/, ([^,]*)$/, " and $1")}.</p>` : ""}
         </header>
         <div class="mode-body"></div>
         ${neighbours(st)}

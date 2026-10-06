@@ -515,3 +515,5 @@ a.ref:hover { text-decoration-color: var(--ink); }
 @media (max-width: 640px) {
   .tb-paper table, .sec table { display: block; max-width: 100%; overflow-x: auto; }
 }
+.story-in { margin: 10px 0 0; font-size: 14.5px; color: var(--ink-2); }
+.story-in::before { content: "▸ "; color: var(--c); }

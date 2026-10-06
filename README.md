@@ -54,6 +54,7 @@ deleted.
 
 An entry is `content/<part folder>/<id>.md`, where `<id>` is a station in `map.toml`. It starts with TOML
 front matter between `+++` lines: `summary`, `change` (what changed from the parent), `prereqs`, `lab`, `sources`,
+`story_in` (for an entry without a story of its own: the stations whose stories show its idea at work),
 and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline`, `mdp`, or one of the Lab's views: `bandit`,
 `chain`, `cards`, `graph`, `line`, `car`, `star`, `corridor`, `throw`, `cartpole`, `pendulum`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
 a Lab view, and grid stories that replay dynamic programming or Monte Carlo, name their runs in a `[story.runs]`

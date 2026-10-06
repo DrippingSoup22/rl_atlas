@@ -1,5 +1,6 @@
 +++
 summary = "When an agent does not learn, the cause is usually not the algorithm: it is the world as the agent sees it, a quiet bug, or a knob far from its sweet spot. Check the world first, then make the learner solve something whose answer you know, then watch every number it produces, on several seeds. Each failure has a signature, and the guide's experiments show most of them."
+story_in = ["learning-curves", "seeds"]
 prereqs = ["hyperparameters", "seeds"]
 lab = "deadly-triad"
 sources = [

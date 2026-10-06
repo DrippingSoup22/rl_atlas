@@ -1,5 +1,6 @@
 +++
 summary = "The three signals of the loop: what the agent is told, what it does, and the single number that grades the result."
+story_in = ["agent-environment", "mdp"]
 prereqs = ["agent-environment"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §3.1 and §3.2", url = "http://incompleteideas.net/book/the-book-2nd.html" },

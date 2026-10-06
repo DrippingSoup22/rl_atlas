@@ -1,5 +1,6 @@
 +++
 summary = "A model is anything the agent can ask “what would happen if I did this here?” Planning is learning from the model's answers instead of from the world: the same updates, applied to imagined experience."
+story_in = ["dyna-q", "prioritized-sweeping"]
 prereqs = ["model-based-free", "q-learning", "policy-evaluation"]
 lab = "dyna-maze"
 sources = [
