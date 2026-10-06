@@ -35,8 +35,9 @@ REQUIRED = {
 FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story"}
 # The keys of a Lab preset (content/lab.toml); any other key is a knob, and what its charts may plot.
 # Lab algorithms that teach a concept station, each with its station: DPG on the throw, offline RL on the cliff,
-# imitation on the ice bridge. Their pseudocode is the station's.
-RUNNABLE_CONCEPTS = {"dpg": "dpg", "offline-q": "offline-rl", "offline-bcq": "offline-rl", "bc": "imitation", "dagger": "imitation"}
+# imitation on the ice bridge, planning in a learned model among hidden cliffs. Their pseudocode is the station's.
+RUNNABLE_CONCEPTS = {"dpg": "dpg", "offline-q": "offline-rl", "offline-bcq": "offline-rl", "bc": "imitation", "dagger": "imitation",
+                     "model-planner": "model-based-deep"}
 PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds"}
 CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights",
           "policy-value", "right", "aim", "kl", "clipped", "deployed", "labels"}

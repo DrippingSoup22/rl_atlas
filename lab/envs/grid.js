@@ -75,6 +75,16 @@
       reward: { step: 0, goal: 1, small: 0.3 },
       valueRange: 1,
     },
+    // Cliffs scattered between the start and the goal, for planning in a learned model: the way round by the top row
+    // is safe and takes 14 steps; the best way through takes 12, past four cliffs a model cannot know without trying.
+    "hidden-cliffs": {
+      title: "Hidden cliffs",
+      map: ["...........", "..C....C...", "S...C.C...G", "..C.....C..", "....C.C....", "..........."],
+      reward: { step: -1, cliff: -100 },
+      valueRange: 20,
+      // the safe way, shown to a learner: up to the top row, along it, and down the last column to the goal
+      policies: { careful: (r, c, rows, cols) => (c === cols - 1 ? (r < 2 ? 2 : 0) : r > 0 ? 0 : 1) },
+    },
     // A bridge of ice between holes, for imitation: the way across is three tiles wide, and one move in ten slides
     // to a side. An expert recovers from a slide; a learner that never saw one has to guess.
     "ice-bridge": {

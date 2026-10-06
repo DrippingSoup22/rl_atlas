@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "envs/approx", "envs/policy", "dp", "run", "measures", "features",
-  "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy", "agents/offline",
+  "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy", "agents/offline", "agents/model",
   "envs/deep", "recorded"];
 for (const file of FILES) require(`../lab/${file}.js`);
 require("../app/recordings.js"); // recorded runs (recorder/record.py), bundled by build.py
@@ -278,6 +278,7 @@ test("replaying a unit reproduces the run exactly, for every algorithm", () => {
     ["dyna-maze", "ppo", { ...maze, alpha: 0.1, epochs: 4, clip: 0.2, beta: 0.01 }, 12],
     ["cliff", "offline-q", { alpha: 0.5, epsilon: 0.1, gamma: 1, logEpisodes: 5 }, 12], ["cliff", "offline-bcq", { alpha: 0.5, epsilon: 0.3, gamma: 1, logEpisodes: 5 }, 12],
     ["ice-bridge", "bc", imitate, 12], ["ice-bridge", "dagger", imitate, 12], ["ice-bridge", "dagger", { ...imitate, generalize: undefined, calmExpert: false }, 12],
+    ["hidden-cliffs", "model-planner", { gamma: 1, doubt: 0, maxSteps: 500 }, 6], ["hidden-cliffs", "model-planner", { gamma: 1, doubt: 0.2, epsilon: 0.1, maxSteps: 500 }, 6],
   ];
   const flat = (m) => Object.values(m).flatMap((x) => Array.from(x));
   for (const [world, id, params, units] of cases) {
@@ -385,4 +386,10 @@ test("imitation: cloning an expert who never slips stalls; DAgger asks about the
   const bc = seeds(20).map((s) => end("bc", s)), dagger = seeds(20).map((s) => end("dagger", s));
   assert.ok(bc.every((v) => Math.abs(v - bc[0]) < 1e-12) && bc[0] < 0.5, `cloning stays put: ${bc[0]}`);
   assert.ok(dagger.filter((v) => v >= 0.8).length >= 18, `DAgger: ${dagger.map((v) => v.toFixed(2))}`);
+});
+
+test("planning in a learned model: trusting its guesses costs four falls and finds a shorter way; doubting them keeps the safe one", () => {
+  const returns = (doubt) => Array.from(run("hidden-cliffs", "model-planner", { gamma: 1, doubt, maxSteps: 500 }, 6).metrics.return);
+  assert.deepEqual(returns(0), [-14, -431, -12, -12, -12, -12]);
+  for (const doubt of [0.5, 1, 3]) assert.deepEqual(returns(doubt), [-14, -14, -14, -14, -14, -14], `doubt ${doubt}`);
 });

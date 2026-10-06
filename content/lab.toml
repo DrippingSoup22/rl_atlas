@@ -908,3 +908,20 @@ charts = ["steps"]
 film = [1, 2, 20, 60]
 intro = "The same A2C three times, in the same maze; only the units of the reward change. Every advantage, and so every step of the policy, is as many times larger. Then switch on the normalization of the advantages, and the units stop mattering."
 success = { metric = "steps", max = 25, text = "end up reaching the gem in under 25 steps" }
+
+[model-cliffs]
+title = "Planning in a learned model, among hidden cliffs"
+env = "hidden-cliffs"
+racers = [
+  { algorithm = "model-planner", name = "trusts its model (d = 0)", doubt = 0.0 },
+  { algorithm = "model-planner", name = "doubts unseen tiles (d = 1)", doubt = 1.0 },
+]
+units = 20
+seed = 1
+gamma = 1.0
+epsilon = 0.0
+maxSteps = 500
+charts = ["return"]
+film = [0, 1, 2, 20]
+intro = "Both agents are first shown the safe way round, by the top row: 14 steps. Their model knows how moves work and where the goal is; what each tile does, it learns only by stepping on it, and it guesses that a tile it has never seen is an ordinary one. Every step they plan in the model (the dashed sparks) and take the first move. One trusts the guesses; the other adds a cost to every unseen tile. Slide the doubt, or add some randomness to their moves."
+success = { metric = "return", min = -12, text = "end up on the 12-step path through the cliffs" }

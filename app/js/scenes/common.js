@@ -144,7 +144,7 @@
       const draw = () => {
         chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: acc.sums[i].map((v) => v / Math.max(1, acc.done)) })), refs);
         chart.playhead(first.units);
-        status.textContent = acc.done < total ? ` · averaging ${acc.done} of ${total} runs…` : ` · average of ${total} runs`;
+        status.textContent = acc.done < total ? ` · averaging ${acc.done} of ${total} runs…` : total === 1 ? " · one run" : ` · average of ${total} runs`;
       };
       if (names.every((n) => cfg.runs[n].recording)) { // trained offline: every seed's curve is in the recording
         const seeds = names.map((n) => RL.lab.recordedCurves(RL.recordings[cfg.runs[n].recording]));
