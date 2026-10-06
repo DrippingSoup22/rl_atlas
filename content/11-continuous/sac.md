@@ -53,6 +53,24 @@ where $\mathcal H(\pol{\pi(\cdot \mid s)}) = -\mathbb E_{a \sim \pi}[\ln \pol{\p
 
 Why want that? Exploration comes from the objective, not from added noise. The policy does not collapse onto one action as soon as it looks best. And among near-equal choices it stays spread, which makes it more robust to errors in the critic and to changes in the world.
 
+### Soft policy iteration {#soft-pi}
+
+The objective has its own Bellman equations. For a policy $\pol\pi$, the **soft values** add the entropy still to come:
+$$\val{q_\pi(s, a)} = \rew{r(s, a)} + \gam\, \mathbb E_{s'}\big[\val{v_\pi(s')}\big], \qquad \val{v_\pi(s)} = \mathbb E_{a \sim \pi}\big[\val{q_\pi(s, a)} - \alpha \ln \pol{\pi(a \mid s)}\big]. \label{soft-bellman}$$
+They can be computed exactly as in [[policy-evaluation]], by applying \ref{soft-bellman} as an update until it settles. Policy improvement then moves the policy toward the softened greedy policy of those values, staying within the family $\Pi$ the policy can represent (Gaussians, say):
+$$\pol{\pi_{\text{new}}}(\cdot \mid s) = \operatorname*{arg\,min}_{\pi' \in \Pi} D_{\mathrm{KL}}\Big(\pi'(\cdot \mid s)\ \Big\|\ \frac{\exp\big(\val{q_{\pi_{\text{old}}}(s, \cdot)} / \alpha\big)}{Z(s)}\Big), \label{soft-improve}$$
+where $Z(s)$ makes the right side a distribution.
+
+::: theorem {#thm-soft-pi} Soft policy improvement
+For every state and action, $\val{q_{\pi_{\text{new}}}(s, a)} \ge \val{q_{\pi_{\text{old}}}(s, a)}$. Alternating soft evaluation and soft improvement in a finite MDP converges to the policy in $\Pi$ with the highest soft values.
+:::
+
+::: proof Proof idea
+The old policy is itself a candidate in \ref{soft-improve}, so the new one has a smaller divergence. Written out, that says $\mathbb E_{a \sim \pi_{\text{new}}}[\val{q_{\pi_{\text{old}}}(s, a)} - \alpha \ln \pol{\pi_{\text{new}}(a \mid s)}] \ge \val{v_{\pi_{\text{old}}}(s)}$ in every state. Using this inequality at the first step and following the old policy's values after it, then unrolling the soft Bellman equation one step at a time, as in the proof of [[policy-improvement]], gives the result (Haarnoja et al., 2018, Lemma 2 and Theorem 1).
+:::
+
+SAC is the approximate, sampled version: the critics do soft evaluation with gradient steps, and the actor does soft improvement with gradient steps on the same divergence.
+
 ### Soft values and the critics {#critics}
 
 The soft action value includes the entropy still to come, and its target is
@@ -63,13 +81,29 @@ Like [[td3]], SAC trains twin critics and takes the min, against overestimation,
 
 The policy is a Gaussian squashed into the allowed range: $a = a_{\max}\tanh(u)$, $u = \mu(s) + \sigma(s)\,\varepsilon$, $\varepsilon \sim \mathcal N(0, 1)$, with the network giving $\mu$ and $\ln\sigma$. Writing the action as a function of the parameters and an independent noise is the **reparameterization**: the actor's loss
 $$L(\boldsymbol\theta) = \mathbb E_{s,\,\varepsilon}\Big[\alpha \ln \pol{\pi(a_{\boldsymbol\theta} \mid s)} - \min_i \val{\hat q_i(s, a_{\boldsymbol\theta})}\Big] \label{actor-loss}$$
-can be differentiated straight through the sampled action, as DDPG differentiates through its deterministic one ([[dpg]]). The gradient has much less variance than a likelihood-ratio estimate. The squashing changes the density, so $\ln\pol\pi$ subtracts the log of the tanh's slope at $u$.
+can be differentiated straight through the sampled action, as DDPG differentiates through its deterministic one ([[dpg]]). The gradient has much less variance than a likelihood-ratio estimate. Up to a constant and the factor $\alpha$, this loss is the divergence of \ref{soft-improve}, averaged over the states of the memory. The squashing changes the density, by the change of variables:
+$$\ln \pol{\pi(a \mid s)} = \ln \mathcal N\big(u;\, \mu(s), \sigma(s)^2\big) - \sum_{i} \ln\big(a_{\max}\,(1 - \tanh^2 u_i)\big), \label{squash}$$
+summed over the action's dimensions. Forgetting this term makes the policy think a saturated action, deep in the tanh's flat end, is as random as any other.
 
 ### Tuning the entropy weight {#alpha}
 
 The right $\alpha$ depends on the scale of the rewards and changes as learning goes on, so the second version of SAC tunes it. It picks a target entropy $\bar{\mathcal H}$, by default minus the number of action dimensions, and adjusts $\ln\alpha$ by gradient steps on
 $$J(\alpha) = \mathbb E_{a \sim \pi}\big[-\alpha\,(\ln \pol{\pi(a \mid s)} + \bar{\mathcal H})\big]. \label{alpha-loss}$$
 When the policy is less random than the target, $\alpha$ grows and the bonus pushes randomness back up; when it is more random, $\alpha$ shrinks. In the recorded run, $\alpha$ fell from 0.2 to 0.034 within 7,500 steps and to 0.0005 by the end.
+
+### The algorithm {#algorithm}
+
+::: algorithm {#alg-sac} Soft actor–critic (SAC), with a tuned entropy weight
+Parameters: memory size $N$, minibatch size $B$, step sizes, target speed $\tau$, target entropy $\bar{\mathcal H}$, random steps at the start
+Initialize the actor (giving $\mu$ and $\ln\sigma$), two critics and their target copies, $\ln\alpha$, and an empty memory $\mathcal D$
+Repeat for each step:
+  In $S$, sample $A = a_{\max} \tanh(u)$, $u \sim \mathcal N(\mu(S), \sigma(S)^2)$; observe $\rew R$, $S'$; store the transition in $\mathcal D$
+  Draw $B$ transitions; for each, sample $a' \sim \pol{\pi(\cdot \mid s')}$ and compute the target \ref{soft-target}
+  Both critics: a gradient step down the squared error to that target
+  Actor: sample $a_{\boldsymbol\theta}$ by reparameterization at each $s$ of the batch, and take a gradient step down \ref{actor-loss}, with \ref{squash} for $\ln\pol\pi$
+  Entropy weight: a gradient step on $\ln\alpha$ down \ref{alpha-loss}
+  Both target critics move by $\tau$ toward their networks
+:::
 
 ### On Pendulum {#pendulum}
 

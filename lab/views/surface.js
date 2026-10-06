@@ -179,14 +179,25 @@
       ctx.textAlign = "center";
       const edgeX = project(0, -0.5, 0)[2] < project(0, 0.5, 0)[2] ? -0.5 : 0.5; // the near edge along x
       const edgeY = project(-0.5, 0, 0)[2] < project(0.5, 0, 0)[2] ? -0.5 : 0.5;
-      const label = (X, Y, text, dx = 0, dy = 0) => { const [x, y] = scr(project(X, Y, 0)); ctx.fillText(text, x + dx, y + dy); };
+      // Each label claims its box; a tick that would overlap one already drawn is left out (the axis names go first),
+      // so the corner where the two edges meet never shows two numbers on top of each other.
+      const boxes = [];
+      const label = (X, Y, text, dx = 0, dy = 0) => {
+        if (!text) return;
+        const [x, y] = scr(project(X, Y, 0)), w = ctx.measureText(text).width + 4, box = [x + dx - w / 2, y + dy - 11, w, 13];
+        if (boxes.some(([bx, by, bw, bh]) => box[0] < bx + bw && bx < box[0] + box[2] && box[1] < by + bh && by < box[1] + box[3])) return;
+        boxes.push(box);
+        ctx.fillText(text, x + dx, y + dy);
+      };
       const out = (v) => v * 1.16;
-      for (const t of o.xTicks || []) label((t - o.x[0]) / (o.x[1] - o.x[0]) - 0.5, out(edgeX), o.fx ? o.fx(t) : String(t), 0, 4);
-      for (const t of o.yTicks || []) label(out(edgeY), (t - o.y[0]) / (o.y[1] - o.y[0]) - 0.5, o.fy ? o.fy(t) : String(t), 0, 4);
       ctx.fillStyle = pal.ink;
       ctx.font = "600 11.5px system-ui, sans-serif";
       label(0, out(out(edgeX)), o.xLabel || "", 0, 10);
       label(out(out(edgeY)), 0, o.yLabel || "", 0, 10);
+      ctx.fillStyle = pal.ink3;
+      ctx.font = "11px system-ui, sans-serif";
+      for (const t of o.xTicks || []) label((t - o.x[0]) / (o.x[1] - o.x[0]) - 0.5, out(edgeX), o.fx ? o.fx(t) : String(t), 0, 4);
+      for (const t of o.yTicks || []) label(out(edgeY), (t - o.y[0]) / (o.y[1] - o.y[0]) - 0.5, o.fy ? o.fy(t) : String(t), 0, 4);
     }
 
     // The height scale, on the corner of the floor farthest from the viewer: drawn first, so the surface hides it.

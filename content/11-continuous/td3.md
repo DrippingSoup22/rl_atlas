@@ -57,15 +57,39 @@ Double DQN removes the bias by letting the online network choose the next action
 $$y = \rew{r} + \gam \min_{i = 1, 2} \val{\hat q_i\big(s', \tilde a, \mathbf w_i^-\big)}, \qquad \tilde a = \pol{\mu(s', \boldsymbol\theta^-)} + \epsilon. \label{target}$$
 The min can underestimate, and that is deliberate: an underestimated action is simply not chosen, while an overestimated one attracts the actor and spreads.
 
+::: lemma {#lem-min} The min does not overestimate
+Let $X_1$ and $X_2$ be two estimates of the same value $q$, each unbiased: $\mathbb E[X_1] = \mathbb E[X_2] = q$. Then $\mathbb E[\min(X_1, X_2)] \le q$, with equality only if $X_1 = X_2$ almost surely.
+:::
+
+::: proof
+$\min(X_1, X_2) = \tfrac12(X_1 + X_2) - \tfrac12|X_1 - X_2|$. The first term has mean $q$, and the second is never negative, with mean zero only when the two estimates always agree.
+:::
+
+The lemma covers one target. The bias in DDPG arises because the errors of successive targets compound through the bootstrap; taking the min at every target removes the upward drift at its source, at the cost of a downward lean whose size grows with the disagreement of the two critics. Their errors are not independent, since they see the same batches and the same targets; their different starting weights are what keeps them apart.
+
 ### Delayed policy updates {#delayed}
 
 A critic that has just changed has fresh errors. TD3 updates the actor, and moves the target copies, only once every $d$ critic updates ($d = 2$), so the actor follows a critic that has had time to settle. The actor still climbs the first critic, $\nabla_a \val{\hat q_1(s, a)}$ at $a = \pol{\mu(s)}$, as in DDPG.
+
+A target network that moves slowly is part of the same idea: Fujimoto et al. showed that when the targets follow the critic at every step, its value estimates swing widely, and more so once the policy learns too. Slow targets and a delayed actor let each critic update aim at something that has stood still for a while.
 
 ### Target policy smoothing {#smoothing}
 
 Similar actions should have similar values. TD3 evaluates the target at a blurred action:
 $$\epsilon = \operatorname{clip}\big(\mathcal N(0, \tilde\sigma^2), -c, c\big), \label{noise}$$
-with $\tilde\sigma = 0.2$ and $c = 0.5$ in units of the largest action. The target becomes an average over a small neighborhood of actions, so a narrow, spurious peak of the critic cannot pull the targets up.
+with $\tilde\sigma = 0.2$ and $c = 0.5$ in units of the largest action. The target becomes an average over a small neighborhood of actions, so a narrow, spurious peak of the critic cannot pull the targets up. It is the continuous cousin of [[expected-sarsa]]: instead of the value of one action, the expected value under a little noise around it, which fits a smoother critic.
+
+### The algorithm {#algorithm}
+
+::: algorithm {#alg-td3} TD3, twin delayed DDPG
+Parameters: those of DDPG, plus the target noise $\tilde\sigma$ and its clip $c$, and the delay $d$
+Initialize the actor $\pol{\mu(\cdot, \boldsymbol\theta)}$ and two critics $\val{\hat q_1}$, $\val{\hat q_2}$ with weights $\mathbf w_1$, $\mathbf w_2$ at random; their targets as copies; an empty memory $\mathcal D$
+Repeat for each step $t$:
+  Take $A = \pol{\mu(S, \boldsymbol\theta)} + \epsilon$ with exploration noise, clipped; observe $\rew R$, $S'$; store the transition in $\mathcal D$
+  Draw $B$ transitions; for each, $\tilde a = \pol{\mu(s', \boldsymbol\theta^-)} + \operatorname{clip}(\mathcal N(0, \tilde\sigma^2), -c, c)$, clipped to the allowed range, and the target \ref{target}
+  Both critics: a gradient step down the squared error to that one target
+  Every $d$ steps: the actor climbs $\val{\hat q_1(s, \pol{\mu(s, \boldsymbol\theta)})}$, and all three targets move by $\tau$
+:::
 
 ### On Pendulum {#pendulum}
 

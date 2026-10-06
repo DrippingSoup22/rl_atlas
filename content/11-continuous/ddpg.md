@@ -61,6 +61,21 @@ DQN copies its network into the target every $C$ steps ([[target-network]]). DDP
 $$\mathbf w^- \leftarrow \tau\,\mathbf w + (1 - \tau)\,\mathbf w^-, \qquad \boldsymbol\theta^- \leftarrow \tau\,\boldsymbol\theta + (1 - \tau)\,\boldsymbol\theta^-, \label{eq-soft}$$
 with a small $\tau$: 0.001 in the paper, 0.005 here. The targets then trail the networks by about $1/\tau$ updates, smoothly, without the jumps of a periodic copy.
 
+### The algorithm {#algorithm}
+
+::: algorithm {#alg-ddpg} Deep deterministic policy gradient (DDPG)
+Parameters: memory size $N$, minibatch size $B$, step sizes for the critic and the actor, target speed $\tau$, noise spread $\sigma$, random steps at the start
+Initialize the actor $\pol{\mu(\cdot, \boldsymbol\theta)}$ and the critic $\val{\hat q(\cdot, \cdot, \mathbf w)}$ at random; their targets $\boldsymbol\theta^- \leftarrow \boldsymbol\theta$, $\mathbf w^- \leftarrow \mathbf w$; an empty memory $\mathcal D$
+Repeat for each step:
+  In $S$, take $A = \pol{\mu(S, \boldsymbol\theta)} + \epsilon$, $\epsilon \sim \mathcal N(0, \sigma^2)$, clipped to the allowed range (a random action during the first steps); observe $\rew R$, $S'$; store $(S, A, \rew R, S')$ in $\mathcal D$
+  Draw $B$ transitions from $\mathcal D$ and compute their targets \ref{critic}
+  Critic: a gradient step down the squared error of \ref{critic}
+  Actor: a gradient step up $\frac1B \sum_j \val{\hat q(s_j, \pol{\mu(s_j, \boldsymbol\theta)}, \mathbf w)}$, along \ref{actor}
+  Both targets move toward their networks, \ref{eq-soft}
+:::
+
+The critic is updated first, as in the paper, so the actor climbs slopes that already include the latest batch.
+
 ### Exploration {#exploration}
 
 The actor is deterministic, so the agent explores by adding noise to its action: $a = \pol{\mu(s)} + \epsilon$, clipped to the allowed range. The paper used noise correlated in time (an Ornstein–Uhlenbeck process); Fujimoto et al. (2018) found it brought no benefit over independent Gaussian noise, which is what the recording uses: a spread of 0.2, a tenth of the largest torque. Learning is off-policy, so the noise affects what the memory contains, not what the targets mean.
@@ -72,6 +87,10 @@ Networks of 64 + 64 units, Adam with a step size of $10^{-3}$ for both, a memory
 ### Overestimation {#overestimation}
 
 The critic is trained on values, and the actor chases its slopes: wherever the critic errs upward, the actor goes, and the target then reads the same inflated value through the target actor. The errors feed on themselves. On Pendulum this shows plainly, because no value can be above 0. In the shown run, along the greedy test episodes of blocks 11 to 40, the critic rated the states 52 above the discounted return that actually followed. Over the 20 seeds, the average target in the last 10 blocks ended above 0, an impossible value, in 11 of them. Here the bias does no visible harm, and every seed still learns. On harder tasks Fujimoto et al. (2018) found it degrades the policy, and their fixes became [[td3]].
+
+### Why it works, and when it does not {#theory}
+
+The deterministic policy gradient theorem ([[dpg]]) says that the actor's update \ref{actor} is the gradient of the return, if $\nabla_a \val{\hat q}$ is the true action-value gradient. DDPG's critic offers no such guarantee. It is a network trained by semi-gradient steps on bootstrapped, off-policy targets, all three parts of the [[deadly-triad]], and the actor uses only its slopes, the part of a value function that regression fits least directly: two critics with the same error in their values can have very different slopes. So, as for [[dqn]], no theorem covers the method. What makes it work in practice is the machinery borrowed from DQN, replay and slowly moving targets, which keep the critic's targets steady enough for its slopes to be roughly right where the data is. Where they are wrong, nothing stops the actor from following them, which is why DDPG is sensitive to its knobs and its seeds, and why its successors spend their effort on the critic ([[td3]], [[sac]]).
 
 ### Historical remarks {#history}
 
