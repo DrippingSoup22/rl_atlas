@@ -137,7 +137,8 @@
 .odds-card h3 { margin: 0; }
 .odds-tally { margin: 6px 0 0; font-size: 14px; }
 .sweep-bar { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-top: 10px; font-size: 13.5px; color: var(--ink-2); }
-.sweep-bar label { display: inline-flex; align-items: center; gap: 6px; }
+.sweep-bar label { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+.sweep-bar .sweep-knob { min-width: 0; max-width: 100%; text-overflow: ellipsis; } /* long knob names must not widen a phone's page */
 .sweep-bar[hidden], .sweep-bar label[hidden] { display: none; }
 .sweep-note { margin: 6px 0 0; font-size: 12.5px; }
 .linechart .now-band { fill: var(--ink); opacity: 0.05; }
