@@ -1,16 +1,16 @@
 /* The home screen: the whole curriculum, seen three ways.
-   Metro map: each part is a branch hanging from its family's line. Family tree: every algorithm under the one it changes.
-   Unified view: the tabular methods, placed by how deep and how wide their updates are (after Sutton & Barto, Figure 8.11).
-   Stations glide from one view to the next; the filters dim what does not match.
-   Drag to pan, scroll to move, Ctrl + scroll to zoom, click a station to dive in. */
+   Metro: each part is a branch hanging from its family's line. Tree: one tree per line, of what builds on what.
+   Unified: every algorithm, placed by how deep and how wide its updates are (after Sutton & Barto, Figure 8.11).
+   Stations glide from one view to the next, part by part; the filters and the legend dim what does not match.
+   Drag to pan, scroll to move, Ctrl + scroll to zoom, click a station to open it. */
 (function (RL) {
   "use strict";
   const { esc, station, entry, store, lineColor } = RL;
   const COL = 178, STEP = 27, FIRST = 50, LEFT = 40, TOP = 96, ROW_GAP = 132;
   const LENSES = {
-    map: { name: "Metro map", caption: "Every station is one idea. Follow the lines from the top left: first the problem, then methods that keep a table, then methods that scale." },
-    tree: { name: "Family tree", caption: "Every algorithm is the one it hangs from, plus one change. Hover a written station to read the change." },
-    unified: { name: "Unified view", caption: "The tabular methods, by how far an update looks ahead (downward) and whether it samples one outcome or averages over all of them (across)." },
+    map: { name: "Metro", caption: "Every station is one idea, in reading order. Start at the top left: first the problem, then methods that keep a table, then methods that scale." },
+    tree: { name: "Tree", caption: "One tree per line, read from the top. Each station grows from the one it builds on; an algorithm from the algorithm it changes. Hover a station to see the path that leads to it." },
+    unified: { name: "Unified", caption: "Every algorithm, by how far its update looks ahead (down) and whether it samples one outcome or averages over all of them (across)." },
   };
   const cameras = {}; // one camera per view, kept between visits
   let drawn = false; // the lines draw themselves only the first time
@@ -35,27 +35,49 @@
     return { pos, rows, width, height: rows[rows.length - 1].bottom + 30 };
   }
 
-  // A tidy tree, growing to the right: leaves one row apart, each parent level with the middle of its children.
+  // One tree per line, stacked in reading order. Every station hangs from the station of its line it builds on
+  // most: an algorithm from the algorithm it changes, any other station from its latest prerequisite. Stations
+  // that build on nothing in their line hang from the line's badge. Leaves sit one row apart, each parent level
+  // with the middle of its children, and the trees grow to the right.
   function treeLayout() {
-    const algos = RL.order.filter((s) => s.kind === "algorithm"), kids = new Map(algos.map((s) => [s.id, []])), roots = [];
-    for (const s of algos) (s.parent ? kids.get(s.parent) : roots).push(s.id);
-    const pos = new Map(), DX = 150, DY = 30, X = 70, Y = 60;
-    let rowsUsed = 0, depthMax = 0;
-    const place = (id, depth) => {
-      depthMax = Math.max(depthMax, depth);
-      const c = kids.get(id);
-      const y = c.length ? (() => { const ys = c.map((k) => place(k, depth + 1)); return (ys[0] + ys[ys.length - 1]) / 2; })() : Y + rowsUsed++ * DY;
-      pos.set(id, { x: X + depth * DX, y });
-      return y;
-    };
-    roots.forEach((r, i) => { rowsUsed += i ? 1 : 0; place(r, 0); });
-    return { pos, kids, width: X + depthMax * DX + 150, height: Y + rowsUsed * DY };
+    const DX = 156, DY = 30, X = 40, HUB = 188, GAP = 58;
+    const pos = new Map(), kids = new Map(), up = new Map(), hubs = [];
+    let y = 44, depthMax = 0;
+    for (const [line, name] of Object.entries(RL.content.lines)) {
+      const ids = RL.order.filter((s) => s.line === line), hub = `line-${line}`;
+      const before = (a, s) => station(a)?.line === line && station(a).index < s.index;
+      kids.set(hub, []);
+      for (const s of ids) kids.set(s.id, []);
+      for (const s of ids) {
+        const pre = (entry(s.id)?.prereqs || []).filter((q) => before(q, s)).sort((a, b) => station(b).index - station(a).index);
+        const p = s.parent && before(s.parent, s) ? s.parent : pre[0] || hub;
+        up.set(s.id, p);
+        kids.get(p).push(s.id);
+      }
+      const top = y;
+      let leaves = 0;
+      // A station with branches carries its name above its dot: unless it is the first child, it gets half a row of
+      // headroom so the name clears the sibling above.
+      const place = (id, d, first = true) => {
+        depthMax = Math.max(depthMax, d);
+        const c = kids.get(id);
+        if (c.length && !first) leaves += 0.5;
+        const at = c.length ? (() => { const ys = c.map((k, i) => place(k, d + 1, i === 0)); return (ys[0] + ys[ys.length - 1]) / 2; })() : top + leaves++ * DY;
+        if (d) pos.set(id, { x: X + HUB + 80 + (d - 1) * DX, y: at });
+        return at;
+      };
+      hubs.push({ id: hub, line, name, x: X, w: HUB, y: place(hub, 0) });
+      y = top + leaves * DY + GAP;
+    }
+    return { pos, kids, up, hubs, width: X + HUB + 80 + (depthMax - 1) * DX + 90, height: y - GAP + 10 };
   }
 
+  // Sutton & Barto's plane, with every algorithm on it. A bandit has no next state, so one step is already the
+  // whole return: the bandits sit in their own strip above the plane, where the reading starts.
   function unifiedLayout() {
-    const X = 110, Y = 110, PW = 900, PH = 560;
-    const pos = new Map(Object.entries(RL.content.unified).map(([id, [w, d]]) => [id, { x: X + w * PW, y: Y + d * PH }]));
-    return { pos, plane: { X, Y, PW, PH }, width: X + PW + 150, height: Y + PH + 60 };
+    const X = 110, Y = 250, PW = 1300, PH = 560, STRIP = Y - 168;
+    const pos = new Map(Object.entries(RL.content.unified).map(([id, [w, d]]) => [id, { x: X + w * PW, y: d < 0 ? STRIP + 44 : Y + d * PH }]));
+    return { pos, plane: { X, Y, PW, PH, STRIP }, width: X + PW + 150, height: Y + PH + 60 };
   }
 
   // ---- drawings that belong to one view ----
@@ -95,32 +117,44 @@
 
   function treeDrawing(T) {
     let svg = "";
+    const hub = new Map(T.hubs.map((h) => [h.id, h]));
+    // The trees follow one another down the page: a dotted spine joins their badges in reading order.
+    T.hubs.slice(0, -1).forEach((h, i) => {
+      const n = T.hubs[i + 1], cx = h.x + 14;
+      svg += `<path class="spine" d="M${cx} ${h.y + 13} V${n.y - 13}"/>`;
+    });
     for (const [id, kids] of T.kids) {
-      const a = T.pos.get(id);
+      const h = hub.get(id), a = h ? { x: h.x + h.w - 9, y: h.y } : T.pos.get(id);
       for (const k of kids) {
         const b = T.pos.get(k), mx = (a.x + b.x) / 2;
         svg += `<path class="edge" pathLength="1" data-from="${id}" data-to="${k}" style="--c:${lineColor(station(k).line)}" d="M${a.x + 9} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x - 9} ${b.y}"/>`;
       }
     }
+    for (const h of T.hubs) {
+      svg += `<g class="tree-hub" data-line="${h.line}" style="--c:${lineColor(h.line)}" transform="translate(${h.x} ${h.y})"><rect y="-12" width="${h.w}" height="24" rx="12"/><text x="${h.w / 2}" y="4.5">${esc(h.name)}</text></g>`;
+    }
     return svg;
   }
 
   function unifiedDrawing(U) {
-    const { X, Y, PW, PH } = U.plane;
-    return `<rect class="plane" x="${X - 24}" y="${Y - 10}" width="${PW + 170}" height="${PH + 24}" rx="18"/>
+    const { X, Y, PW, PH, STRIP } = U.plane, R = X + PW + 146;
+    return `<rect class="plane" x="${X - 24}" y="${STRIP}" width="${0.52 * PW}" height="64" rx="16"/>
+      <text class="corner" x="${X - 6}" y="${STRIP - 12}">Bandits</text>
+      <text class="region" x="${X + 62}" y="${STRIP - 12}">one situation and no next state, so one step is the whole return</text>
+      <rect class="plane" x="${X - 24}" y="${Y - 10}" width="${PW + 170}" height="${PH + 24}" rx="18"/>
       <text class="axis-title" x="${X + PW / 2}" y="${Y - 70}" text-anchor="middle">Width of update</text>
       <text class="axis-end" x="${X - 24}" y="${Y - 48}">← sample updates: one outcome at a time</text>
-      <text class="axis-end" x="${X + PW + 146}" y="${Y - 48}" text-anchor="end">expected updates: every outcome, weighted →</text>
+      <text class="axis-end" x="${R}" y="${Y - 48}" text-anchor="end">expected updates: every outcome, weighted →</text>
       <text class="axis-title" transform="translate(${X - 58} ${Y + PH / 2}) rotate(-90)" text-anchor="middle">Depth of update</text>
       <text class="axis-end" transform="translate(${X - 40} ${Y}) rotate(-90)" text-anchor="end">one step: bootstrapping</text>
       <text class="axis-end" transform="translate(${X - 40} ${Y + PH}) rotate(-90)">the full return</text>
       <text class="corner" x="${X - 6}" y="${Y - 20}">Temporal-difference learning</text>
-      <text class="corner" x="${X + PW + 140}" y="${Y - 20}" text-anchor="end">Dynamic programming</text>
+      <text class="corner" x="${R - 6}" y="${Y - 20}" text-anchor="end">Dynamic programming</text>
       <text class="corner" x="${X - 6}" y="${Y + PH + 40}">Monte Carlo</text>
-      <text class="corner" x="${X + PW + 140}" y="${Y + PH + 40}" text-anchor="end">Exhaustive search</text>
-      <text class="region" x="${X + 0.22 * PW}" y="${Y + 0.41 * PH}">n-step methods: n rewards, then a guess</text>
-      <text class="region" x="${X + 0.22 * PW}" y="${Y + 0.63 * PH}">eligibility traces: a blend of every depth</text>
-      <text class="credit" x="${X + PW + 140}" y="${Y + PH + 58}" text-anchor="end">after Sutton &amp; Barto, Figure 8.11</text>`;
+      <text class="corner" x="${R - 6}" y="${Y + PH + 40}" text-anchor="end">Exhaustive search</text>
+      <text class="region" x="${X + 0.74 * PW}" y="${Y + 0.455 * PH}">n-step methods: n rewards, then a guess</text>
+      <text class="region" x="${X + 0.74 * PW}" y="${Y + 0.655 * PH}">traces and GAE: a blend of every depth</text>
+      <text class="credit" x="${R - 6}" y="${Y + PH + 58}" text-anchor="end">after Sutton &amp; Barto, Figure 8.11</text>`;
   }
 
   function stations(next) {
@@ -144,9 +178,9 @@
     let lens = LENSES[store.get("lens")] ? store.get("lens") : "map";
     const next = RL.order.find((s) => entry(s.id) && !store.visited(s.id)) || RL.order.find((s) => entry(s.id));
     const algorithms = RL.order.filter((s) => s.kind === "algorithm");
-    const count = (line) => {
-      const ids = C.parts.filter((p) => !line || p.line === line).flatMap((p) => p.stations.map((s) => s.id));
-      return `${ids.filter((id) => entry(id)).length}/${ids.length}`;
+    const read = (line) => {
+      const ids = RL.order.filter((s) => !line || s.line === line);
+      return [ids.filter((s) => store.visited(s.id)).length, ids.length];
     };
     const panelOpen = store.get("mapPanel", false);
     host.innerHTML = `
@@ -161,22 +195,22 @@
             <button class="icon-btn mp-close" type="button" aria-label="Close the panel" title="Close (Esc)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
           </div>
           <section class="mp-sec">
-            <h2 class="mp-title">View</h2>
             <div class="lenses" role="tablist" aria-label="How to look at the atlas">
-              ${Object.entries(LENSES).map(([id, l]) => `<button type="button" role="tab" data-lens="${id}"><b>${l.name}</b><span>${l.caption}</span></button>`).join("")}
+              ${Object.entries(LENSES).map(([id, l]) => `<button type="button" role="tab" data-lens="${id}">${l.name}</button>`).join("")}
             </div>
+            <p class="lens-caption"></p>
+          </section>
+          <section class="mp-sec mp-lines">
+            <h2 class="mp-title">Lines <span>read</span></h2>
+            ${Object.entries(C.lines).map(([id, name]) => { const [n, of] = read(id); return `<button class="lg" type="button" data-line="${id}" style="--c:${lineColor(id)};--f:${n / of}"><i></i><span>${esc(name)}</span><b>${n}/${of}</b></button>`; }).join("")}
+            <p class="lg-note"><span class="dot-read"></span>read <span class="dot-unread"></span>not yet · ${read()[0]} of ${read()[1]} read</p>
           </section>
           <section class="mp-sec map-filters">
             <h2 class="mp-title">Show only <button class="mf-clear" type="button">clear</button></h2>
             <div class="mf-chips">${Object.entries(C.labels).map(([id, l]) => `<button class="chip" type="button" data-label="${id}" aria-pressed="false" data-tip="${esc(l.tip)}" data-term="${l.station}">${esc(l.text)}</button>`).join("")}</div>
             <p class="mf-count faint"></p>
           </section>
-          <section class="mp-sec mp-lines">
-            <h2 class="mp-title">Lines</h2>
-            ${Object.entries(C.lines).map(([id, name]) => `<div class="lg" style="--c:${lineColor(id)}"><i></i><span>${esc(name)}</span><b>${count(id)}</b></div>`).join("")}
-            <div class="lg-note"><span class="dot-written"></span>written <span class="dot-planned"></span>planned · ${count()} written</div>
-          </section>
-          <p class="mp-hint faint">Drag or scroll to move, Ctrl + scroll or pinch to zoom, click a station to open it.</p>
+          <p class="mp-hint faint">Drag to move the map; Ctrl + scroll or pinch to zoom.</p>
         </aside>
         ${next ? `<a class="btn map-cta" href="#/e/${next.id}">${store.visited(next.id) ? "Continue with" : "Start with"} ${esc(next.title)} ▸</a>` : ""}
         <svg class="metro${drawn ? "" : " intro"}" aria-label="Map of the atlas"><g class="cam">
@@ -197,7 +231,7 @@
     const svg = host.querySelector(".metro"), cam = host.querySelector(".cam"), links = host.querySelector(".links");
     const nodes = new Map(Array.from(svg.querySelectorAll(".st"), (g) => [g.dataset.id, g]));
     const L = () => layouts[lens];
-    let view = null, raf = 0;
+    let view = null, raf = 0, switching = 0;
     const apply = () => cam.setAttribute("transform", `translate(${view.x.toFixed(1)} ${view.y.toFixed(1)}) scale(${view.k.toFixed(4)})`);
     const keep = () => { cameras[lens] = { ...view }; };
 
@@ -209,14 +243,16 @@
         g.classList.toggle("out", !at);
         if (at) g.style.transform = `translate(${at.x}px, ${at.y}px)`;
       }
-      // In the family tree the names sit above the dots, so the branches can leave from the dots.
-      for (const g of nodes.values()) {
-        const text = g.querySelector("text");
-        text.style.transform = lens === "tree" ? `translate(${-(+text.getAttribute("x")) - text.getComputedTextLength() / 2}px, -15px)` : "";
+      // In the tree a name sits above its dot, so the branches can leave from the dot; a leaf keeps its name on
+      // the right, where no branch goes.
+      for (const [id, g] of nodes) {
+        const text = g.querySelector("text"), inner = lens === "tree" && layouts.tree.kids.get(id)?.length;
+        text.style.transform = inner ? `translate(${-(+text.getAttribute("x")) - text.getComputedTextLength() / 2}px, -15px)` : "";
       }
       svg.dataset.lens = lens;
       host.querySelector(".map-view").dataset.lens = lens;
       host.querySelectorAll("[data-lens]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.lens === lens)));
+      host.querySelector(".lens-caption").textContent = LENSES[lens].caption;
     }
     // The part of the screen the map may use: below the floating buttons, and right of the panel when it is open
     // beside the map (on a narrow screen it covers the map instead, so the map keeps the whole width).
@@ -224,7 +260,7 @@
     const wide = () => svg.clientWidth > 1200; // narrower, the panel covers the map instead of shrinking it
     function insets() {
       const open = view$.dataset.panel === "open" && wide();
-      return { left: open ? host.querySelector(".map-panel").offsetWidth + 24 : 12, top: 64, right: 12, bottom: 12 };
+      return { left: open ? host.querySelector(".map-panel").offsetWidth + 24 : 12, top: 64, right: 60, bottom: 12 };
     }
     // The zoom that shows the whole view in that area.
     function wholeK() {
@@ -294,20 +330,14 @@
       const at = L().pos.get(id), r = svg.getBoundingClientRect();
       return { x: r.left + view.x + at.x * view.k, y: r.top + view.y + at.y * view.k };
     }
-    // Clicking a station flies the camera into it, and the page grows out of it.
+    // Clicking a station presses it, and its page opens out of it.
     function dive(id) {
-      const at = L().pos.get(id), W = svg.clientWidth, H = svg.clientHeight, k = Math.max(view.k * 1.8, 1.6);
-      if (!at || RL.reducedMotion()) { location.hash = `#/e/${id}`; return; }
-      let gone = false;
-      const go = () => {
-        if (gone) return;
-        gone = true;
-        const r = svg.getBoundingClientRect();
-        RL.app.origin = { x: r.left + W / 2, y: r.top + H / 2 };
-        location.hash = `#/e/${id}`;
-      };
-      tween({ k, x: W / 2 - at.x * k, y: H / 2 - at.y * k }, 300, go);
-      setTimeout(go, 450); // in case animation frames are paused
+      const g = nodes.get(id);
+      if (!L().pos.get(id) || RL.reducedMotion()) { location.hash = `#/e/${id}`; return; }
+      const r = g.querySelector(".dot").getBoundingClientRect();
+      RL.app.origin = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      g.classList.add("pressed");
+      setTimeout(() => { location.hash = `#/e/${id}`; }, 160);
     }
     function switchTo(next) {
       if (next === lens) return;
@@ -318,6 +348,10 @@
       svg.classList.remove("redraw");
       void svg.getBoundingClientRect();
       svg.classList.add("redraw"); // the family tree's branches draw themselves again
+      // Stations set off part by part, so the eye sees the reading order arrive.
+      svg.classList.add("switching");
+      clearTimeout(switching);
+      switching = setTimeout(() => svg.classList.remove("switching"), 1600);
       const to = cameras[lens] ? clamp(cameras[lens]) : fitted();
       if (to) tween(to, 650, keep);
     }
@@ -433,7 +467,10 @@
     }));
 
     // ---- hover: a station's family, its parent and its children ----
+    // In the tree, the whole path from the line's badge lights up: everything this station builds on.
+    const curve = (a, b) => `<path d="M${a.x - 9} ${a.y} Q${Math.min(a.x, b.x) - 46 - Math.abs(a.y - b.y) * 0.15} ${(a.y + b.y) / 2} ${b.x - 9} ${b.y}"/>`;
     svg.addEventListener("pointerover", (e) => {
+      if (drag?.moved) return;
       const g = e.target.closest?.(".st:not(.out)");
       if (!g || g.classList.contains("hot")) return;
       clear();
@@ -442,13 +479,19 @@
       const family = [station(id).parent, ...algorithms.filter((s) => s.parent === id).map((s) => s.id)].filter((r) => r && pos.has(r));
       for (const r of family) nodes.get(r)?.classList.add("rel");
       if (lens === "tree") {
-        svg.querySelectorAll(`.edge[data-from="${id}"], .edge[data-to="${id}"]`).forEach((p) => p.classList.add("hot"));
+        const T = layouts.tree;
+        svg.querySelectorAll(`.edge[data-from="${id}"]`).forEach((p) => p.classList.add("hot"));
+        for (let k = id; T.up.has(k); k = T.up.get(k)) {
+          svg.querySelector(`.edge[data-to="${k}"]`)?.classList.add("hot");
+          nodes.get(T.up.get(k))?.classList.add("rel");
+        }
+        svg.querySelector(`.tree-hub[data-line="${station(id).line}"]`)?.classList.add("hot");
+        svg.classList.add("tracing");
+        // A parent from another line has no branch here: a dashed link reaches across to it.
+        links.innerHTML = family.filter((r) => T.up.get(r) !== id && T.up.get(id) !== r).map((r) => curve(a, pos.get(r))).join("");
         return;
       }
-      links.innerHTML = family.map((r) => {
-        const b = pos.get(r), bend = Math.min(a.x, b.x) - 46 - Math.abs(a.y - b.y) * 0.15;
-        return `<path d="M${a.x - 9} ${a.y} Q${bend} ${(a.y + b.y) / 2} ${b.x - 9} ${b.y}"/>`;
-      }).join("");
+      links.innerHTML = family.map((r) => curve(a, pos.get(r))).join("");
     });
     svg.addEventListener("pointerout", (e) => {
       const g = e.target.closest?.(".st");
@@ -456,8 +499,30 @@
     });
     function clear() {
       links.innerHTML = "";
-      svg.querySelectorAll(".st.hot, .st.rel, .edge.hot").forEach((s) => s.classList.remove("hot", "rel"));
+      svg.classList.remove("tracing");
+      svg.querySelectorAll(".st.hot, .st.rel, .edge.hot, .tree-hub.hot").forEach((s) => s.classList.remove("hot", "rel"));
     }
+
+    // ---- the legend: pointing at a line lights up its stations ----
+    const legend = host.querySelector(".mp-lines");
+    const spot = (line) => {
+      for (const [id, g] of nodes) g.classList.toggle("unlit", !!line && station(id).line !== line);
+      svg.classList.toggle("spot", !!line);
+    };
+    legend.addEventListener("pointerover", (e) => spot(e.target.closest?.("[data-line]")?.dataset.line));
+    legend.addEventListener("pointerleave", () => spot(null));
+    legend.addEventListener("focusin", (e) => spot(e.target.closest?.("[data-line]")?.dataset.line));
+    legend.addEventListener("focusout", () => spot(null));
+    // Clicking a line brings its stations to the middle of the screen.
+    legend.addEventListener("click", (e) => {
+      const line = e.target.closest("[data-line]")?.dataset.line;
+      const pts = [...L().pos].filter(([id]) => station(id)?.line === line).map(([, p]) => p);
+      if (!pts.length) return;
+      const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y), I = insets(), k = view.k;
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2 + 60, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+      const W = svg.clientWidth, H = svg.clientHeight;
+      tween(clamp({ k, x: (I.left + W - I.right) / 2 - cx * k, y: (I.top + H - I.bottom) / 2 - cy * k, moved: true }), 500, keep);
+    });
 
     return { destroy() { cancelAnimationFrame(raf); resized.disconnect(); document.removeEventListener("keydown", onKey); } };
   };

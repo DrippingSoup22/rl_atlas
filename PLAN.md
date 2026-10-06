@@ -28,7 +28,7 @@ The full curriculum, 95 stations in 14 parts, lives in [content/map.toml](conten
 - One color per quantity, everywhere: value blue, reward gold, policy violet, surprise (δ, advantage) red; knobs stay in ink.
   The palette was checked with a color validator in both themes (marks and text separately).
 - Values on tiles use a diverging scale: orange below zero, gray at zero, blue above.
-- Motion explains cause: zoom into what you click, formulas that build themselves, values that ripple back
+- Motion explains cause: a page opens out of the station you click, formulas that build themselves, values that ripple back
   from the goal, sparks where an update happens, an agent that hops, falls and respawns.
 - Light and dark themes; reduced motion follows the operating system setting.
 
@@ -119,6 +119,10 @@ animations and hover effects this guide relies on would not be smooth.
   wherever an entry had two; a one-by-one review of every textbook against Sutton & Barto and newer sources; a review
   of every story and card: stories play at human pace (a move every 300–400 ms, long episodes shown by their first moves
   and their end), wordy steps cut to the idea and one telling number, and every step's picture checked.
+  The map's other views completed: the tree gives every line its own tree of what builds on what, stacked in reading
+  order, and the unified view places all 37 algorithms (bandits in a strip of their own); the panel became a view switch,
+  a legend that counts what you have read and lights up a line, and the filters. The hand shows only while dragging; a
+  click opens the page out of the station instead of flying the camera in.
   Still open:
   - No story, on purpose: which-algorithm (a decision guide, not a run), pg-theorem (a derivation; REINFORCE and the
     baseline show it at work), multi-agent and RLHF (they need worlds with several learners or a learned reward, beyond

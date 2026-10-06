@@ -19,9 +19,10 @@ A metro map of a city you are about to explore. You can ride the lines in order,
 ### The map {#map}
 
 - Stations you have visited fill with color, so the map shows how far you have come.
-- **Metro map** shows the curriculum in reading order: the foundations, then methods that keep a table, then methods that scale.
-- **Family tree** shows every algorithm under the one it changes. Most algorithms are their parent plus **one change**.
-- **Unified view** places the tabular methods by how far their updates look ahead and whether they sample or average.
+- **Metro** shows the curriculum in reading order: the foundations, then methods that keep a table, then methods that scale.
+- **Tree** gives each line its own tree, read from the top: every station grows from the one it builds on, and an algorithm from the one it changes. Most algorithms are their parent plus **one change**. Hover a station to light up the path that leads to it.
+- **Unified** places every algorithm by how far its updates look ahead and whether they sample or average.
+- **Lines** in the panel count what you have read; point at one to light up its stations, click it to bring them into view.
 - **Show only** dims every algorithm without the chosen labels, such as *off-policy* or *model-based*.
 
 ### Reading an entry {#reading}

@@ -6,9 +6,9 @@ Local and offline: everything is in one file, `rl_atlas.html`.
 
 ## Use it
 
-Open `rl_atlas.html` in a browser. The home screen is a map: each station is one idea, bright
-stations are written, faded ones are planned. It has three views (the metro map in reading order, the
-family tree of algorithms, and Sutton & Barto's unified view of tabular methods) and filters by label,
+Open `rl_atlas.html` in a browser. The home screen is a map: each station is one idea, and the
+stations you have read fill with color. It has three views (the metro map in reading order, a tree per
+line of what builds on what, and Sutton & Barto's unified view with every algorithm placed) and filters by label,
 in a side panel opened by **Views & filters** at the top left (or `V`). Drag to move and Ctrl + scroll
 to zoom; the map always stays in view.
 Each algorithm can be read three ways, in this order, and then watched:

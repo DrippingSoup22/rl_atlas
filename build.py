@@ -528,6 +528,9 @@ def compile_content(problems: Problems) -> dict:
     for sid in atlas.get("unified", {}):
         if stations.get(sid, {}).get("kind") != "algorithm":
             problems.error("content/map.toml", f"[unified] places '{sid}', which is not an algorithm station")
+    for sid, st in stations.items():
+        if st["kind"] == "algorithm" and sid not in atlas.get("unified", {}):
+            problems.warn("content/map.toml", f"algorithm '{sid}' has no place in [unified]")
     for sid in MACRO_TERMS:
         if sid not in stations:
             problems.error("app/js/math.js", f"a math macro links to unknown station '{sid}'")
