@@ -8,6 +8,9 @@ sources = [
   { text = "Moore & Atkeson (1993), Prioritized sweeping: reinforcement learning with less data and less real time, Machine Learning 13", url = "https://doi.org/10.1007/BF00993104" },
   { text = "Peng & Williams (1993), Efficient learning and planning within the Dyna framework, Adaptive Behavior 1", url = "https://doi.org/10.1177/105971239300100403" },
   { text = "van Seijen & Sutton (2013), Planning by prioritized sweeping with small backups, Proceedings of the 30th International Conference on Machine Learning", url = "https://arxiv.org/abs/1301.2343" },
+  { text = "Foster & Wilson (2006), Reverse replay of behavioural sequences in hippocampal place cells during the awake state, Nature 440", url = "https://doi.org/10.1038/nature04587" },
+  { text = "Mattar & Daw (2018), Prioritized memory access explains planning and hippocampal replay, Nature Neuroscience 21", url = "https://doi.org/10.1038/s41593-018-0232-z" },
+  { text = "McMahan & Gordon (2005), Fast exact planning in Markov decision processes, Proceedings of the 15th International Conference on Automated Planning and Scheduling" },
   { text = "Schaul, Quan, Antonoglou & Silver (2016), Prioritized experience replay, International Conference on Learning Representations", url = "https://arxiv.org/abs/1511.05952" },
 ]
 
@@ -91,6 +94,8 @@ Steps per episode in the Dyna maze for Dyna-Q and prioritized sweeping, both wit
 
 With the same number of planning updates per step, prioritized sweeping finds a short path in fewer episodes (\ref{fig-curves}). Counting updates instead of episodes makes the gap plainer. In 20 runs in the Lab, Dyna-Q needed a median of about 10 500 updates, real and planned, before its greedy path was the shortest one, 14 steps; prioritized sweeping needed about 1100 with $\alpha = 0.5$, and about 175 with $\alpha = 1$. The step size matters here because the world is deterministic: with $\alpha = 1$ each pair taken from the queue gets its final value in a single update, while with smaller steps the same pair has to come back to the queue several times. The bigger the maze, the larger the share of Dyna-Q's random replays that change nothing, so the gap grows with the size of the problem.
 
+With $\alpha = 1$ in a deterministic maze, the queue settles squares roughly in order of their distance from the goal, the highest values first, and each only once or twice. This is close kin to Dijkstra's shortest-path algorithm, which settles nodes nearest first from a priority queue. McMahan and Gordon (2005) made the link exact: their improved prioritized sweeping reduces to Dijkstra's algorithm on deterministic problems.
+
 ### Stochastic environments {#stochastic}
 
 In a stochastic environment the model keeps counts of the outcomes of each pair, and planning can use **expected updates** over the estimated distribution:
@@ -102,6 +107,8 @@ Each such update costs as many computations as there are outcomes, many of them 
 ### Other ways to focus {#focus}
 
 Prioritized sweeping focuses backward from changes. **Forward focusing** instead concentrates on states reachable soon under the current policy, as trajectory sampling and real-time dynamic programming do ([[models]]). Prioritizing replays by surprise carried over to deep RL as **prioritized experience replay** (Schaul et al., 2016), where transitions in a DQN replay buffer are sampled with probability growing with their last TD error ([[dqn-extensions]]).
+
+Brains may do something similar. When a rat pauses at a reward, place cells in its hippocampus often replay the path it just ran *in reverse*, from the reward back toward the start (Foster & Wilson, 2006): the order in which news of the reward should travel. Mattar and Daw (2018) showed that a replay rule ranking memories by how much updating them would improve future choices, a close relative of the priority here, reproduces many such patterns of replay.
 
 ### Historical remarks {#history}
 

@@ -8,6 +8,8 @@ sources = [
   { text = "Sutton (1990), Integrated architectures for learning, planning, and reacting based on approximating dynamic programming, Proceedings of the 7th International Conference on Machine Learning", url = "https://doi.org/10.1016/B978-1-55860-141-3.50030-4" },
   { text = "Barto, Bradtke & Singh (1995), Learning to act using real-time dynamic programming, Artificial Intelligence 72", url = "https://doi.org/10.1016/0004-3702(94)00011-O" },
   { text = "Tesauro & Galperin (1997), On-line policy improvement using Monte-Carlo search, Advances in Neural Information Processing Systems 9" },
+  { text = "Talvitie (2014), Model regularization for stable sample rollouts, Proceedings of the 30th Conference on Uncertainty in Artificial Intelligence" },
+  { text = "Grimm, Barreto, Singh & Silver (2020), The value equivalence principle for model-based reinforcement learning, NeurIPS", url = "https://arxiv.org/abs/2011.03506" },
   { text = "Craik (1943), The Nature of Explanation, Cambridge University Press" },
 ]
 +++
@@ -24,6 +26,8 @@ A model can answer in two ways, and the difference decides which algorithms can 
 - A **sample model** answers with one outcome, drawn with the right probabilities, like the real world does. A shuffled deck is a good picture: drawing a card is trivial, while writing down the chance of every five-card hand is a chore.
 
 Samples are easy to get from a distribution model; the reverse requires many samples and gives only an estimate. A model can be handed to the agent (the rules of chess, a physics simulator) or **learned** from experience, by remembering what followed each action. Either way it produces *simulated experience*: transitions that did not happen, but could have, and that the agent can learn from at the price of computation instead of real interaction.
+
+A learned model is never exact, and its mistakes behave differently from the noise in real experience. Asked one step ahead, it is off by a little; asked to imagine a long trajectory, it takes each of its own predictions as the next input, and the errors compound (Talvitie, 2014). Nor does it need to be a faithful picture of the world: it only has to get right what changes the values and the choice of action. Such *value-equivalent* models (Grimm et al., 2020) are what deep model-based agents like MuZero learn ([[model-based-deep]]).
 
 ### Planning {#planning}
 
@@ -114,6 +118,7 @@ Real experience can improve the model (model learning) and the values directly (
 
 - Trusting a wrong model: planning amplifies its errors ([[dyna-q-plus]]).
 - Planning on states that never matter: uniform sweeps waste most of their effort in large problems.
+- Long imagined trajectories from a learned model: its errors compound with every step ([[model-based-deep]]).
 
 ### Check yourself {#check}
 

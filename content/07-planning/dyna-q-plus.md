@@ -7,6 +7,7 @@ sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §8.3 and Examples 8.2 and 8.3", url = "http://incompleteideas.net/book/the-book-2nd.html" },
   { text = "Sutton (1990), Integrated architectures for learning, planning, and reacting based on approximating dynamic programming, Proceedings of the 7th International Conference on Machine Learning", url = "https://doi.org/10.1016/B978-1-55860-141-3.50030-4" },
   { text = "Kaelbling (1993), Learning in Embedded Systems, MIT Press", url = "https://mitpress.mit.edu/9780262111744/" },
+  { text = "Strehl & Littman (2008), An analysis of model-based interval estimation for Markov decision processes, Journal of Computer and System Sciences 74", url = "https://doi.org/10.1016/j.jcss.2007.08.009" },
   { text = "Brafman & Tennenholtz (2002), R-max: a general polynomial time algorithm for near-optimal reinforcement learning, Journal of Machine Learning Research 3", url = "https://jmlr.org/papers/v3/brafman02a.html" },
 ]
 
@@ -102,6 +103,8 @@ Here the error is pessimistic. Dyna-Q never finds the shortcut: its model says t
 The bonus must be small compared with real rewards, or the agent wanders forever; large enough that untested moves eventually win. With rewards of 1 and $\gamma = 0.95$, $\kappa = 0.001$ means that a move untested for 10 000 steps earns an extra 0.1 per planning update. Because the bonus is added to the values, it also inflates them: the greedy policy of Dyna-Q+'s values sometimes heads for untested moves rather than the goal, and its values no longer estimate returns.
 
 An alternative is to leave the values alone and add the bonus only when choosing actions, for example acting greedily on $\val{Q(S, a)} + \kappa\sqrt{\tau(S, a)}$. This keeps the values honest but explores less effectively, since the attraction of a distant untested move is not propagated back by planning. The general idea, optimism about what is uncertain, also underlies [[ucb]] for bandits and model-based methods with guarantees such as R-max (Brafman & Tennenholtz, 2002), which treat every insufficiently tried pair as maximally rewarding.
+
+The shape of the bonus encodes a belief about the world. Count-based bonuses such as MBIE-EB's $\beta/\sqrt{n(s, a)}$ (Strehl & Littman, 2008) shrink with every visit and never come back: the right shape for a world that does not change, where a well-tried move has nothing left to reveal. Dyna-Q+'s bonus grows with time instead, the right shape for a world that does, where any knowledge goes stale if it is not checked.
 
 ### Historical remarks {#history}
 
