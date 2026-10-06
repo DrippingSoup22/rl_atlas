@@ -1,6 +1,7 @@
 +++
 summary = "When several agents learn in the same world, each one's environment includes the others, and it changes as they learn. The Markov property of the single-agent world breaks, the right answer becomes an equilibrium rather than an optimum, and credit for a shared reward is hard to assign. Self-play, centralized training with decentralized execution, and leagues of past opponents are the main tools."
 prereqs = ["mdp", "mcts", "on-off-policy"]
+story_in = ["mcts"]
 sources = [
   { text = "Littman (1994), Markov games as a framework for multi-agent reinforcement learning, ICML" },
   { text = "Tesauro (1995), Temporal difference learning and TD-Gammon, Communications of the ACM 38", url = "https://dl.acm.org/doi/10.1145/203330.203343" },
