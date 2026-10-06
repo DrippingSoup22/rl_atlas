@@ -884,3 +884,27 @@ measures = ["policy-value"]
 film = [0, 1, 5, 20]
 intro = "An expert crosses a bridge of ice; it never slips, so every demonstration walks the middle row. The learner slips one move in ten, and where nobody showed it anything it copies the nearest move it was shown. Behavior cloning watches the expert every episode; DAgger lets the learner walk, and asks the expert about each tile it reaches. The chart is each one's exact chance of reaching the gem."
 success = { metric = "policy-value", min = 0.8, text = "reach the gem 80% of the time or more (the expert: 89%)" }
+
+[reward-units]
+title = "A2C with rewards in other units"
+env = "dyna-maze"
+racers = [
+  { algorithm = "a2c", name = "the gem pays 0.01", rewardScale = 0.01 },
+  { algorithm = "a2c", name = "the gem pays 1", rewardScale = 1.0 },
+  { algorithm = "a2c", name = "the gem pays 100", rewardScale = 100.0 },
+]
+units = 60
+runs = 20
+seed = 2
+alpha = 2.0
+alphaW = 0.3
+workers = 4
+n = 5
+beta = 0.0
+gamma = 0.95
+maxSteps = 1000
+normalize = 0
+charts = ["steps"]
+film = [1, 2, 20, 60]
+intro = "The same A2C three times, in the same maze; only the units of the reward change. Every advantage, and so every step of the policy, is as many times larger. Then switch on the normalization of the advantages, and the units stop mattering."
+success = { metric = "steps", max = 25, text = "end up reaching the gem in under 25 steps" }

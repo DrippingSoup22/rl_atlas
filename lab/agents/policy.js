@@ -147,14 +147,15 @@
 
   // Advantages of steps from … to−1 of one worker's episode: GAE(λ), a discounted sum of TD errors with weights (γλ)ᵏ,
   // stopping at `to`, which is the end of the episode (worth 0) or a point the critic's estimate stands in for.
-  // λ-returns (advantage + estimate) are what the critic learns toward.
-  function advantages(tr, from, to, V, gamma, lambda) {
+  // λ-returns (advantage + estimate) are what the critic learns toward. scale multiplies the rewards, as if the world
+  // paid in other units (p.rewardScale): the learner sees the scaled rewards, the charts the world's own.
+  function advantages(tr, from, to, V, gamma, lambda, scale = 1) {
     const n = to - from, adv = new Float64Array(n), ret = new Float64Array(n), deltas = new Float64Array(n);
     const last = tr.A.length, ended = tr.done && to === last;
     let A = 0;
     for (let k = n - 1; k >= 0; k--) {
       const t = from + k, next = t + 1 === last && ended ? 0 : V(tr.S[t + 1]);
-      deltas[k] = tr.R[t + 1] + gamma * next - V(tr.S[t]);
+      deltas[k] = scale * tr.R[t + 1] + gamma * next - V(tr.S[t]);
       A = deltas[k] + gamma * lambda * A;
       adv[k] = A;
       ret[k] = A + V(tr.S[t]);
@@ -167,6 +168,14 @@
     return: lab.mean(team.map((tr) => sumOf(tr.R))), steps: lab.mean(team.map((tr) => tr.A.length)), falls: lab.mean(team.map((tr) => tr.falls)), ...extra,
   });
 
+  // Advantages normalized over a batch, to mean 0 and spread 1 (p.normalize): the size of a policy step no longer
+  // depends on the units the rewards come in. A batch whose advantages are all alike is left as it is.
+  function normalized(list) {
+    const mean = lab.mean(list.map((u) => u.adv)), sd = Math.sqrt(lab.mean(list.map((u) => (u.adv - mean) ** 2)));
+    if (sd > 1e-8) for (const u of list) u.adv = (u.adv - mean) / sd;
+    return list;
+  }
+
   // ---- A2C: every n steps, one synchronous update from all the workers' last n steps ----
   function* a2c(ctx) {
     const { env, m, p } = ctx, P = lab.policy(env, p), F = P.F, { theta, w } = m, N = workersOf(p), n = rolloutOf(p), beta = p.beta || 0;
@@ -178,17 +187,20 @@
       for (const tr of team) {
         const to = tr.A.length;
         if (to === tr.from) continue;
-        const { adv, ret } = advantages(tr, tr.from, to, V, p.gamma, 1); // n-step returns: λ = 1 inside the stretch
+        const { adv, ret } = advantages(tr, tr.from, to, V, p.gamma, 1, p.rewardScale ?? 1); // n-step returns: λ = 1 inside the stretch
         for (let k = 0; k < adv.length; k++) {
           const t = tr.from + k, s = tr.S[t];
-          P.grad(theta, s, tr.A[t], adv[k], gt);
-          if (beta) P.gradEntropy(theta, s, beta, gt);
           lab.addTo(gw, F.of(s), ret[k] - V(s));
           list.push({ s, a: tr.A[t], adv: adv[k] });
         }
         tr.from = to;
       }
       if (!list.length) return;
+      if (p.normalize) normalized(list);
+      for (const u of list) {
+        P.grad(theta, u.s, u.a, u.adv, gt);
+        if (beta) P.gradEntropy(theta, u.s, beta, gt);
+      }
       for (let i = 0; i < theta.length; i++) if (gt[i]) theta[i] += (p.alpha / N) * gt[i];
       for (let i = 0; i < w.length; i++) if (gw[i]) w[i] += (p.alphaW / N) * gw[i];
       updates++;
@@ -202,7 +214,7 @@
   function batchOf(team, P, theta, V, p) {
     const batch = [];
     for (const tr of team) {
-      const { adv, ret } = advantages(tr, 0, tr.A.length, V, p.gamma, p.lambda ?? 0.95);
+      const { adv, ret } = advantages(tr, 0, tr.A.length, V, p.gamma, p.lambda ?? 0.95, p.rewardScale ?? 1);
       for (let t = 0; t < tr.A.length; t++) {
         const s = tr.S[t], a = tr.A[t];
         batch.push({ s, a, adv: adv[t], ret: ret[t], pi: Float64Array.from(P.probs(theta, s)) });

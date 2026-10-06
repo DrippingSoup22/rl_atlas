@@ -48,6 +48,8 @@
     delta: { sym: "δ", name: "trust region (KL)", choices: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2] },
     noise: { sym: "σ", name: "exploration noise (degrees)", min: 0, max: 30, step: 1, sweep: [0, 1, 2, 5, 10, 20, 30] },
     logEpisodes: { sym: "E", name: "episodes in the log", choices: [1, 2, 5, 10, 20, 50, 100, 200] },
+    rewardScale: { sym: "c", name: "rewards × c (other units)", choices: [0.01, 0.1, 1, 10, 100] },
+    normalize: { sym: "Â", name: "normalize advantages (1: yes)", choices: [0, 1] },
   };
   const ALPHA_LADDER = [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05];
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);

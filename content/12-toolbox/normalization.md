@@ -1,7 +1,7 @@
 +++
 summary = "Networks learn best when their inputs, outputs and targets stay in a moderate range, and RL rarely provides that on its own: observations come in arbitrary units, rewards can be tiny or huge, and values grow as the agent improves. Normalizing observations, scaling rewards, normalizing advantages, clipping gradients and bounding steps are small changes that often decide whether a run learns at all."
 prereqs = ["neural-networks", "hyperparameters"]
-lab = "ddpg-pendulum"
+lab = "reward-units"
 sources = [
   { text = "Mnih et al. (2015), Human-level control through deep reinforcement learning, Nature 518", url = "https://www.nature.com/articles/nature14236" },
   { text = "van Hasselt, Guez, Hessel, Mnih & Silver (2016), Learning values across many orders of magnitude (PopArt), NeurIPS", url = "https://arxiv.org/abs/1602.07714" },
@@ -9,7 +9,48 @@ sources = [
   { text = "Andrychowicz et al. (2021), What matters in on-policy reinforcement learning? A large-scale empirical study, ICLR", url = "https://arxiv.org/abs/2006.05990" },
   { text = "Ba, Kiros & Hinton (2016), Layer normalization", url = "https://arxiv.org/abs/1607.06450" },
 ]
+
+[story]
+scene = "grid"
+env = "dyna-maze"
+seed = 2
+average = 20
+formula = '''\step{1}{\pol{\theta} \leftarrow \pol{\theta} + \alp\, \err{\hat A}\, \nabla \ln \pol{\pi(A \mid S, \theta)}} \step{2}{\qquad \err{\hat A} \leftarrow \frac{\err{\hat A} - \text{mean}}{\text{spread}}}'''
+
+[story.runs]
+one = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta = 0.0, gamma = 0.95, maxSteps = 1000, units = 60, name = "the gem pays 1" }
+cent = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta = 0.0, gamma = 0.95, maxSteps = 1000, units = 60, rewardScale = 0.01, name = "pays 0.01" }
+hundred = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta = 0.0, gamma = 0.95, maxSteps = 1000, units = 60, rewardScale = 100.0, name = "pays 100" }
+centN = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta = 0.0, gamma = 0.95, maxSteps = 1000, units = 60, rewardScale = 0.01, normalize = 1, name = "pays 0.01, normalized" }
+oneN = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta = 0.0, gamma = 0.95, maxSteps = 1000, units = 60, normalize = 1, name = "pays 1, normalized" }
+hundredN = { algorithm = "a2c", alpha = 2.0, alphaW = 0.3, workers = 4, n = 5, beta = 0.0, gamma = 0.95, maxSteps = 1000, units = 60, rewardScale = 100.0, normalize = 1, name = "pays 100, normalized" }
 +++
+
+## Story
+
+::: step {run = "one", at = 60, range = 1, formula = 1}
+**A2C in the maze**, as in [[a2c|its own entry]]: four workers, one update every five steps, and the gem pays 1. Each step of the policy is the step size times an advantage, so its size depends on how big the rewards are. After 60 rounds the arrows lead to the gem, and the last rounds take 15 to 17 steps.
+:::
+
+::: step {run = "cent", at = 60, range = 0.01}
+**The same world, with the gem paying 0.01:** cents instead of euros. Every TD error and every advantage is a hundred times smaller, and so is every step of the policy. The critic copes, since its values simply come out in cents. The policy barely moves: after 60 rounds, the four moves from the start still have probability 0.25 each, and the last three rounds take 321, 515 and 261 steps.
+:::
+
+::: step {run = "hundred", at = 1, range = 100}
+**Now the gem pays 100.** In the first round, three workers find the gem, after 47, 95 and 135 steps. Below it, one worker bumped into the wall on its left, bumped into the edge on its right, then went up twice and reached the gem, all within one five-step stretch. Each of those moves shared the prize: advantages of 70 to 95, where with a gem worth 1 they would be at most 1. Steps that large overshoot. By the end of the round, bumping right into the edge, below the gem, has probability 1.0000, and the fourth worker spends its 1,000 steps there.
+:::
+
+::: step {run = "hundred", at = 2, range = 100}
+**Round two never ends.** All four workers end up on that tile and stay there, bumping into the edge, until its 1,000 steps run out: 3,563 of the round's moves are that one bump. The advantages of the bump now come out negative, but a move with probability 1 cannot unlearn itself: the gradient of $\ln \pol{\pi}$ for it is $1 - \pol{\pi} = 0$. The run stays stuck for all 60 rounds.
+:::
+
+::: step {run = "one", at = 60, curves = ["cent", "one", "hundred"], metric = "steps"}
+**Twenty runs of each.** With the gem worth 1, all 20 runs learn the way. With 0.01, none does within 60 rounds. With 100, the 14 runs that escape the trap are fast; 6 get stuck at 1,000 steps a round for good.
+:::
+
+::: step {run = "hundredN", at = 60, range = 100, formula = 2, curves = ["centN", "oneN", "hundredN"], metric = "steps"}
+**One line fixes it: normalize each batch's advantages**, subtracting their mean and dividing by their spread. The units cancel out, and the three lines lie on top of each other: in cents, euros or hundreds, all 60 runs learn the way, in 14 to 16 steps. Normalization even speeds things up here: five rounds in, the normalized runs average about 33 steps; with the gem paying 1 and no normalization, 211. [Try the units in the Lab](lab:reward-units).
+:::
 
 ## Textbook
 
@@ -31,7 +72,11 @@ The size of the rewards sets the size of every value, every TD error and so ever
 
 ### Advantages {#advantages}
 
-Policy gradients weight each action's log-probability by its advantage. Normalizing the advantages in each batch to mean 0 and standard deviation 1 keeps the size of the policy's steps independent of the reward scale and of how well the critic has learned so far. PPO and A2C implementations usually do it, as the recorded runs of this guide do ([[ppo]]). It is a safeguard more than a cure: in the study of Andrychowicz et al. (2021) it made little difference on their tasks.
+Policy gradients weight each action's log-probability by its advantage. Normalizing the advantages in each batch to mean 0 and standard deviation 1 keeps the size of the policy's steps independent of the reward scale and of how well the critic has learned so far. PPO and A2C implementations usually do it, as the recorded runs of this guide do ([[ppo]]). It is a safeguard more than a cure: in the study of Andrychowicz et al. (2021) it made little difference on their tasks, whose rewards were already of a sensible size.
+
+::: example {#ex-units} The same A2C, in other units
+In the guide's maze, A2C with four workers and a step size of 2 learns the way to the gem in all of 20 runs when the gem pays 1. Pay 0.01 instead and every step of the policy is a hundred times smaller: none of 20 runs learns it within 60 rounds. Pay 100 and the steps overshoot: in 6 runs of 20, one round pushes a useless move, such as bumping into a wall, to probability 1, where its gradient $1 - \pol{\pi}$ vanishes and the run stays stuck. With the advantages of each batch normalized, all 60 runs learn the way, whatever the units, along curves that cannot be told apart.
+:::
 
 ### Gradients and steps {#gradients}
 
