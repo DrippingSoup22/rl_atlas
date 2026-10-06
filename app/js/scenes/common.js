@@ -122,7 +122,7 @@
     const cache = new Map();
     let chart = null, shown = "", timer = 0;
     return function show(st) {
-      const names = st.curves || [], metric = st.metric || "optimal", key = `${names}|${metric}|${st.domain || ""}`;
+      const names = st.curves || [], metric = st.metric || "optimal", key = `${names}|${metric}|${st.domain || ""}|${st.log || ""}|${st.ref || ""}`;
       host.hidden = !names.length;
       if (!names.length || key === shown) return;
       shown = key;
@@ -134,12 +134,14 @@
       const label = typeof METRIC[metric].label === "function" ? METRIC[metric].label(noun, learner) : METRIC[metric].label;
       const legend = names.length > 1 ? `<div class="scene-chart-legend">${names.map((n, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${RL.esc(cfg.runs[n].name || n)}</span>`).join("")}</div>` : "";
       host.innerHTML = `<div class="scene-chart-title">${RL.asIs(label)}<span class="faint"></span></div>${legend}<div class="scene-chart-host"></div>`;
-      chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, log: METRIC[metric].log, domain: st.domain || null, noun });
+      chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, log: st.log ?? METRIC[metric].log, domain: st.domain || null, noun });
+      // st.ref = [value, "label"]: a dashed line across the chart, such as the most a state can be worth
+      const refs = st.ref ? [{ value: st.ref[0], label: st.ref[1] || "" }] : [];
       const total = cfg.average || 200, status = host.querySelector(".faint");
       const acc = cache.get(key) || { done: 0, sums: names.map(() => new Float64Array(first.units)) };
       cache.set(key, acc);
       const draw = () => {
-        chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: acc.sums[i].map((v) => v / Math.max(1, acc.done)) })));
+        chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: acc.sums[i].map((v) => v / Math.max(1, acc.done)) })), refs);
         chart.playhead(first.units);
         status.textContent = acc.done < total ? ` · averaging ${acc.done} of ${total} runs…` : ` · average of ${total} runs`;
       };
@@ -148,7 +150,7 @@
         // every seed kept its training returns (and in newer recordings its test returns), DQN's and the actor-critics'
         // their Q-values; anything else comes from the seed played back
         const key = metric === "return" ? "train" : metric, all = names.every((n) => RL.recordings[cfg.runs[n].recording].curves.every((c) => c[key]));
-        chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: all ? RL.lab.recordedCurves(RL.recordings[cfg.runs[n].recording], key).mean : runOf(n).metrics[metric] })));
+        chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: all ? RL.lab.recordedCurves(RL.recordings[cfg.runs[n].recording], key).mean : runOf(n).metrics[metric] })), refs);
         chart.playhead(first.units);
         status.textContent = all ? ` · average of ${seeds[0].seeds.length} seeds` : " · the seed played back";
         return;
@@ -196,7 +198,8 @@
 
   // A scene built on a Lab view. A step names a run (st.run, else the first) and a moment (st.at, in units); it can
   // replay some units from there (st.play, at st.pace ms an event; st.updates stops after that many updates), step
-  // through moments of the run (st.checkpoints, held st.hold ms each) and chart averaged runs (st.curves, st.metric).
+  // through moments of the run (st.checkpoints, held st.hold ms each) and chart averaged runs (st.curves, st.metric; st.log
+  // for a log axis, st.ref for a reference line).
   // options(st): the view's options for the step; more(st, view, run, t): anything else the scene adds.
   function runScene(View, { options = () => ({}), more = null } = {}) {
     return {
