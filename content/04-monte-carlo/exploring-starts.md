@@ -5,6 +5,7 @@ prereqs = ["mc-prediction", "policy-improvement", "gpi"]
 lab = "blackjack-control"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §5.2–5.3, Example 5.3 and Figure 5.2", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Wang, Yuan, Shao & Ross (2022), On the convergence of the Monte Carlo exploring starts algorithm for reinforcement learning, International Conference on Learning Representations", url = "https://arxiv.org/abs/2002.03585" },
   { text = "Thorp (1966), Beat the Dealer, 2nd ed., Random House" },
   { text = "Tsitsiklis (2002), On the convergence of optimistic policy iteration, Journal of Machine Learning Research 3", url = "https://www.jmlr.org/papers/v3/tsitsiklis02a.html" },
 ]
@@ -90,7 +91,7 @@ As in [[mc-prediction]], the averages can be kept incrementally with counts. Tie
 
 ### Convergence {#convergence}
 
-Monte Carlo ES pools every return a pair has ever produced, under whichever policy was in force at the time. Why should that settle on an optimal policy? Suppose it settled on a worse one. From then on all new returns would come from that policy, the averages would drift toward its action values, and greedy improvement on those values would change the policy after all ([[policy-improvement]]). So the only place the algorithm can come to rest is where both the policy and the values are optimal. That it always gets there is a different claim: the argument rules out suboptimal resting points, not endless wandering. Proofs exist only for special cases and for closely related variants, such as the synchronous version analyzed by Tsitsiklis (2002); the general case is still open.
+Monte Carlo ES pools every return a pair has ever produced, under whichever policy was in force at the time. Why should that settle on an optimal policy? Suppose it settled on a worse one. From then on all new returns would come from that policy, the averages would drift toward its action values, and greedy improvement on those values would change the policy after all ([[policy-improvement]]). So the only place the algorithm can come to rest is where both the policy and the values are optimal. That it always gets there is a different claim: the argument rules out suboptimal resting points, not endless wandering. Proofs exist only for special cases and for closely related variants, such as the synchronous version analyzed by Tsitsiklis (2002). Wang, Yuan, Shao and Ross (2022) proved convergence of the algorithm as written for a broad class of episodic problems that includes every problem in which no state can be visited twice in an episode, Blackjack among them, since the player's sum only grows. The general case is still open.
 
 ### Example: solving Blackjack {#example}
 
@@ -113,7 +114,7 @@ The optimal strategy is Thorp's *basic strategy* for this version of the game (T
 
 ### Historical remarks {#history}
 
-Monte Carlo ES was introduced by Sutton and Barto (§5.3); their Blackjack example builds on one by Widrow, Gupta and Maitra (1973). The strategy it learns is the basic strategy derived by Thorp (1966) from careful computation of the odds. The convergence of Monte Carlo ES remains open in general; Tsitsiklis (2002) proved it for a version with synchronous updates.
+Monte Carlo ES was introduced by Sutton and Barto (§5.3); their Blackjack example builds on one by Widrow, Gupta and Maitra (1973). The strategy it learns is the basic strategy derived by Thorp (1966) from careful computation of the odds. The convergence of Monte Carlo ES remains open in general; Tsitsiklis (2002) proved it for a version with synchronous updates, and Wang et al. (2022) for the algorithm itself on a broad class of episodic problems.
 
 ## Card
 

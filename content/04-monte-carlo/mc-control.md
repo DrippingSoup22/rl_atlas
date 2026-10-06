@@ -96,7 +96,7 @@ In practice the policy need not be stored: acting ε-greedily with respect to th
 
 ### What it converges to {#limit}
 
-With a constant $\eps$, the method approaches the best ε-soft policy and its action values, which still include the cost of exploring: like [[sarsa]], it learns the values of an agent that keeps making random moves, and prefers routes on which random moves are less dangerous. To reach an optimal policy, exploration must fade out: if $\eps$ decays toward zero in a way that keeps every pair visited infinitely often, a schedule that is greedy in the limit with infinite exploration (GLIE), the policy converges to an optimal one (Singh et al., 2000).
+With a constant $\eps$, the method approaches the best ε-soft policy and its action values, which still include the cost of exploring: like [[sarsa]], it learns the values of an agent that keeps making random moves, and prefers routes on which random moves are less dangerous. To reach an optimal policy, exploration must fade out: if $\eps$ decays toward zero in a way that keeps every pair visited infinitely often, a schedule that is greedy in the limit with infinite exploration (GLIE), the policy converges to an optimal one. GLIE was named by Singh, Jaakkola, Littman and Szepesvári (2000), who used it to prove the convergence of one-step on-policy methods such as [[sarsa]].
 
 ### Example: Frozen Lake {#example}
 
@@ -119,7 +119,7 @@ Monte Carlo is ahead for the first few hundred episodes. Then Q-learning overtak
 
 ### Historical remarks {#history}
 
-On-policy Monte Carlo control with ε-soft policies, and the argument that improvement works within the ε-soft class, follow Sutton and Barto (§5.4). The convergence of on-policy methods under GLIE exploration was established by Singh, Jaakkola, Littman and Szepesvári (2000). Barto and Duff (1994) discussed Monte Carlo methods in the context of dynamic programming and reinforcement learning.
+On-policy Monte Carlo control with ε-soft policies, and the argument that improvement works within the ε-soft class, follow Sutton and Barto (§5.4). GLIE exploration, and the convergence of one-step on-policy methods under it, are due to Singh, Jaakkola, Littman and Szepesvári (2000). Barto and Duff (1994) discussed Monte Carlo methods in the context of dynamic programming and reinforcement learning.
 
 ## Card
 

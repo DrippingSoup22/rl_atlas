@@ -4,6 +4,7 @@ prereqs = ["mc-prediction", "off-policy-mc"]
 lab = "blackjack-control"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §5.5, §5.8–5.9, Examples 5.4 and 5.5, Figures 5.3 and 5.4", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Jiang & Li (2016), Doubly robust off-policy value evaluation for reinforcement learning, Proceedings of the 33rd International Conference on Machine Learning", url = "https://arxiv.org/abs/1511.03722" },
   { text = "Kahn & Marshall (1953), Methods of reducing sample size in Monte Carlo computations, Journal of the Operations Research Society of America 1", url = "https://doi.org/10.1287/opre.1.5.263" },
   { text = "Hesterberg (1988), Advances in Importance Sampling, PhD thesis, Stanford University" },
   { text = "Precup, Sutton & Singh (2000), Eligibility traces for off-policy policy evaluation, Proceedings of the 17th International Conference on Machine Learning" },
@@ -127,6 +128,8 @@ The return is a sum of rewards, and each reward needs only the ratios of the act
 $$\mathbb{E}_b\big[\rho_{t:T-1}\,\rew{R_{t+k+1}}\big] = \mathbb{E}_b\big[\rho_{t:t+k}\,\rew{R_{t+k+1}}\big]. \label{per-decision-eq}$$
 
 Weighting each reward by its own truncated ratio gives **per-decision importance sampling**, which has the same expectation as the ordinary estimator and lower variance (Precup, Sutton & Singh, 2000). With discounting, a related idea treats the discount as a probability of termination, so that distant rewards need fewer ratios. These ideas carry over to multi-step temporal-difference methods and eligibility traces ([[n-step-td]], [[td-lambda]]).
+
+A learned value function can cut the variance further. **Doubly robust** estimators weight only the *surprise* of each step, the difference between what happened and what an approximate model of the values predicted, and add back the model's own prediction, which needs no ratio. If the model is good, the weighted surprises are small and so is the variance; if it is bad, the estimate is still unbiased, as ordinary importance sampling is (Jiang and Li, 2016). The same trick, a learned baseline subtracted inside a sampled estimate and added back outside, is the baseline of policy-gradient methods ([[baseline]]).
 
 ### Where importance ratios appear later {#later}
 
