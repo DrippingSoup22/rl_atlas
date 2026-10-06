@@ -13944,10 +13944,13 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       return { ...v, k, x: axis(v.x, width * k, I.left, W - I.right), y: axis(v.y, height * k, I.top, H - I.bottom) };
     }
     // The whole view when it stays readable; on small screens fit the width instead (the rest is a scroll away).
+    // On a phone even the width is too much to read, so the view opens readable at the top left, where reading
+    // starts, and the rest of the map is a swipe away.
     function fitted() {
       const W = svg.clientWidth, H = svg.clientHeight, I = insets(), { width, height } = L();
       if (!W || H <= I.top) return null;
       const whole = wholeK();
+      if (whole < 0.8 && (W - I.left - I.right) / width < 0.6) return clamp({ k: 0.8, x: I.left, y: I.top + 6 });
       const k = Math.max(0.3, Math.min(1.25, whole >= 0.8 ? whole : (W - I.left - I.right) / width));
       return clamp({ k, x: I.left + (W - I.left - I.right - width * k) / 2, y: I.top + (whole >= 0.8 ? (H - I.top - I.bottom - height * k) / 2 : 6) });
     }
