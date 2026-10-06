@@ -5,6 +5,7 @@ prereqs = ["sarsa", "value-functions", "epsilon-greedy", "td-error"]
 lab = "cliff-race"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §6.5, §6.7, Examples 6.6 and 6.7", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Even-Dar & Mansour (2003), Learning rates for Q-learning, Journal of Machine Learning Research 5", url = "https://www.jmlr.org/papers/v5/evendar03a.html" },
   { text = "Watkins (1989), Learning from Delayed Rewards, PhD thesis, University of Cambridge" },
   { text = "Watkins & Dayan (1992), Q-learning, Machine Learning 8", url = "https://doi.org/10.1007/BF00992698" },
   { text = "Jaakkola, Jordan & Singh (1994), On the convergence of stochastic iterative dynamic programming algorithms, Neural Computation 6", url = "https://doi.org/10.1162/neco.1994.6.6.1185" },
@@ -147,6 +148,8 @@ By \ref{noisy}, Q-learning is a noisy version of the iteration $Q \leftarrow \ma
 :::
 
 Compare with SARSA's convergence theorem ([[sarsa]]): Q-learning places no condition on how the behavior policy evolves, only that it keeps trying every action in every state. In a task where every state can be reached, ε-greedy with a constant $\eps > 0$ is enough. The estimates converge to $\val{q_*}$, while the behavior, which never stops exploring, never becomes optimal itself.
+
+The theorem says nothing about speed, and the choice of step sizes matters a great deal. The sample-average choice $\alp = 1/n(s,a)$ meets both conditions, yet with it Q-learning can need a number of updates that grows exponentially with the horizon $1/(1-\gam)$: each target leans on maxima of estimates that are still far off, and $1/n$ forgets those early errors too slowly. Step sizes $1/n^{\omega}$ with $\tfrac12 < \omega < 1$ also meet the conditions and need only polynomially many (Even-Dar and Mansour, 2003). In practice a constant $\alp$ is the common choice, as in the cliff example below.
 
 ### Example: the cliff again {#cliff}
 

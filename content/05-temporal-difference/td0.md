@@ -5,6 +5,7 @@ prereqs = ["mc-prediction", "policy-evaluation", "bellman"]
 lab = "random-walk"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §6.1–6.2 and Example 6.2", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Witten (1977), An adaptive optimal controller for discrete-time Markov environments, Information and Control 34", url = "https://doi.org/10.1016/S0019-9958(77)90354-0" },
   { text = "Sutton (1988), Learning to predict by the methods of temporal differences, Machine Learning 3", url = "https://doi.org/10.1007/BF00115009" },
   { text = "Samuel (1959), Some studies in machine learning using the game of checkers, IBM Journal of Research and Development 3", url = "https://doi.org/10.1147/rd.33.0210" },
   { text = "Dayan (1992), The convergence of TD(λ) for general λ, Machine Learning 8", url = "https://doi.org/10.1007/BF00992701" },
@@ -150,7 +151,7 @@ With its best step size, TD(0) is better than Monte Carlo with its best step siz
 
 ### Historical remarks {#history}
 
-The idea of learning a prediction from a later prediction goes back to Samuel's checkers player (Samuel, 1959), which adjusted its evaluation of positions toward the evaluation of positions searched later. Sutton (1988) introduced temporal-difference learning in its modern form, TD(λ), proved convergence in the mean for the tabular case and introduced the random-walk example. Dayan (1992) and Jaakkola, Jordan and Singh (1994) proved convergence with probability 1. With a neural network in place of the table, TD learning produced TD-Gammon, a backgammon program that reached the level of the best human players (Tesauro, 1995).
+The idea of learning a prediction from a later prediction goes back to Samuel's checkers player (Samuel, 1959), which adjusted its evaluation of positions toward the evaluation of positions searched later. The earliest published learning rule of the TD(0) form appears in Witten's adaptive controller for Markov environments (Witten, 1977). Sutton (1988) introduced temporal-difference learning in its modern form, TD(λ), proved convergence in the mean for the tabular case and introduced the random-walk example. Dayan (1992) and Jaakkola, Jordan and Singh (1994) proved convergence with probability 1. With a neural network in place of the table, TD learning produced TD-Gammon, a backgammon program that reached the level of the best human players (Tesauro, 1995).
 
 ## Card
 

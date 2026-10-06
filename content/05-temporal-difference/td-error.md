@@ -4,6 +4,7 @@ prereqs = ["td0", "bellman"]
 lab = "random-walk"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §6.1–6.2, §13.5 and §15.4", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Dabney, Kurth-Nelson, Uchida, Starkweather, Hassabis, Munos & Botvinick (2020), A distributional code for value in dopamine-based reinforcement learning, Nature 577", url = "https://doi.org/10.1038/s41586-019-1924-6" },
   { text = "Sutton (1988), Learning to predict by the methods of temporal differences, Machine Learning 3", url = "https://doi.org/10.1007/BF00115009" },
   { text = "Schultz, Dayan & Montague (1997), A neural substrate of prediction and reward, Science 275", url = "https://doi.org/10.1126/science.275.5306.1593" },
   { text = "Schulman, Moritz, Levine, Jordan & Abbeel (2016), High-dimensional continuous control using generalized advantage estimation, International Conference on Learning Representations", url = "https://arxiv.org/abs/1506.02438" },
@@ -113,7 +114,7 @@ The TD error takes slightly different forms in different methods, always as a ta
 
 ### A signal in the brain {#dopamine}
 
-In the 1990s, recordings from dopamine neurons in the midbrains of monkeys showed a striking pattern. The neurons fired a burst when a reward arrived unexpectedly. Once the animal had learned that a cue predicted the reward, they fired at the cue instead, and not at the predicted reward. And when a predicted reward failed to arrive, their activity dipped below its baseline at the moment the reward should have come. This is exactly how a TD error behaves: positive for an unpredicted reward, transferred to the earliest reliable predictor, and negative when a prediction is disappointed (Schultz, Dayan & Montague, 1997). The *reward prediction error hypothesis* of dopamine is one of the best-known points of contact between reinforcement learning and neuroscience.
+In the 1990s, recordings from dopamine neurons in the midbrains of monkeys showed a striking pattern. The neurons fired a burst when a reward arrived unexpectedly. Once the animal had learned that a cue predicted the reward, they fired at the cue instead, and not at the predicted reward. And when a predicted reward failed to arrive, their activity dipped below its baseline at the moment the reward should have come. This is exactly how a TD error behaves: positive for an unpredicted reward, transferred to the earliest reliable predictor, and negative when a prediction is disappointed (Schultz, Dayan & Montague, 1997). The *reward prediction error hypothesis* of dopamine is one of the best-known points of contact between reinforcement learning and neuroscience. The story has continued: individual dopamine neurons turn out to differ in how optimistic they are, some signalling surprise relative to a high prediction and some to a low one, so that together they represent the whole distribution of possible rewards, as distributional reinforcement learning does ([[return]]; Dabney et al., 2020).
 
 ## Card
 
