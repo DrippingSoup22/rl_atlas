@@ -127,3 +127,65 @@ animations and hover effects this guide relies on would not be smooth.
   - No story, on purpose: which-algorithm (a decision guide, not a run), pg-theorem (a derivation; REINFORCE and the
     baseline show it at work), multi-agent and RLHF (they need worlds with several learners or a learned reward, beyond
     the guide's), debugging until a fair bug-hunt run is found.
+
+- [ ] **M8 · Honest runs**: stories show a chosen run that matches the idea; the Lab lets anyone test settings and seeds.
+  Done in order, one phase at a time, each reviewed with screenshots before the next. The deep presets (recorded on
+  CartPole and Pendulum) wait until the live ones work; they then adopt the same method.
+
+  **Principles**
+  - *Stories sell the idea.* A run is chosen (any seed, any knobs) so the picture is clean and shows the chapter's point.
+    No justification in the story itself. A small seed chip on a run ("seed 58 · open in Lab") leads anyone skeptical to
+    the Lab with those exact settings. Behind the scenes a test re-checks that the shown run, and the method in general,
+    still behave as the text says. That keeps the stories from drifting when the code changes, and it is never shown.
+  - *The Lab measures; it does not sell.* Two things decide a run: the settings and the luck (the seed). The Lab keeps them
+    apart.
+    - A **bench** of 20 seeds (1–20, the same for every setting) runs live in the browser whenever a knob changes. It
+      gives the odds and the spread.
+    - The run played and animated is, by default, the bench's **typical** seed for those settings (the median). Good
+      settings show a good typical run, bad settings a bad one.
+    - Anyone can instead type or roll their **own seed**. It plays, and the Lab places it on the bench ("your seed does
+      better than 14 of the 20").
+  - Races share their seed, so the comparison is fair: the typical seed of a race is the one closest to every racer's
+    median. Odds are counted on shared seeds ("UCB wins on 17 of 20").
+
+  **Phase 1 · The bench (lab engine, no visible change yet)**
+  - The bench: seeds 1–20 per racer, run in the background in small slices (as the odds already are). Results are cached
+    by settings, so going back to a setting is instant.
+  - Typical seed: the median of the success score (or of the preset's main measure when it has no success rule). For a
+    race, it is the seed nearest every racer's median rank.
+  - Rank of any seed against the bench; paired wins between racers.
+  - Tests: typical seeds and ranks are deterministic, and a preset's default settings give the same typical seed every
+    time.
+
+  **Phase 2 · Seed and odds in the Lab**
+  - The seed control: *Typical* (the default) or a number (typed, or rolled with the dice). Seeds outside 1–20 are allowed.
+  - A scoreboard per racer, in its pane's header: its odds on the bench, and where the played seed falls.
+  - Charts open on the spread (thin lines for the bench, a thick median), with the played run highlighted; "This run"
+    stays.
+  - The sweep keeps its form (every value on the same bench) and marks the played settings.
+  - The preset `seed` keys go. Preset intros that quote numbers from one run are checked and reworded.
+
+  **Phase 3 · A layout made for comparing**
+  Today the racers are stacked full-width, so two worlds never fit on one screen, the transport bar covers the second,
+  and the charts and odds sit far below. There are 45 live presets: 6 with one racer, 25 with two, 13 with three, 1 with
+  four.
+  - Racers side by side in compact panes (two or three across; four as a 2 × 2), with one shared transport and the same
+    moment in each. Each pane carries its name, color, scoreboard and status.
+  - The charts directly under the panes, in the racers' colors; the filmstrip as a row per racer.
+  - The side column: pseudocode with a tab per racer and the lines where they differ marked; the "Show" options shared.
+  - One racer: the same frame, with the pane at full width.
+  - Prototype on the cliff race (grid view) and review it. Then every other view kind: arms, cards, chain and line, car
+    and surface, star, corridor, throw, graph.
+
+  **Phase 4 · Stories**
+  - Each story run names the Lab preset it belongs to (plus its overrides), so its seed chip opens the Lab exactly there.
+    The Lab reads settings and seed from its address.
+  - Seeds re-picked where the shown run is weak or reverses the idea, by a small picker: among the seeds where the idea
+    shows cleanly, the one closest to typical-good. Story numbers are updated from it.
+  - The behind-the-scenes check: per story, the claim its text makes (one line in the front matter), tested on the shown
+    seed and on the bench.
+
+  **Later (decided separately)**
+  - The deep presets: the same bench-and-typical method on recorded grids (each value's seeds trained offline), how much
+    of the knob space to record, and the flat Pendulum sweeps (see `recorder/RUNS-REVIEW.md`).
+  - The Pendulum and CartPole stories play their recorded test episodes instead of stills (code only).
