@@ -273,7 +273,9 @@
       this._trace(s);
       const fogged = this._fog(s);
       const num = this.nums[s];
-      num.textContent = this.o.numbers && !fogged ? fmt(v, this.o.digits) : ""; // a number on a tile nobody has seen would mislead
+      // a number on a tile nobody has seen would mislead; large numbers drop decimals, so they fit their tile
+      const d = this.o.digits ?? 2, place = Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? Math.min(d, 1) : d;
+      num.textContent = this.o.numbers && !fogged ? fmt(v, place) : "";
       if (!this.o.arrows) return;
       // With numbers on, the number owns the middle of the tile and the arrows become chevrons by its edges.
       const p = this._probs(s), edge = this.o.numbers;

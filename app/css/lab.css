@@ -104,8 +104,9 @@
 .cartview .bar-fill { fill: var(--val); opacity: 0.45; }
 .cartview .chosen .bar-fill { opacity: 1; }
 .cartview .chosen .bar-name, .cartview .chosen .bar-num { fill: var(--ink); font-weight: 600; }
-.cartview .map-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 4px; }
-.cartview .map-head span { color: var(--ink-3); }
+.cartview .map-head { display: flex; flex-direction: column; gap: 2px; font-size: 13px; margin-bottom: 6px; }
+.cartview .map-head b { white-space: nowrap; }
+.cartview .map-head span { color: var(--ink-3); font-size: 12px; line-height: 1.35; }
 .cartview .zero { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
 .cartview .axis-name { font-size: 11px; fill: var(--ink-2); }
 .cartview .chev { fill: none; stroke: var(--ink); stroke-width: 1.4; opacity: 0.55; }

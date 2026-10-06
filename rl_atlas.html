@@ -1102,8 +1102,9 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .cartview .bar-fill { fill: var(--val); opacity: 0.45; }
 .cartview .chosen .bar-fill { opacity: 1; }
 .cartview .chosen .bar-name, .cartview .chosen .bar-num { fill: var(--ink); font-weight: 600; }
-.cartview .map-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 4px; }
-.cartview .map-head span { color: var(--ink-3); }
+.cartview .map-head { display: flex; flex-direction: column; gap: 2px; font-size: 13px; margin-bottom: 6px; }
+.cartview .map-head b { white-space: nowrap; }
+.cartview .map-head span { color: var(--ink-3); font-size: 12px; line-height: 1.35; }
 .cartview .zero { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
 .cartview .axis-name { font-size: 11px; fill: var(--ink-2); }
 .cartview .chev { fill: none; stroke: var(--ink); stroke-width: 1.4; opacity: 0.55; }
@@ -5673,7 +5674,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this._trace(s);
       const fogged = this._fog(s);
       const num = this.nums[s];
-      num.textContent = this.o.numbers && !fogged ? fmt(v, this.o.digits) : ""; // a number on a tile nobody has seen would mislead
+      // a number on a tile nobody has seen would mislead; large numbers drop decimals, so they fit their tile
+      const d = this.o.digits ?? 2, place = Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? Math.min(d, 1) : d;
+      num.textContent = this.o.numbers && !fogged ? fmt(v, place) : "";
       if (!this.o.arrows) return;
       // With numbers on, the number owns the middle of the tile and the arrows become chevrons by its edges.
       const p = this._probs(s), edge = this.o.numbers;
