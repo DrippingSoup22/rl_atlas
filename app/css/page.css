@@ -129,6 +129,27 @@
 .surprise .num { font-size: 10.5px; font-weight: 700; fill: var(--err-ink); }
 .surprise .pred { fill: var(--val); opacity: 0.85; }
 .surprise .pred-name { font-size: 11px; fill: var(--val-ink); }
+.predictor { display: block; width: 100%; height: auto; overflow: visible; }
+.predictor text { font-family: var(--font); }
+.predictor .head, .predictor .ptitle { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; fill: var(--ink-3); text-transform: uppercase; }
+.predictor .ep, .predictor .panel, .predictor .link { transition: opacity 0.4s; }
+.predictor .ep.off, .predictor .panel.off { opacity: 0; }
+.predictor .ep.dim { opacity: 0.3; }
+.predictor .tok circle { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.5; }
+.predictor .tok text { font-size: 11.5px; font-weight: 700; fill: var(--ink); }
+.predictor .tok.mark circle { stroke: var(--val); stroke-width: 3; }
+.predictor .arr { stroke: var(--line-2); stroke-width: 1.5; }
+.predictor .r { font-size: 11px; font-weight: 700; fill: var(--ink-3); }
+.predictor .r.pay { fill: var(--rew-ink); }
+.predictor .end { fill: var(--surface-3); }
+.predictor .end-t { font-size: 10px; fill: var(--ink-3); }
+.predictor .sname { font-size: 12.5px; font-weight: 700; fill: var(--val-ink); }
+.predictor .track { fill: var(--surface-3); }
+.predictor .vbar { fill: var(--val); transition: width 0.7s var(--ease); }
+.predictor .vnum { font-size: 13px; font-weight: 800; fill: var(--val-ink); }
+.predictor .link { fill: none; stroke: var(--val); stroke-width: 2; stroke-dasharray: 4 4; }
+.predictor .head-mark { fill: var(--val); }
+.predictor .link-t { font-size: 12px; font-weight: 700; fill: var(--val-ink); transition: opacity 0.4s; }
 
 .loop .box { fill: var(--surface-2); stroke: var(--line-2); stroke-width: 1.5; }
 .loop .part-agent, .loop .part-env, .loop .wires { transition: opacity 0.5s; }

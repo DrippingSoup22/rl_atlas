@@ -8,7 +8,38 @@ sources = [
   { text = "Sutton (1988), Learning to predict by the methods of temporal differences, Machine Learning 3", url = "https://doi.org/10.1007/BF00115009" },
   { text = "Baird (1995), Residual algorithms: reinforcement learning with function approximation, Proceedings of the 12th International Conference on Machine Learning" },
 ]
+
+[story]
+scene = "predictor"
+episodes = [
+  [["A", 0], ["B", 0]],
+  [["B", 1]], [["B", 1]], [["B", 1]], [["B", 1]], [["B", 1]], [["B", 1]],
+  [["B", 0]],
+]
+formula = '''\step{1}{\text{Monte Carlo: } \val{V(s)} \leftarrow \text{average of } \rew{G_t} \qquad} \step{2}{\text{TD: } \val{V(s)} \leftarrow \text{average of } \rew{R_{t+1}} + \gam\,\val{V(S_{t+1})}}'''
 +++
+
+## Story
+
+::: step {show = 8}
+**Eight episodes, and nothing else to go on.** One started in A, paid nothing, moved to B, and ended there with nothing. Six started in B and ended with a reward of 1. One started in B and ended with nothing. No discount. What is each state worth?
+:::
+
+::: step {show = 8, mark = "B", mc = true, td = true, formula = 2}
+**B is easy.** It was left eight times, six of them with a reward of 1, so both predictors say 0.75: Monte Carlo averages the eight returns that followed B, and TD averages the eight rewards plus the value of what came next, the end, worth 0. They agree because nothing comes after B but rewards.
+:::
+
+::: step {show = 8, mark = "A", mc = true, formula = 1}
+**Monte Carlo on A: 0.** A appears once, and the return that followed it was 0 + 0 = 0. Monte Carlo only believes returns that actually followed a state, so A is worth exactly what its one episode paid.
+:::
+
+::: step {show = 8, mark = "A", mc = true, td = true, link = ["B", "A"], formula = 2}
+**TD on A: 0.75.** TD never looks at A's whole return. It sees one step: A paid 0 and led to B. And B, from all eight episodes, is worth 0.75. So A is worth 0 + 0.75: a guess built from another guess. That is **bootstrapping**: A borrows what was learned about B from episodes that never went through A.
+:::
+
+::: step {show = 8, mc = true, td = true, link = ["B", "A"], formula = 2}
+**Which is right?** If what happens after B does not depend on how B was reached, the world is Markov, and TD's answer is the better bet: the next visit to A will likely lead to B again, and B pays 1 three times in four. Monte Carlo's 0 rests on one unlucky episode. Run on a batch until they settle, TD finds the values of the most likely model of the data, and Monte Carlo the values that best fit the returns seen. The price of bootstrapping is the other side of the same coin: if B's guess is wrong, A inherits the error.
+:::
 
 ## Textbook
 
