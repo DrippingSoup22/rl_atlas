@@ -16,15 +16,18 @@
 
   // What one unit is called, in this world and for this algorithm.
   const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"], round: ["round", "rounds"], throw: ["throw", "throws"], block: ["block", "blocks"], pass: ["pass", "passes"] };
-  // Walking speeds replay a unit event by event ("step" stops at each update); rates jump between snapshots.
+  // A ladder of speeds, each showing what can be seen at that pace. Walking speeds replay a unit event by event:
+  // "line" stops at every line of the pseudocode, the others at each update ("step" slowly enough to read its numbers,
+  // "fast" and "faster" so the agent runs while the pseudocode still lights up). Rates jump from unit to unit.
   const walking = (step, every) => [{ id: "line", label: "Line by line", every: every[0] }, { id: "step", label: step, every: every[1] }];
+  const quick = (fast, faster) => [{ id: "fast", label: "Fast", every: fast, quick: true }, ...(faster ? [{ id: "faster", label: "Faster", every: faster, quick: true }] : [])];
   const rates = (...list) => list.map((rate) => ({ id: `r${rate}`, rate }));
   const SPEEDS = {
-    episode: [...walking("Step by step", [560, 180]), ...rates(1, 10, 50)],
-    sweep: [...walking("State by state", [380, 130]), ...rates(1, 4, 20)],
+    episode: [...walking("Step by step", [560, 320]), ...quick(100, 25), ...rates(1, 10, 50)],
+    sweep: [...walking("State by state", [380, 130]), ...quick(40), ...rates(1, 4, 20)],
     step: [...walking("Pull by pull", [480, 300]), ...rates(10, 50, 250)],
-    round: [...walking("Step by step", [520, 200]), ...rates(1, 4, 20)], // every worker steps at once
-    pass: [...walking("Step by step", [520, 160]), ...rates(1, 4, 10)], // the log being made, then passes over it
+    round: [...walking("Step by step", [520, 320]), ...quick(110, 35), ...rates(1, 4, 20)], // every worker steps at once
+    pass: [...walking("Step by step", [520, 300]), ...quick(90, 30), ...rates(1, 4, 10)], // the log being made, then passes over it
     block: [{ id: "line", label: "Step by step", every: 80 }, { id: "step", label: "Quickly", every: 12 }, ...rates(1, 4, 10)], // a recorded test episode
   };
   // The knobs a preset can show as sliders. alpha = 0 means sample averages (1/n), where an algorithm allows it.
@@ -163,7 +166,7 @@
             </section>
           </div>
           <aside class="lab-side">
-            <section class="panel card"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-host"></div></section>
+            <section class="panel card"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-tabs" hidden></div><div class="pseudo-host"></div><p class="pseudo-diff faint" hidden></p></section>
             <section class="panel card live">
               <h3>This step</h3>
               <div class="live-sym"></div>
@@ -235,16 +238,15 @@
       const View = RL.labViews[env.kind];
       const box = q(".stages");
       box.className = `stages n${racers.length}`;
-      // boxy grids sit side by side, and so do recorded worlds in pairs, each view stacking its two panes
-      box.dataset.shape = env.kind === "grid" && env.cols / env.rows < 2 ? "boxy" : env.recorded && racers.length % 2 === 0 ? "pair" : "";
       box.innerHTML = racers.map((r, i) => `
-        <figure class="stage card" data-i="${i}">
-          <figcaption><i class="key" style="--k: var(--s${i + 1})"></i><b>${esc(r.name)}</b><span class="stat"></span></figcaption>
+        <figure class="stage card" data-i="${i}" style="--k: var(--s${i + 1})">
+          <figcaption><span class="who"><i class="key"></i><b>${esc(r.name)}</b></span><span class="odds-badge" hidden></span><span class="stat"></span></figcaption>
           <div class="view-host"></div>
         </figure>`).join("");
       stages = Array.from(box.querySelectorAll(".stage"));
       view.show.agent = unitOf() !== "sweep"; // dynamic programming has no agent walking about
       views = stages.map((st) => new View(st.querySelector(".view-host"), env, view.show));
+      views.forEach((v) => v.setPace?.(speed()?.quick ? P.speed : ""));
       stages.forEach((st, i) => st.addEventListener("click", () => focus(i)));
       const displays = racers.map((r, i) => {
         if (recRuns[i]) return { ...recRuns[i].at(0) };
@@ -267,15 +269,82 @@
       knobPanel();
       oddsPanel();
       chartsFor();
+      pseudoTabs();
       focus(Math.min(P.focus, racers.length - 1));
       simulate();
+      fitStages();
+    }
+
+    // ---- the stages: every racer on screen at once ----
+    // The panes keep their world's shape. The arrangement (how many across) is the one that gives each pane the most
+    // room while all of them, and the play bar under them, fit in the window below the header; if that would make them
+    // too small, they may take the whole window instead (a scroll down to them).
+    function fitStages() {
+      const box = q(".stages");
+      if (!box || !stages.length) return;
+      box.style.gridTemplateColumns = "minmax(0, 1fr)";
+      if (innerWidth < 900) return; // narrow screens: one under the other, full width
+      const st = stages[0], host = st.querySelector(".view-host"), content = host.firstElementChild;
+      const w0 = Math.min(host.clientWidth, content ? content.getBoundingClientRect().width || host.clientWidth : host.clientWidth);
+      const padX = st.offsetWidth - host.clientWidth;
+      const W = box.clientWidth, n = stages.length, gap = 16, bar = q(".transport").offsetHeight;
+      // Some views reflow when narrowed (a recorded run's two panels stack), so nothing is predicted: each arrangement
+      // is laid out and measured, its panes narrowed until everything fits, and the one with the widest panes wins.
+      const apply = (cols, w) => { box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`; return box.offsetHeight; };
+      const MIN = 260;
+      const widest = (cols, H) => {
+        let hi = Math.min(w0, (W - gap * (cols - 1)) / cols - padX), lo = MIN;
+        if (hi < lo) return 0;
+        if (apply(cols, hi) <= H) return hi;
+        if (apply(cols, lo) > H) {
+          // too tall even at the narrowest, yet a view that reflows may fit wider (panels side by side): look down
+          // from the widest in small steps for a width that fits
+          let w = hi * 0.93;
+          while (w > lo && apply(cols, w) > H) { hi = w; w *= 0.93; }
+          if (w <= lo) return 0;
+          lo = w;
+        }
+        for (let k = 0; k < 7; k++) { const mid = (lo + hi) / 2; if (apply(cols, mid) > H) hi = mid; else lo = mid; }
+        return lo;
+      };
+      const pick = (H) => {
+        let best = { cols: 0, w: 0 };
+        for (let cols = 1; cols <= n; cols++) { const w = widest(cols, H); if (w > best.w + 1) best = { cols, w }; }
+        return best.cols ? best : null;
+      };
+      const top = box.getBoundingClientRect().top + scrollY;
+      // below the header if they fit there; else the whole window (a scroll down to them); else as many across as fit
+      const best = pick(innerHeight - top - bar - 28) || pick(innerHeight - 64 - bar - 28) ||
+        { cols: Math.max(1, Math.min(n, Math.floor((W + gap) / (MIN + padX + gap)))), w: MIN };
+      const w = best.w;
+      apply(best.cols, w);
+      box.classList.toggle("narrow", w < 430); // narrow panes keep their headers short
+    }
+    let lastWidth = 0;
+    const resized = new ResizeObserver(() => {
+      const w = q(".lab-main").clientWidth;
+      if (Math.abs(w - lastWidth) > 4) { lastWidth = w; fitStages(); }
+    });
+    resized.observe(q(".lab-main"));
+
+    // ---- the pseudocode: a tab per algorithm when the racers run different ones, the lines where they differ marked ----
+    const lineText = (html) => {
+      const box = document.createElement("div");
+      box.innerHTML = html;
+      return [...box.querySelectorAll("li")].map((li) => li.textContent.replace(/\s+/g, " ").trim());
+    };
+    function pseudoTabs() {
+      const ids = [...new Set(racers.map((r) => r.algorithm.station || r.algorithm.id))];
+      const tabs = q(".pseudo-tabs");
+      tabs.hidden = ids.length < 2;
+      tabs.innerHTML = ids.length < 2 ? "" : racers.map((r, i) => `<button type="button" data-i="${i}" style="--k: var(--s${i + 1})"><i class="key"></i>${esc(r.name)}</button>`).join("");
     }
 
     // The speeds of this world: some worlds walk faster (a Mountain Car episode has hundreds of steps) or play more
     // units a second (Baird's counterexample, whose units are single steps).
     function speedList() {
-      const list = SPEEDS[unitOf()];
-      return list.map((s, i) => (s.rate ? (env.rates ? { ...s, id: `r${env.rates[i - 2]}`, rate: env.rates[i - 2] } : s) : env.pace ? { ...s, every: env.pace[s.id] } : s));
+      const list = SPEEDS[unitOf()], first = list.findIndex((s) => s.rate);
+      return list.map((s, i) => (s.rate ? (env.rates ? { ...s, id: `r${env.rates[i - first]}`, rate: env.rates[i - first] } : s) : env.pace?.[s.id] ? { ...s, every: env.pace[s.id] } : s));
     }
 
     // ---- the runs ----
@@ -491,6 +560,11 @@
       const stuck = st.reduce((k, x) => k + x.stuck, 0);
       q(".odds-tally").innerHTML = text + (stuck ? ` ${stuckNote(stuck)}` : "");
       const own = racers.map((_, i) => lab.success(R, runs[i].metrics).score);
+      stages.forEach((stg, i) => {
+        const b = stg.querySelector(".odds-badge");
+        b.hidden = !preset.success || !n;
+        if (!b.hidden) { b.innerHTML = `<b>${st[i].wins}</b>/${n}<span class="long"> seeds end well</span>`; b.title = `${st[i].wins} of ${n} seeds end well`; b.classList.toggle("good", st[i].wins >= n / 2); }
+      });
       strip.set({
         rows: racers.map((r, i) => ({ name: r.name, color: `--s${i + 1}`, seeds: bench.seeds.slice(0, n), scores: st[i].scores, ok: bench.results[i].slice(0, n).map((d) => d.ok), played: { seed: played, score: own[i] } })),
         threshold: R.min ?? R.max ?? null, lower: bench.lower, percent: !!m.percent,
@@ -645,6 +719,12 @@
       q(".summary").innerHTML = out.join("<br>");
     }
 
+    // The greedy path from the start, while it reaches a goal; null if it goes round in circles.
+    function greedyStates(Q) {
+      const g = lab.greedyPath(env, Q);
+      return g.reached ? g.path : null;
+    }
+
     // Follow the most likely action of a learned policy from the start, as far as it reaches.
     function likelyPath(world, P) {
       let s = world.start, steps = 0;
@@ -673,16 +753,27 @@
     }
 
     // ---- moving the playhead: t is the start of unit t; t = units is the end of the run ----
-    function seek(t, draw = false) {
+    // heat: "keep" when the units since the last position were already added to the views' maps of where the agent
+    // goes; otherwise the maps are rebuilt from the 20 units before the new position.
+    function seek(t, draw = false, heat = "rebuild") {
       P.e = Math.max(0, Math.min(knobs.units, t));
       P.walkers = null;
       P.acc = 0;
       P.wait = 0;
       let shown = [];
+      const fast = rate() >= 10;
       runs.forEach((r, i) => {
         const p = paramsOf(racers[i]), events = P.e > 0 ? [...r.replay(P.e - 1).events] : [];
-        views[i].show(racers[i].algorithm.show(r.at(P.e), r.env, p, P.e), p);
-        views[i].rest(events, draw);
+        const d = racers[i].algorithm.show(r.at(P.e), r.env, p, P.e);
+        views[i].show(d, p);
+        if (views[i].heatEpisode && heat === "rebuild") {
+          views[i].heat.clear();
+          for (let u = Math.max(0, P.e - 20); u < P.e; u++) views[i].heatEpisode(u === P.e - 1 ? events : [...r.replay(u).events], { draw: false });
+          views[i].drawHeat();
+        }
+        views[i].rest(events, draw, { trail: !fast });
+        // at quick rates single episodes cannot be followed: the greedy path shows where learning is heading
+        if (views[i].path && env.kind === "grid") views[i].path(fast && d.Q && !env.slip ? greedyStates(d.Q) : null);
         caption(i);
         if (i === P.focus) shown = events;
       });
@@ -731,7 +822,7 @@
     function walk(toUpdate) {
       if (!P.walkers) {
         if (P.e >= knobs.units) { pause(); return; }
-        P.walkers = runs.map((r, i) => ({ ...r.replay(P.e), done: false, G: 0, n: 0, p: paramsOf(racers[i]) }));
+        P.walkers = runs.map((r, i) => ({ ...r.replay(P.e), done: false, G: 0, n: 0, p: paramsOf(racers[i]), log: [] }));
         if (recorded) P.walkers.forEach((w, i) => views[i].show(w.m, w.p)); // the network that plays this test episode
       }
       let wait = 0;
@@ -745,19 +836,21 @@
       });
       P.wait = wait;
       if (P.walkers.every((w) => w.done)) {
+        P.walkers.forEach((w, i) => views[i].heatEpisode?.(w.log));
         P.e += 1;
         P.walkers = null;
         P.wait = Math.max(P.wait, unitOf() === "episode" ? 700 : 250);
         runs.forEach((_, i) => caption(i));
         if (P.e >= knobs.units) pause();
       }
+      if (speed().quick) P.wait *= speed().every / 400; // the quick paces keep the pauses short too
       position();
     }
 
     // Show one event of racer i. Returns how long to pause after it (a fall, a hand being dealt…).
     function on(i, w, ev) {
       const a = racers[i].algorithm;
-      if (ev.type === "move") { w.G += ev.r; w.n += 1; }
+      if (ev.type === "move") { w.G += ev.r; w.n += 1; w.log.push(ev); }
       if (ev.type === "sweep") w.n += 1;
       if (SHOWN.has(ev.type)) views[i].show(a.show(w.m, runs[i].env, w.p, P.e), w.p);
       const pauseFor = views[i].event(ev, { line: P.speed === "line", p: w.p }) || 0;
@@ -800,9 +893,12 @@
       liveNote.classList.add("faint");
     }
 
+    let explained = 0;
     function explain(ev, p) {
       const a = racers[P.focus].algorithm;
       if (!a.numbers) return;
+      // at the quick paces the numbers change too fast to read: refresh them a few times a second
+      if (speed().quick) { const now = performance.now(); if (now - explained < 250) return; explained = now; }
       texInto(liveNum, a.numbers(ev, p));
       const where = env.describe ? env.describe(ev.s, ev.a ?? -1) : "";
       let note;
@@ -837,7 +933,17 @@
       stages.forEach((st, k) => st.classList.toggle("focus", k === i && racers.length > 1));
       const a = racers[i].algorithm, p = paramsOf(racers[i]);
       q(".algo-name").textContent = racers[i].name;
-      pseudo.innerHTML = RL.entry(a.station || a.id)?.pseudocode || '<p class="faint">The pseudocode of this algorithm is not written yet.</p>';
+      const code = (r) => RL.entry(r.algorithm.station || r.algorithm.id)?.pseudocode || "";
+      pseudo.innerHTML = code(racers[i]) || '<p class="faint">The pseudocode of this algorithm is not written yet.</p>';
+      // the lines of this algorithm that none of the other racers' algorithms has
+      const others = racers.filter((r) => (r.algorithm.station || r.algorithm.id) !== (a.station || a.id));
+      const known = new Set(others.flatMap((r) => lineText(code(r))));
+      const lines = lineText(pseudo.innerHTML);
+      pseudo.querySelectorAll("li").forEach((li, k) => li.classList.toggle("differs", others.length > 0 && !known.has(lines[k])));
+      q(".pseudo-diff").hidden = !others.length || !pseudo.querySelector("li.differs");
+      q(".pseudo-diff").innerHTML = `Marked: where ${esc(racers[i].name)} differs from ${others.map((r) => esc(r.name)).filter((v, k, l) => l.indexOf(v) === k).join(" and ")}.`;
+      q(".pseudo-tabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", +b.dataset.i === i));
+      pseudo.closest(".panel").style.setProperty("--k-focus", `var(--s${i + 1})`);
       texInto(liveSym, typeof a.rule === "function" ? a.rule(p) : a.rule);
       liveNum.innerHTML = "";
       RL.math.render(pseudo);
@@ -861,7 +967,7 @@
     function stepOnce() {
       pause();
       if (rate()) seek(P.e + 1, true);
-      else walk(P.speed === "step");
+      else walk(P.speed !== "line");
     }
 
     let raf = 0, last = 0;
@@ -875,15 +981,18 @@
       if (rate()) {
         P.acc += (dt / 1000) * rate();
         if (P.acc >= 1) {
-          const k = Math.floor(P.acc);
-          seek(P.e + k, rate() <= 1);
-          P.acc -= k;
+          const k = Math.min(Math.floor(P.acc), knobs.units - P.e);
+          // every unit passed adds to the views' maps of where the agent goes, the last one through seek
+          runs.forEach((r, i) => { if (views[i].heatEpisode) for (let u = P.e; u < P.e + k - 1; u++) views[i].heatEpisode([...r.replay(u).events], { draw: false }); });
+          runs.forEach((r, i) => views[i].heatEpisode?.(P.e + k - 1 >= 0 && k > 0 ? [...r.replay(P.e + k - 1).events] : []));
+          seek(P.e + k, rate() <= 1, "keep");
+          P.acc -= Math.floor(P.acc);
         }
         return;
       }
       if (P.wait > 0) { P.wait -= dt; return; }
       P.acc += dt;
-      if (P.acc >= speed().every) { P.acc = 0; walk(P.speed === "step"); }
+      if (P.acc >= speed().every) { P.acc = 0; walk(P.speed !== "line"); }
     }
 
     // ---- controls ----
@@ -950,6 +1059,7 @@
       drawCharts();
       if (view.seeds || preset.success) averageRecorded();
     });
+    q(".pseudo-tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (b) focus(+b.dataset.i); });
     q(".sweep-go").addEventListener("click", sweep);
     q(".sweep-runs").addEventListener("change", () => { runsChosen = true; });
     q(".sweep-knob").addEventListener("change", autoRuns);
@@ -959,6 +1069,8 @@
     q(".speed").addEventListener("change", (e) => {
       const wasWalking = !rate();
       P.speed = e.target.value;
+      views.forEach((v) => v.setPace?.(speed().quick ? P.speed : ""));
+      if (!wasWalking || rate()) seek(P.e, false, "keep"); // the trail and the greedy path follow the new pace
       if (wasWalking && rate() && P.walkers) seek(P.e);
     });
     scrub.addEventListener("input", () => { pause(); seek(parseInt(scrub.value, 10)); });
@@ -997,6 +1109,7 @@
         strip?.destroy();
         clearSweep("");
         removeEventListener("keydown", onKey);
+        resized.disconnect();
         charts.forEach((c) => c.destroy());
         views.forEach((v) => v.destroy());
         film?.destroy();

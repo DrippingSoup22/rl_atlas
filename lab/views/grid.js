@@ -53,6 +53,7 @@
       this.Z = null; // eligibility traces (per tile, or per move), when the algorithm keeps them
       this.model = null; // a learned model: where each move led (−1: never tried)
       this.path_ = [];
+      this.heat = new Map(); // "a,b" (tiles a < b) → how often recent episodes crossed between them, fading per episode
       const W = env.cols * T, H = env.rows * T;
       this.svg = el("svg", { class: `gridview${env.ice ? " ice" : ""}`, viewBox: `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`, role: "img", "aria-label": env.title });
       this.svg.style.maxWidth = `${env.cols * (env.cols <= 5 ? 125 : 100)}px`; // small worlds stay a comfortable size instead of filling the page
@@ -62,6 +63,7 @@
       this.gTrace = layer("trace-layer"); // eligibility traces, glowing where credit will flow
       this.gFog = layer("fog-layer"); // tiles the agent's model has never seen
       this.gJumps = layer("jumps");
+      this.gHeat = layer("heat-layer"); // where the recent episodes went: the more often, the bolder
       this.gTrail = layer("trail-layer");
       this.gPath = layer("path-layer");
       this.gArrows = layer("arrows");
@@ -171,6 +173,7 @@
       this.svg.toggleAttribute("data-numbers", !!this.o.numbers);
       this.showAgent(this.o.agent !== false);
       if (!this.o.trail) this.trail(null);
+      this.gHeat.style.display = this.o.heat === false ? "none" : "";
       this._paintAll();
     }
     _mode() { return this.o.tiles === "q" && !this.hasQ ? "v" : this.o.tiles; }
@@ -419,9 +422,38 @@
       }
     }
 
+    // ---- where the agent goes most: every episode adds its moves, older ones fade ----
+    // The lines join tiles crossed in recent episodes; the more often crossed (relative to the most crossed), the wider
+    // and darker. Each new episode fades the old ones a little, so the picture follows what the agent does now.
+    heatEpisode(events, { fade = 0.85, draw = true } = {}) {
+      for (const [k, v] of this.heat) { const w = v * fade; if (w < 0.03) this.heat.delete(k); else this.heat.set(k, w); }
+      for (const ev of events) {
+        if (ev.type !== "move") continue;
+        const to = ev.fell ?? ev.s2;
+        if (to === ev.s || this.env.jumps?.some((j) => j.from === ev.s)) continue;
+        const key = ev.s < to ? `${ev.s},${to}` : `${to},${ev.s}`;
+        this.heat.set(key, (this.heat.get(key) || 0) + 1);
+      }
+      if (draw) this.drawHeat();
+    }
+    heatClear() { this.heat.clear(); this.drawHeat(); }
+    drawHeat() {
+      let top = 0;
+      for (const v of this.heat.values()) top = Math.max(top, v);
+      let out = "";
+      for (const [k, v] of this.heat) {
+        const [a, b] = k.split(",").map(Number), f = v / top, [x1, y1] = this.center(a), [x2, y2] = this.center(b);
+        out += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${(3 + 13 * f).toFixed(1)}" stroke-opacity="${(0.06 + 0.34 * f).toFixed(2)}"/>`;
+      }
+      this.gHeat.innerHTML = out;
+    }
+    // How fast the Lab plays: at the quick paces the agent glides without hopping.
+    setPace(pace) { this.pace = pace || ""; this.svg.dataset.pace = this.pace; }
+
     // After a jump to the start of a unit: the path of the unit before it, and the agent where it ended.
-    // With several workers, each one's path and place.
-    rest(events, draw = false) {
+    // With several workers, each one's path and place. trail: false hides the single episode's path (at quick rates,
+    // where it would only flicker).
+    rest(events, draw = false, { trail = true } = {}) {
       this.mark([], "focus");
       this.mark([], "next");
       const paths = [[]];
@@ -430,9 +462,9 @@
         if (ev.type === "start") path.push(ev.s);
         else if (ev.type === "move") { if (ev.fell !== undefined) path.push(ev.fell, -1, ev.s2); else if (this.env.jumps.some((j) => j.from === ev.s)) path.push(-1, ev.s2); else path.push(ev.s2); }
       }
-      this._workersAt(paths, draw);
+      this._workersAt(paths, draw && trail, trail);
       const path = paths[0];
-      this.trail(this.o.trail && path.length ? path : null, draw);
+      this.trail(this.o.trail && trail && path.length ? path : null, draw);
       this.bot.classList.remove("sunk");
       if (path.length) this.place(path[path.length - 1], -1, true);
       else this.place(this.env.start, -1, true);
@@ -444,8 +476,9 @@
       let w = this.workers[k];
       if (w) return w;
       w = this.workers[k] = { path: [] };
-      w.trailEl = el("path", { class: "trail worker" }, this.gTrail);
-      w.bot = el("g", { class: "bot worker" }, this.gAgent);
+      this.svg.classList.add("multi"); // several workers: each trail in its own color, the first one's too
+      w.trailEl = el("path", { class: "trail worker", style: `--wc: var(--w${(k % 8) + 1})` }, this.gTrail);
+      w.bot = el("g", { class: "bot worker", style: `--wc: var(--w${(k % 8) + 1})` }, this.gAgent);
       w.body = el("g", { class: "bot-body" }, w.bot);
       el("circle", { class: "bot-head", r: 11 }, w.body);
       w.eyes = el("g", { class: "bot-eyes" }, w.body);
@@ -480,7 +513,7 @@
         } else {
           w.path.push(ev.s2);
           this._workerPut(w, ev.s2, false);
-          if (!RL.reducedMotion()) w.body.animate(HOP, { duration: 200, easing: "ease-out" });
+          if (!RL.reducedMotion() && !this.pace) w.body.animate(HOP, { duration: 200, easing: "ease-out" });
           const k = this.env.tile(ev.s2);
           if (k === "H") w.bot.classList.add("sunk");
           else if ((k === "G" || k === "g") && ev.r) this.pop(ev.s2, signed(ev.r, Number.isInteger(ev.r) ? 0 : 1));
@@ -490,7 +523,7 @@
       return 0;
     }
     // At rest: each worker beyond the first where its last episode ended; workers a run does not have are hidden.
-    _workersAt(paths, draw) {
+    _workersAt(paths, draw, trail = true) {
       for (let k = 1; k < Math.max(paths.length, this.workers?.length || 0); k++) {
         const path = paths[k];
         if (!path?.length) { if (this.workers?.[k]) { this.workers[k].bot.classList.add("gone"); this.workers[k].trailEl.setAttribute("d", ""); } continue; }
@@ -498,7 +531,7 @@
         w.path = path;
         w.bot.classList.remove("gone", "sunk");
         this._workerPut(w, path[path.length - 1], true);
-        this._draw(w.trailEl, this.o.trail ? path : null, draw);
+        this._draw(w.trailEl, this.o.trail && trail ? path : null, draw);
       }
     }
 
@@ -546,7 +579,7 @@
 
     move(s, a) {
       this.place(s, a);
-      if (!RL.reducedMotion()) this.body.animate(HOP, { duration: 220, easing: "ease-out" });
+      if (!RL.reducedMotion() && !this.pace) this.body.animate(HOP, { duration: 220, easing: "ease-out" });
     }
 
     // The ice gave way under the agent: it went somewhere it did not choose.
@@ -704,7 +737,8 @@
         { key: "tiles", type: "seg", label: "Color the tiles by", value: hasQ ? "q" : "v",
           choices: hasQ ? [["q", "Q per move"], ["v", "V per tile"], ["none", "Off"]] : [["v", "V per tile"], ["none", "Off"]] },
         { key: "arrows", type: "check", label: "Policy arrows", swatch: "pol", value: true },
-        ...(episodes ? [{ key: "trail", type: "check", label: "Path of the episode", swatch: "trail", value: true }] : []),
+        ...(episodes ? [{ key: "trail", type: "check", label: "Path of the episode", swatch: "trail", value: true },
+          { key: "heat", type: "check", label: "Where it goes most, lately", swatch: "heat", value: true }] : []),
         { key: "numbers", type: "check", label: "Numbers on tiles", value: env.nS <= 16 },
         ...(traces ? [{ key: "traces", type: "check", label: "Eligibility traces", swatch: "trc", value: true }] : []),
         ...(model ? [{ key: "fog", type: "check", label: "Fog where the model knows nothing", swatch: "fog", value: true }] : []),

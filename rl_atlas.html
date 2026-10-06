@@ -1013,6 +1013,8 @@ a.ref:hover { text-decoration-color: var(--ink); }
 
 </style>
 <style>
+/* worker colors: each worker of a team (A2C, PPO) draws its trail in its own color */
+:root { --w1: #2a78d6; --w2: #e2702f; --w3: #1b9e6f; --w4: #8a5bd6; --w5: #d4487f; --w6: #1196ab; --w7: #b98b00; --w8: #6b7280; }
 /* The Lab, and the views it shares with the stories: grid, arms (bandits), chain (random walk), cards (Blackjack),
    graph (maximization bias), the charts, the filmstrip and the sandbox. */
 
@@ -1047,18 +1049,21 @@ a.ref:hover { text-decoration-color: var(--ink); }
 /* Everything that follows the playhead flows down the left column, so it fills itself whatever the stages' height;
    the side panel stays in view beside it. */
 .lab-flow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
-.stages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-@media (min-width: 900px) {
-  .stages[data-shape="boxy"].n2, .stages[data-shape="pair"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .stages[data-shape="boxy"].n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .stages[data-shape="boxy"].n3 .stat { flex-basis: 100%; margin-left: 0; }
-}
+/* every racer on screen at once: the Lab sets how many across and how wide (fitStages), centered in the column */
+.stages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; justify-content: center; }
 .stage { margin: 0; padding: 12px 14px 10px; cursor: pointer; transition: box-shadow 0.2s, border-color 0.2s; animation: rise-in 0.5s var(--ease) both; min-width: 0; }
 .stage:nth-child(2) { animation-delay: 0.08s; }
 .stage:nth-child(3) { animation-delay: 0.16s; }
-.stage.focus { border-color: var(--ink-3); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 9%, transparent), var(--shadow); }
-.stage figcaption { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 14px; flex-wrap: wrap; }
-.stage .stat { margin-left: auto; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.stage.focus { border-color: color-mix(in oklab, var(--k) 55%, var(--line)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--k) 14%, transparent), var(--shadow); }
+.stage figcaption { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 10px; margin-bottom: 6px; font-size: 14px; }
+.stage .who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.stage .who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stage .key { background: var(--k); }
+.stage .stat { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.odds-badge { font-size: 12px; font-weight: 600; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.odds-badge.good { color: var(--ink-2); }
+.odds-badge b { color: var(--ink); }
+.stages.narrow .odds-badge .long { display: none; }
 .key { display: inline-block; width: 16px; height: 4px; border-radius: 2px; background: var(--k); flex: none; }
 
 .lab-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; position: sticky; top: 72px; }
@@ -1069,6 +1074,14 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .panel .pseudo { font-size: 13px; padding: 8px 0; }
 .panel .pseudo li { padding-left: calc(34px + var(--indent) * 15px); }
 .panel .pseudo li::before { left: 10px; }
+/* a tab per algorithm, and the lines where the focused one differs from the others */
+.pseudo-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px; }
+.pseudo-tabs button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 0; border-radius: 8px; background: transparent; font: 600 12.5px var(--font); color: var(--ink-3); cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.pseudo-tabs button:hover { color: var(--ink); }
+.pseudo-tabs button.on { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.pseudo-tabs .key { background: var(--k); }
+.panel .pseudo li.differs { box-shadow: inset 3px 0 0 var(--k-focus, var(--ink-3)); background: color-mix(in oklab, var(--k-focus, var(--ink)) 6%, transparent); }
+.pseudo-diff { margin: 6px 0 0; font-size: 12px; }
 .live-sym, .live-num { min-height: 30px; font-size: 0.86em; overflow-x: auto; overflow-y: hidden; }
 .live-num:empty { display: none; }
 .live-note { margin: 6px 0 0; font-size: 13px; }
@@ -1080,6 +1093,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .swatch.trc { background: var(--trc); box-shadow: 0 0 6px var(--trc); }
 .swatch.fog { background: color-mix(in oklab, var(--ink-3) 55%, transparent); }
 .swatch.trail { background: color-mix(in oklab, var(--ink) 35%, transparent); }
+.swatch.heat { height: 8px; background: linear-gradient(90deg, color-mix(in oklab, var(--heat, var(--ink)) 10%, transparent), color-mix(in oklab, var(--heat, var(--ink)) 40%, transparent)); }
 .panel .scale { margin-top: 12px; }
 .arms-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 10px 0 0; font-size: 12px; color: var(--ink-3); }
 .arms-legend i { display: inline-block; width: 14px; height: 5px; border-radius: 3px; }
@@ -1115,7 +1129,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .thumb .t-dot { fill: var(--val); }
 
 /* ---- CartPole (recorded runs): the cart on its track, the network's numbers, its map of the pole's states ---- */
-.cartview { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px 20px; align-items: center; }
+.cartview { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 20px; align-items: center; }
 .cartview svg { display: block; width: 100%; height: auto; overflow: visible; }
 .cartview text { font-family: var(--font); }
 .cartview .rail { stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round; }
@@ -1260,6 +1274,11 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .gridview .arrow .shaft { fill: none; stroke: var(--pol); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .gridview .trail { fill: none; stroke: var(--ink); stroke-opacity: 0.35; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
 .gridview .greedy { fill: none; stroke: var(--pol); stroke-opacity: 0.85; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.gridview .heat-layer { pointer-events: none; }
+.gridview .heat-layer line { stroke: var(--heat, var(--ink)); stroke-linecap: round; }
+.gridview.multi .trail { stroke: var(--wc, var(--w1)); stroke-opacity: 0.55; }
+.gridview[data-pace] .bot { transition-duration: 0.07s; }
+.gridview[data-pace=""] .bot { transition-duration: 0.2s; }
 .gridview .trail.draw, .gridview .greedy.draw { stroke-dasharray: 1; animation: line-in 1.1s var(--ease) both; }
 .gridview .bot { transition: transform 0.2s var(--ease), opacity 0.3s; }
 .gridview .bot.gone, .gridview .bot.sunk { opacity: 0; }
@@ -1525,11 +1544,11 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .gridview .gem.small .shine { fill: #fff; }
 .gridview .gem-r { font: 800 11px var(--font); text-anchor: end; fill: var(--rew-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
 .gridview .bot.worker .bot-head { fill: var(--ink-2); stroke-width: 2.5; }
-.gridview .bot.worker .badge { fill: var(--pol); stroke: var(--surface); stroke-width: 1.5; }
+.gridview .bot.worker .badge { fill: var(--wc, var(--pol)); stroke: var(--surface); stroke-width: 1.5; }
 .gridview .bot.worker .badge-n { font: 800 9px var(--font); text-anchor: middle; fill: #fff; }
-.gridview .trail.worker { stroke-opacity: 0.22; stroke-width: 2.5; }
+.gridview .trail.worker { stroke-opacity: 0.5; stroke-width: 2.5; }
 .gridview .trail.long { stroke-opacity: 0.18; stroke-width: 2.5; }
-.gridview .trail.worker.long { stroke-opacity: 0.1; }
+.gridview .trail.worker.long { stroke-opacity: 0.22; }
 .gridview .spark.k-adv-pos { stroke: var(--v-pos); stroke-width: 2.5; }
 .gridview .spark.k-adv-neg { stroke: var(--v-neg); stroke-width: 2.5; }
 
@@ -5655,6 +5674,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.Z = null; // eligibility traces (per tile, or per move), when the algorithm keeps them
       this.model = null; // a learned model: where each move led (−1: never tried)
       this.path_ = [];
+      this.heat = new Map(); // "a,b" (tiles a < b) → how often recent episodes crossed between them, fading per episode
       const W = env.cols * T, H = env.rows * T;
       this.svg = el("svg", { class: `gridview${env.ice ? " ice" : ""}`, viewBox: `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`, role: "img", "aria-label": env.title });
       this.svg.style.maxWidth = `${env.cols * (env.cols <= 5 ? 125 : 100)}px`; // small worlds stay a comfortable size instead of filling the page
@@ -5664,6 +5684,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.gTrace = layer("trace-layer"); // eligibility traces, glowing where credit will flow
       this.gFog = layer("fog-layer"); // tiles the agent's model has never seen
       this.gJumps = layer("jumps");
+      this.gHeat = layer("heat-layer"); // where the recent episodes went: the more often, the bolder
       this.gTrail = layer("trail-layer");
       this.gPath = layer("path-layer");
       this.gArrows = layer("arrows");
@@ -5773,6 +5794,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.svg.toggleAttribute("data-numbers", !!this.o.numbers);
       this.showAgent(this.o.agent !== false);
       if (!this.o.trail) this.trail(null);
+      this.gHeat.style.display = this.o.heat === false ? "none" : "";
       this._paintAll();
     }
     _mode() { return this.o.tiles === "q" && !this.hasQ ? "v" : this.o.tiles; }
@@ -6021,9 +6043,38 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       }
     }
 
+    // ---- where the agent goes most: every episode adds its moves, older ones fade ----
+    // The lines join tiles crossed in recent episodes; the more often crossed (relative to the most crossed), the wider
+    // and darker. Each new episode fades the old ones a little, so the picture follows what the agent does now.
+    heatEpisode(events, { fade = 0.85, draw = true } = {}) {
+      for (const [k, v] of this.heat) { const w = v * fade; if (w < 0.03) this.heat.delete(k); else this.heat.set(k, w); }
+      for (const ev of events) {
+        if (ev.type !== "move") continue;
+        const to = ev.fell ?? ev.s2;
+        if (to === ev.s || this.env.jumps?.some((j) => j.from === ev.s)) continue;
+        const key = ev.s < to ? `${ev.s},${to}` : `${to},${ev.s}`;
+        this.heat.set(key, (this.heat.get(key) || 0) + 1);
+      }
+      if (draw) this.drawHeat();
+    }
+    heatClear() { this.heat.clear(); this.drawHeat(); }
+    drawHeat() {
+      let top = 0;
+      for (const v of this.heat.values()) top = Math.max(top, v);
+      let out = "";
+      for (const [k, v] of this.heat) {
+        const [a, b] = k.split(",").map(Number), f = v / top, [x1, y1] = this.center(a), [x2, y2] = this.center(b);
+        out += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${(3 + 13 * f).toFixed(1)}" stroke-opacity="${(0.06 + 0.34 * f).toFixed(2)}"/>`;
+      }
+      this.gHeat.innerHTML = out;
+    }
+    // How fast the Lab plays: at the quick paces the agent glides without hopping.
+    setPace(pace) { this.pace = pace || ""; this.svg.dataset.pace = this.pace; }
+
     // After a jump to the start of a unit: the path of the unit before it, and the agent where it ended.
-    // With several workers, each one's path and place.
-    rest(events, draw = false) {
+    // With several workers, each one's path and place. trail: false hides the single episode's path (at quick rates,
+    // where it would only flicker).
+    rest(events, draw = false, { trail = true } = {}) {
       this.mark([], "focus");
       this.mark([], "next");
       const paths = [[]];
@@ -6032,9 +6083,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         if (ev.type === "start") path.push(ev.s);
         else if (ev.type === "move") { if (ev.fell !== undefined) path.push(ev.fell, -1, ev.s2); else if (this.env.jumps.some((j) => j.from === ev.s)) path.push(-1, ev.s2); else path.push(ev.s2); }
       }
-      this._workersAt(paths, draw);
+      this._workersAt(paths, draw && trail, trail);
       const path = paths[0];
-      this.trail(this.o.trail && path.length ? path : null, draw);
+      this.trail(this.o.trail && trail && path.length ? path : null, draw);
       this.bot.classList.remove("sunk");
       if (path.length) this.place(path[path.length - 1], -1, true);
       else this.place(this.env.start, -1, true);
@@ -6046,8 +6097,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       let w = this.workers[k];
       if (w) return w;
       w = this.workers[k] = { path: [] };
-      w.trailEl = el("path", { class: "trail worker" }, this.gTrail);
-      w.bot = el("g", { class: "bot worker" }, this.gAgent);
+      this.svg.classList.add("multi"); // several workers: each trail in its own color, the first one's too
+      w.trailEl = el("path", { class: "trail worker", style: `--wc: var(--w${(k % 8) + 1})` }, this.gTrail);
+      w.bot = el("g", { class: "bot worker", style: `--wc: var(--w${(k % 8) + 1})` }, this.gAgent);
       w.body = el("g", { class: "bot-body" }, w.bot);
       el("circle", { class: "bot-head", r: 11 }, w.body);
       w.eyes = el("g", { class: "bot-eyes" }, w.body);
@@ -6082,7 +6134,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         } else {
           w.path.push(ev.s2);
           this._workerPut(w, ev.s2, false);
-          if (!RL.reducedMotion()) w.body.animate(HOP, { duration: 200, easing: "ease-out" });
+          if (!RL.reducedMotion() && !this.pace) w.body.animate(HOP, { duration: 200, easing: "ease-out" });
           const k = this.env.tile(ev.s2);
           if (k === "H") w.bot.classList.add("sunk");
           else if ((k === "G" || k === "g") && ev.r) this.pop(ev.s2, signed(ev.r, Number.isInteger(ev.r) ? 0 : 1));
@@ -6092,7 +6144,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       return 0;
     }
     // At rest: each worker beyond the first where its last episode ended; workers a run does not have are hidden.
-    _workersAt(paths, draw) {
+    _workersAt(paths, draw, trail = true) {
       for (let k = 1; k < Math.max(paths.length, this.workers?.length || 0); k++) {
         const path = paths[k];
         if (!path?.length) { if (this.workers?.[k]) { this.workers[k].bot.classList.add("gone"); this.workers[k].trailEl.setAttribute("d", ""); } continue; }
@@ -6100,7 +6152,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         w.path = path;
         w.bot.classList.remove("gone", "sunk");
         this._workerPut(w, path[path.length - 1], true);
-        this._draw(w.trailEl, this.o.trail ? path : null, draw);
+        this._draw(w.trailEl, this.o.trail && trail ? path : null, draw);
       }
     }
 
@@ -6148,7 +6200,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     move(s, a) {
       this.place(s, a);
-      if (!RL.reducedMotion()) this.body.animate(HOP, { duration: 220, easing: "ease-out" });
+      if (!RL.reducedMotion() && !this.pace) this.body.animate(HOP, { duration: 220, easing: "ease-out" });
     }
 
     // The ice gave way under the agent: it went somewhere it did not choose.
@@ -6306,7 +6358,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         { key: "tiles", type: "seg", label: "Color the tiles by", value: hasQ ? "q" : "v",
           choices: hasQ ? [["q", "Q per move"], ["v", "V per tile"], ["none", "Off"]] : [["v", "V per tile"], ["none", "Off"]] },
         { key: "arrows", type: "check", label: "Policy arrows", swatch: "pol", value: true },
-        ...(episodes ? [{ key: "trail", type: "check", label: "Path of the episode", swatch: "trail", value: true }] : []),
+        ...(episodes ? [{ key: "trail", type: "check", label: "Path of the episode", swatch: "trail", value: true },
+          { key: "heat", type: "check", label: "Where it goes most, lately", swatch: "heat", value: true }] : []),
         { key: "numbers", type: "check", label: "Numbers on tiles", value: env.nS <= 16 },
         ...(traces ? [{ key: "traces", type: "check", label: "Eligibility traces", swatch: "trc", value: true }] : []),
         ...(model ? [{ key: "fog", type: "check", label: "Fog where the model knows nothing", swatch: "fog", value: true }] : []),
@@ -9626,15 +9679,18 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
   // What one unit is called, in this world and for this algorithm.
   const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"], round: ["round", "rounds"], throw: ["throw", "throws"], block: ["block", "blocks"], pass: ["pass", "passes"] };
-  // Walking speeds replay a unit event by event ("step" stops at each update); rates jump between snapshots.
+  // A ladder of speeds, each showing what can be seen at that pace. Walking speeds replay a unit event by event:
+  // "line" stops at every line of the pseudocode, the others at each update ("step" slowly enough to read its numbers,
+  // "fast" and "faster" so the agent runs while the pseudocode still lights up). Rates jump from unit to unit.
   const walking = (step, every) => [{ id: "line", label: "Line by line", every: every[0] }, { id: "step", label: step, every: every[1] }];
+  const quick = (fast, faster) => [{ id: "fast", label: "Fast", every: fast, quick: true }, ...(faster ? [{ id: "faster", label: "Faster", every: faster, quick: true }] : [])];
   const rates = (...list) => list.map((rate) => ({ id: `r${rate}`, rate }));
   const SPEEDS = {
-    episode: [...walking("Step by step", [560, 180]), ...rates(1, 10, 50)],
-    sweep: [...walking("State by state", [380, 130]), ...rates(1, 4, 20)],
+    episode: [...walking("Step by step", [560, 320]), ...quick(100, 25), ...rates(1, 10, 50)],
+    sweep: [...walking("State by state", [380, 130]), ...quick(40), ...rates(1, 4, 20)],
     step: [...walking("Pull by pull", [480, 300]), ...rates(10, 50, 250)],
-    round: [...walking("Step by step", [520, 200]), ...rates(1, 4, 20)], // every worker steps at once
-    pass: [...walking("Step by step", [520, 160]), ...rates(1, 4, 10)], // the log being made, then passes over it
+    round: [...walking("Step by step", [520, 320]), ...quick(110, 35), ...rates(1, 4, 20)], // every worker steps at once
+    pass: [...walking("Step by step", [520, 300]), ...quick(90, 30), ...rates(1, 4, 10)], // the log being made, then passes over it
     block: [{ id: "line", label: "Step by step", every: 80 }, { id: "step", label: "Quickly", every: 12 }, ...rates(1, 4, 10)], // a recorded test episode
   };
   // The knobs a preset can show as sliders. alpha = 0 means sample averages (1/n), where an algorithm allows it.
@@ -9773,7 +9829,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
             </section>
           </div>
           <aside class="lab-side">
-            <section class="panel card"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-host"></div></section>
+            <section class="panel card"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-tabs" hidden></div><div class="pseudo-host"></div><p class="pseudo-diff faint" hidden></p></section>
             <section class="panel card live">
               <h3>This step</h3>
               <div class="live-sym"></div>
@@ -9845,16 +9901,15 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const View = RL.labViews[env.kind];
       const box = q(".stages");
       box.className = `stages n${racers.length}`;
-      // boxy grids sit side by side, and so do recorded worlds in pairs, each view stacking its two panes
-      box.dataset.shape = env.kind === "grid" && env.cols / env.rows < 2 ? "boxy" : env.recorded && racers.length % 2 === 0 ? "pair" : "";
       box.innerHTML = racers.map((r, i) => `
-        <figure class="stage card" data-i="${i}">
-          <figcaption><i class="key" style="--k: var(--s${i + 1})"></i><b>${esc(r.name)}</b><span class="stat"></span></figcaption>
+        <figure class="stage card" data-i="${i}" style="--k: var(--s${i + 1})">
+          <figcaption><span class="who"><i class="key"></i><b>${esc(r.name)}</b></span><span class="odds-badge" hidden></span><span class="stat"></span></figcaption>
           <div class="view-host"></div>
         </figure>`).join("");
       stages = Array.from(box.querySelectorAll(".stage"));
       view.show.agent = unitOf() !== "sweep"; // dynamic programming has no agent walking about
       views = stages.map((st) => new View(st.querySelector(".view-host"), env, view.show));
+      views.forEach((v) => v.setPace?.(speed()?.quick ? P.speed : ""));
       stages.forEach((st, i) => st.addEventListener("click", () => focus(i)));
       const displays = racers.map((r, i) => {
         if (recRuns[i]) return { ...recRuns[i].at(0) };
@@ -9877,15 +9932,82 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       knobPanel();
       oddsPanel();
       chartsFor();
+      pseudoTabs();
       focus(Math.min(P.focus, racers.length - 1));
       simulate();
+      fitStages();
+    }
+
+    // ---- the stages: every racer on screen at once ----
+    // The panes keep their world's shape. The arrangement (how many across) is the one that gives each pane the most
+    // room while all of them, and the play bar under them, fit in the window below the header; if that would make them
+    // too small, they may take the whole window instead (a scroll down to them).
+    function fitStages() {
+      const box = q(".stages");
+      if (!box || !stages.length) return;
+      box.style.gridTemplateColumns = "minmax(0, 1fr)";
+      if (innerWidth < 900) return; // narrow screens: one under the other, full width
+      const st = stages[0], host = st.querySelector(".view-host"), content = host.firstElementChild;
+      const w0 = Math.min(host.clientWidth, content ? content.getBoundingClientRect().width || host.clientWidth : host.clientWidth);
+      const padX = st.offsetWidth - host.clientWidth;
+      const W = box.clientWidth, n = stages.length, gap = 16, bar = q(".transport").offsetHeight;
+      // Some views reflow when narrowed (a recorded run's two panels stack), so nothing is predicted: each arrangement
+      // is laid out and measured, its panes narrowed until everything fits, and the one with the widest panes wins.
+      const apply = (cols, w) => { box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`; return box.offsetHeight; };
+      const MIN = 260;
+      const widest = (cols, H) => {
+        let hi = Math.min(w0, (W - gap * (cols - 1)) / cols - padX), lo = MIN;
+        if (hi < lo) return 0;
+        if (apply(cols, hi) <= H) return hi;
+        if (apply(cols, lo) > H) {
+          // too tall even at the narrowest, yet a view that reflows may fit wider (panels side by side): look down
+          // from the widest in small steps for a width that fits
+          let w = hi * 0.93;
+          while (w > lo && apply(cols, w) > H) { hi = w; w *= 0.93; }
+          if (w <= lo) return 0;
+          lo = w;
+        }
+        for (let k = 0; k < 7; k++) { const mid = (lo + hi) / 2; if (apply(cols, mid) > H) hi = mid; else lo = mid; }
+        return lo;
+      };
+      const pick = (H) => {
+        let best = { cols: 0, w: 0 };
+        for (let cols = 1; cols <= n; cols++) { const w = widest(cols, H); if (w > best.w + 1) best = { cols, w }; }
+        return best.cols ? best : null;
+      };
+      const top = box.getBoundingClientRect().top + scrollY;
+      // below the header if they fit there; else the whole window (a scroll down to them); else as many across as fit
+      const best = pick(innerHeight - top - bar - 28) || pick(innerHeight - 64 - bar - 28) ||
+        { cols: Math.max(1, Math.min(n, Math.floor((W + gap) / (MIN + padX + gap)))), w: MIN };
+      const w = best.w;
+      apply(best.cols, w);
+      box.classList.toggle("narrow", w < 430); // narrow panes keep their headers short
+    }
+    let lastWidth = 0;
+    const resized = new ResizeObserver(() => {
+      const w = q(".lab-main").clientWidth;
+      if (Math.abs(w - lastWidth) > 4) { lastWidth = w; fitStages(); }
+    });
+    resized.observe(q(".lab-main"));
+
+    // ---- the pseudocode: a tab per algorithm when the racers run different ones, the lines where they differ marked ----
+    const lineText = (html) => {
+      const box = document.createElement("div");
+      box.innerHTML = html;
+      return [...box.querySelectorAll("li")].map((li) => li.textContent.replace(/\s+/g, " ").trim());
+    };
+    function pseudoTabs() {
+      const ids = [...new Set(racers.map((r) => r.algorithm.station || r.algorithm.id))];
+      const tabs = q(".pseudo-tabs");
+      tabs.hidden = ids.length < 2;
+      tabs.innerHTML = ids.length < 2 ? "" : racers.map((r, i) => `<button type="button" data-i="${i}" style="--k: var(--s${i + 1})"><i class="key"></i>${esc(r.name)}</button>`).join("");
     }
 
     // The speeds of this world: some worlds walk faster (a Mountain Car episode has hundreds of steps) or play more
     // units a second (Baird's counterexample, whose units are single steps).
     function speedList() {
-      const list = SPEEDS[unitOf()];
-      return list.map((s, i) => (s.rate ? (env.rates ? { ...s, id: `r${env.rates[i - 2]}`, rate: env.rates[i - 2] } : s) : env.pace ? { ...s, every: env.pace[s.id] } : s));
+      const list = SPEEDS[unitOf()], first = list.findIndex((s) => s.rate);
+      return list.map((s, i) => (s.rate ? (env.rates ? { ...s, id: `r${env.rates[i - first]}`, rate: env.rates[i - first] } : s) : env.pace?.[s.id] ? { ...s, every: env.pace[s.id] } : s));
     }
 
     // ---- the runs ----
@@ -10101,6 +10223,11 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const stuck = st.reduce((k, x) => k + x.stuck, 0);
       q(".odds-tally").innerHTML = text + (stuck ? ` ${stuckNote(stuck)}` : "");
       const own = racers.map((_, i) => lab.success(R, runs[i].metrics).score);
+      stages.forEach((stg, i) => {
+        const b = stg.querySelector(".odds-badge");
+        b.hidden = !preset.success || !n;
+        if (!b.hidden) { b.innerHTML = `<b>${st[i].wins}</b>/${n}<span class="long"> seeds end well</span>`; b.title = `${st[i].wins} of ${n} seeds end well`; b.classList.toggle("good", st[i].wins >= n / 2); }
+      });
       strip.set({
         rows: racers.map((r, i) => ({ name: r.name, color: `--s${i + 1}`, seeds: bench.seeds.slice(0, n), scores: st[i].scores, ok: bench.results[i].slice(0, n).map((d) => d.ok), played: { seed: played, score: own[i] } })),
         threshold: R.min ?? R.max ?? null, lower: bench.lower, percent: !!m.percent,
@@ -10255,6 +10382,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       q(".summary").innerHTML = out.join("<br>");
     }
 
+    // The greedy path from the start, while it reaches a goal; null if it goes round in circles.
+    function greedyStates(Q) {
+      const g = lab.greedyPath(env, Q);
+      return g.reached ? g.path : null;
+    }
+
     // Follow the most likely action of a learned policy from the start, as far as it reaches.
     function likelyPath(world, P) {
       let s = world.start, steps = 0;
@@ -10283,16 +10416,27 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     // ---- moving the playhead: t is the start of unit t; t = units is the end of the run ----
-    function seek(t, draw = false) {
+    // heat: "keep" when the units since the last position were already added to the views' maps of where the agent
+    // goes; otherwise the maps are rebuilt from the 20 units before the new position.
+    function seek(t, draw = false, heat = "rebuild") {
       P.e = Math.max(0, Math.min(knobs.units, t));
       P.walkers = null;
       P.acc = 0;
       P.wait = 0;
       let shown = [];
+      const fast = rate() >= 10;
       runs.forEach((r, i) => {
         const p = paramsOf(racers[i]), events = P.e > 0 ? [...r.replay(P.e - 1).events] : [];
-        views[i].show(racers[i].algorithm.show(r.at(P.e), r.env, p, P.e), p);
-        views[i].rest(events, draw);
+        const d = racers[i].algorithm.show(r.at(P.e), r.env, p, P.e);
+        views[i].show(d, p);
+        if (views[i].heatEpisode && heat === "rebuild") {
+          views[i].heat.clear();
+          for (let u = Math.max(0, P.e - 20); u < P.e; u++) views[i].heatEpisode(u === P.e - 1 ? events : [...r.replay(u).events], { draw: false });
+          views[i].drawHeat();
+        }
+        views[i].rest(events, draw, { trail: !fast });
+        // at quick rates single episodes cannot be followed: the greedy path shows where learning is heading
+        if (views[i].path && env.kind === "grid") views[i].path(fast && d.Q && !env.slip ? greedyStates(d.Q) : null);
         caption(i);
         if (i === P.focus) shown = events;
       });
@@ -10341,7 +10485,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     function walk(toUpdate) {
       if (!P.walkers) {
         if (P.e >= knobs.units) { pause(); return; }
-        P.walkers = runs.map((r, i) => ({ ...r.replay(P.e), done: false, G: 0, n: 0, p: paramsOf(racers[i]) }));
+        P.walkers = runs.map((r, i) => ({ ...r.replay(P.e), done: false, G: 0, n: 0, p: paramsOf(racers[i]), log: [] }));
         if (recorded) P.walkers.forEach((w, i) => views[i].show(w.m, w.p)); // the network that plays this test episode
       }
       let wait = 0;
@@ -10355,19 +10499,21 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       });
       P.wait = wait;
       if (P.walkers.every((w) => w.done)) {
+        P.walkers.forEach((w, i) => views[i].heatEpisode?.(w.log));
         P.e += 1;
         P.walkers = null;
         P.wait = Math.max(P.wait, unitOf() === "episode" ? 700 : 250);
         runs.forEach((_, i) => caption(i));
         if (P.e >= knobs.units) pause();
       }
+      if (speed().quick) P.wait *= speed().every / 400; // the quick paces keep the pauses short too
       position();
     }
 
     // Show one event of racer i. Returns how long to pause after it (a fall, a hand being dealt…).
     function on(i, w, ev) {
       const a = racers[i].algorithm;
-      if (ev.type === "move") { w.G += ev.r; w.n += 1; }
+      if (ev.type === "move") { w.G += ev.r; w.n += 1; w.log.push(ev); }
       if (ev.type === "sweep") w.n += 1;
       if (SHOWN.has(ev.type)) views[i].show(a.show(w.m, runs[i].env, w.p, P.e), w.p);
       const pauseFor = views[i].event(ev, { line: P.speed === "line", p: w.p }) || 0;
@@ -10410,9 +10556,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       liveNote.classList.add("faint");
     }
 
+    let explained = 0;
     function explain(ev, p) {
       const a = racers[P.focus].algorithm;
       if (!a.numbers) return;
+      // at the quick paces the numbers change too fast to read: refresh them a few times a second
+      if (speed().quick) { const now = performance.now(); if (now - explained < 250) return; explained = now; }
       texInto(liveNum, a.numbers(ev, p));
       const where = env.describe ? env.describe(ev.s, ev.a ?? -1) : "";
       let note;
@@ -10447,7 +10596,17 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       stages.forEach((st, k) => st.classList.toggle("focus", k === i && racers.length > 1));
       const a = racers[i].algorithm, p = paramsOf(racers[i]);
       q(".algo-name").textContent = racers[i].name;
-      pseudo.innerHTML = RL.entry(a.station || a.id)?.pseudocode || '<p class="faint">The pseudocode of this algorithm is not written yet.</p>';
+      const code = (r) => RL.entry(r.algorithm.station || r.algorithm.id)?.pseudocode || "";
+      pseudo.innerHTML = code(racers[i]) || '<p class="faint">The pseudocode of this algorithm is not written yet.</p>';
+      // the lines of this algorithm that none of the other racers' algorithms has
+      const others = racers.filter((r) => (r.algorithm.station || r.algorithm.id) !== (a.station || a.id));
+      const known = new Set(others.flatMap((r) => lineText(code(r))));
+      const lines = lineText(pseudo.innerHTML);
+      pseudo.querySelectorAll("li").forEach((li, k) => li.classList.toggle("differs", others.length > 0 && !known.has(lines[k])));
+      q(".pseudo-diff").hidden = !others.length || !pseudo.querySelector("li.differs");
+      q(".pseudo-diff").innerHTML = `Marked: where ${esc(racers[i].name)} differs from ${others.map((r) => esc(r.name)).filter((v, k, l) => l.indexOf(v) === k).join(" and ")}.`;
+      q(".pseudo-tabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", +b.dataset.i === i));
+      pseudo.closest(".panel").style.setProperty("--k-focus", `var(--s${i + 1})`);
       texInto(liveSym, typeof a.rule === "function" ? a.rule(p) : a.rule);
       liveNum.innerHTML = "";
       RL.math.render(pseudo);
@@ -10471,7 +10630,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     function stepOnce() {
       pause();
       if (rate()) seek(P.e + 1, true);
-      else walk(P.speed === "step");
+      else walk(P.speed !== "line");
     }
 
     let raf = 0, last = 0;
@@ -10485,15 +10644,18 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (rate()) {
         P.acc += (dt / 1000) * rate();
         if (P.acc >= 1) {
-          const k = Math.floor(P.acc);
-          seek(P.e + k, rate() <= 1);
-          P.acc -= k;
+          const k = Math.min(Math.floor(P.acc), knobs.units - P.e);
+          // every unit passed adds to the views' maps of where the agent goes, the last one through seek
+          runs.forEach((r, i) => { if (views[i].heatEpisode) for (let u = P.e; u < P.e + k - 1; u++) views[i].heatEpisode([...r.replay(u).events], { draw: false }); });
+          runs.forEach((r, i) => views[i].heatEpisode?.(P.e + k - 1 >= 0 && k > 0 ? [...r.replay(P.e + k - 1).events] : []));
+          seek(P.e + k, rate() <= 1, "keep");
+          P.acc -= Math.floor(P.acc);
         }
         return;
       }
       if (P.wait > 0) { P.wait -= dt; return; }
       P.acc += dt;
-      if (P.acc >= speed().every) { P.acc = 0; walk(P.speed === "step"); }
+      if (P.acc >= speed().every) { P.acc = 0; walk(P.speed !== "line"); }
     }
 
     // ---- controls ----
@@ -10560,6 +10722,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       drawCharts();
       if (view.seeds || preset.success) averageRecorded();
     });
+    q(".pseudo-tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (b) focus(+b.dataset.i); });
     q(".sweep-go").addEventListener("click", sweep);
     q(".sweep-runs").addEventListener("change", () => { runsChosen = true; });
     q(".sweep-knob").addEventListener("change", autoRuns);
@@ -10569,6 +10732,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     q(".speed").addEventListener("change", (e) => {
       const wasWalking = !rate();
       P.speed = e.target.value;
+      views.forEach((v) => v.setPace?.(speed().quick ? P.speed : ""));
+      if (!wasWalking || rate()) seek(P.e, false, "keep"); // the trail and the greedy path follow the new pace
       if (wasWalking && rate() && P.walkers) seek(P.e);
     });
     scrub.addEventListener("input", () => { pause(); seek(parseInt(scrub.value, 10)); });
@@ -10607,6 +10772,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         strip?.destroy();
         clearSweep("");
         removeEventListener("keydown", onKey);
+        resized.disconnect();
         charts.forEach((c) => c.destroy());
         views.forEach((v) => v.destroy());
         film?.destroy();
