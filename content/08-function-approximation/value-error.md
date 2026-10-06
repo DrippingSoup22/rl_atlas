@@ -8,6 +8,7 @@ sources = [
   { text = "Robbins & Monro (1951), A stochastic approximation method, Annals of Mathematical Statistics 22", url = "https://doi.org/10.1214/aoms/1177729586" },
   { text = "Widrow & Hoff (1960), Adaptive switching circuits, IRE WESCON Convention Record 4" },
   { text = "Tsitsiklis & Van Roy (1997), An analysis of temporal-difference learning with function approximation, IEEE Transactions on Automatic Control 42", url = "https://doi.org/10.1109/9.580874" },
+  { text = "Bertsekas (2012), Dynamic Programming and Optimal Control, Vol. II, 4th ed., Athena Scientific, §6.3" },
   { text = "Barnard (1993), Temporal-difference methods and Markov models, IEEE Transactions on Systems, Man, and Cybernetics 23", url = "https://doi.org/10.1109/21.229471" },
 ]
 +++
@@ -70,10 +71,10 @@ $$\overline{\text{VE}}(\mathbf w_{\text{TD}}) \le \frac{1}{1-\gamma}\,\min_{\mat
 :::
 
 ::: proof Proof idea
-On-policy, the matrix $\mathbf A$ is positive definite: the expected update always has a component pointing toward $\mathbf w_{\text{TD}}$, so the weights are drawn there and cannot run away. The bound comes from viewing $\mathbf w_{\text{TD}}$ as the fixed point of a Bellman backup followed by a projection onto what the features can represent; the backup shrinks errors by $\gamma$, the projection does not grow them, and summing the geometric series gives $1/(1-\gamma)$ (Tsitsiklis and Van Roy, 1997).
+On-policy, the matrix $\mathbf A$ is positive definite: the expected update always has a component pointing toward $\mathbf w_{\text{TD}}$, so the weights are drawn there and cannot run away. The bound comes from viewing the TD solution $\hat v_{\text{TD}} = \hat v(\cdot, \mathbf w_{\text{TD}})$ as the fixed point of a Bellman backup followed by a projection $\Pi$ onto what the features can represent, with distances weighted by $\mu$. Its error splits into two perpendicular parts: the error of the best fit, $\Pi v_\pi - v_\pi$, and the gap from the best fit to $\hat v_{\text{TD}}$. The projected backup shrinks distances by $\gamma$, so the gap is at most $\gamma$ times the whole error, and Pythagoras gives $\overline{\text{VE}}(\mathbf w_{\text{TD}}) \le \min_{\mathbf w} \overline{\text{VE}}(\mathbf w) + \gamma^2\, \overline{\text{VE}}(\mathbf w_{\text{TD}})$. That is a factor $1/(1-\gamma^2)$, slightly sharper than \ref{eq-bound}, since $1-\gamma^2 \ge 1-\gamma$ (Tsitsiklis and Van Roy, 1997; this form after Bertsekas).
 :::
 
-With $\gamma$ close to 1 the factor is large (100 for $\gamma = 0.99$), so the bound alone is not reassuring; in practice TD's fixed point is usually much closer than that, and TD gets there with far less variance. The positive definiteness of $\mathbf A$ is where on-policy sampling matters: weighted by another distribution, $\mathbf A$ can lose it, and then nothing stops the weights from diverging ([[deadly-triad]]).
+With $\gamma$ close to 1 the factor is large (100 for $\gamma = 0.99$), and even the sharper factor is about 50, so the bound alone is not reassuring; in practice TD's fixed point is usually much closer than that, and TD gets there with far less variance. The positive definiteness of $\mathbf A$ is where on-policy sampling matters: weighted by another distribution, $\mathbf A$ can lose it, and then nothing stops the weights from diverging ([[deadly-triad]]).
 
 ::: figure {#fig-fit}
 {{walk-fit}}

@@ -4,6 +4,7 @@ prereqs = ["why-approximate"]
 lab = "walk-features"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §9.4–9.5", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Rahimi & Recht (2007), Random features for large-scale kernel machines, Advances in Neural Information Processing Systems 20", url = "https://proceedings.neurips.cc/paper/2007/file/013a006f03dbc5392effeb8f18fda755-Paper.pdf" },
   { text = "Albus (1975), A new approach to manipulator control: the cerebellar model articulation controller (CMAC), Journal of Dynamic Systems, Measurement, and Control 97", url = "https://doi.org/10.1115/1.3426922" },
   { text = "Hinton (1984), Distributed representations, Technical Report CMU-CS-84-157, Carnegie Mellon University" },
   { text = "Sutton (1996), Generalization in reinforcement learning: successful examples using sparse coarse coding, Advances in Neural Information Processing Systems 8", url = "https://papers.nips.cc/paper/1995/hash/8f1d43620bc6bb580df6e80b0dc05c48-Abstract.html" },
@@ -135,6 +136,7 @@ Features are where knowledge of the problem enters. Good features make states th
 - smooth values over a few continuous numbers: cosines or tile coding;
 - a problem with many numbers, only some of which interact: several tilings, each over a small subset of the numbers;
 - discontinuities (a cliff, a wall): local features (tiles, groups) placed so a boundary falls where the jump is.
+- many numbers and no idea which matter: a large set of **random features**, such as cosines of random combinations of the numbers (Rahimi & Recht, 2007), with a linear learner on top; cheap, and surprisingly hard to beat.
 
 When nobody knows the right features, the learner can learn them: a neural network is a linear method on top of features that are themselves adjusted by gradient descent ([[neural-networks]], [[dqn]]).
 
