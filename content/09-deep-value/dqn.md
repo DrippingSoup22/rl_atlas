@@ -88,17 +88,17 @@ With these settings unchanged, the same algorithm learned 49 games, from Pong to
 
 CartPole is far smaller: four numbers instead of a screen, two actions, and episodes of at most 500 steps. It is old, too: Barto, Sutton and Anderson (1983) balanced a pole with an actor and a critic made of two neuron-like elements. The guide's recorded DQN uses two hidden layers of 64 rectifier units and Adam. Its memory holds 10,000 steps, and it takes one step on 128 transitions every 4 steps. The target is copied every 500 steps, and ε falls from 1 to 0.05 over the first 20,000 steps. It uses the plain squared error, which did better than the Huber loss in our runs on this small problem.
 
-Those numbers were not the first ones tried. With a memory of 100,000 steps, only two of five seeds ended keeping the pole up, and the [[experience-replay|replay entry]] shows why a large memory can hurt. Every knob behaves this way. Over five seeds per value, the step size gives:
+Those numbers were not the first ones tried. With a memory of 100,000 steps, three of 20 seeds ended below 160 steps, and the [[experience-replay|replay entry]] shows how the size of the memory changes the odds. Every knob behaves this way. Over 20 seeds per value, the step size gives:
 
 | step size $\alp$ | runs that end well |
 | --- | --- |
-| $10^{-4}$ | 4 of 5 |
-| $2.5 \cdot 10^{-4}$ | 4 of 5 |
-| $5 \cdot 10^{-4}$ | 5 of 5 |
-| $10^{-3}$ | 3 of 5 |
-| $2.5 \cdot 10^{-3}$ | 2 of 5 |
+| $10^{-4}$ | 16 of 20 |
+| $2.5 \cdot 10^{-4}$ | 13 of 20 |
+| $5 \cdot 10^{-4}$ | 16 of 20 |
+| $10^{-3}$ | 11 of 20 |
+| $2.5 \cdot 10^{-3}$ | 3 of 20 |
 
-A run ends well here when its last training episodes keep the pole up for 450 steps or more on average. Too small a step learns slowly, and its seeds finish at different heights. Too large a step keeps knocking over what it learned: at $2.5 \cdot 10^{-3}$, three of five runs end between 205 and 320. With a table, a step size that is a little off costs some speed; with a network it changes the odds that the run works at all. Deep RL results are reported over many seeds for this reason (Henderson et al., 2018), and the Lab's sweeps show these odds for every knob.
+A run ends well here when its last training episodes keep the pole up for 450 steps or more on average. A smaller step does no worse within 200,000 steps. A larger one keeps knocking over what it learned: at $2.5 \cdot 10^{-3}$, every run averages 450 steps per episode for a while, and 17 of them end between 205 and 412. With a table, a step size that is a little off costs some speed; with a network it changes the odds that the run works at all. Deep RL results are reported over many seeds for this reason (Henderson et al., 2018), and the Lab's sweeps show these odds for every knob.
 
 ### Why it works, and when it does not {#theory}
 
@@ -159,7 +159,7 @@ Repeat for each step:
 
 - No guarantee: all three parts of the deadly triad are present.
 - Overestimates values: the max picks up noise.
-- Sensitive to its knobs and its seed. On CartPole a step size twice too large drops the share of runs that end well from five in five to three.
+- Sensitive to its knobs and its seed. On CartPole a step size five times too large drops the runs that end well from 16 in 20 to 3.
 - Only discrete actions: the max over $a'$ needs a short list of actions.
 - Needs many samples: the recorded run first kept the pole up for 500 steps after 150,000 steps of training; the recorded PPO, after 15,000.
 
@@ -169,7 +169,7 @@ Repeat for each step:
 | --- | --- | --- |
 | memory $N$ | replay in name only, correlated batches | keeps fitting a long-gone policy |
 | copy period $C$ | targets move again | values crawl, one backup per copy |
-| step size $\alp$ | slow, uneven seeds | knocks over what it learned |
+| step size $\alp$ | slow | knocks over what it learned |
 | $\eps$ schedule | too little exploration early | too many random moves late |
 | batch $B$ | noisy steps | slow, and fewer updates per sample |
 
@@ -177,7 +177,7 @@ Repeat for each step:
 
 - A transition that ends the episode must have target $\rew{r}$ alone; one cut by a time limit should still bootstrap.
 - Rewards of very different sizes call for one step size per game: Atari clipped them; elsewhere, scale them.
-- Judging a setting by one seed: with a 100,000-step memory, the same settings ended at 153 or at 499 steps, depending on the seed.
+- Judging a setting by one seed: with a 100,000-step memory, the same settings ended anywhere from 116 to 500 steps, depending on the seed.
 - Reading the training curve as the policy's quality: training episodes include the ε moves, and test episodes do not.
 
 ### Check yourself {#check}

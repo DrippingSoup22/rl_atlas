@@ -115,7 +115,7 @@ CATALOG = {
 
 # The knobs each recording's sweep tries, with the recording's own value among them. target_every = 0: no target
 # network; buffer = 128 (the batch size): no replay, each batch is the latest experience. DQN's memory is 10,000 steps:
-# a sweep found 100,000 left 3 of 5 seeds unable to keep the pole up, and 10,000 none.
+# over 20 seeds, 16 end well with it, 11 with 100,000, and every run with 10,000 ends at 400 steps or more.
 SWEEPS = {
     "dqn-cartpole": {"lr": [1e-4, 2.5e-4, 5e-4, 1e-3, 2.5e-3], "target_every": [0, 100, 500, 2000], "buffer": [128, 1_000, 10_000, 100_000],
                      "huber": [0, 1]},

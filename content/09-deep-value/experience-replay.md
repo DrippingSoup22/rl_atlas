@@ -31,18 +31,18 @@ Replaying old transitions is only correct for an off-policy method. A transition
 
 ### How big a memory {#size}
 
-The size $N$ decides how old the data may be, and both ends fail. With $N$ equal to the batch size, each batch is exactly the last $B$ steps: replay in name only, as correlated as online learning. With a very large $N$, the memory keeps transitions from a policy that was much worse, in states the current policy no longer visits, and the network keeps spending its updates on them.
+The size $N$ decides how old the data may be, and both ends can fail. With $N$ equal to the batch size, each batch is exactly the last $B$ steps: replay in name only, as correlated as online learning. With a very large $N$, the memory keeps transitions from a policy that was much worse, in states the current policy no longer visits, and the network keeps spending its updates on them.
 
-DQN on CartPole, with the guide's other settings and five seeds per size, shows both ends. A run counts as ending well when its last training episodes keep the pole up for 450 steps or more on average:
+DQN on CartPole, with the guide's other settings and 20 seeds per size, shows how often. A run counts as ending well when its last training episodes keep the pole up for 450 steps or more on average:
 
 | memory $N$ | runs that end well | their last training episodes, steps |
 | --- | --- | --- |
-| 128 (no replay) | 2 of 5 | 415 to 500 |
-| 1,000 | 3 of 5 | 305 to 500 |
-| 10,000 | 5 of 5 | 493 to 500 |
-| 100,000 | 2 of 5 | 153 to 499 |
+| 128 (no replay) | 7 of 20 | 102 to 500 |
+| 1,000 | 8 of 20 | 183 to 500 |
+| 10,000 | 16 of 20 | 402 to 500 |
+| 100,000 | 11 of 20 | 116 to 500 |
 
-Without replay the runs still learn, but they wobble: no run collapses, and most never quite settle. With 100,000 steps of memory, one run ends at 153 steps. Larger studies agree that the age of the oldest policy in the memory matters, and the number of updates per new transition with it (Fedus et al., 2020).
+Without replay the runs still learn, but most never settle: 17 of the 20 average 450 steps per episode for a while, and only 7 still do at the end. With 10,000 steps of memory, every run ends at 402 steps or more. With 100,000, three runs end below 160; the count, 11 of 20, is lower too, though a gap of that size could still be luck (Fisher's exact test gives 18%, against 1% for no replay; see [[seeds]]). Larger studies find that the age of the oldest policy in the memory matters, and the number of updates per new transition with it (Fedus et al., 2020).
 
 ### Replay as planning {#planning}
 
@@ -77,7 +77,7 @@ then one gradient step on the batch's average of $\big(\rew{r} + \gam \max_{a'} 
 ### Pitfalls
 
 - Only for off-policy learning; on-policy methods need corrections to learn from old data.
-- Too small a memory is online learning again; too large a memory keeps fitting a policy long gone. On CartPole, 10,000 steps let all five seeds end well; 128 and 100,000 only two.
+- Too small a memory is online learning again; too large a memory keeps fitting a policy long gone. On CartPole, 10,000 steps let 16 of 20 seeds end well; no replay, only 7.
 - Transitions that end an episode must be marked, or their targets bootstrap from a state that never comes.
 
 ### Check yourself {#check}

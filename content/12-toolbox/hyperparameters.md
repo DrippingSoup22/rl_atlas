@@ -48,7 +48,7 @@ In supervised learning a poor step size usually costs time: the loss falls slowl
 
 ### Sweet spots {#sweet-spots}
 
-Almost every knob in this guide has failure on both sides. The Lab's sweeps measure how often: below, how many runs end well, out of 40 seeds for the two gems and out of the 5 seeds recorded for each setting of the deep methods. A CartPole run ends well when its last training episodes balance the pole (450 steps or more), a Pendulum run when they hold the pendulum up (a return of −250 or more).
+Almost every knob in this guide has failure on both sides. The Lab's sweeps measure how often: below, how many runs end well, out of 40 seeds for the two gems and out of the seeds recorded for each setting of the deep methods, as each cell says. A CartPole run ends well when its last training episodes balance the pole (450 steps or more), a Pendulum run when they hold the pendulum up (a return of −250 or more).
 
 | Knob | too low | sweet spot | too high |
 | --- | --- | --- | --- |
@@ -56,9 +56,9 @@ Almost every knob in this guide has failure on both sides. The Lab's sweeps meas
 | TRPO's trust region $\delta$ (CartPole) | 4 of 5 ($\delta = 0.001$) | 5 of 5 ($0.003$ to $0.1$) | 0 of 5 ($\delta = 1$) |
 | PPO's clip $\epsilon$ (Pendulum) | 0 of 5 (no clip) | 5 of 5 ($0.1$, $0.2$) | 0 of 5 ($\epsilon = 0.5$) |
 | PPO's passes per batch (Pendulum) | 4 of 5 (1 pass) | 5 of 5 (4, 10) | 1 of 5 (30 passes) |
-| DQN's step size $\alp$ (CartPole) | 4 of 5 ($10^{-4}$) | 5 of 5 ($5 \cdot 10^{-4}$) | 2 of 5 ($2.5 \cdot 10^{-3}$) |
-| DQN's target period $C$ (CartPole) | 0 of 5 (no copy) | 5 of 5 (500 steps) | 3 of 5 (2,000 steps) |
-| DQN's memory $N$ (CartPole) | 2 of 5 (128 steps) | 5 of 5 (10,000 steps) | 2 of 5 (100,000 steps) |
+| DQN's step size $\alp$ (CartPole) | 16 of 20 ($10^{-4}$, no worse here) | 16 of 20 ($5 \cdot 10^{-4}$) | 3 of 20 ($2.5 \cdot 10^{-3}$) |
+| DQN's target period $C$ (CartPole) | 0 of 20 (no copy) | 16 of 20 (500 steps) | 4 of 20 (2,000 steps) |
+| DQN's memory $N$ (CartPole) | 7 of 20 (128 steps) | 16 of 20 (10,000 steps) | 11 of 20 (100,000 steps) |
 
 The reasons differ, and the [[bias-variance]] trade explains several of them. Too little exploration commits early, too much never commits. Too small a step learns slowly, too large a step knocks over what was learned. A target that moves too often chases itself, one that moves too rarely crawls. Knowing why a knob fails on each side tells which way to turn it.
 

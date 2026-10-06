@@ -31,16 +31,16 @@ Between two copies the targets are fixed functions of the data, and learning is 
 
 $C$ trades stability for speed. With a small $C$ the targets move almost as fast as without a copy. With a large $C$ each copy is one backup, so information travels one step backward per period: the news that the pole fell, after 400 steps of balancing, reaches the early states only after many copies.
 
-DQN on CartPole, with the guide's other settings and five seeds per value, shows both ends. A run counts as ending well when its last training episodes keep the pole up for 450 steps or more on average:
+DQN on CartPole, with the guide's other settings and 20 seeds per value, shows both ends. A run counts as ending well when its last training episodes keep the pole up for 450 steps or more on average:
 
 | target copied every | runs that end well | their last training episodes, steps |
 | --- | --- | --- |
-| never (targets from the current weights) | 0 of 5 | 63 to 242 |
-| 100 steps | 2 of 5 | 161 to 500 |
-| 500 steps | 5 of 5 | 493 to 500 |
-| 2,000 steps | 3 of 5 | 421 to 500 |
+| never (targets from the current weights) | 0 of 20 | 46 to 446 |
+| 100 steps | 11 of 20 | 161 to 500 |
+| 500 steps | 16 of 20 | 402 to 500 |
+| 2,000 steps | 4 of 20 | 118 to 500 |
 
-Without a copy, no run of five learns to keep the pole up. The best period is in the middle, and it is a knob like the step size: its sweet spot depends on the world and on the other knobs.
+Without a copy, no run ends well, and 17 of the 20 end below 200 steps. Copying every 2,000 steps, only 4 do. The best period is in the middle, and it is a knob like the step size: its sweet spot depends on the world and on the other knobs.
 
 ### Overestimation stays {#overestimation}
 
@@ -68,7 +68,7 @@ $$L(\mathbf w) = \mathbb E\Big[\big(\rew{r} + \gam \max_{a'} \val{\hat q(s', a',
 
 - Breaks the loop in which an update raises its own target.
 - Turns each period into a supervised regression problem, which networks handle well.
-- On CartPole, without it no run of five ends well; copying every 500 steps, all five do.
+- On CartPole, without it none of 20 runs ends well; copying every 500 steps, 16 of 20 do.
 
 ### Pitfalls
 
