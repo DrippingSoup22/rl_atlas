@@ -5,6 +5,7 @@ prereqs = ["policy-evaluation", "policy-improvement"]
 lab = "dp-iteration"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §4.3 and Exercise 4.4", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Hansen, Miltersen & Zwick (2013), Strategy iteration is strongly polynomial for 2-player turn-based stochastic games with a constant discount factor, Journal of the ACM 60", url = "https://doi.org/10.1145/2432622.2432623" },
   { text = "Howard (1960), Dynamic Programming and Markov Processes, MIT Press" },
   { text = "Puterman & Shin (1978), Modified policy iteration algorithms for discounted Markov decision problems, Management Science 24" },
   { text = "Puterman & Brumelle (1979), On the convergence of policy iteration in stationary dynamic programming, Mathematics of Operations Research 4", url = "https://doi.org/10.1287/moor.4.1.60" },
@@ -73,7 +74,7 @@ In a finite MDP, policy iteration started from any deterministic policy reaches 
 By the policy improvement theorem, each greedy improvement gives a policy that is strictly better in at least one state, unless the policy is already optimal ([[policy-improvement]]). So no policy can occur twice in the sequence. A finite MDP has only finitely many deterministic policies, $|\mathcal{A}|^{|\mathcal{S}|}$ of them, so the sequence must end, and it can only end at a policy that improvement leaves unchanged, which is optimal.
 :::
 
-The bound $|\mathcal{A}|^{|\mathcal{S}|}$ is astronomically pessimistic. Real runs usually need only a handful of improvement steps: Frozen Lake below needs three, and the last of them only confirms that nothing changes. Ye (2011) proved that, for a fixed discount rate $\gam < 1$, the number of iterations is bounded by a polynomial in the numbers of states and actions, roughly $\tfrac{|\mathcal{S}|\,|\mathcal{A}|}{1 - \gam} \log \tfrac{|\mathcal{S}|}{1 - \gam}$.
+The bound $|\mathcal{A}|^{|\mathcal{S}|}$ is astronomically pessimistic. Real runs usually need only a handful of improvement steps: Frozen Lake below needs three, and the last of them only confirms that nothing changes. Ye (2011) proved that, for a fixed discount rate $\gam < 1$, the number of iterations is bounded by a polynomial in the numbers of states and actions, and Hansen, Miltersen and Zwick (2013) sharpened the bound to roughly $\tfrac{|\mathcal{S}|\,|\mathcal{A}|}{1 - \gam} \log \tfrac{|\mathcal{S}|}{1 - \gam}$.
 
 ### The algorithm {#algorithm}
 
@@ -131,7 +132,7 @@ That cost suggests a compromise: stop each evaluation early, after a fixed numbe
 
 ### Historical remarks {#history}
 
-Policy iteration was introduced by Howard (1960), building on Bellman's work. Puterman and Brumelle (1979) showed its equivalence to Newton's method, and Ye (2011) proved that it runs in strongly polynomial time for a fixed discount rate. Modified policy iteration was analyzed by Puterman and Shin (1978).
+Policy iteration was introduced by Howard (1960), building on Bellman's work. Puterman and Brumelle (1979) showed its equivalence to Newton's method, and Ye (2011) proved that it runs in strongly polynomial time for a fixed discount rate, a bound Hansen, Miltersen and Zwick (2013) improved. Modified policy iteration was analyzed by Puterman and Shin (1978).
 
 ## Card
 

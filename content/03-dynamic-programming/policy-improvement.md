@@ -4,6 +4,7 @@ prereqs = ["policy-evaluation", "value-functions", "optimality"]
 lab = "dp-iteration"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §4.2 and Figure 4.1", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Kakade & Langford (2002), Approximately optimal approximate reinforcement learning, Proceedings of the 19th International Conference on Machine Learning" },
   { text = "Bellman (1957), Dynamic Programming, Princeton University Press" },
   { text = "Howard (1960), Dynamic Programming and Markov Processes, MIT Press" },
   { text = "Puterman (1994), Markov Decision Processes: Discrete Stochastic Dynamic Programming, Wiley, §6.4" },
@@ -90,6 +91,14 @@ which is the Bellman optimality equation ([[optimality]]). Its only solution is 
 ### Stochastic policies {#stochastic}
 
 Nothing here needs the policies to be deterministic. For stochastic ones the condition of the theorem becomes $\sum_a \pol{\pi'(a \mid s)}\,\val{q_\pi(s,a)} \ge \val{v_\pi(s)}$, and the proof is the same. If several actions tie for the maximum in \ref{greedy-policy}, any policy that puts all of its probability on them, split in any way, is a valid improvement. The atlas splits ties evenly, which is why some cells show two arrows. The theorem also holds within restricted classes of policies: an ε-greedy policy with respect to $\val{q_\pi}$ is at least as good as any ε-soft policy $\pol{\pi}$, which is what on-policy control methods rely on ([[mc-control]], [[sarsa]]).
+
+### How much better {#difference}
+
+The theorem says the new policy is no worse; an identity says by exactly how much. Write $\err{a_\pi(s,a)} = \val{q_\pi(s,a)} - \val{v_\pi(s)}$ for the advantage of $a$ over $\pol{\pi}$ ([[value-functions]]). Unrolling the same telescoping sum as in the proof, but keeping the terms instead of bounding them, gives the **performance difference lemma** (Kakade and Langford, 2002): from any start state,
+
+$$\val{v_{\pi'}(s_0)} - \val{v_\pi(s_0)} = \mathbb{E}_{\pi'}\Big[\sum_{t=0}^{\infty} \gam^t\, \err{a_\pi(S_t, A_t)} \;\Big|\; S_0 = s_0\Big]. \label{pdl}$$
+
+The new policy gains the old policy's advantages, collected along the new policy's own trajectories. Greedy improvement makes every term nonnegative, which is the theorem again. The catch is the expectation over $\pol{\pi'}$'s trajectories, which are unknown until $\pol{\pi'}$ is tried. Replacing them by the old policy's is accurate only when the two policies are close, and that observation is the starting point of [[trpo]] and [[ppo]], which improve a policy in small, safe steps.
 
 ### Example: the 4 × 4 gridworld {#example}
 
