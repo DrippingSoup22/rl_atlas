@@ -3,6 +3,7 @@ summary = "Everything the agent collects from now on, added up: the quantity it 
 prereqs = ["agent-environment", "episodes"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §3.3, §3.4 and Example 3.4", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Bellemare, Dabney & Munos (2017), A distributional perspective on reinforcement learning, Proceedings of the 34th International Conference on Machine Learning", url = "https://arxiv.org/abs/1707.06887" },
 ]
 
 [story]
@@ -90,7 +91,7 @@ The recursion also gives an efficient way to compute every return of a finished 
 
 ### The return is random {#random}
 
-Policies and environments are usually stochastic, so the same state can be followed by many different streams of reward, and $\rew{G_t}$ is a random variable. Two episodes from the same start can give returns of $\rew{12}$ and $\rew{5}$, as in the story. A random quantity cannot be maximized as such; what can be maximized is its expectation. The expected return from a state, under a given way of acting, is that state's **value** ([[value-functions]]).
+Policies and environments are usually stochastic, so the same state can be followed by many different streams of reward, and $\rew{G_t}$ is a random variable. Two episodes from the same start can give returns of $\rew{12}$ and $\rew{5}$, as in the story. A random quantity cannot be maximized as such; what can be maximized is its expectation. The expected return from a state, under a given way of acting, is that state's **value** ([[value-functions]]). Maximizing the expectation is a choice too: it is indifferent to risk, rating a sure $\rew{5}$ the same as an even chance of $\rew{0}$ or $\rew{10}$. Risk-sensitive formulations change the objective instead, and **distributional** methods learn the whole distribution of the return rather than its mean, which often helps even when only the mean is used to act (Bellemare, Dabney and Munos, 2017; [[dqn-extensions]]).
 
 The randomness of the return also has a practical side. The return depends on every action and every transition until the end of the episode, so its variance grows with the length of the episode. An estimate built from returns alone needs many episodes to settle; methods that bootstrap, through \ref{recursion-eq}, trade some bias for much less variance ([[mc-vs-td]]).
 

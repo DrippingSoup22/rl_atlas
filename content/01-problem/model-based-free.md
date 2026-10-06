@@ -4,6 +4,7 @@ story_in = ["dyna-q", "model-based-deep"]
 prereqs = ["mdp", "prediction-control"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §1.6, §8.1–8.3 and Example 8.1", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Daw, Niv & Dayan (2005), Uncertainty-based competition between prefrontal and dorsolateral striatal systems for behavioral control, Nature Neuroscience 8", url = "https://doi.org/10.1038/nn1560" },
   { text = "Silver et al. (2017), Mastering the game of Go without human knowledge, Nature 550", url = "https://doi.org/10.1038/nature24270" },
   { text = "Schrittwieser et al. (2020), Mastering Atari, Go, chess and shogi by planning with a learned model, Nature 588", url = "https://doi.org/10.1038/s41586-020-03051-4" },
 ]
@@ -49,6 +50,8 @@ The first row is the main attraction of models: real experience is often expensi
 ### A spectrum, not a split {#spectrum}
 
 The two families shade into each other. Experience replay, as in [[dqn]], keeps past transitions and learns from them again: a memory that acts like a sample model, but one that can only replay what has already happened. Dyna combines direct learning with planning, and decision-time planning such as tree search can be added on top of almost any learned value function. The question is less “with or without a model” than how much of the agent's computation goes into predicting the world and how much into predicting value.
+
+The same split appears in animal behavior. A rat that has learned to press a lever for food keeps pressing after the food has been made unpleasant, if it was trained long enough: the press has become a **habit**, driven by a cached value, as in a model-free method. Briefly trained, it stops at once: its choice is **goal-directed**, computed from what it knows the press leads to, as with a model. Daw, Niv and Dayan (2005) proposed that the brain runs both systems and trusts whichever is more reliable at the moment, and the model-free versus model-based distinction has become a standard tool of neuroscience since (Sutton and Barto, §14.6).
 
 ## Card
 

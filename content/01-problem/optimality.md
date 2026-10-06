@@ -3,6 +3,7 @@ summary = "The best any policy can do from each state, and the policies that do 
 prereqs = ["bellman", "value-functions", "policy"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §3.6, Examples 3.8 and 3.9, Figures 3.5 and 3.4", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Singh & Yee (1994), An upper bound on the loss from approximate optimal-value functions, Machine Learning 16", url = "https://doi.org/10.1007/BF00993308" },
   { text = "Bellman (1957), Dynamic Programming, Princeton University Press" },
   { text = "Puterman (1994), Markov Decision Processes: Discrete Stochastic Dynamic Programming, Wiley, §6.2" },
 ]
@@ -108,6 +109,8 @@ A one-step look ahead is enough because $\val{v_*}$ already accounts for all fut
 $$\pol{\pi_*(s)} = \operatorname*{arg\,max}_a \val{q_*(s,a)}. \label{argmax}$$
 
 This is why so many methods learn action values: the best action can be read off directly.
+
+In practice the values are only approximately right, and acting greedily on them is still safe, in a precise sense. If an estimate $V$ is within $\varepsilon$ of $\val{v_*}$ in every state, the greedy policy with respect to $V$ loses at most $2\gam\varepsilon / (1 - \gam)$ of return in any state (Singh and Yee, 1994). Small errors in the values cost little, though the factor $1/(1-\gam)$ grows with the horizon.
 
 ### Example: the gridworld {#gridworld}
 

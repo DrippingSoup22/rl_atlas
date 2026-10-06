@@ -38,7 +38,7 @@ The sign and the scale of rewards matter in specific ways.
 - Multiplying every reward by the same positive constant does not change which policy is best; it only rescales the values, which matters for step sizes and for learning with neural networks.
 - Adding a constant $c$ to every reward does not change which policy is best in a continuing task: with discount $\gam < 1$ it adds the same amount, $c/(1-\gam)$, to the value of every state. In an episodic task it can change it: a positive bonus on every step makes long episodes attractive, and a maze agent rewarded $+1$ per step would learn to avoid the exit.
 
-The expected reward of an action, $r(s,a) = \mathbb{E}[\rew{R_{t+1}} \mid S_t = s, A_t = a]$, is often all that matters, so rewards can be random without changing the problem much ([[mdp]]).
+The expected reward of an action, $r(s,a) = \mathbb{E}[\rew{R_{t+1}} \mid S_t = s, A_t = a]$, is often all that matters, so rewards can be random without changing the problem much ([[mdp]]). Texts write the reward function in three forms, $r(s)$, $r(s, a)$ or $r(s, a, s')$, depending on what it is allowed to depend on. They describe the same problems: the richer forms can always be averaged down to $r(s, a)$, which is all the Bellman equations use, and a reward that depends on more can be turned into $r(s)$ by putting the extra information into the state.
 
 ### Timing {#timing}
 

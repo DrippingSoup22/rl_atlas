@@ -3,6 +3,8 @@ summary = "An agent acts, an environment answers with a reward and a new situati
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §1.1, §3.1 and Figure 3.1", url = "http://incompleteideas.net/book/the-book-2nd.html" },
   { text = "OpenAI (2018), Spinning Up in Deep RL, Part 1: Key Concepts in RL", url = "https://spinningup.openai.com/en/latest/spinningup/rl_intro.html" },
+  { text = "Abel, Dabney, Harutyunyan, Ho, Littman, Precup & Singh (2021), On the expressivity of Markov reward, Advances in Neural Information Processing Systems 34", url = "https://arxiv.org/abs/2111.00876" },
+  { text = "Bowling, Martin, Abel & Dabney (2023), Settling the reward hypothesis, Proceedings of the 40th International Conference on Machine Learning", url = "https://arxiv.org/abs/2212.10420" },
 ]
 
 [story]
@@ -47,7 +49,7 @@ The goal is not the next reward but the **total** over time. Every step right co
 
 ### The interface {#interface}
 
-Reinforcement learning studies a learner that interacts with its surroundings over time and tries to influence them to its advantage. The interaction is cut into discrete time steps $t = 0, 1, 2, \ldots$ At each step the **agent** receives a description of the situation, the **state** $S_t \in \mathcal{S}$, and selects an **action** $A_t \in \mathcal{A}(S_t)$ from the actions available in that state. One step later, partly as a consequence of that action, the **environment** produces a numerical **reward** $\rew{R_{t+1}} \in \mathbb{R}$ and a new state $S_{t+1}$, and the cycle repeats (\ref{fig-loop}).
+Reinforcement learning studies a learner that interacts with its surroundings over time and tries to influence them to its advantage. The interaction is cut into discrete time steps $t = 0, 1, 2, \ldots$ At each step the **agent** receives a description of the situation, the **state** $S_t \in \mathcal{S}$, and selects an **action** $A_t \in \mathcal{A}(S_t)$ from the actions available in that state. One step later, partly as a consequence of that action, the **environment** produces a numerical **reward** $\rew{R_{t+1}} \in \mathbb{R}$ and a new state $S_{t+1}$, and the cycle repeats (\ref{fig-loop}). The steps need not be equal slices of clock time: they are successive decisions, a motor command every millisecond or a choice of route every day, and the framework is the same.
 
 ::: figure {#fig-loop}
 {{loop}}
@@ -72,7 +74,7 @@ The boundary is also a choice of the designer. One physical system can contain s
 
 ### The goal {#goal}
 
-The agent's purpose is expressed through the reward alone. At each step the reward is a single number, and the agent's aim is to maximize the reward it receives **in total over time**, not at the next step. Sutton and Barto call the claim that this is enough the *reward hypothesis*: whatever we mean by a goal can be expressed as the maximization of the expected cumulative sum of a scalar signal. The hypothesis is a modeling choice, a strong one, and much of the art of applying reinforcement learning lies in choosing rewards that express the intended goal ([[reward-design]]).
+The agent's purpose is expressed through the reward alone. At each step the reward is a single number, and the agent's aim is to maximize the reward it receives **in total over time**, not at the next step. Sutton and Barto call the claim that this is enough the *reward hypothesis*: whatever we mean by a goal can be expressed as the maximization of the expected cumulative sum of a scalar signal. The hypothesis is a modeling choice, a strong one, and much of the art of applying reinforcement learning lies in choosing rewards that express the intended goal ([[reward-design]]). The hypothesis also has limits that can be stated exactly. Some goals, written as a set of acceptable behaviors or as a ranking of outcomes, cannot be captured by any reward that depends only on the current state and action (Abel et al., 2021); Bowling et al. (2023) give the precise conditions on an agent's preferences under which a cumulative scalar reward is enough.
 
 “Total over time” is made precise by the return ([[return]], [[discount]]), and “expected” by value functions ([[value-functions]]).
 

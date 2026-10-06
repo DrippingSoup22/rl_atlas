@@ -4,6 +4,8 @@ prereqs = ["return"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §3.3, §10.3 and §10.4", url = "http://incompleteideas.net/book/the-book-2nd.html" },
   { text = "Puterman (1994), Markov Decision Processes: Discrete Stochastic Dynamic Programming, Wiley, §5.3 (discounting as a random horizon)" },
+  { text = "Jiang, Kulesza, Singh & Lewis (2015), The dependence of effective planning horizon on model accuracy, Proceedings of the 14th International Conference on Autonomous Agents and Multiagent Systems" },
+  { text = "Ainslie (1975), Specious reward: a behavioral theory of impulsiveness and impulse control, Psychological Bulletin 82", url = "https://doi.org/10.1037/h0076860" },
 ]
 
 [story]
@@ -95,9 +97,13 @@ So an agent with $\gam = 0.9$ waits, and an agent with $\gam = 0.88$ does not, a
 
 ### γ as a knob in practice {#practice}
 
-In practice $\gam$ also acts as a knob of the learning method. Larger values make the agent far-sighted but make learning harder: the returns are longer sums, so their variance grows, and information has to travel back over more steps ([[mc-vs-td]]). Values between 0.9 and 0.999 are common, 0.99 being a frequent default in deep reinforcement learning. In episodic tasks whose goal is the undiscounted total, a $\gam$ slightly below 1 is often used anyway, because it makes learning more stable.
+In practice $\gam$ also acts as a knob of the learning method. Larger values make the agent far-sighted but make learning harder: the returns are longer sums, so their variance grows, and information has to travel back over more steps ([[mc-vs-td]]). Values between 0.9 and 0.999 are common, 0.99 being a frequent default in deep reinforcement learning. In episodic tasks whose goal is the undiscounted total, a $\gam$ slightly below 1 is often used anyway, because it makes learning more stable. A smaller $\gam$ can even give better behavior than the true one when experience is scarce: a short horizon asks the agent to predict less of the future, so the errors of an estimated model or of noisy values compound over fewer steps (Jiang et al., 2015). Discounting then acts as a form of regularization.
 
 In continuing tasks there is an alternative to discounting: the **average reward per step**, $\lim_{h \to \infty} \frac{1}{h}\,\mathbb{E}\big[\sum_{t=1}^{h} \rew{R_t}\big]$. Sutton and Barto argue that with function approximation the discounted formulation becomes problematic for continuing tasks and that the average-reward setting is more appropriate there (§10.3 and §10.4). The atlas uses discounting throughout, as most of the literature does.
+
+### Why geometric {#geometric}
+
+The weights $\gam^k$ have a property that other ways of discounting lack: they are **time-consistent**. The ratio between the weights of two future rewards depends only on how far apart they are, so a choice that looks best today still looks best tomorrow, when both rewards are one step closer. People and animals do not discount this way. Their preferences are closer to hyperbolic, $1/(1 + \kappa k)$, which falls steeply at first and slowly later, so their choices reverse as a reward approaches: the larger, later reward preferred from afar loses to the smaller, sooner one when it is near (Ainslie, 1975). A geometric discount never changes its mind, which is one reason the theory of this atlas holds together: an optimal policy stays optimal at every step.
 
 ## Card
 

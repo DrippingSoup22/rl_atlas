@@ -58,6 +58,8 @@ For every $s$ and $a$ these probabilities add up to one: $\sum_{s' \in \mathcal{
 
 Together with a discount rate $\gam$ ([[discount]]), an MDP specifies a reinforcement learning problem completely. The function $p$ is the **model** of the environment. Dynamic programming assumes it is known ([[policy-evaluation]]); most of the atlas assumes it is not, and learns from samples of it instead ([[model-based-free]]).
 
+The finite case keeps the mathematics simple, but nothing essential depends on it. With continuous states or actions, such as a car's position and speed or a steering angle, sums over $s'$ become integrals and $p$ becomes a density; the definitions, the Markov property and the Bellman equations carry over, and the hard part becomes representing values and policies, which is what Parts 8 to 11 are about.
+
 ### The Markov property {#markov}
 
 Definition \ref{def-mdp} contains a strong assumption: the probabilities in \ref{dynamics} depend only on the current state and action. In full,
@@ -115,7 +117,7 @@ The practical remedy is to build an approximately Markov state from the history 
 
 ### Historical remarks {#history}
 
-Markov decision processes come from optimal control and operations research. Bellman (1957) formulated the discrete stochastic version and the dynamic programming methods that solve it; Howard (1960) introduced policy iteration. Reinforcement learning took the framework over in the 1980s, with the difference that the dynamics are not assumed to be known. Sutton and Barto's account in their Chapter 3 is the one followed here.
+Markov decision processes come from optimal control and operations research. The Markov property is named after Andrey Markov, who studied chains of random events whose next step depends only on the present one (1906). Bellman (1957) formulated the discrete stochastic version and the dynamic programming methods that solve it; Howard (1960) introduced policy iteration. Reinforcement learning took the framework over in the 1980s, with the difference that the dynamics are not assumed to be known. Sutton and Barto's account in their Chapter 3 is the one followed here.
 
 ## Card
 

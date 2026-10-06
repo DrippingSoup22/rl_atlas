@@ -21,6 +21,8 @@ for every state $s$. A **deterministic** policy picks one action in each state a
 
 Reinforcement learning methods specify how the agent's policy changes with experience. Everything else in the atlas, values, models and gradients, exists in the service of this one object.
 
+The policy an agent follows need not be the one it is learning about. The **behavior policy** generates the experience, and usually explores; the **target policy** is the one being evaluated or improved, often the greedy one. Methods for which the two coincide are on-policy, the others off-policy ([[on-off-policy]]).
+
 ### A policy and an MDP make a process {#process}
 
 Once a policy is fixed, the interaction with an MDP ([[mdp]]) becomes a well-defined random process. The probability of an episode is a product of factors, alternately chosen by the agent and by the environment:

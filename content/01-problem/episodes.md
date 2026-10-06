@@ -22,7 +22,7 @@ with $S_T$ terminal. Nothing happens after $S_T$: its value is zero by definitio
 
 ### Continuing tasks {#continuing}
 
-Other problems never end: a thermostat keeps regulating, a process-control system keeps running, a trading agent keeps trading. These **continuing** tasks have $T = \infty$. They raise a difficulty that episodic tasks do not: the total reward over an infinite future can be infinite, so “maximize the total” is no longer a well-defined goal. Discounting solves this ([[discount]]); an alternative, the average reward per step, is used in some continuing problems.
+Other problems never end: a thermostat keeps regulating, a process-control system keeps running, a trading agent keeps trading. These **continuing** tasks have $T = \infty$. They raise a difficulty that episodic tasks do not: the total reward over an infinite future can be infinite, so “maximize the total” is no longer a well-defined goal. Discounting solves this ([[discount]]); an alternative, the average reward per step, is used in some continuing problems ([[semi-gradient-sarsa]]).
 
 ### One notation for both {#unified}
 
@@ -41,6 +41,8 @@ The distinction matters for every method that bootstraps. At a true terminal sta
 $$\text{terminal: } \rew{R_{t+1}} \qquad\qquad \text{truncated: } \rew{R_{t+1}} + \gam\,\val{V(S_{t+1})},$$
 
 or else the agent learns that the world ends at the time limit, which it does not. Treating time-outs as terminal is a common source of subtle errors (Pardo et al., 2018). Modern environment interfaces such as Gymnasium report the two cases separately, as `terminated` and `truncated`, for this reason.
+
+The opposite case also exists. When the time limit is part of the task, as in a game that ends after a fixed number of moves, the cut-off is a real end, and the time remaining should be part of the state: otherwise the same state is worth different amounts depending on the clock, and the agent cannot tell why (Pardo et al., 2018).
 
 ### Examples {#examples}
 

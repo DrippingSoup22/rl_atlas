@@ -4,6 +4,7 @@ story_in = ["td0", "q-learning", "gpi"]
 prereqs = ["value-functions", "optimality"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §4.1–4.3, §4.6 and §5.3", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Sutton, Modayil, Delp, Degris, Pilarski, White & Precup (2011), Horde: a scalable real-time architecture for learning knowledge from unsupervised sensorimotor interaction, Proceedings of the 10th International Conference on Autonomous Agents and Multiagent Systems" },
 ]
 +++
 
@@ -53,6 +54,8 @@ Reading across a row shows the pattern of the atlas: each family first learns to
 ### Prediction for its own sake {#why-prediction}
 
 Prediction is useful on its own, not only as a step toward control. A game program may need the probability of winning from a position against a fixed opponent; an engineer may want the expected energy cost of a fixed controller before deploying it. And in actor–critic methods ([[actor-critic]]) the critic solves a prediction problem, the evaluation of the actor's current policy, while the actor solves control.
+
+Nothing in a prediction method requires the signal it accumulates to be the reward. Replace $\rew{R}$ by any measurement, a sensor reading, a count of collisions, a one when the battery dies, and choose how far ahead to look through $\gam$: the same TD update then learns forecasts such as “how much light will I see over the next few seconds if I keep turning?”. Such **general value functions** let an agent learn many predictions at once from one stream of experience, a way of representing knowledge about its world (Sutton et al., 2011).
 
 ## Card
 

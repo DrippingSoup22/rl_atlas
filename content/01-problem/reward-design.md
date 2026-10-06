@@ -3,6 +3,7 @@ summary = "The agent maximizes exactly what the reward says, not what you meant.
 prereqs = ["state-action-reward", "return", "optimality"]
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §3.2 and §17.4", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Krakovna et al. (2020), Specification gaming: the flip side of AI ingenuity, DeepMind blog, with a public list of examples", url = "https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/" },
   { text = "Ng, Harada & Russell (1999), Policy invariance under reward transformations: theory and application to reward shaping, Proceedings of the 16th International Conference on Machine Learning" },
   { text = "Randløv & Alstrøm (1998), Learning to drive a bicycle using reinforcement learning and shaping, Proceedings of the 15th International Conference on Machine Learning" },
   { text = "Clark & Amodei (2016), Faulty reward functions in the wild, OpenAI blog" },
@@ -75,11 +76,11 @@ $$\sum_{k=0}^{n-1} \gam^k \big(\gam\,\Phi(S_{t+k+1}) - \Phi(S_{t+k})\big) = \gam
 because $\Phi$ is bounded and $\gam^n \to 0$. So the shaped return from $(S_t, A_t)$ is the original return minus $\Phi(S_t)$, whatever the actions. Taking expectations, $\tilde q_\pi(s,a) = \val{q_\pi(s,a)} - \Phi(s)$ for every policy. The shift depends on the state only, so in every state the ranking of the actions is unchanged, and so are the optimal policies.
 :::
 
-Ng, Harada and Russell also showed a converse: without further knowledge of the MDP, potential-based terms are the only shaping terms guaranteed to preserve optimal policies. A natural potential is an estimate of the state's value: with $\Phi(s)$ equal to minus the distance to the goal, moving one step closer earns a small bonus and moving away a small penalty, and a loop earns exactly nothing, which rules out the bicycle's circles.
+Ng, Harada and Russell also showed a converse: without further knowledge of the MDP, potential-based terms are the only shaping terms guaranteed to preserve optimal policies. A natural potential is an estimate of the state's value: with $\Phi(s)$ equal to minus the distance to the goal, moving one step closer earns a small bonus and moving away a small penalty, and a loop earns nothing undiscounted, and with $\gam < 1$ a little less than nothing, as in the story's checkpoint world, which rules out the bicycle's circles.
 
 ### Specification gaming {#gaming}
 
-When the reward and the intention differ, agents find the difference. Clark and Amodei (2016) describe an agent trained on a boat-racing game, rewarded by the game's score: it found a lagoon where it could circle and hit the same targets again and again, scoring more than by finishing the race. Such behavior is called **specification gaming** or reward hacking. It is not a malfunction: the agent is doing what it was asked. The remedies are a better reward, constraints on behavior, or learning the reward from people instead of writing it by hand.
+When the reward and the intention differ, agents find the difference. Clark and Amodei (2016) describe an agent trained on a boat-racing game, rewarded by the game's score: it found a lagoon where it could circle and hit the same targets again and again, scoring more than by finishing the race. Such behavior is called **specification gaming** or reward hacking. It is not a malfunction: the agent is doing what it was asked. It is Goodhart's law in miniature: when a measure becomes a target, it stops being a good measure. Krakovna et al. (2020) keep a public list of dozens of such cases, from simulated creatures that exploit bugs in the physics engine to agents that learn to pause a game forever rather than lose it. The remedies are a better reward, constraints on behavior, or learning the reward from people instead of writing it by hand.
 
 ### Scale {#scale}
 
