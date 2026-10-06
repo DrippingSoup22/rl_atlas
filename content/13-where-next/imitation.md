@@ -4,6 +4,7 @@ prereqs = ["reward-design", "offline-rl"]
 lab = "imitation-bridge"
 sources = [
   { text = "Pomerleau (1989), ALVINN: an autonomous land vehicle in a neural network, Advances in Neural Information Processing Systems 1" },
+  { text = "Chi, Feng, Du, Xu, Cousineau, Burchfiel & Song (2023), Diffusion policy: visuomotor policy learning via action diffusion, Robotics: Science and Systems", url = "https://arxiv.org/abs/2303.04137" },
   { text = "Ross, Gordon & Bagnell (2011), A reduction of imitation learning and structured prediction to no-regret online learning (DAgger), AISTATS", url = "https://arxiv.org/abs/1011.0686" },
   { text = "Ng & Russell (2000), Algorithms for inverse reinforcement learning, ICML", url = "https://ai.stanford.edu/~ang/papers/icml00-irl.pdf" },
   { text = "Abbeel & Ng (2004), Apprenticeship learning via inverse reinforcement learning, ICML", url = "https://ai.stanford.edu/~ang/papers/icml04-apprentice.pdf" },
@@ -60,6 +61,8 @@ Writing a reward that captures what we want is hard ([[reward-design]]); showing
 The direct approach treats the demonstrations as labeled data: states as inputs, the expert's actions as labels, and a policy trained by supervised learning to predict them. ALVINN (Pomerleau, 1989) learned to steer a van this way from camera images, and behavior cloning remains the first thing to try.
 
 Its weakness is **compounding error**. The expert's data covers the states the expert visits. The clone makes a small mistake, drifts slightly off the expert's path, and lands in a state the data never shows, where its mistakes are larger, which takes it further off. Ross, Gordon and Bagnell (2011) showed that with a per-step error $\epsilon$, the total cost of a cloned policy over a horizon $T$ can grow like $\epsilon T^2$, against $\epsilon T$ for a learner trained on its own states. ALVINN's designers met it directly: a car that never saw the expert recover from the road's edge had no idea how to recover, and they had to synthesize views of shifted positions with their corrective steering.
+
+Cloning has had a revival in robotics. Demonstrations often contain several right ways to do a task, and a policy that averages them, reaching neither left nor right around an obstacle, fails. Expressive generative policies, such as diffusion models that output a short sequence of actions at a time (Chi et al., 2023), keep the alternatives apart, and with a few hundred demonstrations they learn many manipulation skills by cloning alone.
 
 ### DAgger: ask about your own mistakes {#dagger}
 

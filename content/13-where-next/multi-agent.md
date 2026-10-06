@@ -4,6 +4,7 @@ prereqs = ["mdp", "mcts", "on-off-policy"]
 story_in = ["mcts"]
 sources = [
   { text = "Littman (1994), Markov games as a framework for multi-agent reinforcement learning, ICML" },
+  { text = "Yu, Velu, Vinitsky, Gao, Wang, Bayen & Wu (2022), The surprising effectiveness of PPO in cooperative multi-agent games, NeurIPS Datasets and Benchmarks", url = "https://arxiv.org/abs/2103.01955" },
   { text = "Tesauro (1995), Temporal difference learning and TD-Gammon, Communications of the ACM 38", url = "https://dl.acm.org/doi/10.1145/203330.203343" },
   { text = "Lowe, Wu, Tamar, Harb, Abbeel & Mordatch (2017), Multi-agent actor-critic for mixed cooperative-competitive environments (MADDPG), NeurIPS", url = "https://arxiv.org/abs/1706.02275" },
   { text = "Rashid, Samvelyan, de Witt, Farquhar, Foerster & Whiteson (2018), QMIX: monotonic value function factorisation for deep multi-agent reinforcement learning, ICML", url = "https://arxiv.org/abs/1803.11485" },
@@ -43,7 +44,7 @@ The common answer is **centralized training with decentralized execution**: duri
 
 ### Simpler options first {#simple}
 
-Treating the other agents as part of the environment, each learning independently (independent Q-learning, independent PPO), ignores the non-stationarity but often works surprisingly well, especially with enough experience replayed recently or on-policy data that tracks the others' current behavior. It is the baseline every multi-agent method must beat.
+Treating the other agents as part of the environment, each learning independently (independent Q-learning, independent PPO), ignores the non-stationarity but often works surprisingly well, especially with enough experience replayed recently or on-policy data that tracks the others' current behavior. It is the baseline every multi-agent method must beat, and a hard one: PPO with a value function that sees the whole team, and otherwise little change, matched or beat the specialized methods on standard cooperative benchmarks (Yu et al., 2022).
 
 ## Card
 

@@ -4,6 +4,7 @@ story_in = ["reward-design", "ppo"]
 prereqs = ["reward-design", "ppo", "imitation"]
 sources = [
   { text = "Christiano, Leike, Brown, Martic, Legg & Amodei (2017), Deep reinforcement learning from human preferences, NeurIPS", url = "https://arxiv.org/abs/1706.03741" },
+  { text = "Shao et al. (2024), DeepSeekMath: pushing the limits of mathematical reasoning in open language models, arXiv:2402.03300", url = "https://arxiv.org/abs/2402.03300" },
   { text = "Ziegler et al. (2019), Fine-tuning language models from human preferences", url = "https://arxiv.org/abs/1909.08593" },
   { text = "Stiennon et al. (2020), Learning to summarize from human feedback, NeurIPS", url = "https://arxiv.org/abs/2009.01325" },
   { text = "Ouyang et al. (2022), Training language models to follow instructions with human feedback, NeurIPS", url = "https://arxiv.org/abs/2203.02155" },
@@ -39,7 +40,7 @@ The reward model is a learned approximation, and an optimizer will find its erro
 
 - **Direct preference optimization** (DPO; Rafailov et al., 2023) observes that for the KL-regularized objective, the optimal policy and the reward are tied in closed form. It turns the preference data directly into a classification loss on the policy, with no reward model and no RL loop.
 - **AI feedback.** Comparisons can come from a model guided by written principles instead of people, as in Constitutional AI (Bai et al., 2022). That makes feedback cheaper, and the principles explicit.
-- **Verifiable rewards.** Where answers can be checked automatically, as in mathematics or code with tests, the reward needs no model of preferences at all, and RL can optimize correctness directly; policy-gradient methods in the PPO family are used there too.
+- **Verifiable rewards.** Where answers can be checked automatically, as in mathematics or code with tests, the reward needs no model of preferences at all, and RL can optimize correctness directly. Policy-gradient methods in the PPO family are used there too, often without a value network: GRPO (Shao et al., 2024) samples several answers to each prompt and judges each against the group's average, a leave-one-out style baseline ([[baseline]]).
 
 ## Card
 
