@@ -92,7 +92,7 @@ Optimism in the face of uncertainty treats what has not been tried as possibly g
 
 Policy-gradient methods sample their actions from the policy, so they explore by construction, but a policy gradient also makes the policy more decisive with every update. Left alone, it can become nearly deterministic before it has found the best option.
 
-- **An entropy bonus** pays the policy for staying uncertain ([[entropy-bonus]]). On the two gems, $\beta = 0.1$ finds the big gem in 19 of the Lab's 20 runs, against none without a bonus. Too large a bonus keeps the policy random forever ([[hyperparameters]]).
+- **An entropy bonus** pays the policy for staying uncertain ([[entropy-bonus]]). On the two gems, $\beta = 0.1$ finds the big gem in all 20 of the Lab's runs within 240 rounds, against none without a bonus. Too large a bonus keeps the policy random forever ([[hyperparameters]]).
 - **Maximum entropy RL** makes that bonus part of the objective, with a weight tuned automatically, as [[sac]] does.
 - **Sampling a belief.** Thompson sampling keeps a distribution over what each action is worth, samples one plausible world, and acts greedily in it. Each sample commits to one hypothesis for a while, which gives deep exploration. Bootstrapped DQN does this with several value heads trained on different subsets of the data, acting with one head per episode (Osband et al., 2016). Noisy networks put learned noise in the weights themselves (Fortunato et al., 2018).
 

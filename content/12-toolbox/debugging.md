@@ -59,6 +59,7 @@ Plot more than the return. Each number below tells something the return hides:
 - **Entropy, KL and clipped fractions** for policy methods: how fast the policy changes, and how decisive it is.
 - **Gradient norms**: sudden spikes come before many collapses.
 - **The exploration schedule**: ε, the noise, or SAC's α at each moment.
+- **The agent itself**: watching a few episodes, early and late, often reveals a loophole in the reward or a frozen policy faster than any curve ([[reward-design]]).
 
 The Lab charts most of these for each method.
 

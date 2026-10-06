@@ -4,6 +4,7 @@ prereqs = ["seeds", "dqn"]
 lab = "dqn-cartpole"
 sources = [
   { text = "Henderson, Islam, Bachman, Pineau, Precup & Meger (2018), Deep reinforcement learning that matters, AAAI", url = "https://arxiv.org/abs/1709.06560" },
+  { text = "Jordan, Chandak, Cohen, Zhang & Thomas (2020), Evaluating the performance of reinforcement learning algorithms, Proceedings of the 37th International Conference on Machine Learning", url = "https://arxiv.org/abs/2006.16958" },
   { text = "Agarwal, Schwarzer, Castro, Courville & Bellemare (2021), Deep reinforcement learning at the edge of the statistical precipice, NeurIPS", url = "https://arxiv.org/abs/2108.13264" },
   { text = "Machado, Bellemare, Talvitie, Veness, Hausknecht & Bowling (2018), Revisiting the Arcade Learning Environment: evaluation protocols and open problems for general agents, JAIR 61", url = "https://arxiv.org/abs/1709.06009" },
 ]
@@ -59,6 +60,16 @@ Raw curves are noisy, so they are averaged: over a window of episodes, or, as in
 ### Many seeds {#seeds}
 
 A curve from one seed shows one run's luck. Average several seeds and show their spread: thin lines for each run, or a shaded band. Many papers shade the standard error, others a confidence interval, others the range; they mean different things, so say which. When runs split into groups, say how many ended well instead of averaging them together ([[seeds]]). To compare final performance, average the last part of training for each seed, then compare those numbers across seeds.
+
+### One number from a curve {#summary}
+
+Comparisons often need a single number per run, and each choice favors a different kind of method:
+
+- **Final performance**, the average over the last part of training: what the method ends with, blind to how long it took.
+- **Area under the curve**, the average over all of training: rewards learning fast and staying good, and penalizes a slow start as much as a late collapse.
+- **Time to a threshold**, the steps until a run first reaches a set level, such as this guide's "steps until half the seeds train at −250 or better": speed, blind to what happens after.
+
+A method can win on one and lose on another, so say which was used, and choose it before looking at the results. Jordan et al. (2020) show how much such evaluation choices can sway a comparison.
 
 ### Curves besides the return {#others}
 
