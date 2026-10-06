@@ -112,7 +112,7 @@ The recording uses the settings of the DDPG and TD3 recordings: networks of 64 +
 | | DDPG | TD3 | SAC |
 | --- | --- | --- | --- |
 | seeds that hold the pendulum up at the end | 20 | 20 | 20 |
-| first test at −250 or better, median block | 3 | 5 | 4 |
+| first test at −250 or better, median block | 3 | 5 | 3.5 |
 | steps until half the seeds train at −250 or better | 6,000 | 9,000 | 7,500 |
 | last four tests, range over seeds | −121 to −132 | −122 to −139 | −121 to −128 |
 | seeds whose average target ends above 0 | 11 | 0 | 0 |

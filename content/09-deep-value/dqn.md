@@ -38,7 +38,7 @@ notarget = { recording = "dqn-cartpole-no-target", name = "without a target netw
 :::
 
 ::: step {run = "learn", at = 10}
-**Then a long plateau.** ε reaches its floor, 0.05, after 20,000 steps, and for the next 26 blocks the test episodes last between 172 and 353 steps. The pole is no longer the problem. In 23 of those 26 episodes, the cart drifts until it runs off the end of the track. The map shows why: it is a slice with the cart at rest in the middle. The network has learned to keep the pole up, but where the cart is barely matters to it yet. Running off the track costs only the steps that are lost, 200 steps away, and $\gam^{200} \approx 0.13$ makes that hard to see.
+**Then a long plateau.** From block 3 to block 28, the 26 test episodes last between 172 and 353 steps; ε reaches its floor, 0.05, along the way, after 20,000 steps. The pole is no longer the problem. In 23 of those 26 episodes, the cart drifts until it runs off the end of the track. The map shows why: it is a slice with the cart at rest in the middle. The network has learned to keep the pole up, but where the cart is barely matters to it yet. Running off the track costs only the steps that are lost, 200 steps away, and $\gam^{200} \approx 0.13$ makes that hard to see.
 :::
 
 ::: step {run = "learn", at = 30}

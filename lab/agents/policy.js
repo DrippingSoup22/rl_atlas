@@ -240,8 +240,13 @@
     let D = 0;
     for (const b of batch) {
       const q = P.probs(theta, b.s);
-      // a probability that underflowed to 0 counts as the smallest number there is, so the divergence stays finite
-      for (const a of env.acts(b.s)) if (b.pi[a] > 0) D += b.pi[a] * Math.log(b.pi[a] / Math.max(q[a], Number.MIN_VALUE));
+      // a probability that underflowed to 0 counts as the smallest number there is, so the divergence stays finite;
+      // the ratio to that number overflows, so it is then taken as a difference of logarithms
+      for (const a of env.acts(b.s)) {
+        if (!(b.pi[a] > 0)) continue;
+        const now = Math.max(q[a], Number.MIN_VALUE), ratio = b.pi[a] / now;
+        D += b.pi[a] * (Number.isFinite(ratio) ? Math.log(ratio) : Math.log(b.pi[a]) - Math.log(now));
+      }
     }
     return D / Math.max(1, batch.length);
   }
