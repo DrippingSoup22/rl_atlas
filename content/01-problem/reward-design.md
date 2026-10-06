@@ -9,7 +9,41 @@ sources = [
   { text = "Mnih et al. (2015), Human-level control through deep reinforcement learning, Nature 518 (reward clipping)", url = "https://doi.org/10.1038/nature14236" },
   { text = "Christiano, Leike, Brown, Martic, Legg & Amodei (2017), Deep reinforcement learning from human preferences, Advances in Neural Information Processing Systems 30" },
 ]
+
+[story]
+scene = "grid"
+env = "checkpoint"
+seed = 1
+average = 20
+range = 2
+formula = '''\step{1}{0.2\,(1 + \gam^2 + \gam^4 + \dots) = \frac{0.2}{1 - \gam^2} \approx 2.05 \qquad} \step{2}{F(s, s') = \gam\,\Phi(s') - \Phi(s)}'''
+
+[story.runs]
+naive = { algorithm = "q-learning", gamma = 0.95, alpha = 0.5, epsilon = 0.1, maxSteps = 200, units = 300, measures = [], name = "+0.2 on the checkpoint" }
+shaped = { algorithm = "q-learning", gamma = 0.95, alpha = 0.5, epsilon = 0.1, maxSteps = 200, units = 300, measures = [], world = "checkpoint-shaped", name = "the same bonus, as a potential" }
 +++
+
+## Story
+
+::: step {q = "zero", agent = "start"}
+**A goal, and a helping hand.** Reaching the gem pays $\rew{+1}$, with rewards discounted by $\gam = 0.95$. The wall makes the way long, so the designer adds a hint: $\rew{+0.2}$ for stepping on the checkpoint ⚑, which lies on the way down past the wall. A little reward for progress should speed learning up.
+:::
+
+::: step {run = "naive", at = 300, values = true, path = true}
+**After 300 episodes, the agent never reaches the gem.** It walks to the checkpoint and steps off and on it, again and again, until its 200 steps run out. It does that in all 20 runs. The values around the checkpoint are about 2, twice what the gem pays.
+:::
+
+::: step {run = "naive", at = 300, values = true, path = true, formula = 1}
+**It did exactly what it was paid to do.** Stepping off and back on pays $\rew{0.2}$ every second step, forever: discounted, about 2.05, while the gem, ten moves away, is worth $\gam^{9} \approx 0.63$ from the checkpoint. This is not a learning failure: for this reward, circling is the optimal policy, and a perfect planner would circle too. The reward said "be on the checkpoint", not "get to the gem".
+:::
+
+::: step {run = "shaped", at = 300, values = true, path = true, formula = 2}
+**The same hint, given as a potential.** Give the checkpoint a potential $\Phi = 0.2$, and pay $\gam\,\Phi(s') - \Phi(s)$ on every move: stepping on pays $0.95 \times 0.2 = 0.19$, stepping off costs $0.2$. A loop now loses a little each time around, and along any path from start to end the hints add up to nothing at all. In all 20 runs the agent walks to the gem by a shortest path, 14 steps.
+:::
+
+::: step {run = "shaped", at = 300, curves = ["naive", "shaped"], metric = "steps"}
+**Twenty runs of each.** With the bonus, every episode runs to the 200-step limit once the loop is found. With the potential, the episodes shrink to the shortest path. Shaping of this form never changes which policies are optimal, a guarantee proved by Ng, Harada and Russell: it can only change how fast they are found.
+:::
 
 ## Textbook
 

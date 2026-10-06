@@ -9,8 +9,8 @@
   const NS = "http://www.w3.org/2000/svg";
   const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // screen direction of up, right, down, left
   const ARROW_TEXT = ["↑", "→", "↓", "←"];
-  const MARKS = { S: "S", A: "A", B: "B", a: "A′", b: "B′" };
-  const KINDS = { ".": "free", "#": "wall", C: "C", G: "G", g: "g", T: "exit", H: "hole" };
+  const MARKS = { S: "S", A: "A", B: "B", a: "A′", b: "B′", k: "⚑" };
+  const KINDS = { ".": "free", "#": "wall", C: "C", G: "G", g: "g", T: "exit", H: "hole", k: "checkpoint" };
   let uid = 0;
   const TRIANGLES = [
     [[2, 2], [T - 2, 2]],

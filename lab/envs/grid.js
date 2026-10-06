@@ -1,7 +1,8 @@
 /* Grid worlds. A world is a few lines of text: S start, G goal (a gem), g a small gem (it pays less, and also ends
    the episode), T exit (an ending without a prize), . free, # wall, C cliff (a fall: back to the start), H hole (the
-   episode ends), and letters for tiles that jump elsewhere (A jumps to a, B to b). On slippery ice a move can slide
-   to either side. */
+   episode ends), k a checkpoint (a bonus, reward.checkpoint, every time it is entered), and letters for tiles that jump
+   elsewhere (A jumps to a, B to b). On slippery ice a move can slide to either side. A world with `shaping` adds
+   γΦ(s′) − Φ(s) to every move, where Φ is shaping.potential on the tiles named there and 0 elsewhere. */
 (function (RL) {
   "use strict";
   const lab = (RL.lab = RL.lab || {});
@@ -85,6 +86,24 @@
       // the safe way, shown to a learner: up to the top row, along it, and down the last column to the goal
       policies: { careful: (r, c, rows, cols) => (c === cols - 1 ? (r < 2 ? 2 : 0) : r > 0 ? 0 : 1) },
     },
+    // A designer's bonus, for reward design: the gem pays 1, and a checkpoint on the way pays 0.2 every time it is
+    // entered. Stepping off and back on pays it every second step: with γ = 0.95 that loop is worth about 2.05, more
+    // than the gem.
+    checkpoint: {
+      title: "Checkpoint",
+      map: ["S....#....", ".....#....", "..k..#....", ".....#....", "..........", ".........G"],
+      reward: { step: 0, goal: 1, checkpoint: 0.2 },
+      valueRange: 2,
+    },
+    // The same bonus as a potential (Ng, Harada & Russell, 1999): entering the checkpoint pays γ·0.2, leaving it costs
+    // 0.2, so a loop through it loses a little and the gem stays the goal.
+    "checkpoint-shaped": {
+      title: "Checkpoint, shaped",
+      map: ["S....#....", ".....#....", "..k..#....", ".....#....", "..........", ".........G"],
+      reward: { step: 0, goal: 1 },
+      shaping: { gamma: 0.95, potential: { k: 0.2 } },
+      valueRange: 2,
+    },
     // A bridge of ice between holes, for imitation: the way across is three tiles wide, and one move in ten slides
     // to a side. An expert recovers from a slide; a learner that never saw one has to guess.
     "ice-bridge": {
@@ -120,8 +139,12 @@
       if (k === "G" || k === "T") return { s2, r: reward.goal ?? reward.step };
       if (k === "g") return { s2, r: reward.small ?? reward.goal ?? reward.step };
       if (k === "H") return { s2, r: reward.hole ?? reward.step };
+      if (k === "k") return { s2, r: reward.step + (reward.checkpoint ?? 0) };
       return { s2, r: reward.step };
     }
+    // Potential-based shaping: γΦ(s′) − Φ(s) on every move, with Φ read off the tiles (0 at the end of an episode).
+    const phi = (s) => (isTerminal(s) ? 0 : w.shaping?.potential?.[cells[s]] ?? 0);
+    const shaped = (s, o) => (w.shaping ? { ...o, r: o.r + w.shaping.gamma * phi(o.s2) - phi(s) } : o);
     // On ice the intended direction holds with probability 1 − slip; the rest is split between its two sides.
     const sideways = (d) => [(d + 3) % 4, (d + 1) % 4];
 
@@ -162,20 +185,20 @@
       step(s, a, rng) {
         const jump = jumps.find((j) => j.from === s);
         if (jump) return { s2: jump.to, r: jump.reward };
-        if (!slip) return land(s, a);
+        if (!slip) return shaped(s, land(s, a));
         const u = rng.next(), [left, right] = sideways(a);
         const d = u < 1 - slip ? a : u < 1 - slip / 2 ? left : right;
-        return { ...land(s, d), slid: d !== a ? d : undefined };
+        return { ...shaped(s, land(s, d)), slid: d !== a ? d : undefined };
       },
       // The same moves as a model, for dynamic programming: every outcome with its probability.
       model(s, a) {
         const jump = jumps.find((j) => j.from === s);
         if (jump) return [{ p: 1, s2: jump.to, r: jump.reward }];
-        if (!slip) { const { s2, r } = land(s, a); return [{ p: 1, s2, r }]; }
+        if (!slip) { const { s2, r } = shaped(s, land(s, a)); return [{ p: 1, s2, r }]; }
         const out = [];
         const [left, right] = sideways(a);
         for (const [d, p] of [[a, 1 - slip], [left, slip / 2], [right, slip / 2]]) {
-          const { s2, r } = land(s, d), same = out.find((o) => o.s2 === s2 && o.r === r);
+          const { s2, r } = shaped(s, land(s, d)), same = out.find((o) => o.s2 === s2 && o.r === r);
           if (same) same.p += p;
           else out.push({ p, s2, r });
         }
