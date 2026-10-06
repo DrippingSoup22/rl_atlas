@@ -34,15 +34,16 @@ REQUIRED = {
 }
 FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story"}
 # The keys of a Lab preset (content/lab.toml); any other key is a knob, and what its charts may plot.
-# Concept stations whose idea the Lab's engine also runs, in a small world of its own: DPG on the throw.
-RUNNABLE_CONCEPTS = {"dpg"}
+# Lab algorithms that teach a concept station, each with its station: DPG on the throw, offline RL on the cliff,
+# imitation on the ice bridge. Their pseudocode is the station's.
+RUNNABLE_CONCEPTS = {"dpg": "dpg", "offline-q": "offline-rl", "offline-bcq": "offline-rl", "bc": "imitation", "dagger": "imitation"}
 PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds"}
 CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights",
-          "policy-value", "right", "aim", "kl", "clipped"}
+          "policy-value", "right", "aim", "kl", "clipped", "deployed", "labels"}
 # What a preset of recorded runs (racers that name a recording) can chart: from the recordings, nothing is recomputed.
 RECORDED_CHARTS = {"return", "test", "steps", "loss", "td", "q", "eps", "kl", "clipped"}
 RECORDINGS = CONTENT / "recordings"
-MEASURES = {"error", "optimal-error", "match", "greedy", "ve", "policy-value", "right", "aim"}
+MEASURES = {"error", "optimal-error", "match", "greedy", "ve", "policy-value", "right", "aim", "deployed"}
 # Stations the math macros of app/js/math.js link to.
 MACRO_TERMS = ("step-size", "discount", "epsilon-greedy", "lambda-return", "td-error")
 # What the Textbook numbers, and how a \ref{label} to each one reads.
@@ -439,7 +440,7 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
             problems.error(where, f"runs '{algo}', which is not an algorithm station")
             continue
         own = {k: v for k, v in r.items() if k not in ("algorithm", "name")}
-        racers.append({"algorithm": algo, "name": r.get("name") or stations[algo]["title"], "params": own})
+        racers.append({"algorithm": algo, "name": r.get("name") or stations[RUNNABLE_CONCEPTS.get(algo, algo)]["title"], "params": own})
     if not racers:
         problems.error(where, "runs no algorithm")
     charts, measures = raw.get("charts", ["return"]), raw.get("measures", [])
@@ -547,7 +548,7 @@ def compile_content(problems: Problems) -> dict:
             entries[path.stem] = entry
     for pid, preset in presets.items():
         for algo in sorted({r["algorithm"] for r in preset["racers"]}):
-            if not entries.get(algo, {}).get("pseudocode"):
+            if not entries.get(RUNNABLE_CONCEPTS.get(algo, algo), {}).get("pseudocode"):
                 problems.warn("content/lab.toml", f"preset '{pid}' runs '{algo}', which has no written pseudocode yet")
 
     return {

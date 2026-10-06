@@ -116,22 +116,23 @@
     right: { label: "Chance of stepping right, π(right)", percent: true },
     aim: { label: "Where the policy aims, in degrees" },
     test: { label: "Test episode after each block: its return" },
+    deployed: { label: "Return of the learned policy, played once from the start" },
     q: { label: (noun, learner) => (learner === "ac" ? "The critics' targets in each batch, on average" : "The largest Q-value in each batch, on average") },
   };
   function curves(host, cfg, runOf) {
     const cache = new Map();
     let chart = null, shown = "", timer = 0;
     return function show(st) {
-      const names = st.curves || [], metric = st.metric || "optimal", key = `${names}|${metric}|${st.domain || ""}|${st.log || ""}|${st.ref || ""}`;
+      const names = st.curves || [], metric = st.metric || "optimal", key = `${names}|${metric}|${st.domain || ""}|${st.log || ""}|${st.ref || ""}|${st.title || ""}`;
       host.hidden = !names.length;
       if (!names.length || key === shown) return;
       shown = key;
       clearTimeout(timer);
       chart?.destroy();
       const first = runOf(names[0]), unit = first.env.unitName || first.algorithm.unit;
-      const noun = unit === "pull" || unit === "step" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : unit === "round" ? ["round", "rounds"] : unit === "throw" ? ["throw", "throws"] : unit === "block" ? ["block", "blocks"] : ["episode", "episodes"];
+      const noun = unit === "pull" || unit === "step" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : unit === "round" ? ["round", "rounds"] : unit === "throw" ? ["throw", "throws"] : unit === "block" ? ["block", "blocks"] : unit === "pass" ? ["pass", "passes"] : ["episode", "episodes"];
       const learner = RL.recordings?.[cfg.runs[names[0]].recording]?.learner;
-      const label = typeof METRIC[metric].label === "function" ? METRIC[metric].label(noun, learner) : METRIC[metric].label;
+      const label = st.title || (typeof METRIC[metric].label === "function" ? METRIC[metric].label(noun, learner) : METRIC[metric].label);
       const legend = names.length > 1 ? `<div class="scene-chart-legend">${names.map((n, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${RL.esc(cfg.runs[n].name || n)}</span>`).join("")}</div>` : "";
       host.innerHTML = `<div class="scene-chart-title">${RL.asIs(label)}<span class="faint"></span></div>${legend}<div class="scene-chart-host"></div>`;
       chart = new RL.LineChart(host.querySelector(".scene-chart-host"), { height: 150, percent: METRIC[metric].percent, zero: METRIC[metric].zero, log: st.log ?? METRIC[metric].log, domain: st.domain || null, noun });
@@ -199,7 +200,7 @@
   // A scene built on a Lab view. A step names a run (st.run, else the first) and a moment (st.at, in units); it can
   // replay some units from there (st.play, at st.pace ms an event; st.updates stops after that many updates), step
   // through moments of the run (st.checkpoints, held st.hold ms each) and chart averaged runs (st.curves, st.metric; st.log
-  // for a log axis, st.ref for a reference line).
+  // for a log axis, st.ref for a reference line, st.title for a title of its own).
   // options(st): the view's options for the step; more(st, view, run, t): anything else the scene adds.
   function runScene(View, { options = () => ({}), more = null } = {}) {
     return {

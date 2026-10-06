@@ -37,7 +37,7 @@
       html = `${home}${sep}<span>${st.part} · ${esc(st.partTitle)}</span>${sep}<span class="here">${esc(st.title)}</span>`;
     } else if (route.name === "lab") {
       const preset = RL.content.presets[route.id];
-      const via = app.from?.name === "entry" ? app.from.id : preset?.racers.at(-1).algorithm;
+      const last = preset?.racers.at(-1).algorithm, via = app.from?.name === "entry" ? app.from.id : RL.lab?.algorithms?.[last]?.station || last;
       html = `${home}${sep}${via && station(via) ? `<a href="#/e/${via}">${esc(station(via).title)}</a>${sep}` : ""}<span class="here">Lab${preset ? ` · ${esc(preset.title)}` : ""}</span>`;
     } else if (route.name === "symbols") html = `${home}${sep}<span class="here">Symbols and colors</span>`;
     $(".crumbs", top).innerHTML = html;

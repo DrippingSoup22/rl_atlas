@@ -81,6 +81,24 @@
         stats["policy-value"] = V[env.start];
       };
     },
+    // The return of the policy the learner would deploy (its P, or greedy on its Q), played once from the start in a
+    // world without slips, until it reaches an end, falls or gives up after p.deployCap steps (100): what using it
+    // would cost. A fall ends the episode here, so a policy that walks off the cliff scores about as badly as one that
+    // walks into a wall for 100 steps.
+    deployed(env, p) {
+      const cap = p.deployCap ?? 100, rng = lab.rng(1);
+      return (d, stats) => {
+        let s = env.reset(rng), ret = 0;
+        for (let k = 0; k < cap && !env.terminal(s); k++) {
+          const a = d.P ? lab.argmax(d.P.subarray(s * env.nA, (s + 1) * env.nA)) : lab.greedy(d.Q, s, env);
+          const o = env.step(s, a, rng);
+          ret += o.r;
+          if (o.fell !== undefined) break;
+          s = o.s2;
+        }
+        stats.deployed = ret;
+      };
+    },
     // The short corridor: the chance of stepping right, the same in every cell.
     right(env) {
       return (d, stats) => { stats.right = d.P[env.start * env.nA + 1]; };

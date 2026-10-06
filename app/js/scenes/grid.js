@@ -150,7 +150,11 @@
         showFormula(st);
         note.textContent = st.note || "";
         // path: where the greedy policy of the moment walks from the start
-        const greedy = (u) => { if (st.path) view.path(lab.greedyPath(env, r.at(u).Q).path, false); };
+        const greedy = (u) => {
+          if (!st.path) return;
+          const d = r.algorithm.show(r.at(u), env, r.params);
+          view.path(lab.greedyPath(env, d.Q, d.P, { showFall: true }).path, false);
+        };
         greedy(t);
         const unit = r.algorithm.unit;
         if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${unit}${n === 1 ? "" : "s"}`, each: greedy });

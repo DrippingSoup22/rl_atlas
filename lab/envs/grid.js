@@ -15,6 +15,8 @@
       map: ["............", "............", "............", "SCCCCCCCCCCG"],
       reward: { step: -1, cliff: -100 },
       valueRange: 20, // values beyond ±20 (like stepping into the cliff) show at full color
+      // A careful walker, for logs (offline RL): up the first column, along the top row, down the last column.
+      policies: { careful: (r, c, rows, cols) => (c === cols - 1 ? 2 : r > 0 ? 0 : 1) },
     },
     // Sutton & Barto, Example 3.5: every move from A lands on A′ with +10, every move from B on B′ with +5,
     // a move into the edge costs 1 and leaves the agent in place, every other move is free. It never ends.
@@ -73,6 +75,16 @@
       reward: { step: 0, goal: 1, small: 0.3 },
       valueRange: 1,
     },
+    // A bridge of ice between holes, for imitation: the way across is three tiles wide, and one move in ten slides
+    // to a side. An expert recovers from a slide; a learner that never saw one has to guess.
+    "ice-bridge": {
+      title: "Ice bridge",
+      map: ["HHHHHHHHH", "H.......H", "S.......G", "H.......H", "HHHHHHHHH"],
+      reward: { step: 0, goal: 1 },
+      slip: 0.1,
+      ice: true,
+      valueRange: 1,
+    },
   };
 
   // name: one of the worlds above, or a world spec of your own ({ title, map, reward, slip, … }).
@@ -110,6 +122,14 @@
       // Tiles an episode may start from (for exploring starts): anything that is not a wall, a cliff or an ending.
       starts: Array.from({ length: rows * cols }, (_, s) => s).filter((s) => !"#CGgTH".includes(cells[s])),
       tile: (s) => cells[s],
+      // A named policy of the world's own (w.policies: (row, column, rows, columns) → action), as a table.
+      policy(name) {
+        const f = w.policies?.[name];
+        if (!f) throw new Error(`world '${env.name}' has no policy '${name}'`);
+        const P = new Float64Array(rows * cols * 4);
+        for (let s = 0; s < rows * cols; s++) P[s * 4 + f(Math.floor(s / cols), s % cols, rows, cols)] = 1;
+        return P;
+      },
       // A world that changes (a wall that moves) is told the time, in steps; it returns true when its layout changed.
       // `version` counts the changes, so a view knows when to draw the walls again.
       changes: w.change ? w.change.at : null, version: 0,

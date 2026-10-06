@@ -137,14 +137,17 @@
     return { mean, runs: seeds.length };
   };
 
-  // Follow the first best action from the start. `reached` is false if it falls or goes round in circles.
+  // Follow the first best action from the start, or a policy P's likeliest action. `reached` is false if it falls or
+  // goes round in circles; with showFall, a fall ends the path on the cliff tile it stepped into.
   // (On slippery ice there is no single path, so there is none to follow.)
-  lab.greedyPath = function (env, Q) {
+  lab.greedyPath = function (env, Q, P = null, { showFall = false } = {}) {
     if (env.slip) return { path: [env.start], reached: false };
     const path = [env.start], seen = new Set(path);
     let s = env.start;
     while (!env.terminal(s)) {
-      const { s2, fell } = env.step(s, lab.greedy(Q, s, env));
+      const a = P ? lab.argmax(P.subarray(s * env.nA, (s + 1) * env.nA)) : lab.greedy(Q, s, env);
+      const { s2, fell } = env.step(s, a);
+      if (fell !== undefined && showFall) path.push(fell);
       if (fell !== undefined || seen.has(s2)) return { path, reached: false };
       path.push(s2);
       seen.add(s2);

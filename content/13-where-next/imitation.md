@@ -1,6 +1,7 @@
 +++
 summary = "When someone can show good behavior, an agent can learn from the showing instead of from rewards. Behavior cloning copies the expert's actions like a supervised problem, but small mistakes lead it to states the expert never visited, where it errs more. DAgger asks the expert about the states the learner actually reaches; inverse RL recovers the reward the expert seems to pursue; adversarial methods learn to behave indistinguishably from the expert."
 prereqs = ["reward-design", "offline-rl"]
+lab = "imitation-bridge"
 sources = [
   { text = "Pomerleau (1989), ALVINN: an autonomous land vehicle in a neural network, Advances in Neural Information Processing Systems 1" },
   { text = "Ross, Gordon & Bagnell (2011), A reduction of imitation learning and structured prediction to no-regret online learning (DAgger), AISTATS", url = "https://arxiv.org/abs/1011.0686" },
@@ -9,7 +10,44 @@ sources = [
   { text = "Ziebart, Maas, Bagnell & Dey (2008), Maximum entropy inverse reinforcement learning, AAAI", url = "https://cdn.aaai.org/AAAI/2008/AAAI08-227.pdf" },
   { text = "Ho & Ermon (2016), Generative adversarial imitation learning, NeurIPS", url = "https://arxiv.org/abs/1606.03476" },
 ]
+
+[story]
+scene = "grid"
+env = "ice-bridge"
+seed = 7
+average = 100
+formula = '''\step{1}{\pol{\pi(s)} \leftarrow \pol{\pi_E(s)} \text{ for the states the expert reaches}} \step{2}{\qquad \pol{\pi(s)} \leftarrow \pol{\pi_E(s)} \text{ for the states the learner reaches}}'''
+
+[story.runs]
+clone = { algorithm = "bc", gamma = 0.95, judge = 1.0, maxSteps = 100, calmExpert = true, generalize = "nearest", units = 20, measures = ["policy-value"], name = "behavior cloning" }
+dagger = { algorithm = "dagger", gamma = 0.95, judge = 1.0, maxSteps = 100, calmExpert = true, generalize = "nearest", units = 20, measures = ["policy-value"], name = "DAgger" }
 +++
+
+## Story
+
+::: step {run = "clone", at = 0, play = 1, pace = 320, arrows = false}
+**A bridge of ice, with water on both sides.** The gem waits at the far end. The expert crosses it without ever slipping, as a skilled skater would: straight along the middle row, eight moves. Watch its demonstration.
+:::
+
+::: step {run = "clone", at = 1, fog = true, formula = 1}
+**The clone learns from it.** It now knows eight tiles, each with the expert's move: right. The fog covers everything else. Where it was shown nothing, it does what a network does: it copies the move of the nearest tile it was shown. But the clone is no expert: one move in ten, it slides to a side. Played with those slides, the expert's own policy still reaches the gem 89% of the time, because it knows how to come back. The clone gets there 49% of the time.
+:::
+
+::: step {run = "dagger", at = 1, play = 1, pace = 320, fog = true}
+**Here is the clone on the ice.** Two tiles in, it slides down onto the lower row, onto a tile no demonstration ever showed. The nearest tile it knows says right, so right it goes, along the edge, six tiles, and off the end into the water. Each step takes it further from anything it was shown. More demonstrations would not help: they all walk the middle row. After twenty of them, the clone still knows eight tiles, and still reaches the gem 49% of the time.
+:::
+
+::: step {run = "dagger", at = 2, fog = true, formula = 2}
+**DAgger asks the expert about the clone's own walk.** For each tile the clone stood on, what would you do here? Six new labels, all along the lower row, all the same: up, back to the middle. The chance of reaching the gem rises from 49% to 66%.
+:::
+
+::: step {run = "dagger", at = 3, play = 1, pace = 320, fog = true}
+**Two walks later, the same slide**, onto the same tile of the lower row. This time the clone knows what to do there, and steps back up. After six episodes, the first of them the demonstration, it has nineteen labels and reaches the gem 89% of the time, as often as the expert's own policy.
+:::
+
+::: step {run = "dagger", at = 20, curves = ["clone", "dagger"], metric = "policy-value", title = "Chance the learner reaches the gem"}
+**A hundred runs each.** Behavior cloning stays at 49% however many demonstrations it watches: the expert never shows a recovery. DAgger averages 87% after 20 walks, and 96 runs of 100 pass 80%. The expert's time is spent where the clone goes wrong. [Race them in the Lab](lab:imitation-bridge).
+:::
 
 ## Textbook
 
@@ -26,6 +64,10 @@ Its weakness is **compounding error**. The expert's data covers the states the e
 ### DAgger: ask about your own mistakes {#dagger}
 
 DAgger (dataset aggregation) fixes the mismatch by collecting labels where the learner goes. Train a policy on the demonstrations; run it; ask the expert what it would have done in each state the learner visited; add those labels to the dataset; retrain; repeat. The data then covers the learner's own distribution of states, including the recoveries, and the error grows only linearly with the horizon. The cost is an expert who can be queried, not just recorded.
+
+::: example {#ex-bridge} An expert who never slips
+On a bridge of ice three tiles wide, an expert walks the middle row without ever slipping; the learner slides to a side one move in ten. A clone that copies the expert's move where it has one, and the move of the nearest labeled tile elsewhere, reaches the gem 49% of the time, against 89% for the expert's own policy played with the learner's slides. Every further demonstration walks the same row, so cloning never gets better. After a slide, the clone's nearest label says "right", and it walks along the edge into the water. With DAgger, the expert labels the tiles the clone actually stood on, "up" along the lower row and "down" along the upper one; over 100 runs, the chance of reaching the gem averages 87% after 20 walks.
+:::
 
 ### Inverse reinforcement learning {#irl}
 
@@ -55,6 +97,17 @@ Learning a dance by copying a video works until you misstep, and the video never
 - DAgger: the expert labels the states the learner visits.
 - Inverse RL: recover a reward, then do RL.
 - GAIL: RL against a discriminator that tells learner from expert.
+
+### Pseudocode
+
+::: pseudocode
+Labels $\mathcal D \leftarrow \emptyset$; the learner's policy $\pol{\pi}$ fit to $\mathcal D$
+Repeat for each episode:
+  First episode (behavior cloning: every episode): the expert plays {#demo}
+  Later episodes: the learner plays $\pol{\pi}$ {#play}
+  For each state $s$ reached: ask the expert, $\mathcal D \leftarrow \mathcal D \cup \{(s, \pol{\pi_E(s)})\}$ {#label}
+  Fit $\pol{\pi}$ to $\mathcal D$
+:::
 
 ### Pitfalls
 

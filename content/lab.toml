@@ -842,3 +842,45 @@ charts = ["return", "test", "kl"]
 film = [0, 4, 9, 12, 40]
 intro = "Eight workers collect 256 steps each; TRPO then takes the largest natural-gradient step whose average KL divergence from the old policy stays within δ = 0.01, found by conjugate gradients and a line search. After every block of 2,500 steps the policy plays one test episode, always from the same start: the pole stays up at most 500 steps."
 success = { metric = "return", min = 450, text = "end up balancing the pole in training, 450 steps or more on average" }
+
+[offline-cliff]
+title = "Learning from a log: plain vs constrained Q-learning"
+env = "cliff"
+racers = [
+  { algorithm = "offline-q", name = "Q-learning on the log" },
+  { algorithm = "offline-bcq", name = "batch-constrained" },
+]
+units = 41
+seed = 1
+alpha = 0.5
+epsilon = 0.1
+gamma = 1.0
+q0 = 0.0
+logEpisodes = 10
+charts = ["deployed"]
+measures = ["deployed"]
+domain = [-100, 0]
+film = [0, 1, 5, 41]
+intro = "The first pass is the log: a careful walker crosses the cliff ten times, along the top row, with a random move one time in ten. After that, nobody acts again: each pass is a Q-learning update on every logged move. The chart plays the learned policy once from the start. Raise the log's size or the walker's randomness, or start the estimates lower, and watch what plain Q-learning needs to work."
+success = { metric = "deployed", min = -20, text = "deploy a policy that reaches the goal in 20 steps or fewer" }
+sweep = { q0 = [-50.0, -30.0, -20.0, -17.0, -15.0, -10.0, -5.0, 0.0] }
+
+[imitation-bridge]
+title = "Behavior cloning vs DAgger on the ice bridge"
+env = "ice-bridge"
+racers = [
+  { algorithm = "bc", name = "behavior cloning" },
+  { algorithm = "dagger", name = "DAgger" },
+]
+units = 20
+seed = 1
+gamma = 0.95
+judge = 1.0
+maxSteps = 100
+calmExpert = true
+generalize = "nearest"
+charts = ["policy-value", "labels"]
+measures = ["policy-value"]
+film = [0, 1, 5, 20]
+intro = "An expert crosses a bridge of ice; it never slips, so every demonstration walks the middle row. The learner slips one move in ten, and where nobody showed it anything it copies the nearest move it was shown. Behavior cloning watches the expert every episode; DAgger lets the learner walk, and asks the expert about each tile it reaches. The chart is each one's exact chance of reaching the gem."
+success = { metric = "policy-value", min = 0.8, text = "reach the gem 80% of the time or more (the expert: 89%)" }

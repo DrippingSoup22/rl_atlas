@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "envs/approx", "envs/policy", "dp", "run", "measures", "features",
-  "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy",
+  "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy", "agents/offline",
   "envs/deep", "recorded"];
 for (const file of FILES) require(`../lab/${file}.js`);
 require("../app/recordings.js"); // recorded runs (recorder/record.py), bundled by build.py
@@ -251,6 +251,8 @@ test("entropy bonus: A2C finds the big gem with β = 0.1, and mostly settles for
   assert.ok(withBonus >= 17 && without <= 5, `runs that found the big gem: ${withBonus} of 20 with the bonus, ${without} without`);
 });
 
+const imitate = { gamma: 0.95, judge: 1, maxSteps: 100, calmExpert: true, generalize: "nearest" };
+
 test("replaying a unit reproduces the run exactly, for every algorithm", () => {
   const cases = [
     ["cliff", "sarsa", cliff, 60], ["cliff", "q-learning", cliff, 60], ["cliff", "expected-sarsa", cliff, 60],
@@ -274,6 +276,8 @@ test("replaying a unit reproduces the run exactly, for every algorithm", () => {
     ["cliff", "actor-critic", { alpha: 0.1, alphaW: 0.1, gamma: 1 }, 40], ["cliff", "actor-critic", { alpha: 0.05, alphaW: 0.1, gamma: 1, lambda: 0.5 }, 40],
     ["dyna-maze", "a2c", { ...maze, alpha: 2, alphaW: 0.3, n: 5, beta: 0.05 }, 12], ["dyna-maze", "trpo", { ...maze, delta: 0.02 }, 12],
     ["dyna-maze", "ppo", { ...maze, alpha: 0.1, epochs: 4, clip: 0.2, beta: 0.01 }, 12],
+    ["cliff", "offline-q", { alpha: 0.5, epsilon: 0.1, gamma: 1, logEpisodes: 5 }, 12], ["cliff", "offline-bcq", { alpha: 0.5, epsilon: 0.3, gamma: 1, logEpisodes: 5 }, 12],
+    ["ice-bridge", "bc", imitate, 12], ["ice-bridge", "dagger", imitate, 12], ["ice-bridge", "dagger", { ...imitate, generalize: undefined, calmExpert: false }, 12],
   ];
   const flat = (m) => Object.values(m).flatMap((x) => Array.from(x));
   for (const [world, id, params, units] of cases) {
@@ -360,4 +364,25 @@ test("the odds give up on a stuck run: 20 episodes in a row at the step limit", 
   const full = lab.simulate({ world: "cliff", algorithm: lab.algorithms["actor-critic"], params, units: 60, seed: 1, snapshots: false });
   assert.equal(full.stopped, 0);
   assert.deepEqual(Array.from(full.metrics.steps.slice(0, run.stopped)), Array.from(run.metrics.steps.slice(0, run.stopped)));
+});
+
+test("offline RL: Q-learning on a careful walker's log walks off; constraining it to the log's moves walks the route", () => {
+  const params = { alpha: 0.5, epsilon: 0.1, gamma: 1, q0: 0, logEpisodes: 10 };
+  const deployed = (id, over = {}) => seeds(20).map((s) => run("cliff", id, { ...params, ...over }, 41, s, ["deployed"]).metrics.deployed[40]);
+  assert.ok(deployed("offline-q").every((d) => d <= -100), "plain Q-learning on the log never reaches the goal");
+  assert.ok(deployed("offline-bcq").every((d) => d === -17), "the constrained learner walks the logged route, 17 steps");
+  // pessimism works once it reaches below the true values: the start is worth −17
+  assert.ok(deployed("offline-q", { q0: -17 }).every((d) => d === -17));
+  // what the story shows: seed 2's log never fell, and the first untried move from the start is right, into the cliff
+  const r = run("cliff", "offline-q", params, 41, 2), d = A["offline-q"].show(r.at(41), r.env, params);
+  assert.deepEqual(lab.greedyPath(r.env, d.Q, d.P, { showFall: true }).path, [36, 37]);
+});
+
+test("imitation: cloning an expert who never slips stalls; DAgger asks about the learner's own states and catches up", () => {
+  const end = (id, s) => run("ice-bridge", id, imitate, 20, s, ["policy-value"]).metrics["policy-value"][19];
+  const expert = (() => { const env = lab.make("ice-bridge"), V = lab.valueIteration(env, 0.95); return lab.evaluate(env, lab.greedyPolicy(env, V, 0.95, 1e-9), 1)[env.start]; })();
+  assert.ok(Math.abs(expert - 0.89) < 0.005, `expert ${expert}`);
+  const bc = seeds(20).map((s) => end("bc", s)), dagger = seeds(20).map((s) => end("dagger", s));
+  assert.ok(bc.every((v) => Math.abs(v - bc[0]) < 1e-12) && bc[0] < 0.5, `cloning stays put: ${bc[0]}`);
+  assert.ok(dagger.filter((v) => v >= 0.8).length >= 18, `DAgger: ${dagger.map((v) => v.toFixed(2))}`);
 });

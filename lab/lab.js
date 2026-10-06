@@ -15,7 +15,7 @@
   };
 
   // What one unit is called, in this world and for this algorithm.
-  const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"], round: ["round", "rounds"], throw: ["throw", "throws"], block: ["block", "blocks"] };
+  const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"], round: ["round", "rounds"], throw: ["throw", "throws"], block: ["block", "blocks"], pass: ["pass", "passes"] };
   // Walking speeds replay a unit event by event ("step" stops at each update); rates jump between snapshots.
   const walking = (step, every) => [{ id: "line", label: "Line by line", every: every[0] }, { id: "step", label: step, every: every[1] }];
   const rates = (...list) => list.map((rate) => ({ id: `r${rate}`, rate }));
@@ -24,6 +24,7 @@
     sweep: [...walking("State by state", [380, 130]), ...rates(1, 4, 20)],
     step: [...walking("Pull by pull", [480, 300]), ...rates(10, 50, 250)],
     round: [...walking("Step by step", [520, 200]), ...rates(1, 4, 20)], // every worker steps at once
+    pass: [...walking("Step by step", [520, 160]), ...rates(1, 4, 10)], // the log being made, then passes over it
     block: [{ id: "line", label: "Step by step", every: 80 }, { id: "step", label: "Quickly", every: 12 }, ...rates(1, 4, 10)], // a recorded test episode
   };
   // The knobs a preset can show as sliders. alpha = 0 means sample averages (1/n), where an algorithm allows it.
@@ -46,6 +47,7 @@
     clip: { sym: "ε", name: "clip range (0: no clip)", choices: [0, 0.1, 0.2, 0.3, 0.5] },
     delta: { sym: "δ", name: "trust region (KL)", choices: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2] },
     noise: { sym: "σ", name: "exploration noise (degrees)", min: 0, max: 30, step: 1, sweep: [0, 1, 2, 5, 10, 20, 30] },
+    logEpisodes: { sym: "E", name: "episodes in the log", choices: [1, 2, 5, 10, 20, 50, 100, 200] },
   };
   const ALPHA_LADDER = [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05];
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);
@@ -62,8 +64,10 @@
     greedy: { title: (n, env) => (env.ice ? "Chance the greedy policy reaches the gem" : "Return of the greedy policy"), percent: true },
     ve: { title: () => "Value error √VE, weighted by time spent in each state", zero: true },
     weights: { title: () => "Size of the weights ‖w‖", log: true },
-    "policy-value": { title: (n, env) => (env.kind === "corridor" ? "Value of the start under the current policy, J(θ)" : "Value of the current policy from the start, J(θ)") },
+    "policy-value": { title: (n, env) => (env.kind === "corridor" ? "Value of the start under the current policy, J(θ)" : env.ice ? "Chance the current policy reaches the gem" : "Value of the current policy from the start, J(θ)") },
     right: { title: () => "Chance of stepping right, π(right)", percent: true },
+    deployed: { title: () => "Return of the learned policy, played once from the start" },
+    labels: { title: () => "States the expert has labeled" },
     aim: { title: () => "Where the policy aims: its angle μ, in degrees" },
     kl: { title: () => "How far each update moved the policy: KL divergence (log scale)", log: true },
     clipped: { title: () => "Samples the clip left alone in the last pass", percent: true },
@@ -752,7 +756,7 @@
       stages.forEach((st, k) => st.classList.toggle("focus", k === i && racers.length > 1));
       const a = racers[i].algorithm, p = paramsOf(racers[i]);
       q(".algo-name").textContent = racers[i].name;
-      pseudo.innerHTML = RL.entry(a.id)?.pseudocode || '<p class="faint">The pseudocode of this algorithm is not written yet.</p>';
+      pseudo.innerHTML = RL.entry(a.station || a.id)?.pseudocode || '<p class="faint">The pseudocode of this algorithm is not written yet.</p>';
       texInto(liveSym, typeof a.rule === "function" ? a.rule(p) : a.rule);
       liveNum.innerHTML = "";
       RL.math.render(pseudo);
