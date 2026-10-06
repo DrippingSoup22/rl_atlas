@@ -58,8 +58,8 @@ Why want that? Exploration comes from the objective, not from added noise. The p
 The objective has its own Bellman equations. For a policy $\pol\pi$, the **soft values** add the entropy still to come:
 $$\val{q_\pi(s, a)} = \rew{r(s, a)} + \gam\, \mathbb E_{s'}\big[\val{v_\pi(s')}\big], \qquad \val{v_\pi(s)} = \mathbb E_{a \sim \pi}\big[\val{q_\pi(s, a)} - \alpha \ln \pol{\pi(a \mid s)}\big]. \label{soft-bellman}$$
 They can be computed exactly as in [[policy-evaluation]], by applying \ref{soft-bellman} as an update until it settles. Policy improvement then moves the policy toward the softened greedy policy of those values, staying within the family $\Pi$ the policy can represent (Gaussians, say):
-$$\pol{\pi_{\text{new}}}(\cdot \mid s) = \operatorname*{arg\,min}_{\pi' \in \Pi} D_{\mathrm{KL}}\Big(\pi'(\cdot \mid s)\ \Big\|\ \frac{\exp\big(\val{q_{\pi_{\text{old}}}(s, \cdot)} / \alpha\big)}{Z(s)}\Big), \label{soft-improve}$$
-where $Z(s)$ makes the right side a distribution.
+$$\pol{\pi_{\text{new}}}(\cdot \mid s) = \operatorname*{arg\,min}_{\pi' \in \Pi} D_{\mathrm{KL}}\big(\pi'(\cdot \mid s)\, \big\|\, g(\cdot \mid s)\big) \qquad g(a \mid s) = \frac{\exp\big(\val{q_{\pi_{\text{old}}}(s, a)} / \alpha\big)}{Z(s)}, \label{soft-improve}$$
+where $Z(s)$ makes $g$, the softened greedy policy, a distribution.
 
 ::: theorem {#thm-soft-pi} Soft policy improvement
 For every state and action, $\val{q_{\pi_{\text{new}}}(s, a)} \ge \val{q_{\pi_{\text{old}}}(s, a)}$. Alternating soft evaluation and soft improvement in a finite MDP converges to the policy in $\Pi$ with the highest soft values.
