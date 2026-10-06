@@ -5,6 +5,7 @@ prereqs = ["epsilon-greedy", "optimistic-init"]
 lab = "bandit-ucb"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §2.7, Figure 2.4 and Exercise 2.8", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Garivier & Cappé (2011), The KL-UCB algorithm for bounded stochastic bandits and beyond, Proceedings of the 24th Conference on Learning Theory", url = "https://proceedings.mlr.press/v19/garivier11a.html" },
   { text = "Lai & Robbins (1985), Asymptotically efficient adaptive allocation rules, Advances in Applied Mathematics 6", url = "https://doi.org/10.1016/0196-8858(85)90002-8" },
   { text = "Agrawal (1995), Sample mean based index policies with O(log n) regret for the multi-armed bandit problem, Advances in Applied Probability 27" },
   { text = "Auer, Cesa-Bianchi & Fischer (2002), Finite-time analysis of the multiarmed bandit problem, Machine Learning 47", url = "https://doi.org/10.1023/A:1013689704352" },
@@ -86,7 +87,7 @@ $$\sum_{a:\,\Delta_a > 0} \Big(\frac{8 \ln T}{\Delta_a} + \big(1 + \tfrac{\pi^2}
 A suboptimal action $a$ is chosen only if its upper bound exceeds that of a best action. That requires one of three things: the best action's estimate is far below its value, the estimate of $a$ is far above its value, or $a$ has been tried too few times for its bonus to have shrunk below about $\Delta_a / 2$. By \ref{hoeffding-ineq}, the first two have probability at most $t^{-4}$ each at step $t$, which summed over $t$ gives the constant term. The third can happen only while $N_t(a) < 8 \ln T / \Delta_a^2$.
 :::
 
-Regret that grows like $\ln T$ is the best possible rate (Lai & Robbins, 1985). With a constant $\eps$, ε-greedy's regret grows linearly ([[k-armed-bandit]]).
+Regret that grows like $\ln T$ is the best possible rate (Lai & Robbins, 1985). UCB1 reaches that rate, though not the best constant in front of it: its Hoeffding bound ignores how the rewards are distributed. KL-UCB replaces it with a bound built from the Kullback–Leibler divergence, tighter for rewards near 0 or 1, and matches the Lai–Robbins constant exactly (Garivier and Cappé, 2011). With a constant $\eps$, ε-greedy's regret grows linearly ([[k-armed-bandit]]).
 
 ### Results on the testbed {#testbed}
 
@@ -107,7 +108,7 @@ Outside the bandit setting, the assumptions behind the bonus start to fail one b
 - **Large state spaces.** With states, the bonus needs a count for every state–action pair. When states are rarely or never revisited, as with images, counts are useless, and they must be replaced by *pseudo-counts* or other measures of novelty (Bellemare et al., 2016; [[exploration-strategies]]).
 - **Function approximation.** The confidence interval assumes independent samples of a fixed quantity; estimates that share parameters, bootstrap, and chase a moving policy break that assumption.
 
-Yet UCB has a prominent second life in planning. UCT (Kocsis & Szepesvári, 2006) applies the rule at every node of a search tree, treating the choice among moves as a bandit, and its descendants guide the tree search of AlphaGo and AlphaZero ([[mcts]]).
+Yet UCB has a prominent second life in planning. UCT (Kocsis & Szepesvári, 2006) applies the rule at every node of a search tree, treating the choice among moves as a bandit, and its descendants guide the tree search of AlphaGo and AlphaZero ([[mcts]], whose story shows UCT finding the one winning move of a tic-tac-toe position).
 
 ### Historical remarks {#history}
 

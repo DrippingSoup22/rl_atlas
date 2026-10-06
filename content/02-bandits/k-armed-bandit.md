@@ -4,6 +4,8 @@ prereqs = ["explore-exploit", "state-action-reward"]
 lab = "bandit-epsilon"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §2.1–2.3, §2.9", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Li, Chu, Langford & Schapire (2010), A contextual-bandit approach to personalized news article recommendation, Proceedings of the 19th International World Wide Web Conference", url = "https://arxiv.org/abs/1003.0146" },
+  { text = "Auer, Cesa-Bianchi, Freund & Schapire (2002), The nonstochastic multiarmed bandit problem, SIAM Journal on Computing 32", url = "https://doi.org/10.1137/S0097539701398375" },
   { text = "Thompson (1933), On the likelihood that one unknown probability exceeds another in view of the evidence of two samples, Biometrika 25" },
   { text = "Robbins (1952), Some aspects of the sequential design of experiments, Bulletin of the American Mathematical Society 58", url = "https://doi.org/10.1090/S0002-9904-1952-09620-8" },
   { text = "Gittins (1979), Bandit processes and dynamic allocation indices, Journal of the Royal Statistical Society B 41" },
@@ -123,7 +125,8 @@ Averaging over problems matters. On a single problem, a method may do well becau
 
 The bandit is the full problem stripped to one feature: it has evaluative feedback, but a single situation, and actions that affect only the immediate reward. Adding features back one at a time leads to the rest of the atlas.
 
-- **Associative search.** Suppose there are several bandits, and at each step the agent is told which one it faces, by a signal such as the color of the machine. Now it must learn a policy: the best action *for each situation*. This is a **contextual bandit**, the setting of many recommendation systems. Each action still affects only the immediate reward.
+- **Associative search.** Suppose there are several bandits, and at each step the agent is told which one it faces, by a signal such as the color of the machine. Now it must learn a policy: the best action *for each situation*. This is a **contextual bandit**, the setting of many recommendation systems: LinUCB, a version of UCB whose estimates are linear in features of the context, chose the news articles shown on Yahoo!'s front page this way (Li et al., 2010). Each action still affects only the immediate reward.
+- **Adversarial bandits.** Drop the assumption that each arm's rewards come from a fixed distribution, and let them be chosen by an opponent who knows the method. Deterministic rules like UCB can then be exploited; randomized methods such as EXP3, which samples arms from weights that grow exponentially with their estimated payoff, still keep the regret growing like $\sqrt{T}$ against the best single arm (Auer et al., 2002).
 - **Full reinforcement learning.** If actions also affect the next situation, and through it later rewards, the problem becomes a Markov decision process ([[mdp]]). A bandit is the special case with one state, where every action leads back to it ([[agent-environment]]).
 
 Everything learned here carries over: the incremental estimates, the role of the step size, and the strategies for exploration reappear in every method of the atlas, in the form *new estimate = old estimate + step size × (target − old estimate)*.

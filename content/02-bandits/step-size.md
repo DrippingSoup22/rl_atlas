@@ -4,6 +4,7 @@ prereqs = ["incremental-mean"]
 lab = "bandit-drift"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §2.4–2.5 and Exercise 2.7", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Sutton (1992), Adapting bias by gradient descent: an incremental version of delta-bar-delta, Proceedings of the 10th National Conference on Artificial Intelligence" },
   { text = "Robbins & Monro (1951), A stochastic approximation method, Annals of Mathematical Statistics 22", url = "https://doi.org/10.1214/aoms/1177729586" },
   { text = "Blum (1954), Approximation methods which converge with probability one, Annals of Mathematical Statistics 25" },
   { text = "Kushner & Yin (2003), Stochastic Approximation and Recursive Algorithms and Applications, 2nd ed., Springer" },
@@ -119,6 +120,8 @@ Then $\bar{o}_n = 1 - (1 - \alp)^n$, so $\beta_1 = 1$ and the first reward repla
 ### Step sizes beyond bandits {#beyond}
 
 Every learning method in the atlas has a step size. In Monte Carlo and temporal-difference methods it decides how far a state's estimate moves toward its target, and the same trade-off holds: small values learn slowly and steadily, large ones quickly and noisily, and too large a value makes estimates oscillate. With function approximation the step size becomes the learning rate of stochastic gradient descent ([[value-error]]), where too large a value can make the estimates diverge instead of merely wobble.
+
+The step size can also be learned. Sutton's IDBD (1992) gives every weight its own step size and adjusts it by a second, slower gradient step: a weight whose updates keep pointing the same way gets a larger step, one whose updates cancel out gets a smaller one. Deep reinforcement learning usually leaves this to the optimizer: Adam scales each weight's step by a running estimate of the size of its gradients, which is why one learning rate can serve networks whose weights see gradients of very different sizes.
 
 ## Card
 

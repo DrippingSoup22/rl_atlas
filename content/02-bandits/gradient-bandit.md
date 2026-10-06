@@ -112,7 +112,11 @@ The theorem holds for *any* baseline that does not depend on the action, includi
 The fraction of steps on which the best arm was chosen by the gradient bandit, with and without the average reward as a baseline, for $\alp = 0.1$ and $\alp = 0.4$, on a testbed whose values are drawn around $+4$. Each curve averages 500 runs; the Lab computes them when the figure comes into view. After Sutton & Barto, Figure 2.5.
 :::
 
-In the runs above, over the last hundred steps the version with a baseline chooses the best arm about 84% of the time with $\alp = 0.1$, and the version without one about 46% of the time. The average reward is not the baseline with the least variance, but it is simple, needs no knowledge of the problem, and works well (Greensmith, Bartlett & Baxter, 2004). The same baseline reappears, with the same justification, in policy-gradient methods with states ([[baseline]]).
+In the runs above, over the last hundred steps the version with a baseline chooses the best arm about 84% of the time with $\alp = 0.1$, and the version without one about 46% of the time. The average reward is not the baseline with the least variance. That one weights each reward by the squared size of the update it would cause,
+
+$$B^* = \frac{\mathbb{E}\big[\rew{R_t}\,\lVert \nabla_{\mathbf H} \ln \pol{\pi_t(A_t)} \rVert^2\big]}{\mathbb{E}\big[\lVert \nabla_{\mathbf H} \ln \pol{\pi_t(A_t)} \rVert^2\big]},$$
+
+so rare actions, whose updates are large, count for more (Greensmith, Bartlett & Baxter, 2004). The plain average is simple, needs no knowledge of the problem, and is usually close enough. The same baseline reappears, with the same justification, in policy-gradient methods with states ([[baseline]]).
 
 ### How the bandit methods compare {#comparison}
 

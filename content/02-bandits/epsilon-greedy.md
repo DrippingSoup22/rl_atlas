@@ -4,6 +4,7 @@ prereqs = ["k-armed-bandit", "incremental-mean", "explore-exploit"]
 lab = "bandit-epsilon"
 sources = [
   { text = "Sutton & Barto (2018), Reinforcement Learning: An Introduction, 2nd ed., §2.2–2.4 and Figure 2.2", url = "http://incompleteideas.net/book/the-book-2nd.html" },
+  { text = "Dabney, Ostrovski & Barreto (2021), Temporally-extended ε-greedy exploration, International Conference on Learning Representations", url = "https://arxiv.org/abs/2006.01782" },
   { text = "Auer, Cesa-Bianchi & Fischer (2002), Finite-time analysis of the multiarmed bandit problem, Machine Learning 47", url = "https://doi.org/10.1023/A:1013689704352" },
   { text = "Vermorel & Mohri (2005), Multi-armed bandit algorithms and empirical evaluation, European Conference on Machine Learning" },
   { text = "Mnih et al. (2015), Human-level control through deep reinforcement learning, Nature 518", url = "https://doi.org/10.1038/nature14236" },
@@ -131,7 +132,7 @@ Each step costs $O(k)$ for the arg max and $O(1)$ for the update; memory is two 
 
 ### ε-greedy beyond bandits {#beyond}
 
-With states, the same rule is applied in each state to the action values $\val{Q(s, \cdot)}$: with probability $\eps$ a random action, otherwise a greedy one. It is the default exploration of [[sarsa]], [[q-learning]], [[mc-control]] and [[dqn]]. Two properties carry over from the bandit. ε-greedy is **ε-soft**, giving every action a probability of at least $\eps / |\mathcal{A}(s)|$, which on-policy methods need to keep exploring ([[mc-control]]). And it explores **blindly**: the worst action is tried as often as the second best, and a long sequence of lucky random choices is needed to reach a distant part of a large world ([[explore-exploit]]). Methods that direct exploration toward uncertainty, such as [[ucb]], address the first problem; the second remains an open research question ([[exploration-strategies]]).
+With states, the same rule is applied in each state to the action values $\val{Q(s, \cdot)}$: with probability $\eps$ a random action, otherwise a greedy one. It is the default exploration of [[sarsa]], [[q-learning]], [[mc-control]] and [[dqn]]. Two properties carry over from the bandit. ε-greedy is **ε-soft**, giving every action a probability of at least $\eps / |\mathcal{A}(s)|$, which on-policy methods need to keep exploring ([[mc-control]]). And it explores **blindly**: the worst action is tried as often as the second best, and a long sequence of lucky random choices is needed to reach a distant part of a large world ([[explore-exploit]]). Methods that direct exploration toward uncertainty, such as [[ucb]], address the first problem. For the second, a small change goes a long way: when exploring, repeat the random action for a random number of steps, drawn from a heavy-tailed distribution, instead of choosing anew at every step. This εz-greedy keeps ε-greedy's simplicity and reaches far corners that one-step dithering almost never does (Dabney, Ostrovski and Barreto, 2021). Directed exploration in large worlds remains an open research question ([[exploration-strategies]]).
 
 ### Historical remarks {#history}
 
