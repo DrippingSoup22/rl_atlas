@@ -10,7 +10,7 @@ sources = [
 
 ### Idea
 
-The atlas is a map of reinforcement learning, from the agent–environment loop to PPO and SAC. Every **station** is one idea: a concept such as the [[discount]] factor, or an algorithm such as [[q-learning]]. Stations come in order along **lines**, and each one builds on the ones before it on its line, so the best way to read is from the top left, part by part. You can also jump anywhere: every underlined term explains itself when you hover it.
+The atlas is a map of reinforcement learning, from the agent–environment loop to PPO and SAC, and on to where the field goes next. Every **station** is one idea: a concept such as the [[discount]] factor, or an algorithm such as [[q-learning]]. Stations come in order along **lines**, and each one builds on the ones before it on its line, so the best way to read is from the top left, part by part. You can also jump anywhere: every underlined term explains itself when you hover it.
 
 ::: analogy
 A metro map of a city you are about to explore. You can ride the lines in order, or get off wherever something catches your eye; the map always shows where you are.
@@ -34,7 +34,7 @@ Each algorithm is read three ways, in this order:
 | **Textbook** | the theory, like a book chapter: definitions, derivations, theorems, figures, references |
 | **Card** | the summary: formula, pseudocode, perks, flaws, knobs and questions on one sheet |
 
-Then the **Lab** shows it learning: one pseudocode line at a time, or fifty episodes a second. Concepts use the views that help them.
+Then the **Lab** shows it learning: one pseudocode line at a time, or fifty episodes a second. It also counts how often its settings work over many seeds, and sweeps any knob to show where it works and where it fails. The deep methods' Labs play back networks trained offline, 20 seeds each. Concepts use the views that help them.
 
 ### Colors {#colors}
 
@@ -54,6 +54,7 @@ Hover any colored symbol and every symbol of its kind lights up. The [Symbols pa
 
 - New to reinforcement learning: play [[be-the-agent]] for two minutes, then read Part 1 in order, from [[agent-environment]] to [[reward-design]].
 - Know the basics: go straight to [[sarsa]] and [[q-learning]], and race them in the Lab.
+- Training deep agents: read [[neural-networks]] and [[dqn]], and keep the Toolbox close: the [[hyperparameters|hyperparameter guide]], [[seeds]] and [[debugging|My agent doesn't learn]].
 - Looking for something specific: press `Ctrl K` and type its name.
 
 ### Shortcuts {#shortcuts}
