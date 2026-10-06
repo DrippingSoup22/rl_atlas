@@ -1,6 +1,7 @@
 # RL Atlas
 
-A visual, interactive guide to reinforcement learning, from the agent–environment loop to PPO and SAC.
+A visual, interactive guide to reinforcement learning, from the agent–environment loop to PPO and SAC, and on to
+where the field goes next: 95 stations in 14 parts, each read as a story, a textbook chapter and a card.
 Local and offline: everything is in one file, `rl_atlas.html`.
 
 ## Use it
@@ -47,7 +48,7 @@ deleted.
 | `lab/` | worlds, features, algorithms, runs (computed live, or played back from recordings) and dynamic programming (no DOM, also used by the tests), and their views |
 | `vendor/` | KaTeX 0.19 (MIT license) |
 | `tests/` | `lab.test.js` |
-| `recorder/` | the recorder of the runs with neural networks (NumPy 2.4 and Gymnasium 1.4, the versions the recordings were made with): `python recorder/record.py [name …]` writes `content/recordings/<name>.json`, which `build.py` bundles |
+| `recorder/` | the recorder of the runs with neural networks (NumPy 2.4 and Gymnasium 1.4, the versions the recordings were made with): `python recorder/record.py [name …]` trains 20 seeds and writes `content/recordings/<name>.json` (every seed's training and test returns, and one seed's snapshots), and `--sweep` writes `content/recordings/sweeps/<name>.json` (each knob's values over many seeds); `build.py` bundles both. `RECORDINGS_OUT` sends them elsewhere, to compare before replacing |
 
 ## Writing an entry
 
@@ -72,7 +73,7 @@ shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of 
 - `[[station]]` or `[[station|text]]` for links that explain themselves on hover, and `[text](lab:preset)` for Lab links;
 - `$…$` and `$$…$$` math with the color macros `\val \rew \pol \err` and `\alp \gam \eps \lam \del`;
 - `{{demo arg}}` for a diagram, figure or demo: `backup` (bandit, mc, mc-q, td0, sarsa, q-learning, expected-sarsa,
-  double-q, n-step-td, n-step-sarsa, lambda, lambda-q, v-pi, q-pi, v-star, q-star, reinforce, baseline, actor-critic, a2c, gae), `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `cliff-alpha`,
+  double-q, ddpg, td3, sac, n-step-td, n-step-sarsa, lambda, lambda-q, v-pi, q-pi, v-star, q-star, reinforce, baseline, actor-critic, a2c, gae), `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `cliff-alpha`,
   `loop`, `mdp-graph` (robot), `discount`, `be-the-agent`, `testbed`, `sample-average`, `step-weights`, `step-sizes`,
   `bandit-curves` (epsilon, optimistic, ucb, gradient, drift), `bandit-study`, `dp-sweeps`, `frozen` (pi, optimal),
   `dp-race`, `gpi`, `blackjack-values`, `blackjack-policy`, `blackjack-match`, `frozen-mc`, `is-blackjack`,
