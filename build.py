@@ -38,7 +38,7 @@ FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story", "stor
 # imitation on the ice bridge, planning in a learned model among hidden cliffs. Their pseudocode is the station's.
 RUNNABLE_CONCEPTS = {"dpg": "dpg", "offline-q": "offline-rl", "offline-bcq": "offline-rl", "bc": "imitation", "dagger": "imitation",
                      "model-planner": "model-based-deep"}
-PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "seed", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds"}
+PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds"}
 CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights",
           "policy-value", "right", "aim", "kl", "clipped", "deployed", "labels"}
 # What a preset of recorded runs (racers that name a recording) can chart: from the recordings, nothing is recomputed.
@@ -487,10 +487,10 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
     if sweep is not None and not (isinstance(sweep, dict) and all(isinstance(v, list) and len(v) > 1 and all(isinstance(x, (int, float)) for x in v) for v in sweep.values())):
         problems.error(where, "sweep must map knobs to lists of at least two numbers, as in sweep = { q0 = [-100.0, 0.0] }")
     if not isinstance(raw.get("seeds", False), bool):
-        problems.error(where, "seeds must be true or false (true: the charts open on the thin lines of 10 seeds)")
+        problems.error(where, "seeds must be true or false (true, for recorded runs: the charts open on the thin lines of every seed)")
     return {
         "title": raw.get("title", pid), "env": raw.get("env", ""), "racers": racers,
-        "units": raw.get("units", 500), "seed": raw.get("seed", 1), "runs": raw.get("runs", 1),
+        "units": raw.get("units", 500), "seed": 1, "runs": raw.get("runs", 1),
         "charts": charts, "measures": measures, "film": raw.get("film", []), "intro": raw.get("intro", ""),
         "params": {k: v for k, v in raw.items() if k not in PRESET_KEYS},
         **({"success": success} if success is not None else {}),

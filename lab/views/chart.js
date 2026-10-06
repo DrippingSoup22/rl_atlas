@@ -1,6 +1,8 @@
 /* Line chart of one number per unit (reward per episode, error after each sweep…) for one or more runs.
    The part already played is solid and the rest faint; a playhead marks "now" and a click jumps there.
-   Faint thin lines show single runs behind their average; dashed lines mark the best that can be reached.
+   A soft band can show the spread of many runs (their middle half) behind a line; dashed lines mark the best that
+   can be reached. A series may be shorter than the run (the bench keeps at most a few hundred points): it then
+   spreads over the run's units.
    Long runs are drawn at screen resolution: each point of the line averages the units under one pixel. */
 (function (RL) {
   "use strict";
@@ -70,8 +72,9 @@
       this.ro.observe(host);
     }
 
+    // series: [{ name, color, values, smooth, faint, units }] or bands [{ band: { lo, mid, hi }, color, units }]
     set(series, refs = []) {
-      this.series = series.map((s) => ({ ...s, line: smooth(s.values, s.smooth || 1) }));
+      this.series = series.map((s) => (s.band ? { ...s, line: s.band.mid, values: s.band.mid } : { ...s, line: smooth(s.values, s.smooth || 1) }));
       this.refs = refs;
       this.render();
     }
@@ -87,7 +90,7 @@
       if (this.domain) return this.domain;
       if (this.percent) return [0, 1];
       let lo = Infinity, hi = -Infinity;
-      for (const s of this.series) for (const v of s.line) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      for (const s of this.series) for (const L of s.band ? [s.band.lo, s.band.hi] : [s.line]) for (const v of L) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
       for (const r of this.refs) { lo = Math.min(lo, r.value); hi = Math.max(hi, r.value); }
       if (!Number.isFinite(lo)) return this.log ? [1e-3, 1] : [0, 1];
       if (this.log) {
@@ -114,7 +117,7 @@
       svg.setAttribute("width", W);
       svg.setAttribute("height", H);
       svg.replaceChildren();
-      const n = Math.max(1, ...this.series.map((s) => s.values.length));
+      const n = Math.max(1, ...this.series.map((s) => s.units || s.values.length));
       const [lo, hi] = this._domain(), pw = W - M.l - M.r, ph = H - M.t - M.b;
       const lx = Math.log10(Math.max(2, n));
       const x = this.logX ? (u) => M.l + (Math.log10(Math.max(1, u)) / lx) * pw : (u) => M.l + (u / n) * pw;
@@ -147,11 +150,21 @@
       const defs = el("defs", {}, svg);
       this.clipRect = el("rect", { x: 0, y: 0, height: H, width: 0 }, el("clipPath", { id: this.clip }, defs));
       const buckets = Math.max(1, Math.floor(pw / 1.5));
+      // a series shorter than the run: point i stands for the units it covers, drawn at their middle
+      const ux = (s, i) => (s.line.length === n ? i + 1 : ((i + 0.5) * n) / s.line.length);
+      for (const s of this.series.filter((b) => b.band)) { // bands first, under every line
+        const { lo: L0, hi: L1, mid } = s.band, idx = [...L0.keys()].filter((i) => Number.isFinite(L0[i]) && Number.isFinite(L1[i]));
+        if (idx.length < 2) continue;
+        const top = idx.map((i) => `${x(ux(s, i)).toFixed(1)} ${y(L1[i]).toFixed(1)}`), bottom = idx.reverse().map((i) => `${x(ux(s, i)).toFixed(1)} ${y(L0[i]).toFixed(1)}`);
+        el("path", { class: "band", d: `M${top.join("L")}L${bottom.join("L")}Z`, style: `fill: var(${s.color})` }, svg);
+        el("path", { class: "band-mid", d: "M" + [...mid.keys()].filter((i) => Number.isFinite(mid[i])).map((i) => `${x(ux(s, i)).toFixed(1)} ${y(mid[i]).toFixed(1)}`).join("L"), style: `stroke: var(${s.color})` }, svg);
+      }
       for (const s of this.series) {
+        if (s.band) continue;
         const L = s.line, len = L.length;
         let d = "";
         if (len <= buckets * 2 || this.logX) {
-          for (let i = 0; i < len; i++) d += `${d ? "L" : "M"}${x(i + 1).toFixed(1)} ${y(L[i]).toFixed(1)}`;
+          for (let i = 0; i < len; i++) d += `${d ? "L" : "M"}${x(ux(s, i)).toFixed(1)} ${y(L[i]).toFixed(1)}`;
         } else {
           for (let b = 0; b < buckets; b++) {
             const i0 = Math.floor((b * len) / buckets), i1 = Math.max(i0 + 1, Math.floor(((b + 1) * len) / buckets));
@@ -165,7 +178,7 @@
         el("path", { class: `past${cls}`, d, style, "clip-path": `url(#${this.clip})` }, svg);
       }
       this.head = el("line", { class: "playhead", y1: M.t - 4, y2: M.t + ph }, svg);
-      this.dots = this.series.map((s) => (s.faint ? null : el("circle", { class: "dot", r: 4.5, style: `fill: var(${s.color})` }, svg)));
+      this.dots = this.series.map((s) => (s.faint || s.band ? null : el("circle", { class: "dot", r: 4.5, style: `fill: var(${s.color})` }, svg)));
       this.cross = el("line", { class: "cross", y1: M.t, y2: M.t + ph }, svg);
       const hit = el("rect", { class: "hit", x: M.l, y: 0, width: pw, height: H }, svg);
       hit.addEventListener("pointermove", (ev) => this._hover(ev));
@@ -189,10 +202,11 @@
       this.series.forEach((s, k) => {
         const dot = this.dots[k];
         if (!dot) return;
-        if (e < 1 || !Number.isFinite(s.line[e - 1])) { dot.style.opacity = 0; return; }
+        const v = s.line[Math.min(s.line.length - 1, Math.floor(((e - 1) * s.line.length) / this.n))];
+        if (e < 1 || !Number.isFinite(v)) { dot.style.opacity = 0; return; }
         dot.style.opacity = 1;
         dot.setAttribute("cx", px);
-        dot.setAttribute("cy", this.y(s.line[e - 1]));
+        dot.setAttribute("cy", this.y(v));
       });
     }
 
@@ -201,7 +215,12 @@
       this.cross.setAttribute("x1", px);
       this.cross.setAttribute("x2", px);
       this.cross.style.opacity = 1;
-      const rows = this.series.filter((s) => !s.faint).map((s) => `<div class="row"><i class="key" style="--k: var(${s.color})"></i><b>${this.fmt(s.line[i])}</b><span>${RL.esc(s.name)}</span>${(s.smooth || 1) > 1 ? `<span class="faint">this ${this.noun[0]} ${this.fmt(s.values[i])}</span>` : ""}</div>`);
+      const at = (s) => Math.min(s.line.length - 1, Math.floor((i * s.line.length) / this.n));
+      const rows = this.series.filter((s) => !s.faint).map((s) => {
+        const j = at(s);
+        if (s.band) return `<div class="row"><i class="key band-key" style="--k: var(${s.color})"></i><b>${this.fmt(s.band.lo[j])} to ${this.fmt(s.band.hi[j])}</b><span>${RL.esc(s.name)}</span></div>`;
+        return `<div class="row"><i class="key" style="--k: var(${s.color})"></i><b>${this.fmt(s.line[j])}</b><span>${RL.esc(s.name)}</span>${(s.smooth || 1) > 1 && s.values.length === this.n ? `<span class="faint">this ${this.noun[0]} ${this.fmt(s.values[i])}</span>` : ""}</div>`;
+      });
       RL.tip.show(ev.clientX, ev.clientY, `<div class="head">${this.noun[0][0].toUpperCase() + this.noun[0].slice(1)} ${(i + 1).toLocaleString("en")}</div>${rows.join("")}`);
     }
 
@@ -282,4 +301,125 @@
     }
   }
   RL.SweepChart = SweepChart;
+
+  // How the runs of the bench end: per racer one row, a dot per seed at its final score. A dashed mark splits the
+  // seeds that end well (filled) from the others (hollow); the seed playing above is ringed. A click on a dot plays
+  // that seed. Dots that would overlap are stacked a little above and below the row.
+  class SeedStrip {
+    constructor(host, { onPick, label = "" } = {}) {
+      Object.assign(this, { host, onPick });
+      this.data = null;
+      this.svg = el("svg", { class: "seedstrip", role: "img", "aria-label": label }, host);
+      this.ro = new ResizeObserver(() => this.render());
+      this.ro.observe(host);
+    }
+
+    // rows: [{ name, color, seeds, scores, ok, played: { seed, score } }]; threshold: a number or null; lower: less is
+    // better; percent: scores are shares; fmt: a number's text.
+    set(data) {
+      this.data = data;
+      this.render();
+    }
+
+    render() {
+      const d = this.data, svg = this.svg;
+      svg.replaceChildren();
+      if (!d || !d.rows.length) return;
+      const W = Math.max(280, this.host.clientWidth), ROW = d.rows.some((r) => r.scores.length > 40) ? 44 : 34, TOP = 22, H = TOP + d.rows.length * ROW + 24;
+      const L = Math.min(150, Math.max(80, ...d.rows.map((r) => 8 + 7 * r.name.length))), R = 70;
+      svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      svg.setAttribute("width", W);
+      svg.setAttribute("height", H);
+      const all = d.rows.flatMap((r) => [...r.scores, r.played?.score]).filter(Number.isFinite);
+      if (Number.isFinite(d.threshold)) all.push(d.threshold);
+      let lo = Math.min(...all), hi = Math.max(...all);
+      if (d.percent) { lo = Math.min(lo, 0); hi = Math.max(hi, 1); }
+      if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+      const t = ticks(lo, hi, W < 520 ? 3 : 5);
+      lo = Math.min(lo, t[0]); hi = Math.max(hi, t[t.length - 1]);
+      // the better end on the right, so "further right" always reads "better"
+      const flip = d.lower, x = (v) => L + ((flip ? hi - v : v - lo) / (hi - lo)) * (W - L - R);
+      const fmt = d.fmt || ((v) => (d.percent ? `${Math.round(v * 100)}%` : num(v)));
+      const grid = el("g", { class: "grid" }, svg);
+      t.filter((v) => x(v) < W - R - 22).forEach((v) => el("text", { class: "tick", x: x(v), y: H - 6, "text-anchor": "middle" }, grid).textContent = fmt(v));
+      el("text", { class: "tick end", x: W - R + 6, y: H - 6 }, grid).textContent = "better →";
+      if (Number.isFinite(d.threshold)) {
+        const tx = x(d.threshold);
+        el("line", { class: "goal", x1: tx, x2: tx, y1: TOP - 6, y2: H - 20 }, grid);
+        el("text", { class: "goal-label", x: tx + 5, y: TOP - 8 }, grid).textContent = `ends well: ${d.lower ? "≤" : "≥"} ${fmt(d.threshold)}`;
+      }
+      d.rows.forEach((r, ri) => {
+        const cy = TOP + ri * ROW + ROW / 2, g = el("g", { class: "row" }, svg), many = r.scores.length > 40, rad = many ? 2.6 : 4.2;
+        const goal = Number.isFinite(d.threshold);
+        el("line", { class: "axis", x1: L, x2: W - R, y1: cy, y2: cy }, g);
+        el("text", { class: "name", x: L - 10, y: cy + 4, "text-anchor": "end" }, g).textContent = r.name;
+        const wins = r.ok.filter(Boolean).length;
+        el("text", { class: "count", x: W - R + 6, y: cy + 4 }, g).textContent = Number.isFinite(d.threshold) ? `${wins} of ${r.scores.length}` : `${r.scores.length} seeds`;
+        if (r.scores.length > 60) { this._histogram(g, r, x, cy, ROW, goal, d, fmt); return; }
+        // stack dots that would overlap: each pixel bin of a dot's width fills above and below the row in turn
+        const bins = new Map(), pos = r.scores.map((v) => {
+          if (!Number.isFinite(v)) return null;
+          const px = x(v), b = Math.round(px / (rad * 2 + 1)), k = bins.get(b) || 0;
+          bins.set(b, k + 1);
+          const off = Math.min(ROW / 2 - rad - 1, Math.ceil(k / 2) * (rad * 1.6)) * (k % 2 ? -1 : 1);
+          return [px, cy + off];
+        });
+        r.scores.forEach((v, i) => {
+          if (!pos[i]) return;
+          const ok = Number.isFinite(d.threshold) ? r.ok[i] : true;
+          const dot = el("circle", { class: `seed-dot${ok ? "" : " miss"}`, r: rad, cx: pos[i][0], cy: pos[i][1], style: `--c: var(${r.color})` }, g);
+          dot.addEventListener("pointerenter", (ev) => RL.tip.show(ev.clientX, ev.clientY, `<div class="head">Seed ${r.seeds[i]}</div><div class="row"><i class="key" style="--k: var(${r.color})"></i><b>${fmt(v)}</b><span>${RL.esc(r.name)}${Number.isFinite(d.threshold) ? (ok ? " · ends well" : " · does not") : ""}</span></div><div class="faint">Click to play this seed</div>`));
+          dot.addEventListener("pointerleave", () => RL.tip.hide());
+          dot.addEventListener("click", () => { RL.tip.hide(); this.onPick?.(r.seeds[i]); });
+        });
+        const p = r.played;
+        if (p && Number.isFinite(p.score)) {
+          const i = r.seeds.indexOf(p.seed), at = i >= 0 && pos[i] ? pos[i] : [x(p.score), cy];
+          if (i < 0) el("circle", { class: "seed-dot own", r: rad, cx: at[0], cy: at[1], style: `--c: var(${r.color})` }, g);
+          el("circle", { class: "seed-ring", r: rad + 4, cx: at[0], cy: at[1] }, g);
+        }
+      });
+    }
+
+    // Many seeds: a small histogram above the row instead of dots, filled where runs end well; a click plays the seed
+    // whose ending is closest to where it lands.
+    _histogram(g, r, x, cy, ROW, goal, d, fmt) {
+      const x0 = x(d.lower ? Math.max(...r.scores.filter(Number.isFinite)) : Math.min(...r.scores.filter(Number.isFinite)));
+      const W = this.svg.viewBox.baseVal.width, bw = 6, counts = new Map();
+      r.scores.forEach((v, i) => {
+        if (!Number.isFinite(v)) return;
+        const b = Math.floor(x(v) / bw), c = counts.get(b) || { n: 0, ok: 0 };
+        c.n++;
+        if (r.ok[i]) c.ok++;
+        counts.set(b, c);
+      });
+      const top = Math.max(...[...counts.values()].map((c) => c.n)), hgt = ROW - 10;
+      for (const [b, c] of counts) {
+        const h = Math.max(1.5, (c.n / top) * hgt), ok = goal ? c.ok >= c.n / 2 : true;
+        el("rect", { class: `seed-bar${ok ? "" : " miss"}`, x: b * bw + 0.5, y: cy + ROW / 2 - 4 - h, width: bw - 1, height: h, rx: 1, style: `--c: var(${r.color})` }, g);
+      }
+      const hit = el("rect", { class: "hit", x: Math.min(x0, W) - 6, y: cy - ROW / 2, width: W, height: ROW }, g);
+      const nearest = (ev) => {
+        const box = this.svg.getBoundingClientRect(), px = ((ev.clientX - box.left) / box.width) * W;
+        let best = -1, bd = Infinity;
+        r.scores.forEach((v, i) => { const dd = Math.abs(x(v) - px); if (dd < bd) { bd = dd; best = i; } });
+        return best;
+      };
+      hit.addEventListener("pointermove", (ev) => { const i = nearest(ev); if (i >= 0) RL.tip.show(ev.clientX, ev.clientY, `<div class="head">Seed ${r.seeds[i]}</div><div class="row"><i class="key" style="--k: var(${r.color})"></i><b>${fmt(r.scores[i])}</b><span>${RL.esc(r.name)}</span></div><div class="faint">Click to play this seed</div>`); });
+      hit.addEventListener("pointerleave", () => RL.tip.hide());
+      hit.addEventListener("click", (ev) => { const i = nearest(ev); RL.tip.hide(); if (i >= 0) this.onPick?.(r.seeds[i]); });
+      const p = r.played;
+      if (p && Number.isFinite(p.score)) {
+        const px = x(p.score);
+        el("line", { class: "seed-mark", x1: px, x2: px, y1: cy - ROW / 2 + 2, y2: cy + ROW / 2 - 2 }, g);
+      }
+    }
+
+    destroy() {
+      this.ro.disconnect();
+      RL.tip.hide();
+      this.svg.remove();
+    }
+  }
+  RL.SeedStrip = SeedStrip;
 })(globalThis.RL = globalThis.RL || {});

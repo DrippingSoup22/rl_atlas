@@ -105,13 +105,16 @@
     const unitOf = () => racers[0].algorithm.unit;
     const noun = () => NOUNS[env.unitName || (unitOf() === "step" ? "pull" : unitOf())];
     // Shared knobs: the preset's, minus those every racer sets for itself.
-    const knobs = { units: recorded ? recRuns[0].units : preset.units, seed: recorded ? recRuns[0].seed : preset.seed, runs: preset.runs, ...preset.params };
+    // seed: "typical" (the bench's median run for these settings) or a number the reader chose
+    const knobs = { units: recorded ? recRuns[0].units : preset.units, seed: recorded ? recRuns[0].seed : "typical", runs: preset.runs, ...preset.params };
     const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && racers.some((r) => !(k in r.params)));
     const paramsOf = (r) => ({ ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...r.params });
-    const view = { seeds: !!preset.seeds, show: {} };
+    const view = { seeds: !!preset.seeds, mode: "bench", show: {} }; // seeds: a recording's thin lines; mode: "bench" or "run"
     const from = RL.app?.from?.name === "entry" ? racers.findLastIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
     const P = { e: 0, playing: false, speed: "step", acc: 0, wait: 0, walkers: null, focus: Math.max(0, from >= 0 ? from : racers.length - 1) };
     let runs = [], stages = [], views = [], job = null, film = null, charts = [], avg = null, sweepJob = null, sweepCharts = [], perRun = 0, runsChosen = false;
+    // the bench: the same settings on seeds 1 to 20 (or as many as the charts average), run in the background
+    let bench = null, benchTimer = 0, benchDrawn = 0, strip = null, played = 1, pendingTypical = false;
 
     host.innerHTML = `
       <section class="lab" data-kind="${env.kind}">
@@ -146,8 +149,10 @@
               <p class="summary"></p>
             </section>
             <section class="odds-card card" hidden>
-              <h3>The odds</h3>
+              <h3 class="odds-title">The odds</h3>
               <p class="odds-tally"></p>
+              <div class="strip-host"></div>
+              <p class="faint strip-note"></p>
               <div class="sweep-bar">
                 <label>Sweep <select class="sweep-knob" aria-label="Knob to sweep"></select></label>
                 <label>over <select class="sweep-runs" aria-label="Runs per value">${[10, 20, 50, 100].map((n) => `<option value="${n}"${n === 20 ? " selected" : ""}>${n}</option>`).join("")}</select> runs per value</label>
@@ -199,7 +204,25 @@
       box.innerHTML = shown().map(slider).join("") +
         `<label class="knob"><span class="name">${noun()[1]}</span><select data-knob="units">${options.map((n) => `<option value="${n}"${n === knobs.units ? " selected" : ""}>${n.toLocaleString("en")}</option>`).join("")}</select></label>` +
         (preset.runs > 1 ? `<label class="knob"><span class="name">averaged over</span><select data-knob="runs">${[...new Set([10, 100, preset.runs, 500, 2000])].sort((a, b) => a - b).map((n) => `<option value="${n}"${n === knobs.runs ? " selected" : ""}>${n} runs</option>`).join("")}</select></label>` : "") +
-        `<button class="pill seed" type="button" title="Run again with new randomness">${ICON.dice}<span>Seed <b>${knobs.seed}</b></span></button>`;
+        `<div class="seedbox" role="group" aria-label="Seed">
+          <span class="name">seed</span>
+          <button type="button" class="seed-typ" title="Play the typical run of these settings: the median of the 20 bench seeds">Typical</button>
+          <input class="seed-in" type="number" min="1" max="999999" step="1" inputmode="numeric" aria-label="Seed number" title="Type a seed and press Enter">
+          <button type="button" class="seed-dice" title="Roll a seed" aria-label="Roll a seed">${ICON.dice}</button>
+        </div>`;
+      seedBox();
+    }
+    // The seed control shows the seed playing, and whether it is the typical one.
+    function seedBox() {
+      const typ = q(".seed-typ"), input = q(".seed-in");
+      if (!typ) return;
+      const typical = knobs.seed === "typical";
+      typ.classList.toggle("on", typical);
+      typ.classList.toggle("finding", typical && !bench?.complete);
+      typ.classList.toggle("ready", pendingTypical);
+      typ.textContent = pendingTypical ? `Typical: seed ${bench.typical()}` : "Typical";
+      typ.title = pendingTypical ? "The typical run is ready: click to play it" : typical && !bench?.complete ? "Finding the typical run: the bench is still running" : "Play the typical run of these settings: the median of the bench seeds";
+      if (document.activeElement !== input) input.value = played;
     }
     const fmtKnob = (k, v) => (k === "alpha" && v === 0 ? "1/n" : String(v));
 
@@ -256,11 +279,24 @@
     }
 
     // ---- the runs ----
+    // New settings: a new bench, and the run to play: the typical one once the bench knows it (seed 1 until then),
+    // or the seed the reader chose.
     function simulate() {
       job?.cancel();
+      startBench();
+      played = recorded ? knobs.seed : knobs.seed === "typical" ? (bench?.complete ? bench.typical() : bench?.seeds[0] ?? 1) : knobs.seed;
+      playRuns();
+      clearSweep(sweepCharts.length ? "The settings changed: run the sweep again to see the odds with them." : sweepIdle());
+      autoRuns();
+      if (recorded && (view.seeds || preset.success)) averageRecorded();
+    }
+
+    // Compute the played runs (seed `played`) with their snapshots, and show them.
+    function playRuns() {
       P.walkers = null;
+      pendingTypical = false;
       const t0 = performance.now();
-      runs = racers.map((r, i) => recRuns[i] || lab.simulate({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: knobs.seed, measures: preset.measures }));
+      runs = racers.map((r, i) => recRuns[i] || lab.simulate({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: played, measures: preset.measures }));
       perRun = (performance.now() - t0) / racers.length; // how long one run takes here, for the sweep's default
       views.forEach((v, i) => { v.env = runs[i].env; }); // each view looks at its own run's world (its bandit's machines, its cards)
       scrub.max = knobs.units;
@@ -268,44 +304,46 @@
       drawCharts();
       summary();
       seek(Math.min(P.e, knobs.units));
-      avg = null;
-      clearSweep(sweepCharts.length ? "The settings changed: run the sweep again to see the odds with them." : sweepIdle());
-      autoRuns();
-      if (knobs.runs > 1 || view.seeds || preset.success) average();
+      seedBox();
+      odds();
     }
 
-    // Many runs in the background, a few at a time, so the page stays responsive; the charts fill in as they come.
-    // They also count the runs that end as the preset's success rule asks (20 of them when the charts show one run).
-    function average() {
-      if (recorded) return averageRecorded();
-      const n = knobs.runs > 1 ? knobs.runs : preset.success ? 20 : 10, seeds = Array.from({ length: n }, (_, k) => knobs.seed + k);
-      const sums = racers.map(() => ({})), lines = racers.map(() => []), wins = racers.map(() => 0);
-      let done = 0, stuck = 0, cancelled = false;
-      const note = q(".chart-note"), charted = () => knobs.runs > 1 || view.seeds;
+    // The rule a run is judged by: the preset's success rule, or its main measure over the last tenth.
+    const rule = () => preset.success || { metric: preset.charts[0] };
+
+    function startBench() {
+      clearTimeout(benchTimer);
+      bench = null;
+      if (recorded) return;
+      const many = knobs.runs > 1;
+      bench = new lab.Bench({
+        world: make, racers: racers.map((r) => ({ algorithm: r.algorithm, params: paramsOf(r) })), units: knobs.units, measures: preset.measures, rule: rule(),
+        keys: preset.charts, smooth: Object.fromEntries(preset.charts.map((k) => [k, many ? (k === "return" && unitOf() === "episode" ? 5 : 1) : METRICS[k].smooth || 1])),
+        seeds: Array.from({ length: many ? knobs.runs : 20 }, (_, i) => i + 1), giveUp: GIVE_UP, key: sandbox ? null : presetId,
+      });
+      benchDrawn = 0;
       const chunk = () => {
-        if (cancelled) return;
-        const t0 = performance.now();
-        while (done < n && performance.now() - t0 < 14) {
-          racers.forEach((r, i) => {
-            const { metrics, stopped } = lab.simulate({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: seeds[done], snapshots: false, measures: preset.measures, giveUp: GIVE_UP });
-            if (stopped) stuck++;
-            for (const k of preset.charts) {
-              const s = (sums[i][k] ||= new Float64Array(knobs.units));
-              for (let t = 0; t < knobs.units; t++) s[t] += metrics[k][t];
-            }
-            if (preset.success && lab.success(preset.success, metrics).ok) wins[i]++;
-            if (knobs.runs <= 1 && lines[i].length < 10) lines[i].push(metrics); // the thin lines: the first 10
-          });
-          done++;
-        }
-        avg = { sums, lines, wins, done, n, stuck };
-        if (charted()) drawCharts(avg);
-        note.textContent = !charted() ? chartNote(1) : done < n ? `Running ${done} of ${n} runs…` : chartNote(n) + (stuck ? ` ${stuckNote(stuck)}` : "");
-        tally();
-        if (done < n) timer = setTimeout(chunk, 0);
+        const done = bench.step(14);
+        benched(done);
+        if (!done) benchTimer = setTimeout(chunk, 0);
       };
-      let timer = setTimeout(chunk, 30);
-      job = { cancel() { cancelled = true; clearTimeout(timer); } };
+      if (bench.complete) return; // kept from before: simulate() plays its typical seed at once
+      benchTimer = setTimeout(chunk, 30);
+    }
+
+    // The bench made progress: redraw what depends on it (at most every 200 ms until it is done), and once it is done,
+    // play the typical run if that is what is asked and the reader is not in the middle of watching another.
+    function benched(done) {
+      const now = performance.now();
+      if (!done && now - benchDrawn < 200) return;
+      benchDrawn = now;
+      if (done && knobs.seed === "typical" && bench.typical() !== played) {
+        if (!P.playing && !P.walkers && P.e === 0) { played = bench.typical(); playRuns(); return; }
+        pendingTypical = true;
+      }
+      drawCharts();
+      odds();
+      seedBox();
     }
 
     // A recording keeps the training curve of every seed: the average, the thin lines and the odds come at once.
@@ -333,35 +371,43 @@
         onSeek: (t) => { pause(); seek(t); },
       }));
       const mode = q(".chart-mode");
-      mode.innerHTML = preset.runs > 1 ? "" : `<div class="seg" role="group" aria-label="How many runs the charts show">
-        <button type="button" data-seeds="0" class="${view.seeds ? "" : "on"}">This run</button><button type="button" data-seeds="1" class="${view.seeds ? "on" : ""}">${recorded ? rec0.seeds.length : 10} seeds</button></div>`;
+      mode.innerHTML = preset.runs > 1 ? "" : recorded ? `<div class="seg" role="group" aria-label="How many runs the charts show">
+        <button type="button" data-seeds="0" class="${view.seeds ? "" : "on"}">This run</button><button type="button" data-seeds="1" class="${view.seeds ? "on" : ""}">${rec0.seeds.length} seeds</button></div>`
+        : `<div class="seg" role="group" aria-label="What the charts show">
+        <button type="button" data-mode="bench" class="${view.mode === "bench" ? "on" : ""}">With the spread</button><button type="button" data-mode="run" class="${view.mode === "run" ? "on" : ""}">This run</button></div>`;
     }
 
     function chartNote(n) {
-      if (knobs.runs > 1) return `Each line is the average of ${n} runs, each with its own seed; the views above play the run with seed ${knobs.seed}. Click a chart to jump there.`;
+      const smooth = !recorded && knobs.runs <= 1 && preset.charts.some((k) => METRICS[k].smooth) ? `Smoothed over 10 ${noun()[1]}. ` : "";
+      if (knobs.runs > 1) return `Each line is the average of ${n < knobs.runs ? `the ${n} runs done so far (of ${knobs.runs})` : `${knobs.runs} runs`}, with seeds 1 to ${knobs.runs}; the views above play seed ${played}. Click a chart to jump there.`;
       if (view.seeds && recorded) return `Thin lines: the ${n} seeds the recording trained, the same settings each time. Thick line: their average. The other charts follow the seed played above, ${knobs.seed}. Click a chart to jump there.`;
-      if (view.seeds) return `Thin lines: ${Math.min(10, n)} runs with seeds ${knobs.seed} to ${knobs.seed + Math.min(10, n) - 1}, the same settings each time. Thick lines: ${n > 10 ? `the average of all ${n}, seeds ${knobs.seed} to ${knobs.seed + n - 1}` : "their average"}. Click a chart to jump there.`;
-      const smooth = !recorded && preset.charts.some((k) => METRICS[k].smooth);
-      return `${smooth ? "Smoothed over 10 " + noun()[1] + ". " : ""}Click a chart to jump there.`;
+      if (!recorded && view.mode === "bench") return `${smooth}The line${racers.length > 1 ? "s are the runs" : " is the run"} playing above, seed ${played}. The soft band${racers.length > 2 ? ` (${racers[P.focus].name}'s; click another racer above to see its own)` : ""} holds the middle half of ${n < 20 ? `the ${n} bench seeds done so far` : "the 20 bench seeds"}, the dashed line their median. Click a chart to jump there.`;
+      return `${smooth}Click a chart to jump there.`;
     }
 
     function drawCharts(avg) {
-      const many = knobs.runs > 1, n = avg ? avg.done : 0;
+      const st = bench && bench.seedsDone ? bench.stats() : null, many = knobs.runs > 1;
       preset.charts.forEach((k, j) => {
         const m = { ...METRICS[k], smooth: recorded ? 1 : METRICS[k].smooth }, series = [];
         racers.forEach((r, i) => {
-          const color = `--s${i + 1}`;
-          if (avg && !avg.sums[i][k]) series.push({ name: r.name, color, values: runs[i].metrics[k], smooth: m.smooth }); // the other seeds have no such details
-          else if (many) {
-            if (n) series.push({ name: r.name, color, values: avg.sums[i][k].map((v) => v / n), smooth: k === "return" && unitOf() === "episode" ? 5 : 1 });
-          } else if (view.seeds && avg) {
-            for (const metrics of avg.lines[i]) series.push({ name: r.name, color, values: metrics[k], smooth: m.smooth, faint: true });
-            if (n) series.push({ name: `${r.name}, average`, color, values: avg.sums[i][k].map((v) => v / n), smooth: m.smooth });
-          } else series.push({ name: r.name, color, values: runs[i].metrics[k], smooth: m.smooth });
+          const color = `--s${i + 1}`, band = st?.[i].band[k];
+          if (recorded) {
+            if (view.seeds && avg && avg.sums[i][k]) {
+              for (const metrics of avg.lines[i]) series.push({ name: r.name, color, values: metrics[k], smooth: m.smooth, faint: true });
+              series.push({ name: `${r.name}, average`, color, values: avg.sums[i][k].map((v) => v / avg.done), smooth: m.smooth });
+            } else series.push({ name: r.name, color, values: runs[i].metrics[k], smooth: m.smooth });
+          } else if (many) {
+            if (band) series.push({ name: r.name, color, values: band.mean, units: knobs.units });
+          } else {
+            // the spread of every racer when there are one or two; with more, only the focused racer's, or they would blur
+            if (view.mode === "bench" && band && st[i].n >= 5 && (racers.length <= 2 || i === P.focus)) series.push({ name: `${r.name}, middle half of the seeds`, color, band, units: knobs.units });
+            series.push({ name: r.name, color, values: runs[i].metrics[k], smooth: m.smooth });
+          }
         });
         charts[j].set(series, references(k));
       });
-      if (!avg) q(".chart-note").textContent = many || view.seeds ? "Starting the runs…" : chartNote(1);
+      const n = recorded ? avg?.done ?? 0 : st?.[0].n ?? 0;
+      q(".chart-note").textContent = many && !n ? "Starting the runs…" : chartNote(n);
     }
 
     // Reference lines: the best a chart can reach, where it is known exactly.
@@ -417,15 +463,46 @@
 
     function oddsPanel() {
       const ks = sweepable();
-      q(".odds-card").hidden = !ks.length && !preset.success;
-      q(".odds-tally").hidden = !preset.success;
+      q(".odds-card").hidden = recorded && !ks.length && !preset.success;
+      q(".odds-tally").hidden = recorded && !preset.success;
+      q(".odds-title").textContent = preset.success ? "The odds" : "How the seeds end";
+      strip?.destroy();
+      strip = recorded ? null : new RL.SeedStrip(q(".strip-host"), { label: "How each seed of the bench ends", onPick: (seed) => chooseSeed(seed) });
       q(".sweep-bar").hidden = !ks.length;
       q(".sweep-runs").parentElement.hidden = recorded; // a recording's seeds are fixed
       q(".sweep-knob").innerHTML = ks.map((k) => `<option value="${k}">${esc(knobOf(k).sym)} · ${esc(knobOf(k).name)}</option>`).join("");
       clearSweep(ks.length ? sweepIdle() : "");
     }
 
-    // How many of the runs so far ended as the success rule asks, for each racer.
+    // The bench, in words and as a strip of dots: how many seeds end well, and where the run playing above falls.
+    function odds() {
+      if (recorded || !bench || !strip) return;
+      const st = bench.stats(), n = st[0].n, R = rule(), m = METRICS[R.metric] || {}, total = bench.seeds.length;
+      const still = n < total ? ` (${total - n} still to come)` : "";
+      let text;
+      if (!n) text = `Running the ${total} bench seeds…`;
+      else if (preset.success) {
+        text = `Out of ${n} seeds with these settings${still}, how many ${esc(preset.success.text)}: ` + racers.map((r, i) => `<b>${esc(r.name)}</b> ${st[i].wins}`).join(" · ") + ".";
+        if (racers.length === 2 && n === total) { // the same seed is the same luck for both: compare them seed by seed
+          const w = [bench.pairedWins(0, 1).wins, bench.pairedWins(1, 0).wins], k = w[1] > w[0] ? 1 : 0, ties = n - w[0] - w[1];
+          text += ` Seed by seed, with the same luck: <b>${esc(racers[k].name)}</b> ends better on ${w[k]} of ${n}${ties ? `, ${ties} ${ties === 1 ? "is a tie" : "are ties"}` : ""}.`;
+        }
+      } else text = `How the ${n} bench seeds${still} end: ${esc((m.title ? m.title(noun()[0], env, racers[0].algorithm) : R.metric).toLowerCase())}, averaged over the last tenth of the run.`;
+      const stuck = st.reduce((k, x) => k + x.stuck, 0);
+      q(".odds-tally").innerHTML = text + (stuck ? ` ${stuckNote(stuck)}` : "");
+      const own = racers.map((_, i) => lab.success(R, runs[i].metrics).score);
+      strip.set({
+        rows: racers.map((r, i) => ({ name: r.name, color: `--s${i + 1}`, seeds: bench.seeds.slice(0, n), scores: st[i].scores, ok: bench.results[i].slice(0, n).map((d) => d.ok), played: { seed: played, score: own[i] } })),
+        threshold: R.min ?? R.max ?? null, lower: bench.lower, percent: !!m.percent,
+      });
+      const inBench = bench.seeds.includes(played), typical = knobs.seed === "typical" && bench.complete && played === bench.typical(), bars = n > 60;
+      const where = n && !inBench ? ` It is not one of the bench seeds; ${racers.length === 1 ? "it" : "each racer's run"} ends better than ${racers.map((r, i) => { const pl = bench.place(i, own[i]); return `${pl.beats} of ${pl.of}${racers.length > 1 ? ` (${esc(r.name)})` : ""}`; }).join(", ")}.` : "";
+      q(".strip-note").innerHTML = !n ? "" : bars
+        ? `Each bar counts the seeds that end there${preset.success ? ", filled where they end well" : ""}. The black mark: the run playing above, seed ${played}${typical ? ", the typical one" : ""}.${where} Click anywhere on a row to play the seed that ends closest.`
+        : `One dot per seed${preset.success ? ": filled if it ends well, hollow if not" : ""}. Ringed: the run playing above, seed ${played}${typical ? ", the typical one" : ""}.${where} Click a dot to play its seed.`;
+    }
+
+    // How many of the runs so far ended as the success rule asks, for each racer (recorded runs).
     function tally() {
       if (!preset.success || !avg) return;
       const { wins, done, n, stuck } = avg, pct = (w) => Math.round((100 * w) / Math.max(1, done));
@@ -495,7 +572,7 @@
         const t0 = performance.now();
         while (done < total && performance.now() - t0 < 14) {
           const vi = Math.floor(done / (groups.length * n)), si = Math.floor(done / groups.length) % n, gi = done % groups.length, g = groups[gi];
-          const { metrics, stopped } = lab.simulate({ world: make, algorithm: g.r.algorithm, params: { ...g.base, [k]: values[vi] }, units: knobs.units, seed: knobs.seed + si, snapshots: false, measures: preset.measures, giveUp: GIVE_UP });
+          const { metrics, stopped } = lab.simulate({ world: make, algorithm: g.r.algorithm, params: { ...g.base, [k]: values[vi] }, units: knobs.units, seed: 1 + si, snapshots: false, measures: preset.measures, giveUp: GIVE_UP });
           const { ok, score } = lab.success(rule, metrics), x = res[gi][vi];
           if (stopped) { x.stuck++; stuck++; }
           x.runs++;
@@ -505,7 +582,7 @@
         }
         draw();
         q(".sweep-note").textContent = done < total ? `Running ${done} of ${total} runs…`
-          : `${n} runs per value, with seeds ${knobs.seed} to ${knobs.seed + n - 1} and the other knobs as set above.${current !== null ? " The shaded value is the one the Lab is set to." : ""}${stuck ? ` ${stuckNote(stuck)}` : ""} Hover a dot for its numbers.`;
+          : `${n} runs per value, with seeds 1 to ${n} and the other knobs as set above.${current !== null ? " The shaded value is the one the Lab is set to." : ""}${stuck ? ` ${stuckNote(stuck)}` : ""} Hover a dot for its numbers.`;
         if (done < total) timer = setTimeout(chunk, 0);
       };
       timer = setTimeout(chunk, 30);
@@ -529,7 +606,7 @@
       if (env.kind === "blackjack" && unitOf() === "episode") out.push(`Hands won in this run: ${each((r) => pct(r.metrics.return.reduce((n, g) => n + (g > 0), 0) / knobs.units))}.`);
       if (env.kind === "grid" && unitOf() === "episode") {
         if (env.ice) out.push(`Reached the gem in the last ${last} episodes: ${each((r) => pct(lab.mean(r.metrics.return, knobs.units - last)))}.`);
-        else if (preset.charts.includes("steps")) out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(1))}.`);
+        else if (preset.charts.includes("steps")) out.push(`${knobs.runs > 1 ? `In the run with seed ${played}, average` : "Average"} steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(1))}.`);
         else out.push(`Average reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 0))}.`);
         const finals = runs.map((r) => r.algorithm.show(r.at(knobs.units), r.env, r.params));
         if (finals[0].t !== undefined) env.setTime?.(finals[0].t); // a maze whose walls moved: follow the final layout
@@ -541,26 +618,27 @@
         }
       }
       if (env.kind === "corridor") {
-        out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 1))} (the best possible is ${signed(env.bestValue, 1)}).`);
+        out.push(`${knobs.runs > 1 ? `In the run with seed ${played}, average` : "Average"} reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 1))} (the best possible is ${signed(env.bestValue, 1)}).`);
       }
       if (env.kind === "throw") {
         out.push(`Where the policy aims at the end: ${each((r) => { const d = r.algorithm.show(r.at(knobs.units), r.env, r.params); return d.deterministic ? `${d.mu.toFixed(1)}°, thrown with ±${d.sd.toFixed(0)}° of noise` : `${d.mu.toFixed(1)}° ± ${d.sd.toFixed(1)}°`; })}; average distance over the last ${last} throws: ${each((r) => `${lab.mean(r.metrics.return, knobs.units - last).toFixed(1)} m`)} (40 m at best).`);
       }
       if (env.kind === "grid" && unitOf() === "round") {
-        out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} ${preset.charts.includes("steps") ? "steps" : "reward"} per episode over the last ${last} rounds: ${each((r) => (preset.charts.includes("steps") ? lab.mean(r.metrics.steps, knobs.units - last).toFixed(1) : lab.mean(r.metrics.return, knobs.units - last).toFixed(2)))}.`);
+        out.push(`${knobs.runs > 1 ? `In the run with seed ${played}, average` : "Average"} ${preset.charts.includes("steps") ? "steps" : "reward"} per episode over the last ${last} rounds: ${each((r) => (preset.charts.includes("steps") ? lab.mean(r.metrics.steps, knobs.units - last).toFixed(1) : lab.mean(r.metrics.return, knobs.units - last).toFixed(2)))}.`);
       }
       if (env.kind === "grid" && !env.slip) {
         const finals = runs.map((r) => r.algorithm.show(r.at(knobs.units), r.env, r.params));
         if (finals.every((d) => d.P && !d.Q)) out.push(`Most likely path at the end: ${each((r, i) => { const g = likelyPath(env, finals[i].P); return g.reached ? plural(g.steps, ["step", "steps"]) : "none, its most likely moves go round in circles"; })}.`);
       }
       if (env.kind === "line") out.push(`Value error √VE at the end: ${each((r) => r.metrics.ve ? r.metrics.ve[knobs.units - 1].toFixed(3) : "—")} (0 would be a perfect fit; how close the features allow is in the textbook).`);
-      if (env.kind === "car") out.push(`${knobs.runs > 1 ? `In the run with seed ${knobs.seed}, average` : "Average"} steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(0))} (the best possible from a typical start is a little over 100).`);
+      if (env.kind === "car") out.push(`${knobs.runs > 1 ? `In the run with seed ${played}, average` : "Average"} steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(0))} (the best possible from a typical start is a little over 100).`);
       if (env.kind === "star") out.push(`Size of the weights at the end: ${each((r) => fmtBig(r.metrics.weights[knobs.units - 1]))}, from ${fmtBig(runs[0].metrics.weights[0])} after the first step.`);
       if (unitOf() === "sweep") {
         out.push(`Settled (largest change below θ = ${knobs.theta}) after: ${each((r) => { const t = r.metrics.converged.findIndex((c) => c); return t < 0 ? "not yet" : plural(t + 1, noun()); })}.`);
       }
       for (const k of preset.measures) {
         if (k === "aim" && env.kind === "throw") continue; // said above, with the spread
+        if (k === "ve" && env.kind === "line") continue; // said above
         const f = METRICS[k].percent ? (v) => `${(100 * v).toFixed(0)}%` : (v) => `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(Math.abs(v) >= 10 ? 1 : 3)}${k === "aim" ? "°" : ""}`;
         out.push(`${METRICS[k].title(noun()[0], env, racers[0].algorithm)}, at the end: ${each((r) => f(r.metrics[k][knobs.units - 1]))}.`);
       }
@@ -763,7 +841,7 @@
       texInto(liveSym, typeof a.rule === "function" ? a.rule(p) : a.rule);
       liveNum.innerHTML = "";
       RL.math.render(pseudo);
-      if (runs.length) filmstrip();
+      if (runs.length) { filmstrip(); if (racers.length > 2 && view.mode === "bench" && bench?.seedsDone) drawCharts(); }
     }
 
     // ---- playing ----
@@ -820,11 +898,22 @@
       cancelAnimationFrame(pending);
       pending = requestAnimationFrame(simulate);
     });
+    // Play another seed with the same settings: the bench stays, only the played run changes.
+    function chooseSeed(seed) {
+      knobs.seed = seed;
+      played = seed === "typical" ? (bench?.complete ? bench.typical() : played) : seed;
+      pause();
+      playRuns();
+    }
     q(".knobs").addEventListener("click", (e) => {
-      if (!e.target.closest(".seed")) return;
-      knobs.seed = 1 + Math.floor(Math.random() * 99999);
-      q(".seed b").textContent = knobs.seed;
-      simulate();
+      if (e.target.closest(".seed-dice")) chooseSeed(1 + Math.floor(Math.random() * 99999));
+      else if (e.target.closest(".seed-typ")) chooseSeed("typical");
+    });
+    q(".knobs").addEventListener("change", (e) => {
+      if (!e.target.closest(".seed-in")) return;
+      const v = Math.round(+e.target.value);
+      if (Number.isFinite(v) && v >= 1) chooseSeed(Math.min(999999, v));
+      else e.target.value = played;
     });
     q(".show-host").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-opt]");
@@ -841,6 +930,13 @@
       if (!P.walkers) seek(P.e);
     });
     q(".chart-mode").addEventListener("click", (e) => {
+      const mb = e.target.closest("[data-mode]");
+      if (mb) {
+        view.mode = mb.dataset.mode;
+        mb.parentElement.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === mb));
+        drawCharts();
+        return;
+      }
       const b = e.target.closest("[data-seeds]");
       if (!b || +b.dataset.seeds === +view.seeds) return;
       view.seeds = b.dataset.seeds === "1";
@@ -852,7 +948,7 @@
       }
       job?.cancel();
       drawCharts();
-      if (view.seeds || preset.success) average();
+      if (view.seeds || preset.success) averageRecorded();
     });
     q(".sweep-go").addEventListener("click", sweep);
     q(".sweep-runs").addEventListener("change", () => { runsChosen = true; });
@@ -897,6 +993,8 @@
         cancelAnimationFrame(raf);
         cancelAnimationFrame(pending);
         job?.cancel();
+        clearTimeout(benchTimer);
+        strip?.destroy();
         clearSweep("");
         removeEventListener("keydown", onKey);
         charts.forEach((c) => c.destroy());

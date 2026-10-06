@@ -5,7 +5,8 @@
 #              walk-1000, mountain-car, baird, or sandbox (the map you draw)
 #   algorithms the algorithms that race, with the shared knobs; or racers = [{ algorithm, name, <knobs of its own> }],
 #              or racers = [{ recording }] for a run trained offline (content/recordings/), played back
-#   units      how many episodes, sweeps or steps a run lasts; seed: its randomness
+#   units      how many episodes, sweeps or steps a run lasts. There is no seed: the Lab plays the typical run of the
+#              settings (the median of a bench of seeds 1 to 20), or any seed the reader types or rolls
 #   runs       > 1: the charts average that many runs, each with its own seed
 #   charts     what to plot: return, optimal, left, error, match, greedy, delta, steps, ve, weights
 #   measures   numbers computed against the exact answer after each unit: error, match, greedy, optimal-error, ve
@@ -13,7 +14,7 @@
 #   success    what counts as a run that ended well, for the odds the Lab counts over many seeds: { metric, min or
 #              max, window = [first, last] units (the last tenth by default), text }; text finishes "how many …"
 #   sweep      the values the Lab's sweep tries for a knob, where the defaults do not suit the world: { q0 = [...] }
-#   seeds      true: the charts open on the thin lines of 10 seeds instead of the one run played
+#   seeds      true, for recorded runs: the charts open on the thin lines of every seed instead of the one run played
 # Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge,
 # n (n-step methods), lambda and trace ("accumulating" or "replacing"), planning and kappa (Dyna),
 # features ("groups", "tiles", "poly", "fourier", "table" or "own") with cells, tilings and order, and behavior (the
@@ -24,7 +25,6 @@ title = "SARSA vs Q-learning on the cliff"
 env = "cliff"
 algorithms = ["sarsa", "q-learning"]
 units = 500
-seed = 7
 alpha = 0.5
 epsilon = 0.1
 gamma = 1.0
@@ -39,7 +39,6 @@ title = "Expected SARSA on the cliff"
 env = "cliff"
 algorithms = ["sarsa", "expected-sarsa", "q-learning"]
 units = 500
-seed = 7
 alpha = 0.5
 epsilon = 0.1
 gamma = 1.0
@@ -59,7 +58,6 @@ racers = [
 ]
 units = 1000
 runs = 500
-seed = 1
 alpha = 0.0
 charts = ["return", "optimal"]
 film = [10, 100, 1000]
@@ -75,7 +73,6 @@ racers = [
 ]
 units = 1000
 runs = 500
-seed = 1
 alpha = 0.1
 charts = ["optimal", "return"]
 film = [10, 100, 1000]
@@ -91,7 +88,6 @@ racers = [
 ]
 units = 1000
 runs = 500
-seed = 1
 alpha = 0.0
 c = 2.0
 charts = ["return", "optimal"]
@@ -108,7 +104,6 @@ racers = [
 ]
 units = 1000
 runs = 500
-seed = 1
 alpha = 0.1
 charts = ["optimal"]
 film = [10, 100, 1000]
@@ -124,7 +119,6 @@ racers = [
 ]
 units = 10000
 runs = 200
-seed = 1
 epsilon = 0.1
 charts = ["return", "optimal"]
 film = [100, 1000, 10000]
@@ -136,7 +130,6 @@ title = "Policy evaluation, sweep by sweep"
 env = "small-gridworld"
 algorithms = ["policy-evaluation"]
 units = 200
-seed = 1
 gamma = 1.0
 theta = 0.001
 policy = "random"
@@ -149,7 +142,6 @@ title = "Policy iteration vs value iteration on Frozen Lake"
 env = "frozen-lake"
 algorithms = ["policy-iteration", "value-iteration"]
 units = 120
-seed = 1
 gamma = 0.99
 theta = 0.001
 charts = ["optimal-error", "delta"]
@@ -162,7 +154,6 @@ title = "Monte Carlo prediction at Blackjack"
 env = "blackjack"
 algorithms = ["mc-prediction"]
 units = 100000
-seed = 1
 gamma = 1.0
 policy = "stick-20"
 charts = ["error"]
@@ -178,7 +169,6 @@ racers = [
   { algorithm = "off-policy-mc", name = "off-policy MC, from random play", epsilon = 1.0 },
 ]
 units = 100000
-seed = 1
 gamma = 1.0
 charts = ["match"]
 measures = ["match"]
@@ -193,7 +183,6 @@ racers = [
   { algorithm = "q-learning", name = "Q-learning (α = 0.1)", alpha = 0.1 },
 ]
 units = 3000
-seed = 30
 gamma = 0.99
 epsilon = 0.1
 judge = 1.0
@@ -209,7 +198,6 @@ env = "random-walk"
 algorithms = ["td0", "mc-prediction"]
 units = 100
 runs = 100
-seed = 1
 alpha = 0.1
 gamma = 1.0
 v0 = 0.5
@@ -224,7 +212,6 @@ env = "max-bias"
 algorithms = ["q-learning", "double-q"]
 units = 300
 runs = 1000
-seed = 1
 alpha = 0.1
 epsilon = 0.1
 gamma = 1.0
@@ -242,7 +229,6 @@ racers = [
 ]
 units = 20
 runs = 100
-seed = 1
 alpha = 0.4
 gamma = 1.0
 charts = ["error"]
@@ -260,7 +246,6 @@ racers = [
 ]
 units = 50
 runs = 30
-seed = 1
 alpha = 0.1
 epsilon = 0.1
 gamma = 0.95
@@ -279,7 +264,6 @@ racers = [
 ]
 units = 20
 runs = 100
-seed = 1
 alpha = 0.2
 gamma = 1.0
 charts = ["error"]
@@ -297,7 +281,6 @@ racers = [
 ]
 units = 50
 runs = 30
-seed = 1
 alpha = 0.1
 epsilon = 0.1
 gamma = 0.95
@@ -316,7 +299,6 @@ racers = [
 ]
 units = 50
 runs = 30
-seed = 1
 alpha = 0.1
 epsilon = 0.1
 gamma = 0.95
@@ -333,7 +315,6 @@ racers = [
   { algorithm = "dyna-q-plus", name = "Dyna-Q+ (κ = 0.001)" },
 ]
 units = 200
-seed = 1
 alpha = 1.0
 epsilon = 0.1
 gamma = 0.95
@@ -351,7 +332,6 @@ racers = [
   { algorithm = "dyna-q-plus", name = "Dyna-Q+ (κ = 0.001)" },
 ]
 units = 400
-seed = 1
 alpha = 1.0
 epsilon = 0.1
 gamma = 0.95
@@ -371,7 +351,6 @@ racers = [
 ]
 units = 30
 runs = 30
-seed = 1
 alpha = 0.5
 epsilon = 0.1
 gamma = 0.95
@@ -389,7 +368,6 @@ racers = [
   { algorithm = "semi-gradient-td", name = "Semi-gradient TD(0)", alpha = 0.002 },
 ]
 units = 2000
-seed = 3
 gamma = 1.0
 features = "groups"
 cells = 10
@@ -408,7 +386,6 @@ racers = [
   { algorithm = "gradient-mc", name = "Fourier cosines up to 5", features = "fourier", order = 5, alpha = 0.0001 },
 ]
 units = 2000
-seed = 2
 gamma = 1.0
 charts = ["ve"]
 measures = ["ve"]
@@ -420,7 +397,6 @@ title = "Semi-gradient SARSA climbs Mountain Car"
 env = "mountain-car"
 algorithms = ["semi-gradient-sarsa"]
 units = 500
-seed = 1
 alpha = 0.06
 epsilon = 0.0
 gamma = 1.0
@@ -441,7 +417,6 @@ racers = [
 ]
 units = 300
 runs = 20
-seed = 1
 epsilon = 0.0
 gamma = 1.0
 features = "tiles"
@@ -461,7 +436,6 @@ racers = [
   { algorithm = "semi-gradient-sarsa", name = "values start at −150", q0 = -150.0 },
 ]
 units = 200
-seed = 1
 alpha = 0.06
 epsilon = 0.1
 gamma = 0.99
@@ -483,7 +457,6 @@ racers = [
   { algorithm = "semi-gradient-td", name = "On-policy instead of off-policy", features = "own" },
 ]
 units = 1000
-seed = 1
 alpha = 0.01
 gamma = 0.99
 policy = "target"
@@ -498,7 +471,6 @@ title = "Sandbox"
 env = "sandbox"
 algorithms = ["q-learning"]
 units = 500
-seed = 1
 alpha = 0.5
 epsilon = 0.1
 gamma = 1.0
@@ -516,7 +488,6 @@ racers = [
 ]
 units = 1000
 runs = 100
-seed = 1
 gamma = 1.0
 features = "own"
 maxSteps = 1000
@@ -535,7 +506,6 @@ racers = [
 ]
 units = 1000
 runs = 100
-seed = 1
 gamma = 1.0
 features = "own"
 maxSteps = 1000
@@ -553,7 +523,6 @@ racers = [
   { algorithm = "reinforce", name = "without a baseline (α = 0.0003)", alpha = 0.0003 },
 ]
 units = 1000
-seed = 1
 gamma = 1.0
 features = "own"
 charts = ["return", "aim"]
@@ -570,7 +539,6 @@ racers = [
   { algorithm = "dpg", name = "noise σ = 2°", noise = 2.0 },
 ]
 units = 300
-seed = 1
 alpha = 1.0
 alphaW = 0.2
 gamma = 1.0
@@ -585,7 +553,6 @@ title = "Actor–critic on the cliff"
 env = "cliff"
 algorithms = ["actor-critic"]
 units = 500
-seed = 1
 alpha = 0.1
 alphaW = 0.1
 lambda = 0.0
@@ -607,7 +574,6 @@ racers = [
 ]
 units = 60
 runs = 12
-seed = 1
 alpha = 2.0
 alphaW = 0.3
 workers = 4
@@ -627,7 +593,6 @@ racers = [
   { algorithm = "q-learning", name = "optimistic start, Q = 1", epsilon = 0.0, q0 = 1.0 },
 ]
 units = 500
-seed = 3
 alpha = 0.5
 gamma = 0.95
 maxSteps = 500
@@ -646,7 +611,6 @@ racers = [
 ]
 units = 200
 runs = 20
-seed = 1
 alpha = 2.0
 alphaW = 0.3
 workers = 4
@@ -663,7 +627,6 @@ title = "Seeds: one setting, two fates"
 env = "two-gems"
 algorithms = ["a2c"]
 units = 200
-seed = 19
 beta = 0.05
 alpha = 2.0
 alphaW = 0.3
@@ -673,8 +636,7 @@ gamma = 0.95
 maxSteps = 500
 charts = ["return"]
 film = [1, 40, 100, 200]
-seeds = true
-intro = "The same settings every time; only the seed changes. With an entropy weight β = 0.05, a run is about as likely to settle on the small gem as to find the big one, depending on which gem the workers happen to stumble on, and when. The thin lines are ten seeds; the odds below count twenty. β moves the odds, not the luck: with β = 0, 3 of these 20 runs find the big gem; with β = 0.1, 16 do."
+intro = "The same settings every time; only the seed changes. With an entropy weight β = 0.05, a run is about as likely to settle on the small gem as to find the big one, depending on which gem the workers happen to stumble on, and when. The dots below show how each of the 20 bench seeds ends; click one to watch it. β moves the odds, not the luck: with β = 0, none of the 20 finds the big gem; with β = 0.1, 19 do."
 success = { metric = "return", min = 0.9, text = "end up going for the big gem" }
 
 [trpo-cliff]
@@ -687,7 +649,6 @@ racers = [
 ]
 units = 60
 runs = 12
-seed = 1
 alphaW = 0.1
 workers = 4
 lambda = 0.9
@@ -707,7 +668,6 @@ racers = [
 ]
 units = 40
 runs = 12
-seed = 1
 alpha = 0.3
 alphaW = 0.1
 workers = 4
@@ -731,7 +691,6 @@ racers = [
 ]
 units = 60
 runs = 12
-seed = 1
 alphaW = 0.1
 workers = 4
 delta = 0.02
@@ -851,7 +810,6 @@ racers = [
   { algorithm = "offline-bcq", name = "batch-constrained" },
 ]
 units = 41
-seed = 1
 alpha = 0.5
 epsilon = 0.1
 gamma = 1.0
@@ -873,7 +831,6 @@ racers = [
   { algorithm = "dagger", name = "DAgger" },
 ]
 units = 20
-seed = 1
 gamma = 0.95
 judge = 1.0
 maxSteps = 100
@@ -895,7 +852,6 @@ racers = [
 ]
 units = 60
 runs = 20
-seed = 2
 alpha = 2.0
 alphaW = 0.3
 workers = 4
@@ -917,7 +873,6 @@ racers = [
   { algorithm = "model-planner", name = "doubts unseen tiles (d = 1)", doubt = 1.0 },
 ]
 units = 20
-seed = 1
 gamma = 1.0
 epsilon = 0.0
 maxSteps = 500

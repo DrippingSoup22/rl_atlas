@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 
 const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "envs/approx", "envs/policy", "dp", "run", "measures", "features",
   "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy", "agents/offline", "agents/model",
-  "envs/deep", "recorded", "mcts"];
+  "envs/deep", "recorded", "mcts", "bench"];
 for (const file of FILES) require(`../lab/${file}.js`);
 require("../app/recordings.js"); // recorded runs (recorder/record.py), bundled by build.py
 const { lab } = globalThis.RL;
@@ -404,4 +404,32 @@ test("MCTS: random games prefer the center, but the tree search finds the one wi
     search.run(3000);
     assert.equal(search.best(), 2, `seed ${seed}: UCT picks the corner`);
   }
+});
+
+test("the bench: the same seeds give the same odds, bands and typical seed; the typical seed is the median ending", () => {
+  const p = globalThis.RL.content.presets["cliff-race"];
+  const make = (key) => new lab.Bench({ world: p.env, racers: p.racers.map((r) => ({ algorithm: A[r.algorithm], params: { ...p.params, ...r.params } })),
+    units: p.units, rule: p.success, keys: ["return"], smooth: { return: 10 }, key });
+  const a = make(), b = make();
+  a.step(Infinity); b.step(Infinity);
+  assert.equal(a.typical(), b.typical());
+  assert.deepEqual(a.stats().map((s) => s.scores), b.stats().map((s) => s.scores));
+  const [sarsa, q] = a.stats();
+  assert.equal(sarsa.n, 20);
+  assert.ok(sarsa.wins >= 18 && q.wins <= 3, `SARSA ${sarsa.wins}, Q-learning ${q.wins}`); // the odds the Lab shows
+  // the band holds the median between its quartiles
+  const band = sarsa.band.return;
+  for (let i = 0; i < band.mid.length; i++) assert.ok(band.lo[i] <= band.mid[i] + 1e-6 && band.mid[i] <= band.hi[i] + 1e-6);
+  // a single racer's typical seed ends at the median: as many seeds above it as below
+  const solo = new lab.Bench({ world: p.env, racers: [{ algorithm: A.sarsa, params: { ...p.params } }], units: p.units, rule: p.success });
+  solo.step(Infinity);
+  const typ = solo.typical(), score = solo.results[0][typ - 1].score, at = solo.place(0, score);
+  assert.ok(Math.abs(at.beats - (at.of - at.beats - at.ties)) <= at.ties + 1, `typical seed ${typ} beats ${at.beats} of ${at.of}`);
+  // the cache gives the same results at once
+  const c1 = make("cliff-race"); c1.step(Infinity);
+  const c2 = make("cliff-race");
+  assert.ok(c2.complete);
+  assert.equal(c2.typical(), a.typical());
+  // paired wins: SARSA ends better than Q-learning on nearly every shared seed (it loses less while exploring)
+  assert.ok(a.pairedWins(0, 1).wins >= 18);
 });

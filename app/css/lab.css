@@ -12,7 +12,21 @@
 .knob input[type="range"] { width: 92px; accent-color: var(--ink); }
 .knob output { min-width: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .knob select, .transport select, .sandbox select, .sweep-bar select { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); }
-.pill.seed svg { width: 16px; height: 16px; }
+/* the seed: the typical run of these settings, or one the reader types or rolls */
+.seedbox { display: inline-flex; align-items: center; gap: 2px; padding: 2px 2px 2px 10px; border-radius: 10px; background: var(--surface-2); font-size: 13px; }
+.seedbox .name { color: var(--ink-3); margin-right: 4px; }
+.seedbox button, .seedbox input { font: inherit; font-size: 13px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2); }
+.seedbox .seed-typ { padding: 4px 9px; font-weight: 600; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.seedbox .seed-typ.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.1), inset 0 0 0 1px var(--line); }
+.seedbox .seed-typ.finding { color: var(--ink-3); }
+.seedbox .seed-typ.ready { background: var(--ink); color: var(--bg); box-shadow: none; animation: fade-in 0.3s ease both; }
+.seedbox .seed-in { width: 7ch; padding: 4px 6px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); text-align: center; -moz-appearance: textfield; }
+.seedbox .seed-in::-webkit-inner-spin-button, .seedbox .seed-in::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.seedbox .seed-in:hover, .seedbox .seed-in:focus { background: var(--surface); outline: none; box-shadow: inset 0 0 0 1px var(--line-2); }
+.seedbox .seed-dice { display: grid; place-items: center; width: 30px; height: 28px; cursor: pointer; }
+.seedbox .seed-dice:hover { background: var(--surface); color: var(--ink); }
+.seedbox .seed-dice svg { width: 17px; height: 17px; }
+.seedbox .seed-dice:active svg { transform: rotate(90deg); transition: transform 0.2s; }
 
 .lab-main { display: grid; grid-template-columns: minmax(0, 1fr) clamp(330px, 26vw, 380px); gap: 16px; align-items: start; }
 /* Everything that follows the playhead flows down the left column, so it fills itself whatever the stages' height;
@@ -156,6 +170,26 @@
 .linechart .faint { stroke-width: 1; }
 .linechart .past.faint { opacity: 0.32; }
 .linechart .future.faint { opacity: 0.1; }
+.linechart .band { opacity: 0.13; stroke: none; }
+.linechart .band-mid { fill: none; stroke-width: 1; opacity: 0.45; stroke-dasharray: 3 3; }
+.tip .band-key { opacity: 0.35; }
+.seedstrip { display: block; overflow: visible; }
+.strip-note { margin: 6px 0 14px; font-size: 13px; }
+.strip-host { margin-top: 6px; }
+.seedstrip .tick { font: 11px var(--font); fill: var(--ink-3); font-variant-numeric: tabular-nums; }
+.seedstrip .axis { stroke: var(--line); stroke-width: 1; }
+.seedstrip .name { font: 600 12.5px var(--font); fill: var(--ink-2); }
+.seedstrip .count { font: 600 12px var(--font); fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+.seedstrip .goal { stroke: var(--ink-3); stroke-dasharray: 4 4; }
+.seedstrip .goal-label { font: 11px var(--font); fill: var(--ink-3); }
+.seedstrip .seed-dot { fill: var(--c); stroke: var(--surface); stroke-width: 1.5; cursor: pointer; transition: r 0.15s; }
+.seedstrip .seed-dot.miss { fill: var(--surface); stroke: var(--c); stroke-width: 1.8; }
+.seedstrip .seed-dot:hover { r: 6; }
+.seedstrip .seed-ring { fill: none; stroke: var(--ink); stroke-width: 2; pointer-events: none; }
+.seedstrip .seed-bar { fill: var(--c); opacity: 0.8; pointer-events: none; }
+.seedstrip .seed-bar.miss { fill: var(--surface); stroke: var(--c); stroke-width: 1; opacity: 1; }
+.seedstrip .seed-mark { stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; pointer-events: none; }
+.seedstrip .hit { fill: transparent; cursor: pointer; }
 .linechart .playhead { stroke: var(--ink-2); stroke-width: 1.5; }
 .linechart .dot { stroke: var(--surface); stroke-width: 2; }
 .linechart .cross { stroke: var(--ink-3); stroke-width: 1; opacity: 0; pointer-events: none; }
