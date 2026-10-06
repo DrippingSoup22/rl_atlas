@@ -15,6 +15,7 @@ sources = [
 [story]
 scene = "grid"
 env = "cliff"
+digits = 0
 seed = 2
 range = 20
 average = 100

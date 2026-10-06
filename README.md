@@ -60,7 +60,7 @@ a Lab view, and grid stories that replay dynamic programming or Monte Carlo, nam
 table (`name = { algorithm, <knobs> }`, or `name = { recording }` for a run trained offline); a step then picks a run and a moment (`run`, `at`), can replay some units
 (`play`, `pace`), or only the first few updates of one (`updates`; with `instant`, without animation, to jump to a moment inside a unit), or hold a few moments of the run in turn (`checkpoints`, a list of units
 or a count for evenly spaced ones; `hold`, in milliseconds), and can chart runs averaged over many seeds (`curves`,
-`metric`, `domain` to fix the range, `log` for a log axis and `ref = [value, "label"]` for a reference line). Grid steps can paint a batch's advantages on the move triangles (`advantages`),
+`metric`, `domain` to fix the range, `log` for a log axis, `ref = [value, "label"]` for a reference line and `title` for a title of its own). Grid steps can paint a batch's advantages on the move triangles (`advantages`),
 and a `[story.numbers]` table names lines of numbers that steps show under the formula (`numbers = "name"`).
 A story runs on a seed picked because it proves its point clearly; how often settings succeed over many seeds is
 the Lab's job. Every number in a story comes from its runs.
