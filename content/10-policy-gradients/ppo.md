@@ -121,7 +121,7 @@ PPO's results depend on more than the clip. Careful studies (Engstrom et al., 20
 
 ### With networks, on Pendulum {#pendulum}
 
-The same knobs matter just as much with networks. On Gymnasium's Pendulum, with networks of 64 + 64 units, four workers and 200,000 steps, each setting was trained from five seeds, everything else as in the recorded run. Without the clip, none of the five learns to swing the pendulum up: its last training episodes still return between $-1220$ and $-1605$, against $-166$ to $-234$ with $\epsilon = 0.2$. The clip has a sweet spot: with $\epsilon = 0.1$ all five learn too, with $0.3$ the returns sink to between $-237$ and $-404$, and with $0.5$ all five end between $-622$ and $-1547$. Passes behave the same way: 4 or 10 per batch work, while 30 overfit each batch and end between $-247$ and $-780$. [The sweeps, in the Lab](lab:ppo-pendulum).
+The same knobs matter just as much with networks. On Gymnasium's Pendulum, with networks of 64 + 64 units, four workers and 200,000 steps, each setting was trained from 20 seeds, everything else as in the recorded run. A run ends well when its last training episodes return $-250$ or better. Without the clip, none of the 20 does: their last training episodes still return between $-1099$ and $-1607$, against $-156$ to $-251$ with $\epsilon = 0.2$, where 19 of 20 end well. The clip has a sweet spot: with $\epsilon = 0.1$ all 20 end well, with $0.3$ only 9, and with $0.5$ none. Passes behave the same way: 1, 4 or 10 per batch work (18, 19 and 19 runs of 20), while 30 overfit each batch, and only 5 of 20 end well. [The sweeps, in the Lab](lab:ppo-pendulum).
 
 ### Example: ten passes in a maze {#example}
 
