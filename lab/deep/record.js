@@ -49,12 +49,27 @@
     };
   }
 
+  // How often each hidden unit fires over the map's states, layer by layer: for ReLU, the share of states where it is
+  // above zero (0: a dead unit); for tanh, the share where it is saturated (|h| > 0.97, where its slope is nearly 0).
+  function unitStats(net, grid, raw) {
+    const n = grid.length, d = grid[0].length, x = new Float64Array(n * d), out = [];
+    grid.forEach((s, i) => x.set(s, i * d));
+    net.forward(x, n);
+    for (let i = 0; i < net.L - 1; i++) {
+      const w = net.sizes[i + 1], h = net.h[i], f = new Float64Array(w);
+      for (let r = 0; r < n; r++) for (let j = 0; j < w; j++) { const v = h[r * w + j]; if (net.act === "relu" ? v > 0 : Math.abs(v) > 0.97) f[j]++; }
+      out.push(deep.pack(f.map((c) => c / n), 0, 1, 8, raw));
+    }
+    return out;
+  }
+  const netOf = (net, of) => ({ sizes: net.sizes, act: net.act, of });
+
   // ---- DQN ----
   function snapshotDQN(agent, world, raw) {
     const q = agent.valuesOf(world.grid()), nA = agent.nA, n = q.length / nA, v = new Float64Array(n), act = new Float64Array(n);
     for (let i = 0; i < n; i++) { let b = 0; for (let a = 1; a < nA; a++) if (q[i * nA + a] > q[i * nA + b]) b = a; v[i] = q[i * nA + b]; act[i] = b; }
     const test = testEpisode(world, (o) => { const x = agent.values(o); let b = 0; for (let a = 1; a < nA; a++) if (x[a] > x[b]) b = a; return [b, Array.from(x)]; }, raw);
-    return { v: deep.pack(v, undefined, undefined, 8, raw), act: deep.pack(act, 0, nA - 1, 8, raw), test, eps: round(agent.epsilon(), 4) };
+    return { v: deep.pack(v, undefined, undefined, 8, raw), act: deep.pack(act, 0, nA - 1, 8, raw), test, eps: round(agent.epsilon(), 4), units: unitStats(agent.q.net, world.grid(), raw) };
   }
 
   function runDQN(spec, seed, { snapshots = false, raw = false, onBlock } = {}) {
@@ -82,7 +97,7 @@
         onBlock?.(k, { train: perBlock[k - 1].length ? round(mean(perBlock[k - 1])) : null, test, shot: shots[shots.length - 1] });
       }
     }
-    return { seed, train: perBlock.map((b) => (b.length ? round(mean(b)) : null)), episodes: perBlock.map((b) => b.length), q: qs, test: tests, snapshots: shots };
+    return { seed, train: perBlock.map((b) => (b.length ? round(mean(b)) : null)), episodes: perBlock.map((b) => b.length), q: qs, test: tests, snapshots: shots, net: netOf(agent.q.net, "the Q-network") };
   }
 
   // ---- policy gradients (A2C, PPO, TRPO) ----
@@ -103,7 +118,7 @@
     g.forEach((s, i) => x.set(s, i * world.obs));
     const v = agent.value(x, n), d = agent.pi.dist(x, n), k = agent.pi.out;
     const choice = agent.pi.discrete ? Float64Array.from({ length: n }, (_, i) => d.p[i * k + k - 1]) : Float64Array.from({ length: n }, (_, i) => d.mu[i * k]);
-    return { v: deep.pack(v, undefined, undefined, 8, raw), mean: deep.pack(choice, undefined, undefined, 8, raw), test: testPG(agent, world, rng, raw) };
+    return { v: deep.pack(v, undefined, undefined, 8, raw), mean: deep.pack(choice, undefined, undefined, 8, raw), test: testPG(agent, world, rng, raw), units: unitStats(agent.pi.net, g, raw) };
   }
 
   function runPG(spec, seed, { snapshots = false, raw = false, onBlock } = {}) {
@@ -148,7 +163,7 @@
       agent.update(S, A, adv, ret);
       stats.push({ ...agent.stats });
     }
-    return { seed, train: perBlock.map((b) => (b.length ? round(mean(b)) : null)), episodes: perBlock.map((b) => b.length), test: tests, snapshots: shots };
+    return { seed, train: perBlock.map((b) => (b.length ? round(mean(b)) : null)), episodes: perBlock.map((b) => b.length), test: tests, snapshots: shots, net: netOf(agent.pi.net, "the policy network") };
   }
 
   // ---- off-policy actor-critics (DDPG, TD3, SAC) ----
@@ -162,7 +177,8 @@
     const g = world.grid(), n = g.length, x = new Float64Array(n * world.obs);
     g.forEach((s, i) => x.set(s, i * world.obs));
     const v = agent.value(x, n), a = agent.policy(x, n, true), ad = agent.ad;
-    return { v: deep.pack(v, undefined, undefined, 8, raw), mean: deep.pack(Float64Array.from({ length: n }, (_, i) => a[i * ad]), undefined, undefined, 8, raw), test: testAC(agent, world, raw) };
+    const test = testAC(agent, world, raw); // (the actor's units: counted last, after the critic's passes)
+    return { v: deep.pack(v, undefined, undefined, 8, raw), mean: deep.pack(Float64Array.from({ length: n }, (_, i) => a[i * ad]), undefined, undefined, 8, raw), test, units: unitStats(agent.actor, g, raw) };
   }
 
   function runAC(spec, seed, { snapshots = false, raw = false, onBlock } = {}) {
@@ -190,7 +206,7 @@
         onBlock?.(k, { train: perBlock[k - 1].length ? round(mean(perBlock[k - 1])) : null, test, shot: shots[shots.length - 1] });
       }
     }
-    return { seed, train: perBlock.map((b) => (b.length ? round(mean(b)) : null)), episodes: perBlock.map((b) => b.length), q: qs, test: tests, snapshots: shots };
+    return { seed, train: perBlock.map((b) => (b.length ? round(mean(b)) : null)), episodes: perBlock.map((b) => b.length), q: qs, test: tests, snapshots: shots, net: netOf(agent.actor, "the actor") };
   }
 
   deep.runners = { dqn: runDQN, pg: runPG, ac: runAC };
@@ -205,6 +221,7 @@
       grid: { x: [...world.x, deep.GRID], y: [...world.y, deep.GRID] },
       curves: results.map((r) => ({ seed: r.seed, train: r.train, test: r.test, episodes: r.episodes, ...(r.q ? { q: r.q } : {}) })),
       snapshots: main ? main.snapshots : [],
+      ...(main?.net ? { net: main.net } : {}),
     };
   };
 })(globalThis.RL = globalThis.RL || {});

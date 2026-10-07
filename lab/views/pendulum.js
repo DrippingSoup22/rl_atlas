@@ -29,7 +29,7 @@
       this.o = { path: true, map: "value", ...options };
       this.box = RL.h('<div class="cartview pendview"><div class="track-pane"></div><div class="map-pane"><div class="map-head"><b>What the critic thinks</b><span></span></div><div class="map-host"></div></div></div>');
       host.appendChild(this.box);
-      const svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The pendulum" }, this.box.querySelector(".track-pane"));
+      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The pendulum" }, this.box.querySelector(".track-pane")));
       el("circle", { class: "guide", cx: CX, cy: CY, r: R }, svg);
       el("line", { class: "goal", x1: CX, x2: CX, y1: CY - R - 12, y2: CY - R + 6 }, svg);
       el("text", { class: "track-note", x: CX - 8, y: CY - R - 4, "text-anchor": "end" }, svg).textContent = "upright: 0°";
@@ -92,6 +92,9 @@
     show(d) {
       if (!d || !d.v) return;
       this.d = d;
+      // the network strip under the bars (runs of lab/deep/): the drawing grows to hold it
+      this.svg.setAttribute("viewBox", `0 0 ${W} ${H + RL.netStrip.height(d.units && d.net)}`);
+      RL.netStrip.draw(this.svg, d.net, d.units, { y: CY + R + 70 });
       const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action";
       for (let k = 0; k < this.cellEls.length; k++) {
         const mu = d.mean ? d.mean[k] : 0;

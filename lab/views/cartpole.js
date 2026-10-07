@@ -106,11 +106,19 @@
 
     // What a snapshot knows: values over the grid (DQN: the larger action value; a policy method: its critic), and the
     // push it prefers (DQN: the larger value; a policy: its probabilities, drawn fainter where it is unsure).
+    // The network strip under the bars (deep runs): the drawing grows to hold it.
+    _net(d) {
+      const h = RL.netStrip.height(d.units && d.net);
+      this.svg.setAttribute("viewBox", `0 0 ${W} ${H + h}`);
+      RL.netStrip.draw(this.svg, d.net, d.units, { y: TY + 72 });
+    }
+
     show(d) {
       if (!d) return;
       d = liveMap(this.env, d);
       if (!d.v) return;
       this.d = d;
+      this._net(d);
       this.kind = d.kind;
       this.box.querySelector(".map-head b").textContent = d.live ? "What the learner thinks" : "What the network thinks";
       const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action" && !d.noValue;

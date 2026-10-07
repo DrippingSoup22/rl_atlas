@@ -20,6 +20,7 @@ if (!isMainThread) { // a worker: train the runs it is sent
 const ROOT = path.resolve(__dirname, ".."), OUT = process.env.RECORDINGS_OUT || path.join(ROOT, "content", "recordings");
 const CACHE = path.join(__dirname, ".cache");
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
+const SNAPSHOT_FORMAT = 2; // 2: each snapshot counts how often the network's hidden units fire
 
 // DQN on CartPole: tuned until most seeds balance for the full 500 steps. A squared loss, not Huber's: CartPole's values
 // run up to 1/(1 − γ) = 100, and clipped errors learn them too slowly. Each comparison of Part 9 changes one thing.
@@ -66,7 +67,8 @@ const { DQN_DEFAULTS, PG_DEFAULTS, AC_DEFAULTS } = require("../lab/deep/node.js"
 // ---- a pool of threads, with every finished run cached on disk ----
 function pool(jobs, label) {
   fs.mkdirSync(CACHE, { recursive: true });
-  const keyOf = (j) => crypto.createHash("sha1").update(JSON.stringify([j.spec.world, j.spec.learner, j.spec.steps, j.spec.block, j.spec.cfg, j.seed, j.snapshots])).digest("hex");
+  // a run with snapshots is kept under the snapshots' format too: a new format retrains only the shown seeds
+  const keyOf = (j) => crypto.createHash("sha1").update(JSON.stringify([j.spec.world, j.spec.learner, j.spec.steps, j.spec.block, j.spec.cfg, j.seed, j.snapshots && SNAPSHOT_FORMAT])).digest("hex");
   const results = new Array(jobs.length), todo = [];
   jobs.forEach((j, i) => { const f = path.join(CACHE, `${keyOf(j)}.json`); if (fs.existsSync(f)) results[i] = JSON.parse(fs.readFileSync(f, "utf8")); else todo.push(i); });
   if (!todo.length) return Promise.resolve(results);

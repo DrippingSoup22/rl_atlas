@@ -46,6 +46,7 @@
     return {
       t: snap, kind: rec.learner === "pg" ? "pg" : rec.learner, grid: rec.grid, v, act: snap.act ? lab.unpack(snap.act) : null, mean: snap.mean ? lab.unpack(snap.mean) : null,
       n, eps: snap.eps, stats: snap.stats || {}, steps, ret: t.return,
+      net: rec.net || null, units: snap.units ? snap.units.map(lab.unpack) : null, // how often each hidden unit fires (lab/deep/)
       state: (k) => dims.map((d) => d[k]), action: (k) => lab.unpack(t.a)[k], numbers,
     };
   }

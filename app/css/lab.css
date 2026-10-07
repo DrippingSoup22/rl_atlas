@@ -202,6 +202,9 @@
 .cartview .bar-fill { fill: var(--val); opacity: 0.45; }
 .cartview .chosen .bar-fill { opacity: 1; }
 .cartview .chosen .bar-name, .cartview .chosen .bar-num { fill: var(--ink); font-weight: 600; }
+.cartview .net-title { font-size: 11.5px; fill: var(--ink-2); font-weight: 600; }
+.cartview .netstrip .unit.dead { fill: none; stroke: var(--ink-3); stroke-width: 0.4; stroke-dasharray: 1 1; }
+.cartview .netstrip .bar-num { font-size: 11px; }
 .cartview .map-head { display: flex; flex-direction: column; gap: 2px; font-size: 13px; margin-bottom: 6px; }
 .cartview .map-head b { white-space: nowrap; }
 .cartview .map-head span { color: var(--ink-3); font-size: 12px; line-height: 1.35; }

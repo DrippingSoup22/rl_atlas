@@ -252,7 +252,7 @@
           return `<label class="knob"><span class="sym">${d.sym}</span><span class="name">${d.name}</span>
             <select data-deep="${k}">${values.map((c, j) => `<option value="${j}"${c === v ? " selected" : ""}>${fmtSweep(k, c)}${c === own ? " · recorded" : ""}</option>`).join("")}</select></label>`;
         }).join("") + seedControl() +
-          `<p class="rec-note wide">Trained offline with the trainer this page runs: ${recNote} Turn a knob or pick another seed, and the run trains here, in your browser.</p>`;
+          `<p class="rec-note wide" title="${esc(recNote)}">Recorded offline by the trainer this page runs (${rec0.steps.toLocaleString("en")} steps, ${plural(rec0.seeds.length, ["seed", "seeds"])}). Turn a knob or pick another seed: that run trains here, in your browser.</p>`;
         seedBox();
         return;
       }
@@ -575,7 +575,7 @@
       const ks = Object.keys(turned);
       if (!ks.length) return recs[i].curves;
       const sw = RL.sweeps?.[recs[i].name];
-      if (ks.length === 1 && sw?.knobs[ks[0]]) {
+      if (ks.length === 1 && sw?.knobs[ks[0]] && sw.trainer === recs[i].trainer) { // the same trainer: its seeds are these seeds
         const d = sw.knobs[ks[0]], vi = d.values.indexOf(deepValue(ks[0]));
         if (vi >= 0) return sw.seeds.map((seed, j) => ({ seed, train: d.train[vi][j], test: d.test[vi][j] }));
       }
