@@ -12025,7 +12025,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       // at the quick paces the numbers change too fast to read: refresh them a few times a second
       if (speed().quick) { const now = performance.now(); if (now - explained < 250) return; explained = now; }
       texInto(liveNum, a.numbers(ev, p));
-      const where = env.describe ? env.describe(ev.s, ev.a ?? -1) : "";
+      // an update over a whole batch (A2C, PPO) has no single state to name
+      const where = env.describe && ev.s !== undefined ? env.describe(ev.s, ev.a ?? -1) : "";
       let note;
       if (a.note) note = a.note(ev, where, signed, p);
       else if (ev.baseline !== undefined) note = `Reward <b>${signed(ev.r)}</b>, baseline <b>${signed(ev.baseline)}</b>: the difference <b class="q-err">${signed(ev.delta)}</b> pushes ${where}'s preference ${ev.delta >= 0 ? "up" : "down"}, and every other arm's the other way`;
