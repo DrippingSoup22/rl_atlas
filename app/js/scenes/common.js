@@ -217,7 +217,9 @@
   // through moments of the run (st.checkpoints, held st.hold ms each) and chart averaged runs (st.curves, st.metric; st.log
   // for a log axis, st.ref for a reference line, st.title for a title of its own).
   // options(st): the view's options for the step; more(st, view, run, t): anything else the scene adds.
-  function runScene(View, { options = () => ({}), more = null } = {}) {
+  // test: runs recorded offline, whose units are blocks of training each followed by a test episode; a step that
+  // plays nothing else plays the test episode of the network it shows, in a loop, instead of a still.
+  function runScene(View, { options = () => ({}), more = null, test = false } = {}) {
     return {
       create(card, cfg) {
         card.innerHTML = `<div class="scene-view"></div>${RL.sceneKit.FORMULA}<div class="scene-chart" hidden></div><div class="scene-foot"><span class="scene-note"></span></div>`;
@@ -237,6 +239,24 @@
             if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${noun}${n === 1 ? "" : "s"}`, each: (u) => more?.(st, view, r, u) });
             else if (st.play) {
               play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, updates: st.updates, instant: !!st.instant, lead: st.lead, after: (u) => { if (!st.note) note.textContent = `${u.toLocaleString("en")} ${noun}${u === 1 ? "" : "s"} played`; } });
+            } else if (test && t > 0 && !RL.reducedMotion()) {
+              // the test episode the network shown played after block t (the still drawn above), again and again, at the
+              // world's own pace (a story's human pace would make 500 steps last minutes)
+              const rec = RL.recordings?.[cfg.runs[st.run || names[0]].recording], steps = rec ? t * rec.block : 0;
+              if (!st.note) note.textContent = `Its test episode${steps ? ` after ${steps.toLocaleString("en")} steps of training` : ""}, played back`;
+              const every = st.pace || 30, loop = () => {
+                const events = r.replay(t - 1).events;
+                const tick = () => {
+                  for (;;) {
+                    const { value: ev, done } = events.next();
+                    if (done) { later(() => { showRun(view, r, t); later(loop, 500); }, 1400); return; }
+                    const wait = view.event(ev, { p: r.params }) || 0;
+                    if (ev.type === "move") { later(tick, every + wait); return; }
+                  }
+                };
+                tick();
+              };
+              later(loop, 700);
             }
             chart(st);
             showFormula(st);

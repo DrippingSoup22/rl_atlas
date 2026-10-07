@@ -202,7 +202,8 @@ animations and hover effects this guide relies on would not be smooth.
   - The deep presets: the same bench-and-typical method on recorded grids (each value's seeds trained offline), how much
     of the knob space to record, and the flat Pendulum sweeps (see `recorder/RUNS-REVIEW.md`). Their story runs are
     re-picked from the recorded seeds then.
-  - The Pendulum and CartPole stories play their recorded test episodes instead of stills (code only).
+  - The Pendulum and CartPole stories play their recorded test episodes instead of stills (code only). *Done*: a step
+    after some training plays the test episode of the network it shows, in a loop, at the world's own pace.
 
 - [ ] **M9 · Worlds for every algorithm** (draft, to agree on): a shared set of worlds that every algorithm can be tried
   on, where its kind allows; for each algorithm, a study of which world shows it best; then the deep Lab on top
