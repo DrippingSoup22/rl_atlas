@@ -13,7 +13,7 @@ sources = [
 scene = "grid"
 env = "frozen-lake"
 digits = 2
-seed = 10
+seed = 96
 average = 20
 formula = '\step{1}{\pol{\pi(a \mid s)} = \begin{cases} 1 - \eps + \eps / |\mathcal{A}| & a = \operatorname*{arg\,max}_{a^\prime} \val{Q(s,a^\prime)} \\ \eps / |\mathcal{A}| & \text{otherwise} \end{cases} \qquad} \step{2}{\val{Q(S_t,A_t)} \leftarrow \text{average of the returns}}'
 
@@ -29,11 +29,11 @@ q = { algorithm = "q-learning", epsilon = 0.1, alpha = 0.1, gamma = 0.99, judge 
 :::
 
 ::: step {run = "mc", at = 0, play = 1, pace = 300, formula = 2}
-Episode 1: the agent wanders for 8 steps and falls through the ice. Walking back, every move it tried is credited with the return that followed it, which is 0. The estimates stay at 0, but each now counts one visit.
+Episode 1: the agent wanders for 7 steps and falls through the ice. Walking back, every move it tried is credited with the return that followed it, which is 0. The estimates stay at 0, but each now counts one visit.
 :::
 
-::: step {run = "mc", at = 52, play = 1, lead = 5, pace = 300, formula = 2}
-Episode 53 finally reaches the gem, after 27 slippery steps. Walking back, each move's first visit is credited with the return that followed it: $\rew{+1}$, discounted by 0.99 per step. The news travels all the way back to the start in this one episode.
+::: step {run = "mc", at = 51, play = 1, lead = 5, pace = 300, formula = 2}
+Episode 52 finally reaches the gem, after 15 slippery steps. Walking back, each move's first visit is credited with the return that followed it: $\rew{+1}$, discounted by 0.99 per step. The news travels all the way back to the start in this one episode.
 :::
 
 ::: step {run = "mc", at = 53, values = true}
@@ -41,11 +41,11 @@ After that single episode, a trail of value leads from the start to the gem. A o
 :::
 
 ::: step {run = "mc", at = 300, values = true}
-After 300 episodes, the greedy policy in these values reaches the gem half the time. The agent itself does worse, because one move in ten is still random.
+After 300 episodes, the greedy policy in these values reaches the gem 21% of the time. Most episodes still end in a hole, so most returns are 0, and the estimates move slowly.
 :::
 
 ::: step {run = "mc", at = 3000, values = true, focus = [0, 0]}
-After 3000 episodes the greedy policy reaches the gem 78% of the time, against 82% for the optimal policy. At the start it moves left, into the wall, like the optimal policy found by dynamic programming, here learned without the rules.
+After 3000 episodes the greedy policy reaches the gem 52% of the time, against 82% for the optimal policy. At the start it moves right; the optimal policy found by dynamic programming moves left, into the wall, which is safer on the ice. Its four estimates there lie within 0.03 of each other, too close for averages of noisy returns to rank.
 :::
 
 ::: step {run = "mc", at = 3000, values = true, curves = ["mc", "q"], metric = "greedy"}

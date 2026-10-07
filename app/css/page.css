@@ -44,6 +44,7 @@
 .story-step.active .step-n { background: var(--c); color: var(--bg); transform: scale(1.12); }
 .story-step p { margin: 0 0 0.8em; }
 .story-end { height: 36vh; }
+.seed-line { margin: 28px 0 0 56px; font-size: 12px; color: var(--ink-3); }
 .stage-card { position: sticky; top: calc(56px + 4vh); padding: 18px 18px 12px; }
 .scene-formula { display: grid; gap: 2px; min-height: 104px; margin-top: 8px; }
 .scene-formula.bare { min-height: 52px; }

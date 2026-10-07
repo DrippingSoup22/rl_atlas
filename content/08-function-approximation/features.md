@@ -15,7 +15,7 @@ sources = [
 [story]
 scene = "line"
 env = "walk-1000"
-seed = 2
+seed = 6
 average = 20
 formula = '\step{1}{\val{\hat v(s, \mathbf w)} = w_1 x_1(s) + w_2 x_2(s) + \dots + w_d x_d(s)} \step{2}{\qquad \mathbf w \leftarrow \mathbf w + \alp\,\big[\rew{G} - \val{\hat v(S, \mathbf w)}\big]\,\mathbf x(S)}'
 

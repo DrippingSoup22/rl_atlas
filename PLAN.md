@@ -189,10 +189,14 @@ animations and hover effects this guide relies on would not be smooth.
   - Prototype on the cliff race (grid view) and review it. Then every other view kind: arms, cards, chain and line, car
     and surface, star, corridor, throw, graph.
 
-  **Phase 4 · Stories**
-  - The offline search for every live story run (knobs and seed, over many seeds); runs re-pinned where the shown one is
-    weak or reverses the idea, and the story numbers updated from them.
-  - The fingerprint test for every pinned run, and the faint seed line at the end of each story.
+  **Phase 4 · Stories** (done)
+  - `tools/story-runs.js` checks every live story run (142 of them) against seeds 1–40: where its seed falls, and whether
+    the story's runs keep the order of their medians. Most were representative. Re-pinned: on-policy MC control (its
+    run reached 78% where the typical one reaches about 45%; now seed 96, numbers updated), and the feature and
+    generalization stories (a rough seed for every run; now seeds 6 and 34). The runs that fail on purpose (PPO without
+    the clip, TRPO with δ = 0.2, the thrown REINFORCE run, a gem worth 100) already say how rare they are.
+  - `tests/stories.test.js` keeps a fingerprint of every pinned run (`tests/story-runs.json`); it is a developer check
+    only and shows nowhere in the guide. A faint line at the end of each story names its seeds.
 
   **Later (decided separately)**
   - The deep presets: the same bench-and-typical method on recorded grids (each value's seeds trained offline), how much

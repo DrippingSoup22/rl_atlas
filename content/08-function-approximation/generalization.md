@@ -13,7 +13,7 @@ sources = [
 [story]
 scene = "line"
 env = "walk-1000"
-seed = 2
+seed = 34
 average = 20
 formula = '\step{1}{\Delta\val{\hat v(s)} = \alp\,\del\;\mathbf x(s)^\top \mathbf x(S)}'
 

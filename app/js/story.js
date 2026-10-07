@@ -4,13 +4,25 @@
 (function (RL) {
   "use strict";
 
+  // One faint line under the last step: the seeds of the runs the story plays, so anyone can replay them in the Lab.
+  // Runs trained offline are left out (their seeds are in the recordings).
+  function seedLine(config) {
+    const chance = (id) => RL.lab?.algorithms[id] && RL.lab.algorithms[id].unit !== "sweep"; // sweeps draw nothing at random
+    const live = Object.values(config.runs || {}).filter((r) => chance(r.algorithm)).map((r) => r.seed ?? config.seed ?? 1);
+    if (chance(config.algorithm)) live.push(config.seed ?? 1);
+    if (!live.length) return "";
+    const list = [...new Set(live)].sort((a, b) => a - b).map((s) => s.toLocaleString("en-US"));
+    const named = list.length === 1 ? `seed ${list[0]}` : `seeds ${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
+    return `<p class="seed-line">Played with ${named}. The same ${list.length > 1 ? "seeds" : "seed"} and settings in the Lab replay ${live.length > 1 ? "these runs" : "this run"}.</p>`;
+  }
+
   RL.story = function (host, entry) {
     const { config, steps } = entry.story;
     host.innerHTML = `
       <div class="story">
         <div class="story-steps">
           ${steps.map((s, i) => `<section class="story-step" data-i="${i}"><span class="step-n">${i + 1}</span><div class="step-body">${s.html}</div></section>`).join("")}
-          <div class="story-end"></div>
+          <div class="story-end">${seedLine(config)}</div>
         </div>
         <div class="story-stage"><div class="stage-card card scene-${config.scene}"></div></div>
       </div>`;
