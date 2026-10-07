@@ -230,12 +230,19 @@ animations and hover effects this guide relies on would not be smooth.
   - Policy-gradient and actor–critic methods (REINFORCE, actor–critic, A2C, GAE, TRPO, PPO): any world; a softmax over
     discrete actions, a Gaussian over continuous ones.
   - DDPG, TD3, SAC: continuous actions only.
-  - The Lab offers only the pairs that make sense; a disabled pair says why in one line.
+  - The Lab has a side panel of worlds: the shared set, grouped (tables, approximation, continuous actions), showing
+    only the worlds the chosen algorithm may run. Monte Carlo never lists a continuous-action world.
+
+  **Every world trains live.** The continuous ones included: their physics are a few lines, and their networks are
+  small. Training runs in a Web Worker, so the animation never waits for the weights.
 
   **The network.** Two hidden layers by default, with depth (1–3), width (16–128) and activation as knobs: small, as the
   networks of most control work still are, robots included. Depth earns its keep in perception: Catch and Breakout get
   a small convolutional encoder in front (one or two layers), precomputed rather than trained live. The very deep
   encoders of image-based agents are explained (a story, an animation), not run.
+  - *Smoothness first.* Before the knobs open, every network shape is timed on every world: updates per second, and so
+    the fastest playback it can keep. Shapes that would stall the page at a speed are not offered at that speed (or at
+    all); the fast rates of the ladder show what training actually manages ("training: 1,800 steps a second").
 
   **Steps.**
   1. Port the new worlds; CartPole and Acrobot live; the compatibility table.
@@ -245,4 +252,5 @@ animations and hover effects this guide relies on would not be smooth.
      stories move where a world shows the idea better.
   3. The scenario picker in the Lab: any allowed world for any algorithm, with its bench.
   4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds; then the encoder tier.
-  5. The map: chapters adjusted where needed (a station on learning from pixels, say), not frozen to Sutton & Barto.
+  5. The map keeps its order, which follows Sutton & Barto. A new station goes only where a topic needs its own, and
+     then between the two stations where it naturally fits (learning from pixels, say, after DQN).
