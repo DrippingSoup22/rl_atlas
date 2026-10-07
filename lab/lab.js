@@ -137,7 +137,7 @@
     let bench = null, benchTimer = 0, benchDrawn = 0, strip = null, played = 1, pendingTypical = false;
 
     host.innerHTML = `
-      <section class="lab" data-kind="${env.kind}">
+      <section class="lab" data-kind="${env.kind}" data-drawer="closed">
         <header class="lab-head">
           <div class="lab-title">
             <div class="eyebrow">Lab · <span class="world-name">${esc(env.title)}</span></div>
@@ -157,6 +157,10 @@
               <select class="speed" aria-label="Speed"></select>
               <input class="scrub" type="range" min="0" value="0" aria-label="Position in the run">
               <span class="pos"></span>
+              <button class="settings-btn" type="button" aria-controls="lab-drawer" aria-expanded="false" title="World and display">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h9M3 15h5"/><circle cx="15" cy="10" r="2"/><circle cx="11" cy="15" r="2"/></svg>
+                <span class="sb-label">World &amp; display</span>
+              </button>
             </div>
             <section class="film card" hidden><div class="film-head"><h3>Filmstrip · <span class="film-name as-is"></span></h3><span class="faint">click a frame to jump there</span></div><div class="film-host"></div></section>
             <section class="chart-card card">
@@ -183,7 +187,6 @@
             </section>
           </div>
           <aside class="lab-side">
-            <section class="panel card world-panel" hidden><h3>World</h3><div class="world-list"></div></section>
             <section class="panel card pseudo-panel"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-tabs" hidden></div><div class="pseudo-host"></div><p class="pseudo-diff faint" hidden></p></section>
             <section class="panel card live">
               <h3>This step</h3>
@@ -191,9 +194,16 @@
               <div class="live-num"></div>
               <p class="live-note faint"></p>
             </section>
-            <section class="panel card show-panel"><h3>Show</h3><div class="show-host"></div></section>
           </aside>
         </div>
+        <aside class="lab-drawer" id="lab-drawer" aria-label="World and display">
+          <div class="ld-head">
+            <span class="eyebrow">Settings</span>
+            <button class="icon-btn ld-close" type="button" aria-label="Close the settings" title="Close (Esc)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+          </div>
+          <section class="ld-sec world-panel" hidden><h3>World</h3><div class="world-list"></div></section>
+          <section class="ld-sec show-panel"><h3>Display</h3><div class="show-host"></div></section>
+        </aside>
       </section>`;
 
     const q = (sel) => host.querySelector(sel);
@@ -286,6 +296,8 @@
       q(".legend").innerHTML = racers.map((r, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${esc(r.name)}</span>`).join("");
       knobPanel();
       worldPanel();
+      q(".settings-btn").hidden = q(".world-panel").hidden && q(".show-panel").hidden;
+      if (q(".settings-btn").hidden) setDrawer(false);
       oddsPanel();
       chartsFor();
       pseudoTabs();
@@ -1049,8 +1061,13 @@
     }
 
     function mark(line) {
-      for (const li of pseudo.querySelectorAll("li.on")) li.classList.remove("on");
-      if (line) pseudo.querySelector(`li[data-line="${line}"]`)?.classList.add("on");
+      const li = line ? pseudo.querySelector(`li[data-line="${line}"]`) : null;
+      for (const x of pseudo.querySelectorAll("li.on")) if (x !== li) x.classList.remove("on", "flash");
+      if (!li) return;
+      li.classList.add("on");
+      li.classList.remove("flash");
+      void li.offsetWidth; // restart the flash: the simulation came to this line again
+      li.classList.add("flash");
     }
 
     function focus(i) {
@@ -1200,7 +1217,24 @@
       if (wasWalking && rate() && P.walkers) seek(P.e);
     });
     scrub.addEventListener("input", () => { pause(); seek(parseInt(scrub.value, 10)); });
+    // ---- the settings drawer: the world and how the views draw, out of the way until asked for ----
+    const drawerBtn = q(".settings-btn"), drawer = q(".lab-drawer");
+    function setDrawer(open, focusIt = false) {
+      if ((host.querySelector(".lab").dataset.drawer === "open") === open) return;
+      host.querySelector(".lab").dataset.drawer = open ? "open" : "closed";
+      drawerBtn.setAttribute("aria-expanded", String(open));
+      if (focusIt) (open ? drawer.querySelector(".wchip.on, button, input") : drawerBtn)?.focus({ preventScroll: true });
+    }
+    // focus follows the drawer only for the keyboard (a click has a detail count; Enter and Space do not)
+    drawerBtn.addEventListener("click", (e) => setDrawer(host.querySelector(".lab").dataset.drawer !== "open", e.detail === 0));
+    q(".ld-close").addEventListener("click", (e) => setDrawer(false, e.detail === 0));
+    // a click anywhere else closes it
+    function onOutside(e) {
+      if (host.querySelector(".lab")?.dataset.drawer === "open" && !drawer.contains(e.target) && !drawerBtn.contains(e.target)) setDrawer(false);
+    }
+    document.addEventListener("pointerdown", onOutside);
     function onKey(e) {
+      if (e.key === "Escape" && host.querySelector(".lab").dataset.drawer === "open") { setDrawer(false, true); return; }
       if (e.target.closest("input, select, textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === " ") { e.preventDefault(); P.playing ? pause() : play(); }
       else if (e.key === "ArrowRight") { e.preventDefault(); stepOnce(); }
@@ -1235,6 +1269,7 @@
         strip?.destroy();
         clearSweep("");
         removeEventListener("keydown", onKey);
+        document.removeEventListener("pointerdown", onOutside);
         resized.disconnect();
         charts.forEach((c) => c.destroy());
         views.forEach((v) => v.destroy());

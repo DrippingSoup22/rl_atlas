@@ -1084,6 +1084,11 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .pseudo-tabs button.on { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
 .pseudo-tabs .key { background: var(--k); }
 .panel .pseudo li.differs { box-shadow: inset 3px 0 0 var(--k-focus, var(--ink-3)); background: color-mix(in oklab, var(--k-focus, var(--ink)) 6%, transparent); }
+/* the line the simulation is on: lit in the racer's color, with a flash each time the simulation reaches it */
+.panel .pseudo li.on { background: color-mix(in oklab, var(--k-focus, var(--ink)) 15%, transparent); box-shadow: inset 4px 0 0 var(--k-focus, var(--ink)); }
+.panel .pseudo li.on.flash { animation: line-flash 0.7s var(--ease) both; }
+@keyframes line-flash { from { background: color-mix(in oklab, var(--k-focus, var(--ink)) 34%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .panel .pseudo li.on.flash { animation: none; } }
 .pseudo-diff { margin: 6px 0 0; font-size: 12px; }
 .live-sym, .live-num { min-height: 30px; font-size: 0.86em; overflow-x: auto; overflow-y: hidden; }
 .live-num:empty { display: none; }
@@ -1092,6 +1097,34 @@ a.ref:hover { text-decoration-color: var(--ink); }
 /* A played run still training: the view waits, faded, its progress under the racer's name */
 .stage.training .view-host { opacity: 0.35; transition: opacity 0.2s; pointer-events: none; }
 .stage.training .stat { color: var(--ink-2); font-weight: 600; }
+
+/* The settings drawer: the world, and how the views draw. Out of the way until the button in the play bar opens it;
+   slides in from the right, over the side column. */
+.settings-btn {
+  display: inline-flex; align-items: center; gap: 7px; margin-left: 4px; padding: 7px 12px 7px 10px; border: 0; border-radius: 999px; cursor: pointer;
+  font: 600 13px var(--font); color: var(--ink-2); background: var(--surface-2); white-space: nowrap; transition: background-color 0.2s, color 0.2s;
+}
+.settings-btn:hover, .lab[data-drawer="open"] .settings-btn { color: var(--ink); background: var(--surface-3); }
+.settings-btn[hidden] { display: none; }
+.settings-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.settings-btn svg circle { fill: var(--surface-2); }
+.lab-drawer {
+  position: fixed; top: 68px; right: 12px; z-index: 20; width: min(360px, calc(100vw - 24px)); max-height: calc(100vh - 80px); overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; padding: 12px 16px 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg, var(--shadow));
+  transform: translateX(calc(100% + 24px)); visibility: hidden;
+  transition: transform 0.4s var(--ease), visibility 0s linear 0.4s;
+}
+.lab[data-drawer="open"] .lab-drawer { transform: none; visibility: visible; transition: transform 0.4s var(--ease), visibility 0s; }
+.ld-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.ld-close { width: 30px; height: 30px; box-shadow: none; }
+.ld-close:hover { background: var(--surface-3); }
+.ld-close svg { width: 16px; height: 16px; fill: none; stroke: var(--ink-2); stroke-width: 1.8; stroke-linecap: round; }
+.ld-sec { padding: 12px 0 14px; border-top: 1px solid var(--line); }
+.ld-sec:first-of-type, .ld-sec[hidden] + .ld-sec { border-top: 0; padding-top: 4px; }
+.ld-sec h3 { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 8px; }
+.ld-sec .seg { margin-bottom: 4px; }
+.ld-sec .scale { margin-top: 12px; }
 
 /* The world panel: the shared worlds these racers may run, as chips in groups; the lab's own world is marked. */
 .world-panel .wgroup + .wgroup { margin-top: 10px; }
@@ -1678,10 +1711,8 @@ a.ref:hover { text-decoration-color: var(--ink); }
   .lab-flow > .transport, .lab-flow > .film, .lab-flow > .chart-card, .lab-flow > .odds-card { order: 2; }
 }
 @media (max-width: 1100px) and (min-width: 701px) {
-  /* The pseudocode on the left, "This step" and "Show" stacked beside it: no half-empty cards. */
+  /* The pseudocode on the left, "This step" beside it. */
   .lab-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .lab-side > .pseudo-panel { grid-row: span 2; }
-  .lab-side > .world-panel { grid-column: 1 / -1; }
 }
 @media (max-width: 700px) { .lab-side { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) {
@@ -1734,6 +1765,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .catchview .fall { stroke: var(--rew); stroke-width: 2; stroke-dasharray: 2 5; opacity: 0.5; }
 .catchview .trip { font: 600 12px var(--font); text-anchor: middle; fill: var(--ink-2); }
 .catchview .spark { fill: none; stroke: var(--err); stroke-width: 3; transform-box: fill-box; transform-origin: center; }
+@media (max-width: 760px) { .settings-btn .sb-label { display: none; } .settings-btn { padding: 8px; } }
 
 </style>
 </head>
@@ -11093,7 +11125,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     let bench = null, benchTimer = 0, benchDrawn = 0, strip = null, played = 1, pendingTypical = false;
 
     host.innerHTML = `
-      <section class="lab" data-kind="${env.kind}">
+      <section class="lab" data-kind="${env.kind}" data-drawer="closed">
         <header class="lab-head">
           <div class="lab-title">
             <div class="eyebrow">Lab · <span class="world-name">${esc(env.title)}</span></div>
@@ -11113,6 +11145,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
               <select class="speed" aria-label="Speed"></select>
               <input class="scrub" type="range" min="0" value="0" aria-label="Position in the run">
               <span class="pos"></span>
+              <button class="settings-btn" type="button" aria-controls="lab-drawer" aria-expanded="false" title="World and display">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h9M3 15h5"/><circle cx="15" cy="10" r="2"/><circle cx="11" cy="15" r="2"/></svg>
+                <span class="sb-label">World &amp; display</span>
+              </button>
             </div>
             <section class="film card" hidden><div class="film-head"><h3>Filmstrip · <span class="film-name as-is"></span></h3><span class="faint">click a frame to jump there</span></div><div class="film-host"></div></section>
             <section class="chart-card card">
@@ -11139,7 +11175,6 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
             </section>
           </div>
           <aside class="lab-side">
-            <section class="panel card world-panel" hidden><h3>World</h3><div class="world-list"></div></section>
             <section class="panel card pseudo-panel"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-tabs" hidden></div><div class="pseudo-host"></div><p class="pseudo-diff faint" hidden></p></section>
             <section class="panel card live">
               <h3>This step</h3>
@@ -11147,9 +11182,16 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
               <div class="live-num"></div>
               <p class="live-note faint"></p>
             </section>
-            <section class="panel card show-panel"><h3>Show</h3><div class="show-host"></div></section>
           </aside>
         </div>
+        <aside class="lab-drawer" id="lab-drawer" aria-label="World and display">
+          <div class="ld-head">
+            <span class="eyebrow">Settings</span>
+            <button class="icon-btn ld-close" type="button" aria-label="Close the settings" title="Close (Esc)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+          </div>
+          <section class="ld-sec world-panel" hidden><h3>World</h3><div class="world-list"></div></section>
+          <section class="ld-sec show-panel"><h3>Display</h3><div class="show-host"></div></section>
+        </aside>
       </section>`;
 
     const q = (sel) => host.querySelector(sel);
@@ -11242,6 +11284,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       q(".legend").innerHTML = racers.map((r, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${esc(r.name)}</span>`).join("");
       knobPanel();
       worldPanel();
+      q(".settings-btn").hidden = q(".world-panel").hidden && q(".show-panel").hidden;
+      if (q(".settings-btn").hidden) setDrawer(false);
       oddsPanel();
       chartsFor();
       pseudoTabs();
@@ -12005,8 +12049,13 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     function mark(line) {
-      for (const li of pseudo.querySelectorAll("li.on")) li.classList.remove("on");
-      if (line) pseudo.querySelector(`li[data-line="${line}"]`)?.classList.add("on");
+      const li = line ? pseudo.querySelector(`li[data-line="${line}"]`) : null;
+      for (const x of pseudo.querySelectorAll("li.on")) if (x !== li) x.classList.remove("on", "flash");
+      if (!li) return;
+      li.classList.add("on");
+      li.classList.remove("flash");
+      void li.offsetWidth; // restart the flash: the simulation came to this line again
+      li.classList.add("flash");
     }
 
     function focus(i) {
@@ -12156,7 +12205,24 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (wasWalking && rate() && P.walkers) seek(P.e);
     });
     scrub.addEventListener("input", () => { pause(); seek(parseInt(scrub.value, 10)); });
+    // ---- the settings drawer: the world and how the views draw, out of the way until asked for ----
+    const drawerBtn = q(".settings-btn"), drawer = q(".lab-drawer");
+    function setDrawer(open, focusIt = false) {
+      if ((host.querySelector(".lab").dataset.drawer === "open") === open) return;
+      host.querySelector(".lab").dataset.drawer = open ? "open" : "closed";
+      drawerBtn.setAttribute("aria-expanded", String(open));
+      if (focusIt) (open ? drawer.querySelector(".wchip.on, button, input") : drawerBtn)?.focus({ preventScroll: true });
+    }
+    // focus follows the drawer only for the keyboard (a click has a detail count; Enter and Space do not)
+    drawerBtn.addEventListener("click", (e) => setDrawer(host.querySelector(".lab").dataset.drawer !== "open", e.detail === 0));
+    q(".ld-close").addEventListener("click", (e) => setDrawer(false, e.detail === 0));
+    // a click anywhere else closes it
+    function onOutside(e) {
+      if (host.querySelector(".lab")?.dataset.drawer === "open" && !drawer.contains(e.target) && !drawerBtn.contains(e.target)) setDrawer(false);
+    }
+    document.addEventListener("pointerdown", onOutside);
     function onKey(e) {
+      if (e.key === "Escape" && host.querySelector(".lab").dataset.drawer === "open") { setDrawer(false, true); return; }
       if (e.target.closest("input, select, textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === " ") { e.preventDefault(); P.playing ? pause() : play(); }
       else if (e.key === "ArrowRight") { e.preventDefault(); stepOnce(); }
@@ -12191,6 +12257,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         strip?.destroy();
         clearSweep("");
         removeEventListener("keydown", onKey);
+        document.removeEventListener("pointerdown", onOutside);
         resized.disconnect();
         charts.forEach((c) => c.destroy());
         views.forEach((v) => v.destroy());

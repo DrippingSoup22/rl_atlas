@@ -230,8 +230,10 @@ animations and hover effects this guide relies on would not be smooth.
   - Policy-gradient and actor–critic methods (REINFORCE, actor–critic, A2C, GAE, TRPO, PPO): any world; a softmax over
     discrete actions, a Gaussian over continuous ones.
   - DDPG, TD3, SAC: continuous actions only.
-  - The Lab has a side panel of worlds: the shared set, grouped (tables, approximation, continuous actions), showing
-    only the worlds the chosen algorithm may run. Monte Carlo never lists a continuous-action world.
+  - The Lab lists its worlds in a settings drawer (**World & display**, in the play bar), with the view's display
+    options: the shared set, grouped (tables, approximation, continuous actions), showing only the worlds the chosen
+    algorithm may run. Monte Carlo never lists a continuous-action world. The side column keeps only what follows the
+    simulation: the pseudocode, its line lit in the racer's color at every step, and "This step".
 
   **Every world trains live.** The continuous ones included: their physics are a few lines, and their networks are
   small. Training runs in a Web Worker, so the animation never waits for the weights.
