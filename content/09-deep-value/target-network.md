@@ -74,12 +74,12 @@ DQN on CartPole, with the guide's other settings and 20 seeds per value, shows b
 
 | target copied every | runs that end well | their last training episodes, steps |
 | --- | --- | --- |
-| never (targets from the current weights) | 0 of 20 | 46 to 446 |
-| 100 steps | 11 of 20 | 161 to 500 |
-| 500 steps | 16 of 20 | 402 to 500 |
-| 2,000 steps | 4 of 20 | 118 to 500 |
+| never (targets from the current weights) | 0 of 20 | 39 to 437 |
+| 100 steps | 9 of 20 | 222 to 500 |
+| 500 steps | 13 of 20 | 203 to 500 |
+| 2,000 steps | 4 of 20 | 138 to 497 |
 
-Without a copy, no run ends well, and 17 of the 20 end below 200 steps. Copying every 2,000 steps, only 4 do. The best period is in the middle, and it is a knob like the step size: its sweet spot depends on the world and on the other knobs.
+Without a copy, no run ends well, and 18 of the 20 end below 200 steps. Copying every 2,000 steps, only 4 do. The best period is in the middle, and it is a knob like the step size: its sweet spot depends on the world and on the other knobs.
 
 ### Overestimation stays {#overestimation}
 
@@ -107,7 +107,7 @@ $$L(\mathbf w) = \mathbb E\Big[\big(\rew{r} + \gam \max_{a'} \val{\hat q(s', a',
 
 - Breaks the loop in which an update raises its own target.
 - Turns each period into a supervised regression problem, which networks handle well.
-- On CartPole, without it none of 20 runs ends well; copying every 500 steps, 16 of 20 do.
+- On CartPole, without it none of 20 runs ends well; copying every 500 steps, 13 of 20 do.
 
 ### Pitfalls
 

@@ -68,12 +68,12 @@ DQN on CartPole, with the guide's other settings and 20 seeds per size, shows ho
 
 | memory $N$ | runs that end well | their last training episodes, steps |
 | --- | --- | --- |
-| 128 (no replay) | 7 of 20 | 102 to 500 |
-| 1,000 | 8 of 20 | 183 to 500 |
-| 10,000 | 16 of 20 | 402 to 500 |
-| 100,000 | 11 of 20 | 116 to 500 |
+| 128 (no replay) | 9 of 20 | 200 to 500 |
+| 1,000 | 12 of 20 | 240 to 500 |
+| 10,000 | 13 of 20 | 203 to 500 |
+| 100,000 | 11 of 20 | 119 to 500 |
 
-Without replay the runs still learn, but most never settle: 17 of the 20 average 450 steps per episode for a while, and only 7 still do at the end. With 10,000 steps of memory, every run ends at 402 steps or more. With 100,000, three runs end below 160; the count, 11 of 20, is lower too, though a gap of that size could still be luck (Fisher's exact test gives 18%, against 1% for no replay; see [[seeds]]). Larger studies find that the age of the oldest policy in the memory matters, and the number of updates per new transition with it (Fedus et al., 2020).
+Without replay the runs still learn, but many never settle: 17 of the 20 average 450 steps per episode for a while, and only 9 still do at the end. With replay, every run gets there, and 11 to 13 stay. On a world this small the gaps are modest: Fisher's exact test gives 34% for no replay against 10,000 steps, so even that one could be luck (see [[seeds]]). The largest memory has the lowest end, one run at 119 steps. Larger studies find that the age of the oldest policy in the memory matters, and the number of updates per new transition with it (Fedus et al., 2020).
 
 ### Replay as planning {#planning}
 
@@ -108,7 +108,7 @@ then one gradient step on the batch's average of $\big(\rew{r} + \gam \max_{a'} 
 ### Pitfalls
 
 - Only for off-policy learning; on-policy methods need corrections to learn from old data.
-- Too small a memory is online learning again; too large a memory keeps fitting a policy long gone. On CartPole, 10,000 steps let 16 of 20 seeds end well; no replay, only 7.
+- Too small a memory is online learning again; too large a memory keeps fitting a policy long gone. On CartPole without replay, 17 of 20 seeds reach 450 steps per episode for a while, and only 9 stay there.
 - Transitions that end an episode must be marked, or their targets bootstrap from a state that never comes.
 
 ### Check yourself {#check}

@@ -59,9 +59,9 @@ Almost every knob in this guide has failure on both sides. The Lab's sweeps meas
 | PPO's passes per batch (Pendulum) | 18 of 20 (1 pass, no worse here) | 19 of 20 (4, 10) | 5 of 20 (30 passes) |
 | A2C's step size $\alp$ (CartPole) | 20 of 20 ($3 \cdot 10^{-4}$, no worse here) | 20 of 20 ($10^{-3}$) | 5 of 20 ($10^{-2}$) |
 | A2C's steps between updates $n$ (CartPole) | 13 of 20 ($n = 1$) | 20 of 20 ($n = 5$) | 20 of 20 ($n = 20$, no worse here) |
-| DQN's step size $\alp$ (CartPole) | 16 of 20 ($10^{-4}$, no worse here) | 16 of 20 ($5 \cdot 10^{-4}$) | 3 of 20 ($2.5 \cdot 10^{-3}$) |
-| DQN's target period $C$ (CartPole) | 0 of 20 (no copy) | 16 of 20 (500 steps) | 4 of 20 (2,000 steps) |
-| DQN's memory $N$ (CartPole) | 7 of 20 (128 steps) | 16 of 20 (10,000 steps) | 11 of 20 (100,000 steps) |
+| DQN's step size $\alp$ (CartPole) | 14 of 20 ($10^{-4}$, no worse here) | 13 of 20 ($5 \cdot 10^{-4}$) | 2 of 20 ($2.5 \cdot 10^{-3}$) |
+| DQN's target period $C$ (CartPole) | 0 of 20 (no copy) | 13 of 20 (500 steps) | 4 of 20 (2,000 steps) |
+| DQN's memory $N$ (CartPole) | 9 of 20 (128 steps) | 13 of 20 (10,000 steps) | 11 of 20 (100,000 steps) |
 
 The reasons differ, and the [[bias-variance]] trade explains several of them. Too little exploration commits early, too much never commits. Too small a step learns slowly, too large a step knocks over what was learned. A target that moves too often chases itself, one that moves too rarely crawls. Knowing why a knob fails on each side tells which way to turn it.
 

@@ -81,7 +81,7 @@ In the guide's maze, A2C with four workers and a step size of 2 learns the way t
 ### Gradients and steps {#gradients}
 
 - **Gradient clipping**: if the norm of the whole gradient exceeds a threshold, scale it down. One bad batch then cannot throw the weights far.
-- **The Huber loss**: squared for small TD errors, linear for large ones, so large errors push no harder than a fixed amount. DQN used it on Atari, where rewards were clipped and errors stayed small. The recorded DQN on CartPole uses a squared loss instead: its values legitimately reach 100, and large errors there are signal, not noise. With the Huber loss, none of its 20 runs ends well; with the squared loss, 16 do.
+- **The Huber loss**: squared for small TD errors, linear for large ones, so large errors push no harder than a fixed amount. DQN used it on Atari, where rewards were clipped and errors stayed small. The recorded DQN on CartPole uses a squared loss instead: its values legitimately reach 100, and large errors there are signal, not noise. With the Huber loss, one of its 20 runs ends well; with the squared loss, 13 do.
 - **Bounded policy steps**: PPO's clip and TRPO's KL bound limit how far one update can move the policy, whatever the scale of the gradient ([[trpo]]).
 - **Normalization layers**: layer normalization inside the networks, especially the critics, keeps hidden activations in range as training goes on (Ba et al., 2016).
 

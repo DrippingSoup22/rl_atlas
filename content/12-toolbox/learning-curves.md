@@ -21,23 +21,23 @@ notarget = { recording = "dqn-cartpole-no-target", name = "DQN without a target 
 ## Story
 
 ::: step {run = "learn", at = 40, curves = ["learn"], metric = "return"}
-**The training curve.** DQN learning to balance a pole, as in [[dqn]]: the average return of the training episodes in each block of 5,000 steps, averaged over 20 seeds. It rises to 273 by block 5, sags to 234 by block 10, then climbs to 480 at the end. The first questions a curve answers: did it learn, how fast, and did it keep what it learned.
+**The training curve.** DQN learning to balance a pole, as in [[dqn]]: the average return of the training episodes in each block of 5,000 steps, averaged over 20 seeds. It rises to 283 by block 5, sags to 240 by block 12, climbs to 465 by block 28, then slips to 390 at the end. The first questions a curve answers: did it learn, how fast, and did it keep what it learned.
 :::
 
 ::: step {run = "learn", at = 40, curves = ["learn"], metric = "test"}
-**The test curve.** After each block, every seed also played one episode without exploration. Averaged over the seeds, it follows the training curve closely here, because DQN's exploration has shrunk to 5% of moves after 20,000 steps; with more exploration the two would part. One test episode is a noisy measure: the run in the picture scored 500, 438, 487, 500, 500, 405, 500, 500, 500 and 500 over its last ten blocks.
+**The test curve.** After each block, every seed also played one episode without exploration. Averaged over the seeds, it follows the training curve closely here, because DQN's exploration has shrunk to 5% of moves after 20,000 steps; with more exploration the two would part. One test episode is a noisy measure: from block 12 to block 21, the run in the picture scored 166, 149, 214, 316, 437, 500, 405, 500, 430 and 500.
 :::
 
 ::: step {run = "learn", at = 40, curves = ["learn"], metric = "return"}
-**What the average hides.** The curve ends at 480, near the ceiling of 500. But it is the average of 20 runs that did not all end alike: 16 average 450 or more over their last four blocks, and the other four end between 402 and 446. An average says what to expect, not what every run does ([[seeds]]). The Lab draws the runs one by one.
+**What the average hides.** The curve ends at 390, short of the ceiling of 500. But it is the average of 20 runs that did not all end alike: 13 average 450 or more over their last four blocks, and the other seven end between 203 and 431. An average says what to expect, not what every run does ([[seeds]]). The Lab draws the runs one by one.
 :::
 
 ::: step {run = "learn", at = 40, curves = ["learn"], metric = "q"}
-**The agent's own values are a curve too.** The largest Q-value in each batch, averaged over the seeds, climbs from 4.7 to 101. A state here is worth at most $1 / (1 - \gam) = 100$ to a learner that bootstraps through the time limit, so 101 means overestimation: on 15 of the 20 seeds, the values went past 100 at some point. Values that keep tracking the returns are healthy; values above what the world can pay are not ([[dqn-extensions]]).
+**The agent's own values are a curve too.** The largest Q-value in each batch, averaged over the seeds, climbs from 4.8 to 99. A state here is worth at most $1 / (1 - \gam) = 100$ to a learner that bootstraps through the time limit, and the average hides the seeds again: on 12 of the 20, the values went past 100 at some point, up to 130. That is overestimation. Values that keep tracking the returns are healthy; values above what the world can pay are not ([[dqn-extensions]]).
 :::
 
 ::: step {run = "notarget", at = 40, curves = ["notarget"], metric = "q"}
-**When the values run away.** The same agent without a target network ([[target-network]]): its average largest Q-value passes 1,000 at block 11 and 10,000 at block 30, peaking near 11,000, while its training episodes never average more than 218 steps. No seed ends well. The value curve showed the trouble long before the return curve could explain it.
+**When the values run away.** The same agent without a target network ([[target-network]]): its average largest Q-value passes 1,000 at block 13 and 10,000 at block 27, peaking near 10,500, while its training episodes never average more than 246 steps. No seed ends well. The value curve showed the trouble long before the return curve could explain it.
 :::
 
 ## Textbook
@@ -121,7 +121,7 @@ Episodes change length as the agent learns, so equal intervals of episodes are u
 :::
 
 ::: question
-DQN's average largest Q-value on CartPole reaches 101. What does that tell you?
+On 12 of 20 seeds, DQN's largest Q-value on CartPole goes past 100, up to 130. What does that tell you?
 ---
 That it overestimates: with a reward of 1 per step and γ = 0.99, no state is worth more than 100 to a learner that bootstraps through the time limit. The max in the target picks up upward errors. Double DQN reduces it.
 :::
