@@ -223,8 +223,8 @@ animations and hover effects this guide relies on would not be smooth.
 
   **Who may run where.**
   - Tabular methods (Monte Carlo, TD, SARSA, Q-learning, n-step, λ, Dyna, prioritized sweeping): discrete states and
-    discrete actions only. Dynamic programming also needs the world's model (not Blackjack's dealer, not Taxi's
-    randomness? to check).
+    discrete actions only. Dynamic programming also needs the world's model written out: the grid worlds and Taxi
+    (Blackjack keeps its exact solution).
   - Value methods with approximation (linear SARSA and TD, DQN and its extensions): any states, discrete actions only:
     choosing the best action is a max over a list.
   - Policy-gradient and actor–critic methods (REINFORCE, actor–critic, A2C, GAE, TRPO, PPO): any world; a softmax over
