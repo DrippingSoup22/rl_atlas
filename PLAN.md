@@ -203,3 +203,46 @@ animations and hover effects this guide relies on would not be smooth.
     of the knob space to record, and the flat Pendulum sweeps (see `recorder/RUNS-REVIEW.md`). Their story runs are
     re-picked from the recorded seeds then.
   - The Pendulum and CartPole stories play their recorded test episodes instead of stills (code only).
+
+- [ ] **M9 · Worlds for every algorithm** (draft, to agree on): a shared set of worlds that every algorithm can be tried
+  on, where its kind allows; for each algorithm, a study of which world shows it best; then the deep Lab on top
+  (`recorder/DEEP-LAB.md`). Classic algorithms first.
+
+  **The shared worlds.** All of them run in the page: Gymnasium's equations ported exactly, or, where Gymnasium's
+  physics can't be ported (Box2D, MuJoCo), a world of our own in the same spirit, named as such.
+  - *Discrete actions, discrete states* (tables can hold them): Cliff Walking; Frozen Lake 4 × 4; Frozen Lake 8 × 8
+    (new); Taxi (new, 500 states); the windy gridworld (new, Sutton & Barto's Example 6.5); the Dyna maze; Blackjack.
+  - *Discrete actions, continuous or large states* (approximation only): CartPole (now live, not only recorded);
+    Mountain Car; Acrobot (new); Catch (new, bsuite's tiny pixel game: a falling ball, a paddle, 10 × 5 pixels);
+    MinAtar-style Breakout (new, a 10 × 10 image, several channels).
+  - *Continuous actions* (approximation only): Pendulum; continuous Mountain Car (new); CartPole pushed with any force
+    (new, our own); Acrobot driven with any torque (new, our own); a two-link arm reaching a target (new, our own, in
+    the spirit of MuJoCo's Reacher); a puck pushed to a goal around obstacles (new, our own).
+  - The chapter worlds built to make one point (the short corridor, two gems, the ice bridge, the hidden cliffs, the
+    max-bias pair, Baird's star, the random walks) stay in their chapters; they are not part of the shared set.
+
+  **Who may run where.**
+  - Tabular methods (Monte Carlo, TD, SARSA, Q-learning, n-step, λ, Dyna, prioritized sweeping): discrete states and
+    discrete actions only. Dynamic programming also needs the world's model (not Blackjack's dealer, not Taxi's
+    randomness? to check).
+  - Value methods with approximation (linear SARSA and TD, DQN and its extensions): any states, discrete actions only:
+    choosing the best action is a max over a list.
+  - Policy-gradient and actor–critic methods (REINFORCE, actor–critic, A2C, GAE, TRPO, PPO): any world; a softmax over
+    discrete actions, a Gaussian over continuous ones.
+  - DDPG, TD3, SAC: continuous actions only.
+  - The Lab offers only the pairs that make sense; a disabled pair says why in one line.
+
+  **The network.** Two hidden layers by default, with depth (1–3), width (16–128) and activation as knobs: small, as the
+  networks of most control work still are, robots included. Depth earns its keep in perception: Catch and Breakout get
+  a small convolutional encoder in front (one or two layers), precomputed rather than trained live. The very deep
+  encoders of image-based agents are explained (a story, an animation), not run.
+
+  **Steps.**
+  1. Port the new worlds; CartPole and Acrobot live; the compatibility table.
+  2. The world study for the classic algorithms: each on every world it may run, 20 seeds, sensible settings; a world
+     is a good showcase when good settings succeed on most seeds, learning takes long enough to watch, the chapter's
+     knob visibly matters, and the hero beats the foil on most seeds. Written up like the runs review; presets and
+     stories move where a world shows the idea better.
+  3. The scenario picker in the Lab: any allowed world for any algorithm, with its bench.
+  4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds; then the encoder tier.
+  5. The map: chapters adjusted where needed (a station on learning from pixels, say), not frozen to Sutton & Barto.
