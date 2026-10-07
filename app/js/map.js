@@ -9,7 +9,7 @@
   const COL = 178, STEP = 27, FIRST = 50, LEFT = 40, TOP = 96, ROW_GAP = 132;
   const LENSES = {
     map: { name: "Metro", caption: "Every station is one idea, in reading order. Start at the top left: first the problem, then methods that keep a table, then methods that scale." },
-    tree: { name: "Tree", caption: "One tree per line, read from the top. Each station grows from the one it builds on; an algorithm from the algorithm it changes. Point at a station to light up everything it builds on." },
+    tree: { name: "Tree", caption: "One tree per line, read from the top. Each station grows from the one it builds on; an algorithm from the algorithm it changes." },
     unified: { name: "Unified", caption: "Every algorithm, by how far its update looks ahead (down) and whether it samples one outcome or averages over all of them (across)." },
   };
   const cameras = {}; // one camera per view, kept between visits
@@ -217,7 +217,6 @@
           <g class="deco deco-map">${metroDrawing(layouts.map)}</g>
           <g class="deco deco-tree">${treeDrawing(layouts.tree)}</g>
           <g class="deco deco-unified">${unifiedDrawing(layouts.unified)}</g>
-          <g class="links"></g>
           ${stations(next)}
         </g></svg>
         <div class="map-zoom" role="group" aria-label="Zoom">
@@ -228,7 +227,7 @@
       </section>`;
     drawn = true;
 
-    const svg = host.querySelector(".metro"), cam = host.querySelector(".cam"), links = host.querySelector(".links");
+    const svg = host.querySelector(".metro"), cam = host.querySelector(".cam");
     const nodes = new Map(Array.from(svg.querySelectorAll(".st"), (g) => [g.dataset.id, g]));
     const L = () => layouts[lens];
     let view = null, raf = 0, switching = 0;
@@ -343,7 +342,6 @@
       if (next === lens) return;
       lens = next;
       store.set("lens", lens);
-      clear();
       arrange();
       svg.classList.remove("redraw");
       void svg.getBoundingClientRect();
@@ -466,60 +464,10 @@
       zoomAt(svg.clientWidth / 2, svg.clientHeight / 2, b.dataset.zoom === "in" ? 1.3 : 1 / 1.3);
     }));
 
-    // ---- hover: everything a station builds on ----
-    // Its path up its line's tree, and, for an algorithm whose parent lives in another line, that parent's path too.
-    // Only in the tree: those stations stay lit while the rest fade, and their branches light up. (On the metro and
-    // unified views, a cursor sweeping across the stations made the whole map flicker.)
-    function lineage(id) {
-      const T = layouts.tree, seen = new Set(), cross = [];
-      const walk = (k) => {
-        for (; T.up.has(k); k = T.up.get(k)) {
-          const p = station(k).parent;
-          if (p && station(p).line !== station(k).line) { cross.push([k, p]); if (!seen.has(p)) { seen.add(p); walk(p); } }
-          if (station(T.up.get(k))) seen.add(T.up.get(k));
-        }
-      };
-      walk(id);
-      return { seen, cross };
-    }
-    const curve = (a, b) => `<path d="M${a.x - 9} ${a.y} Q${Math.min(a.x, b.x) - 46 - Math.abs(a.y - b.y) * 0.15} ${(a.y + b.y) / 2} ${b.x - 9} ${b.y}"/>`;
-    svg.addEventListener("pointerover", (e) => {
-      if (drag?.moved) return;
-      if (lens !== "tree") return;
-      const g = e.target.closest?.(".st:not(.out)");
-      if (!g || g.classList.contains("hot")) return;
-      clear();
-      g.classList.add("hot");
-      const id = g.dataset.id, pos = L().pos, { seen, cross } = lineage(id);
-      for (const r of seen) nodes.get(r)?.classList.add("rel");
-      svg.classList.add("tracing");
-      for (const k of [id, ...seen]) {
-        svg.querySelector(`.edge[data-to="${k}"]`)?.classList.add("hot");
-        svg.querySelector(`.tree-hub[data-line="${station(k).line}"]`)?.classList.add("hot");
-      }
-      // A parent from another line has no branch here: a dashed link reaches across to it.
-      links.innerHTML = cross.map(([k, p]) => curve(pos.get(k), pos.get(p))).join("");
-    });
-    svg.addEventListener("pointerout", (e) => {
-      const g = e.target.closest?.(".st");
-      if (g && !g.contains(e.relatedTarget)) clear();
-    });
-    function clear() {
-      links.innerHTML = "";
-      svg.classList.remove("tracing");
-      svg.querySelectorAll(".st.hot, .st.rel, .edge.hot, .tree-hub.hot").forEach((s) => s.classList.remove("hot", "rel"));
-    }
-
-    // ---- the legend: pointing at a line lights up its stations ----
+    // ---- the legend ----
+    // No highlighting on hover, of the stations or of the legend's lines: a cursor sweeping across them made the map
+    // flicker. Clicking still finds things.
     const legend = host.querySelector(".mp-lines");
-    const spot = (line) => {
-      for (const [id, g] of nodes) g.classList.toggle("unlit", !!line && station(id).line !== line);
-      svg.classList.toggle("spot", !!line);
-    };
-    legend.addEventListener("pointerover", (e) => spot(e.target.closest?.("[data-line]")?.dataset.line));
-    legend.addEventListener("pointerleave", () => spot(null));
-    legend.addEventListener("focusin", (e) => spot(e.target.closest?.("[data-line]")?.dataset.line));
-    legend.addEventListener("focusout", () => spot(null));
     // Clicking a line brings its stations to the middle of the screen.
     legend.addEventListener("click", (e) => {
       const line = e.target.closest("[data-line]")?.dataset.line;

@@ -398,7 +398,7 @@ html.vt-side::view-transition-new(root) { animation: vt-fade-in 0.3s ease both; 
 
 .metro .st { cursor: pointer; outline: none; transition: transform 0.9s var(--ease), opacity 0.5s; }
 .metro .st text { transition: transform 0.9s var(--ease); }
-.metro .st.dim, .metro.spot .st.unlit { opacity: 0.13; }
+.metro .st.dim { opacity: 0.13; }
 .metro .st.out { opacity: 0; pointer-events: none; }
 .metro .st .dot { fill: var(--surface); stroke: var(--c); stroke-width: 3; transition: r 0.2s var(--spring), fill 0.2s, stroke-width 0.2s; }
 .metro .st.algorithm .dot { stroke-width: 3.5; }
@@ -410,10 +410,7 @@ html.vt-side::view-transition-new(root) { animation: vt-fade-in 0.3s ease both; 
 .metro .st .halo { fill: var(--c); opacity: 0; transition: opacity 0.2s; transform-box: fill-box; transform-origin: center; }
 /* Pointing at a station lights it, and its lineage, in the tree only: on the metro and unified views, sweeping the
    cursor across many stations would make the whole map flicker. */
-.metro .st:focus-visible .halo, .metro[data-lens="tree"] .st:hover .halo, .metro .st.hot .halo { opacity: 0.18; }
-.metro[data-lens="tree"] .st:hover .dot, .metro .st.hot .dot { r: 9; }
-.metro .st.rel .halo { opacity: 0.14; }
-.metro .st.rel .dot { stroke-width: 5; }
+.metro .st:focus-visible .halo { opacity: 0.18; }
 .metro .st.next .halo { animation: station-pulse 1.8s ease-out infinite; }
 .metro .st.arrived .halo { animation: station-pulse 0.9s ease-out 2; }
 /* a click presses the station before its page opens out of it */
@@ -422,8 +419,6 @@ html.vt-side::view-transition-new(root) { animation: vt-fade-in 0.3s ease both; 
 /* changing views, the stations set off part by part, in reading order */
 .metro.switching .st, .metro.switching .st text { transition-delay: calc(var(--d) * 40ms); }
 @keyframes station-pulse { from { opacity: 0.4; transform: scale(0.5); } to { opacity: 0; transform: scale(2); } }
-.metro .links path { fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-dasharray: 5 5; animation: links-flow 0.6s linear infinite; }
-@keyframes links-flow { to { stroke-dashoffset: -10; } }
 
 /* the first visit: lines draw themselves, then the stations appear */
 .metro.intro .trunk, .metro.intro .branch { stroke-dasharray: 1; animation: line-in 0.9s var(--ease) calc(var(--d) * 70ms) both; }
@@ -435,13 +430,8 @@ html.vt-side::view-transition-new(root) { animation: vt-fade-in 0.3s ease both; 
 .metro .deco { transition: opacity 0.6s; }
 .metro:not([data-lens="map"]) .deco-map, .metro:not([data-lens="tree"]) .deco-tree, .metro:not([data-lens="unified"]) .deco-unified { opacity: 0; pointer-events: none; }
 .metro .edge { fill: none; stroke: var(--c); stroke-width: 3; stroke-linecap: round; opacity: 0.75; transition: stroke-width 0.2s, opacity 0.2s; }
-.metro .edge.hot { stroke-width: 5.5; opacity: 1; }
-.metro.tracing .edge:not(.hot) { opacity: 0.3; }
-/* hovering a station, what it builds on stays lit and the rest steps back */
-.metro.tracing .st:not(.hot):not(.rel):not(.out) { opacity: 0.3; }
 .metro .tree-hub rect { fill: var(--c); }
 .metro .tree-hub text { font: 750 13px var(--font); fill: var(--bg); text-anchor: middle; }
-.metro .tree-hub.hot rect { stroke: var(--c); stroke-width: 6; stroke-opacity: 0.25; }
 .metro .spine { fill: none; stroke: var(--ink-3); stroke-width: 2.5; stroke-dasharray: 2 8; stroke-linecap: round; }
 .metro.redraw[data-lens="tree"] .edge { stroke-dasharray: 1; animation: line-in 0.9s var(--ease) 0.3s both; }
 .metro .plane { fill: color-mix(in oklab, var(--surface) 55%, transparent); stroke: var(--line-2); stroke-width: 1.5; stroke-dasharray: 6 6; }
@@ -1025,6 +1015,10 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .lab-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; animation: rise-in 0.6s var(--ease) both; }
 .lab-title h1 { font-size: clamp(24px, 3vw, 34px); letter-spacing: -0.02em; margin: 6px 0 4px; }
 .lab-title .intro { margin: 0; max-width: 64ch; color: var(--ink-2); }
+.lab-title .intro.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.intro-more { margin: 2px 0 0; padding: 0; border: 0; background: none; cursor: pointer; font: 600 13px var(--font); color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.intro-more:hover { color: var(--ink); }
+.intro-more[hidden] { display: none; }
 .knobs { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 10px 16px; min-width: 0; max-width: 100%; }
 .knob { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .knob .sym { font: italic 600 17px var(--font); }
@@ -1055,6 +1049,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 /* every racer on screen at once: the Lab sets how many across and how wide (fitStages), centered in the column */
 .stages { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; justify-content: center; }
 .stage { margin: 0; padding: 12px 14px 10px; cursor: pointer; transition: box-shadow 0.2s, border-color 0.2s; animation: rise-in 0.5s var(--ease) both; min-width: 0; }
+.stages.odd-last > .stage:last-child { grid-column: 1 / -1; justify-self: center; width: var(--pane); }
 .stage:nth-child(2) { animation-delay: 0.08s; }
 .stage:nth-child(3) { animation-delay: 0.16s; }
 .stage.focus { border-color: color-mix(in oklab, var(--k) 55%, var(--line)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--k) 14%, transparent), var(--shadow); }
@@ -1069,13 +1064,18 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .stages.narrow .odds-badge .long { display: none; }
 .key { display: inline-block; width: 16px; height: 4px; border-radius: 2px; background: var(--k); flex: none; }
 
-.lab-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; position: sticky; top: 72px; }
+/* The side column follows the simulation: it stays in view, no taller than the window; long pseudocode scrolls inside
+   its panel (to the lit line), so "This step" is always there under it. */
+.lab-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 72px; max-height: calc(100vh - 84px); }
+.lab-side > .pseudo-panel { flex: 0 1 auto; min-height: min(220px, 55%); display: flex; flex-direction: column; }
+.lab-side > .pseudo-panel .pseudo-host { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; position: relative; border-radius: 10px; }
+.lab-side > .live { flex: 0 1 auto; min-height: 96px; overflow-y: auto; overscroll-behavior: contain; }
 .lab-side > * { min-width: 0; }
 .panel { padding: 14px 16px; }
 .panel h3, .chart-head h3, .chart-box h3, .film h3 { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 8px; }
 .as-is { text-transform: none; letter-spacing: 0.02em; } /* names like "ε = 0.1": uppercase would turn ε into Ε */
-.panel .pseudo { font-size: 13px; padding: 8px 0; }
-.panel .pseudo li { padding-left: calc(34px + var(--indent) * 15px); }
+.panel .pseudo { font-size: 12.5px; line-height: 1.42; padding: 6px 0; }
+.panel .pseudo li { padding-top: 2px; padding-bottom: 2px; padding-left: calc(34px + var(--indent) * 15px); }
 .panel .pseudo li::before { left: 10px; }
 /* a tab per algorithm, and the lines where the focused one differs from the others */
 .pseudo-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px; }
@@ -1100,14 +1100,20 @@ a.ref:hover { text-decoration-color: var(--ink); }
 
 /* The settings drawer: the world, and how the views draw. Out of the way until the button in the play bar opens it;
    slides in from the right, over the side column. */
-.settings-btn {
-  display: inline-flex; align-items: center; gap: 7px; margin-left: 4px; padding: 7px 12px 7px 10px; border: 0; border-radius: 999px; cursor: pointer;
-  font: 600 13px var(--font); color: var(--ink-2); background: var(--surface-2); white-space: nowrap; transition: background-color 0.2s, color 0.2s;
+.settings-btn, .world-switch {
+  display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px 7px 10px; border: 0; border-radius: 999px; cursor: pointer;
+  font: 650 13px var(--font); color: var(--ink); background: var(--surface); white-space: nowrap;
+  box-shadow: inset 0 0 0 1.5px var(--ink-2), 0 1px 2px rgb(0 0 0 / 0.08); transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
 }
-.settings-btn:hover, .lab[data-drawer="open"] .settings-btn { color: var(--ink); background: var(--surface-3); }
-.settings-btn[hidden] { display: none; }
-.settings-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-.settings-btn svg circle { fill: var(--surface-2); }
+.settings-btn { margin-left: 4px; }
+.settings-btn:hover, .world-switch:hover, .lab[data-drawer="open"] .settings-btn, .lab[data-drawer="open"] .world-switch { color: var(--bg); background: var(--ink); box-shadow: none; }
+.settings-btn[hidden], .world-switch[hidden] { display: none; }
+.settings-btn svg, .world-switch svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+.settings-btn svg circle { fill: var(--surface); transition: fill 0.2s; }
+.settings-btn:hover svg circle, .lab[data-drawer="open"] .settings-btn svg circle { fill: var(--ink); }
+.world-switch .ws-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center; font-size: 11.5px; color: var(--bg); background: var(--ink); }
+.world-switch:hover .ws-count, .lab[data-drawer="open"] .world-switch .ws-count { color: var(--ink); background: var(--bg); }
+.lab-where { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
 .lab-drawer {
   position: fixed; top: 68px; right: 12px; z-index: 20; width: min(360px, calc(100vw - 24px)); max-height: calc(100vh - 80px); overflow-y: auto; overscroll-behavior: contain;
   display: flex; flex-direction: column; padding: 12px 16px 16px;
@@ -1707,7 +1713,8 @@ a.ref:hover { text-decoration-color: var(--ink); }
   /* One column: the side panel moves up under the stages, before the play bar, the filmstrip and the charts. */
   .lab-main { grid-template-columns: minmax(0, 1fr); }
   .lab-flow { display: contents; }
-  .lab-side { position: static; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); order: 1; }
+  .lab-side { display: grid; position: static; max-height: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); order: 1; }
+  .lab-side > .live { max-height: none; }
   .lab-flow > .transport, .lab-flow > .film, .lab-flow > .chart-card, .lab-flow > .odds-card { order: 2; }
 }
 @media (max-width: 1100px) and (min-width: 701px) {
@@ -11005,15 +11012,20 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   // What one unit is called, in this world and for this algorithm.
   const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"], round: ["round", "rounds"], throw: ["throw", "throws"], block: ["block", "blocks"], pass: ["pass", "passes"] };
   // A ladder of speeds, each showing what can be seen at that pace. Walking speeds replay a unit event by event:
-  // "line" stops at every line of the pseudocode, the others at each update ("step" slowly enough to read its numbers,
-  // "fast" and "faster" so the agent runs while the pseudocode still lights up). Rates jump from unit to unit.
-  const walking = (step, every) => [{ id: "line", label: "Line by line", every: every[0] }, { id: "step", label: step, every: every[1] }];
+  // "line" stops at every line of the pseudocode, the others at each update ("slow" with two seconds to read each one
+  // and its numbers, "step" quicker, "fast" and "faster" so the agent runs while the pseudocode still lights up).
+  // Rates jump from unit to unit.
+  const walking = (step, every, one = "step") => [
+    { id: "line", label: "Line by line", every: every[0] },
+    { id: "slow", label: `Slowly: a ${one} every 2 s`, every: 2000 },
+    { id: "step", label: step, every: every[1] },
+  ];
   const quick = (fast, faster) => [{ id: "fast", label: "Fast", every: fast, quick: true }, ...(faster ? [{ id: "faster", label: "Faster", every: faster, quick: true }] : [])];
   const rates = (...list) => list.map((rate) => ({ id: `r${rate}`, rate }));
   const SPEEDS = {
     episode: [...walking("Step by step", [560, 320]), ...quick(100, 25), ...rates(1, 10, 50)],
-    sweep: [...walking("State by state", [380, 130]), ...quick(40), ...rates(1, 4, 20)],
-    step: [...walking("Pull by pull", [480, 300]), ...rates(10, 50, 250)],
+    sweep: [...walking("State by state", [380, 130], "state"), ...quick(40), ...rates(1, 4, 20)],
+    step: [...walking("Pull by pull", [480, 300], "pull"), ...rates(10, 50, 250)],
     round: [...walking("Step by step", [520, 320]), ...quick(110, 35), ...rates(1, 4, 20)], // every worker steps at once
     pass: [...walking("Step by step", [520, 300]), ...quick(90, 30), ...rates(1, 4, 10)], // the log being made, then passes over it
     block: [{ id: "line", label: "Step by step", every: 80 }, { id: "step", label: "Quickly", every: 12 }, ...rates(1, 4, 10)], // a recorded test episode
@@ -11128,9 +11140,14 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       <section class="lab" data-kind="${env.kind}" data-drawer="closed">
         <header class="lab-head">
           <div class="lab-title">
-            <div class="eyebrow">Lab · <span class="world-name">${esc(env.title)}</span></div>
+            <div class="lab-where"><span class="eyebrow">Lab · <span class="world-name">${esc(env.title)}</span></span>
+              <button class="world-switch" type="button" aria-controls="lab-drawer" hidden>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.2"/><path d="M2.8 10h14.4M10 2.8c2.2 2.1 2.2 12.3 0 14.4M10 2.8c-2.2 2.1-2.2 12.3 0 14.4"/></svg>
+                Change world <b class="ws-count"></b>
+              </button>
+            </div>
             <h1>${esc(preset.title)}</h1>
-            <p class="intro">${esc(preset.intro || "")}</p>
+            <p class="intro clamped">${esc(preset.intro || "")}</p><button class="intro-more" type="button" hidden>More</button>
           </div>
           <div class="knobs card"></div>
         </header>
@@ -11285,6 +11302,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       knobPanel();
       worldPanel();
       q(".settings-btn").hidden = q(".world-panel").hidden && q(".show-panel").hidden;
+      // the world switch at the top: the same drawer, for a lab that offers other worlds
+      const worlds = q(".world-list").querySelectorAll("[data-world]").length;
+      q(".world-switch").hidden = q(".world-panel").hidden || worlds < 2;
+      q(".ws-count").textContent = worlds;
       if (q(".settings-btn").hidden) setDrawer(false);
       oddsPanel();
       chartsFor();
@@ -11339,6 +11360,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       racers.forEach((r) => { r.baseName ??= r.name; r.name = id === base.env ? r.baseName : stepNamed(r.baseName, paramsOf(r)); });
       q(".lab-title h1").textContent = id === base.env ? base.title : `${racers.map((r) => r.name).join(" vs ")} · ${lab.make(id).title}`;
       q(".intro").textContent = id === base.env ? base.intro || "" : `${lab.worldBlurb(id)}. The settings start from this world's defaults; the knobs are yours.`;
+      introFold();
       build();
     }
 
@@ -11350,6 +11372,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const box = q(".stages");
       if (!box || !stages.length) return;
       box.style.gridTemplateColumns = "minmax(0, 1fr)";
+      box.classList.remove("odd-last");
       if (innerWidth < 900) return; // narrow screens: one under the other, full width
       const st = stages[0], host = st.querySelector(".view-host"), content = host.firstElementChild;
       const w0 = Math.min(host.clientWidth, content ? content.getBoundingClientRect().width || host.clientWidth : host.clientWidth);
@@ -11357,7 +11380,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const W = box.clientWidth, n = stages.length, gap = 16, bar = q(".transport").offsetHeight;
       // Some views reflow when narrowed (a recorded run's two panels stack), so nothing is predicted: each arrangement
       // is laid out and measured, its panes narrowed until everything fits, and the one with the widest panes wins.
-      const apply = (cols, w) => { box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`; return box.offsetHeight; };
+      const apply = (cols, w) => { box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`; box.style.setProperty("--pane", `${Math.floor(w + padX)}px`); return box.offsetHeight; };
       const MIN = 260;
       const widest = (cols, H) => {
         let hi = Math.min(w0, (W - gap * (cols - 1)) / cols - padX), lo = MIN;
@@ -11380,14 +11403,33 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         return best.cols ? best : null;
       };
       const top = box.getBoundingClientRect().top + scrollY;
-      // below the header if they fit there; else the whole window (a scroll down to them); else as many across as fit
-      const best = pick(innerHeight - top - bar - 28) || pick(innerHeight - 64 - bar - 28) ||
+      // Below the header if they fit there at a good size; the whole window (a scroll down to them) when that makes
+      // them clearly bigger, as a wide world like the cliff, squeezed under the header, would be hard to see; else as
+      // many across as fit.
+      const under = pick(innerHeight - top - bar - 28), whole = pick(innerHeight - 64 - bar - 28);
+      const best = (under && (!whole || whole.w < under.w * 1.2) ? under : whole) ||
         { cols: Math.max(1, Math.min(n, Math.floor((W + gap) / (MIN + padX + gap)))), w: MIN };
       const w = best.w;
       apply(best.cols, w);
       box.classList.toggle("narrow", w < 430); // narrow panes keep their headers short
+      box.classList.toggle("odd-last", best.cols > 1 && n % best.cols === 1); // a last pane alone on its row: centered
+      fitSide();
     }
     let lastWidth = 0;
+    // The side column is never taller than the window below where it starts (under the header at first, at the top
+    // once it sticks), so "This step" under the pseudocode is always in sight; the pseudocode scrolls instead.
+    let sideFrame = 0;
+    function fitSide() {
+      sideFrame = 0;
+      const side = q(".lab-side");
+      if (!side) return;
+      if (getComputedStyle(side).position !== "sticky") { side.style.maxHeight = ""; return; }
+      const top = Math.max(72, side.parentElement.getBoundingClientRect().top);
+      side.style.maxHeight = `${Math.max(320, innerHeight - top - 12)}px`;
+    }
+    const onScroll = () => { if (!sideFrame) sideFrame = requestAnimationFrame(fitSide); };
+    addEventListener("scroll", onScroll, { passive: true });
+    addEventListener("resize", onScroll);
     const resized = new ResizeObserver(() => {
       const w = q(".lab-main").clientWidth;
       if (Math.abs(w - lastWidth) > 4) { lastWidth = w; fitStages(); }
@@ -11978,7 +12020,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (ev.type === "move") { w.G += ev.r; w.n += 1; w.log.push(ev); }
       if (ev.type === "sweep") w.n += 1;
       if (SHOWN.has(ev.type)) views[i].show(a.show(w.m, runs[i].env, w.p, P.e), w.p);
-      const pauseFor = views[i].event(ev, { line: P.speed === "line", p: w.p }) || 0;
+      const pauseFor = views[i].event(ev, { line: P.speed === "line" || P.speed === "slow", p: w.p }) || 0; // the slow paces show every detail
       if (i === P.focus) {
         mark(ev.line);
         if (ev.type === "update") explain(ev, w.p);
@@ -12014,7 +12056,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     function idleNote() {
       liveNum.innerHTML = "";
       liveNote.innerHTML = recorded ? "Play <b>step by step</b> to see, at every step of a test episode, what the network makes of each move."
-        : `Play <b>line by line</b> or <b>${speedList()[1].label.toLowerCase()}</b> to see every update with its numbers.`;
+        : `Play <b>line by line</b>, or <b>slowly</b> (an update every 2 s), to see every update with its numbers.`;
       liveNote.classList.add("faint");
     }
 
@@ -12057,6 +12099,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       li.classList.remove("flash");
       void li.offsetWidth; // restart the flash: the simulation came to this line again
       li.classList.add("flash");
+      // long pseudocode scrolls inside its panel: keep the lit line in view, a third of the way down
+      const box = pseudo;
+      if (box.scrollHeight > box.clientHeight + 4 && (li.offsetTop < box.scrollTop || li.offsetTop + li.offsetHeight > box.scrollTop + box.clientHeight))
+        box.scrollTo({ top: Math.max(0, li.offsetTop - box.clientHeight / 3), behavior: RL.reducedMotion?.() ? "auto" : "smooth" });
     }
 
     function focus(i) {
@@ -12206,20 +12252,36 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (wasWalking && rate() && P.walkers) seek(P.e);
     });
     scrub.addEventListener("input", () => { pause(); seek(parseInt(scrub.value, 10)); });
+    // The intro shows two lines, and the rest on demand: the stages and the pseudocode get the room.
+    const intro = q(".intro"), more = q(".intro-more");
+    function introFold() {
+      intro.classList.add("clamped");
+      more.textContent = "More";
+      more.hidden = intro.scrollHeight <= intro.clientHeight + 2;
+    }
+    more.addEventListener("click", () => {
+      const open = intro.classList.toggle("clamped") === false;
+      more.textContent = open ? "Less" : "More";
+      fitStages();
+    });
+    requestAnimationFrame(introFold);
+
     // ---- the settings drawer: the world and how the views draw, out of the way until asked for ----
     const drawerBtn = q(".settings-btn"), drawer = q(".lab-drawer");
     function setDrawer(open, focusIt = false) {
       if ((host.querySelector(".lab").dataset.drawer === "open") === open) return;
       host.querySelector(".lab").dataset.drawer = open ? "open" : "closed";
       drawerBtn.setAttribute("aria-expanded", String(open));
+      q(".world-switch").setAttribute("aria-expanded", String(open));
       if (focusIt) (open ? drawer.querySelector(".wchip.on, button, input") : drawerBtn)?.focus({ preventScroll: true });
     }
     // focus follows the drawer only for the keyboard (a click has a detail count; Enter and Space do not)
     drawerBtn.addEventListener("click", (e) => setDrawer(host.querySelector(".lab").dataset.drawer !== "open", e.detail === 0));
+    q(".world-switch").addEventListener("click", (e) => setDrawer(host.querySelector(".lab").dataset.drawer !== "open", e.detail === 0));
     q(".ld-close").addEventListener("click", (e) => setDrawer(false, e.detail === 0));
     // a click anywhere else closes it
     function onOutside(e) {
-      if (host.querySelector(".lab")?.dataset.drawer === "open" && !drawer.contains(e.target) && !drawerBtn.contains(e.target)) setDrawer(false);
+      if (host.querySelector(".lab")?.dataset.drawer === "open" && !drawer.contains(e.target) && !e.target.closest?.(".settings-btn, .world-switch")) setDrawer(false);
     }
     document.addEventListener("pointerdown", onOutside);
     function onKey(e) {
@@ -12259,6 +12321,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         clearSweep("");
         removeEventListener("keydown", onKey);
         document.removeEventListener("pointerdown", onOutside);
+        removeEventListener("scroll", onScroll);
+        removeEventListener("resize", onScroll);
+        cancelAnimationFrame(sideFrame);
         resized.disconnect();
         charts.forEach((c) => c.destroy());
         views.forEach((v) => v.destroy());
@@ -16583,7 +16648,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   const COL = 178, STEP = 27, FIRST = 50, LEFT = 40, TOP = 96, ROW_GAP = 132;
   const LENSES = {
     map: { name: "Metro", caption: "Every station is one idea, in reading order. Start at the top left: first the problem, then methods that keep a table, then methods that scale." },
-    tree: { name: "Tree", caption: "One tree per line, read from the top. Each station grows from the one it builds on; an algorithm from the algorithm it changes. Point at a station to light up everything it builds on." },
+    tree: { name: "Tree", caption: "One tree per line, read from the top. Each station grows from the one it builds on; an algorithm from the algorithm it changes." },
     unified: { name: "Unified", caption: "Every algorithm, by how far its update looks ahead (down) and whether it samples one outcome or averages over all of them (across)." },
   };
   const cameras = {}; // one camera per view, kept between visits
@@ -16791,7 +16856,6 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
           <g class="deco deco-map">${metroDrawing(layouts.map)}</g>
           <g class="deco deco-tree">${treeDrawing(layouts.tree)}</g>
           <g class="deco deco-unified">${unifiedDrawing(layouts.unified)}</g>
-          <g class="links"></g>
           ${stations(next)}
         </g></svg>
         <div class="map-zoom" role="group" aria-label="Zoom">
@@ -16802,7 +16866,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       </section>`;
     drawn = true;
 
-    const svg = host.querySelector(".metro"), cam = host.querySelector(".cam"), links = host.querySelector(".links");
+    const svg = host.querySelector(".metro"), cam = host.querySelector(".cam");
     const nodes = new Map(Array.from(svg.querySelectorAll(".st"), (g) => [g.dataset.id, g]));
     const L = () => layouts[lens];
     let view = null, raf = 0, switching = 0;
@@ -16917,7 +16981,6 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (next === lens) return;
       lens = next;
       store.set("lens", lens);
-      clear();
       arrange();
       svg.classList.remove("redraw");
       void svg.getBoundingClientRect();
@@ -17040,60 +17103,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       zoomAt(svg.clientWidth / 2, svg.clientHeight / 2, b.dataset.zoom === "in" ? 1.3 : 1 / 1.3);
     }));
 
-    // ---- hover: everything a station builds on ----
-    // Its path up its line's tree, and, for an algorithm whose parent lives in another line, that parent's path too.
-    // Only in the tree: those stations stay lit while the rest fade, and their branches light up. (On the metro and
-    // unified views, a cursor sweeping across the stations made the whole map flicker.)
-    function lineage(id) {
-      const T = layouts.tree, seen = new Set(), cross = [];
-      const walk = (k) => {
-        for (; T.up.has(k); k = T.up.get(k)) {
-          const p = station(k).parent;
-          if (p && station(p).line !== station(k).line) { cross.push([k, p]); if (!seen.has(p)) { seen.add(p); walk(p); } }
-          if (station(T.up.get(k))) seen.add(T.up.get(k));
-        }
-      };
-      walk(id);
-      return { seen, cross };
-    }
-    const curve = (a, b) => `<path d="M${a.x - 9} ${a.y} Q${Math.min(a.x, b.x) - 46 - Math.abs(a.y - b.y) * 0.15} ${(a.y + b.y) / 2} ${b.x - 9} ${b.y}"/>`;
-    svg.addEventListener("pointerover", (e) => {
-      if (drag?.moved) return;
-      if (lens !== "tree") return;
-      const g = e.target.closest?.(".st:not(.out)");
-      if (!g || g.classList.contains("hot")) return;
-      clear();
-      g.classList.add("hot");
-      const id = g.dataset.id, pos = L().pos, { seen, cross } = lineage(id);
-      for (const r of seen) nodes.get(r)?.classList.add("rel");
-      svg.classList.add("tracing");
-      for (const k of [id, ...seen]) {
-        svg.querySelector(`.edge[data-to="${k}"]`)?.classList.add("hot");
-        svg.querySelector(`.tree-hub[data-line="${station(k).line}"]`)?.classList.add("hot");
-      }
-      // A parent from another line has no branch here: a dashed link reaches across to it.
-      links.innerHTML = cross.map(([k, p]) => curve(pos.get(k), pos.get(p))).join("");
-    });
-    svg.addEventListener("pointerout", (e) => {
-      const g = e.target.closest?.(".st");
-      if (g && !g.contains(e.relatedTarget)) clear();
-    });
-    function clear() {
-      links.innerHTML = "";
-      svg.classList.remove("tracing");
-      svg.querySelectorAll(".st.hot, .st.rel, .edge.hot, .tree-hub.hot").forEach((s) => s.classList.remove("hot", "rel"));
-    }
-
-    // ---- the legend: pointing at a line lights up its stations ----
+    // ---- the legend ----
+    // No highlighting on hover, of the stations or of the legend's lines: a cursor sweeping across them made the map
+    // flicker. Clicking still finds things.
     const legend = host.querySelector(".mp-lines");
-    const spot = (line) => {
-      for (const [id, g] of nodes) g.classList.toggle("unlit", !!line && station(id).line !== line);
-      svg.classList.toggle("spot", !!line);
-    };
-    legend.addEventListener("pointerover", (e) => spot(e.target.closest?.("[data-line]")?.dataset.line));
-    legend.addEventListener("pointerleave", () => spot(null));
-    legend.addEventListener("focusin", (e) => spot(e.target.closest?.("[data-line]")?.dataset.line));
-    legend.addEventListener("focusout", () => spot(null));
     // Clicking a line brings its stations to the middle of the screen.
     legend.addEventListener("click", (e) => {
       const line = e.target.closest("[data-line]")?.dataset.line;

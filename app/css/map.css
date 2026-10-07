@@ -83,7 +83,7 @@
 
 .metro .st { cursor: pointer; outline: none; transition: transform 0.9s var(--ease), opacity 0.5s; }
 .metro .st text { transition: transform 0.9s var(--ease); }
-.metro .st.dim, .metro.spot .st.unlit { opacity: 0.13; }
+.metro .st.dim { opacity: 0.13; }
 .metro .st.out { opacity: 0; pointer-events: none; }
 .metro .st .dot { fill: var(--surface); stroke: var(--c); stroke-width: 3; transition: r 0.2s var(--spring), fill 0.2s, stroke-width 0.2s; }
 .metro .st.algorithm .dot { stroke-width: 3.5; }
@@ -95,10 +95,7 @@
 .metro .st .halo { fill: var(--c); opacity: 0; transition: opacity 0.2s; transform-box: fill-box; transform-origin: center; }
 /* Pointing at a station lights it, and its lineage, in the tree only: on the metro and unified views, sweeping the
    cursor across many stations would make the whole map flicker. */
-.metro .st:focus-visible .halo, .metro[data-lens="tree"] .st:hover .halo, .metro .st.hot .halo { opacity: 0.18; }
-.metro[data-lens="tree"] .st:hover .dot, .metro .st.hot .dot { r: 9; }
-.metro .st.rel .halo { opacity: 0.14; }
-.metro .st.rel .dot { stroke-width: 5; }
+.metro .st:focus-visible .halo { opacity: 0.18; }
 .metro .st.next .halo { animation: station-pulse 1.8s ease-out infinite; }
 .metro .st.arrived .halo { animation: station-pulse 0.9s ease-out 2; }
 /* a click presses the station before its page opens out of it */
@@ -107,8 +104,6 @@
 /* changing views, the stations set off part by part, in reading order */
 .metro.switching .st, .metro.switching .st text { transition-delay: calc(var(--d) * 40ms); }
 @keyframes station-pulse { from { opacity: 0.4; transform: scale(0.5); } to { opacity: 0; transform: scale(2); } }
-.metro .links path { fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-dasharray: 5 5; animation: links-flow 0.6s linear infinite; }
-@keyframes links-flow { to { stroke-dashoffset: -10; } }
 
 /* the first visit: lines draw themselves, then the stations appear */
 .metro.intro .trunk, .metro.intro .branch { stroke-dasharray: 1; animation: line-in 0.9s var(--ease) calc(var(--d) * 70ms) both; }
@@ -120,13 +115,8 @@
 .metro .deco { transition: opacity 0.6s; }
 .metro:not([data-lens="map"]) .deco-map, .metro:not([data-lens="tree"]) .deco-tree, .metro:not([data-lens="unified"]) .deco-unified { opacity: 0; pointer-events: none; }
 .metro .edge { fill: none; stroke: var(--c); stroke-width: 3; stroke-linecap: round; opacity: 0.75; transition: stroke-width 0.2s, opacity 0.2s; }
-.metro .edge.hot { stroke-width: 5.5; opacity: 1; }
-.metro.tracing .edge:not(.hot) { opacity: 0.3; }
-/* hovering a station, what it builds on stays lit and the rest steps back */
-.metro.tracing .st:not(.hot):not(.rel):not(.out) { opacity: 0.3; }
 .metro .tree-hub rect { fill: var(--c); }
 .metro .tree-hub text { font: 750 13px var(--font); fill: var(--bg); text-anchor: middle; }
-.metro .tree-hub.hot rect { stroke: var(--c); stroke-width: 6; stroke-opacity: 0.25; }
 .metro .spine { fill: none; stroke: var(--ink-3); stroke-width: 2.5; stroke-dasharray: 2 8; stroke-linecap: round; }
 .metro.redraw[data-lens="tree"] .edge { stroke-dasharray: 1; animation: line-in 0.9s var(--ease) 0.3s both; }
 .metro .plane { fill: color-mix(in oklab, var(--surface) 55%, transparent); stroke: var(--line-2); stroke-width: 1.5; stroke-dasharray: 6 6; }

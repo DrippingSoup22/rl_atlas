@@ -17,15 +17,20 @@
   // What one unit is called, in this world and for this algorithm.
   const NOUNS = { episode: ["episode", "episodes"], sweep: ["sweep", "sweeps"], step: ["step", "steps"], pull: ["pull", "pulls"], hand: ["hand", "hands"], round: ["round", "rounds"], throw: ["throw", "throws"], block: ["block", "blocks"], pass: ["pass", "passes"] };
   // A ladder of speeds, each showing what can be seen at that pace. Walking speeds replay a unit event by event:
-  // "line" stops at every line of the pseudocode, the others at each update ("step" slowly enough to read its numbers,
-  // "fast" and "faster" so the agent runs while the pseudocode still lights up). Rates jump from unit to unit.
-  const walking = (step, every) => [{ id: "line", label: "Line by line", every: every[0] }, { id: "step", label: step, every: every[1] }];
+  // "line" stops at every line of the pseudocode, the others at each update ("slow" with two seconds to read each one
+  // and its numbers, "step" quicker, "fast" and "faster" so the agent runs while the pseudocode still lights up).
+  // Rates jump from unit to unit.
+  const walking = (step, every, one = "step") => [
+    { id: "line", label: "Line by line", every: every[0] },
+    { id: "slow", label: `Slowly: a ${one} every 2 s`, every: 2000 },
+    { id: "step", label: step, every: every[1] },
+  ];
   const quick = (fast, faster) => [{ id: "fast", label: "Fast", every: fast, quick: true }, ...(faster ? [{ id: "faster", label: "Faster", every: faster, quick: true }] : [])];
   const rates = (...list) => list.map((rate) => ({ id: `r${rate}`, rate }));
   const SPEEDS = {
     episode: [...walking("Step by step", [560, 320]), ...quick(100, 25), ...rates(1, 10, 50)],
-    sweep: [...walking("State by state", [380, 130]), ...quick(40), ...rates(1, 4, 20)],
-    step: [...walking("Pull by pull", [480, 300]), ...rates(10, 50, 250)],
+    sweep: [...walking("State by state", [380, 130], "state"), ...quick(40), ...rates(1, 4, 20)],
+    step: [...walking("Pull by pull", [480, 300], "pull"), ...rates(10, 50, 250)],
     round: [...walking("Step by step", [520, 320]), ...quick(110, 35), ...rates(1, 4, 20)], // every worker steps at once
     pass: [...walking("Step by step", [520, 300]), ...quick(90, 30), ...rates(1, 4, 10)], // the log being made, then passes over it
     block: [{ id: "line", label: "Step by step", every: 80 }, { id: "step", label: "Quickly", every: 12 }, ...rates(1, 4, 10)], // a recorded test episode
@@ -140,9 +145,14 @@
       <section class="lab" data-kind="${env.kind}" data-drawer="closed">
         <header class="lab-head">
           <div class="lab-title">
-            <div class="eyebrow">Lab · <span class="world-name">${esc(env.title)}</span></div>
+            <div class="lab-where"><span class="eyebrow">Lab · <span class="world-name">${esc(env.title)}</span></span>
+              <button class="world-switch" type="button" aria-controls="lab-drawer" hidden>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.2"/><path d="M2.8 10h14.4M10 2.8c2.2 2.1 2.2 12.3 0 14.4M10 2.8c-2.2 2.1-2.2 12.3 0 14.4"/></svg>
+                Change world <b class="ws-count"></b>
+              </button>
+            </div>
             <h1>${esc(preset.title)}</h1>
-            <p class="intro">${esc(preset.intro || "")}</p>
+            <p class="intro clamped">${esc(preset.intro || "")}</p><button class="intro-more" type="button" hidden>More</button>
           </div>
           <div class="knobs card"></div>
         </header>
@@ -297,6 +307,10 @@
       knobPanel();
       worldPanel();
       q(".settings-btn").hidden = q(".world-panel").hidden && q(".show-panel").hidden;
+      // the world switch at the top: the same drawer, for a lab that offers other worlds
+      const worlds = q(".world-list").querySelectorAll("[data-world]").length;
+      q(".world-switch").hidden = q(".world-panel").hidden || worlds < 2;
+      q(".ws-count").textContent = worlds;
       if (q(".settings-btn").hidden) setDrawer(false);
       oddsPanel();
       chartsFor();
@@ -351,6 +365,7 @@
       racers.forEach((r) => { r.baseName ??= r.name; r.name = id === base.env ? r.baseName : stepNamed(r.baseName, paramsOf(r)); });
       q(".lab-title h1").textContent = id === base.env ? base.title : `${racers.map((r) => r.name).join(" vs ")} · ${lab.make(id).title}`;
       q(".intro").textContent = id === base.env ? base.intro || "" : `${lab.worldBlurb(id)}. The settings start from this world's defaults; the knobs are yours.`;
+      introFold();
       build();
     }
 
@@ -362,6 +377,7 @@
       const box = q(".stages");
       if (!box || !stages.length) return;
       box.style.gridTemplateColumns = "minmax(0, 1fr)";
+      box.classList.remove("odd-last");
       if (innerWidth < 900) return; // narrow screens: one under the other, full width
       const st = stages[0], host = st.querySelector(".view-host"), content = host.firstElementChild;
       const w0 = Math.min(host.clientWidth, content ? content.getBoundingClientRect().width || host.clientWidth : host.clientWidth);
@@ -369,7 +385,7 @@
       const W = box.clientWidth, n = stages.length, gap = 16, bar = q(".transport").offsetHeight;
       // Some views reflow when narrowed (a recorded run's two panels stack), so nothing is predicted: each arrangement
       // is laid out and measured, its panes narrowed until everything fits, and the one with the widest panes wins.
-      const apply = (cols, w) => { box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`; return box.offsetHeight; };
+      const apply = (cols, w) => { box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`; box.style.setProperty("--pane", `${Math.floor(w + padX)}px`); return box.offsetHeight; };
       const MIN = 260;
       const widest = (cols, H) => {
         let hi = Math.min(w0, (W - gap * (cols - 1)) / cols - padX), lo = MIN;
@@ -392,14 +408,33 @@
         return best.cols ? best : null;
       };
       const top = box.getBoundingClientRect().top + scrollY;
-      // below the header if they fit there; else the whole window (a scroll down to them); else as many across as fit
-      const best = pick(innerHeight - top - bar - 28) || pick(innerHeight - 64 - bar - 28) ||
+      // Below the header if they fit there at a good size; the whole window (a scroll down to them) when that makes
+      // them clearly bigger, as a wide world like the cliff, squeezed under the header, would be hard to see; else as
+      // many across as fit.
+      const under = pick(innerHeight - top - bar - 28), whole = pick(innerHeight - 64 - bar - 28);
+      const best = (under && (!whole || whole.w < under.w * 1.2) ? under : whole) ||
         { cols: Math.max(1, Math.min(n, Math.floor((W + gap) / (MIN + padX + gap)))), w: MIN };
       const w = best.w;
       apply(best.cols, w);
       box.classList.toggle("narrow", w < 430); // narrow panes keep their headers short
+      box.classList.toggle("odd-last", best.cols > 1 && n % best.cols === 1); // a last pane alone on its row: centered
+      fitSide();
     }
     let lastWidth = 0;
+    // The side column is never taller than the window below where it starts (under the header at first, at the top
+    // once it sticks), so "This step" under the pseudocode is always in sight; the pseudocode scrolls instead.
+    let sideFrame = 0;
+    function fitSide() {
+      sideFrame = 0;
+      const side = q(".lab-side");
+      if (!side) return;
+      if (getComputedStyle(side).position !== "sticky") { side.style.maxHeight = ""; return; }
+      const top = Math.max(72, side.parentElement.getBoundingClientRect().top);
+      side.style.maxHeight = `${Math.max(320, innerHeight - top - 12)}px`;
+    }
+    const onScroll = () => { if (!sideFrame) sideFrame = requestAnimationFrame(fitSide); };
+    addEventListener("scroll", onScroll, { passive: true });
+    addEventListener("resize", onScroll);
     const resized = new ResizeObserver(() => {
       const w = q(".lab-main").clientWidth;
       if (Math.abs(w - lastWidth) > 4) { lastWidth = w; fitStages(); }
@@ -990,7 +1025,7 @@
       if (ev.type === "move") { w.G += ev.r; w.n += 1; w.log.push(ev); }
       if (ev.type === "sweep") w.n += 1;
       if (SHOWN.has(ev.type)) views[i].show(a.show(w.m, runs[i].env, w.p, P.e), w.p);
-      const pauseFor = views[i].event(ev, { line: P.speed === "line", p: w.p }) || 0;
+      const pauseFor = views[i].event(ev, { line: P.speed === "line" || P.speed === "slow", p: w.p }) || 0; // the slow paces show every detail
       if (i === P.focus) {
         mark(ev.line);
         if (ev.type === "update") explain(ev, w.p);
@@ -1026,7 +1061,7 @@
     function idleNote() {
       liveNum.innerHTML = "";
       liveNote.innerHTML = recorded ? "Play <b>step by step</b> to see, at every step of a test episode, what the network makes of each move."
-        : `Play <b>line by line</b> or <b>${speedList()[1].label.toLowerCase()}</b> to see every update with its numbers.`;
+        : `Play <b>line by line</b>, or <b>slowly</b> (an update every 2 s), to see every update with its numbers.`;
       liveNote.classList.add("faint");
     }
 
@@ -1069,6 +1104,10 @@
       li.classList.remove("flash");
       void li.offsetWidth; // restart the flash: the simulation came to this line again
       li.classList.add("flash");
+      // long pseudocode scrolls inside its panel: keep the lit line in view, a third of the way down
+      const box = pseudo;
+      if (box.scrollHeight > box.clientHeight + 4 && (li.offsetTop < box.scrollTop || li.offsetTop + li.offsetHeight > box.scrollTop + box.clientHeight))
+        box.scrollTo({ top: Math.max(0, li.offsetTop - box.clientHeight / 3), behavior: RL.reducedMotion?.() ? "auto" : "smooth" });
     }
 
     function focus(i) {
@@ -1218,20 +1257,36 @@
       if (wasWalking && rate() && P.walkers) seek(P.e);
     });
     scrub.addEventListener("input", () => { pause(); seek(parseInt(scrub.value, 10)); });
+    // The intro shows two lines, and the rest on demand: the stages and the pseudocode get the room.
+    const intro = q(".intro"), more = q(".intro-more");
+    function introFold() {
+      intro.classList.add("clamped");
+      more.textContent = "More";
+      more.hidden = intro.scrollHeight <= intro.clientHeight + 2;
+    }
+    more.addEventListener("click", () => {
+      const open = intro.classList.toggle("clamped") === false;
+      more.textContent = open ? "Less" : "More";
+      fitStages();
+    });
+    requestAnimationFrame(introFold);
+
     // ---- the settings drawer: the world and how the views draw, out of the way until asked for ----
     const drawerBtn = q(".settings-btn"), drawer = q(".lab-drawer");
     function setDrawer(open, focusIt = false) {
       if ((host.querySelector(".lab").dataset.drawer === "open") === open) return;
       host.querySelector(".lab").dataset.drawer = open ? "open" : "closed";
       drawerBtn.setAttribute("aria-expanded", String(open));
+      q(".world-switch").setAttribute("aria-expanded", String(open));
       if (focusIt) (open ? drawer.querySelector(".wchip.on, button, input") : drawerBtn)?.focus({ preventScroll: true });
     }
     // focus follows the drawer only for the keyboard (a click has a detail count; Enter and Space do not)
     drawerBtn.addEventListener("click", (e) => setDrawer(host.querySelector(".lab").dataset.drawer !== "open", e.detail === 0));
+    q(".world-switch").addEventListener("click", (e) => setDrawer(host.querySelector(".lab").dataset.drawer !== "open", e.detail === 0));
     q(".ld-close").addEventListener("click", (e) => setDrawer(false, e.detail === 0));
     // a click anywhere else closes it
     function onOutside(e) {
-      if (host.querySelector(".lab")?.dataset.drawer === "open" && !drawer.contains(e.target) && !drawerBtn.contains(e.target)) setDrawer(false);
+      if (host.querySelector(".lab")?.dataset.drawer === "open" && !drawer.contains(e.target) && !e.target.closest?.(".settings-btn, .world-switch")) setDrawer(false);
     }
     document.addEventListener("pointerdown", onOutside);
     function onKey(e) {
@@ -1271,6 +1326,9 @@
         clearSweep("");
         removeEventListener("keydown", onKey);
         document.removeEventListener("pointerdown", onOutside);
+        removeEventListener("scroll", onScroll);
+        removeEventListener("resize", onScroll);
+        cancelAnimationFrame(sideFrame);
         resized.disconnect();
         charts.forEach((c) => c.destroy());
         views.forEach((v) => v.destroy());
