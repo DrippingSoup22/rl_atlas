@@ -430,3 +430,29 @@ test("the bench: the same seeds give the same odds, bands and typical seed; the 
   // paired wins: SARSA ends better than Q-learning on nearly every shared seed (it loses less while exploring)
   assert.ok(a.pairedWins(0, 1).wins >= 18);
 });
+
+test("CartPole and Acrobot follow Gymnasium's physics step for step", () => {
+  // tests/gym-control.json: Gymnasium's own trajectories from a fixed start under a fixed list of actions
+  const ref = require("./gym-control.json");
+  for (const [name, world] of [["CartPole-v1", "cartpole"], ["Acrobot-v1", "acrobot"]]) {
+    const env = lab.make(world), { start, acts, traj } = ref[name];
+    let s = start;
+    acts.forEach((a, t) => {
+      const { s2, r } = env.step(s, a);
+      s2.forEach((v, i) => assert.ok(Math.abs(v - traj[t][i]) < 1e-9, `${name} step ${t + 1}, state ${i}: ${v} vs ${traj[t][i]}`));
+      assert.equal(r, traj[t][4]);
+      assert.equal(env.terminal(s2), traj[t][5]);
+      s = s2;
+    });
+  }
+});
+
+test("CartPole and Acrobot can be learned live with tile coding", () => {
+  // the settings the world panel starts from: linear SARSA balances the pole and swings the acrobot up
+  const tiles = { features: "tiles", tilings: 8, cells: 6, alpha: 0.06 };
+  const late = (m) => lab.mean(m.steps, m.steps.length - 50);
+  const cart = run("cartpole", "semi-gradient-sarsa", { ...tiles, epsilon: 0.05, gamma: 0.99, maxSteps: 500 }, 500, 1);
+  assert.ok(late(cart.metrics) > 300, `CartPole: ${late(cart.metrics)}`);
+  const acro = run("acrobot", "semi-gradient-sarsa", { ...tiles, epsilon: 0, gamma: 1, maxSteps: 500 }, 300, 1);
+  assert.ok(late(acro.metrics) < 160 && acro.metrics.steps[0] > 200, `Acrobot: ${acro.metrics.steps[0]} → ${late(acro.metrics)}`);
+});

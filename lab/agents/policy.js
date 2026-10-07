@@ -365,7 +365,7 @@
   // ---- what they show: the policy, as probabilities (or a mean and a spread), and the critic's values ----
   function show(critic) {
     return (m, env, p) => {
-      const P = lab.policy(env, p), d = { theta: m.theta, w: m.w, F: P.F };
+      const P = lab.policy(env, p), d = { theta: m.theta, w: m.w, F: P.F, P };
       if (P.kind === "gaussian") {
         d.mu = P.unit * P.mean(m.theta, 0);
         d.sd = P.unit * P.sd(m.theta, 0);

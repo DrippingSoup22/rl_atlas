@@ -5,7 +5,7 @@
    - tabular methods need discrete states and actions; dynamic programming also needs the world's model;
    - methods that predict the values of a fixed policy run on the walks (and Blackjack, tables only);
    - value methods with approximation need discrete actions, and features for continuous states;
-   - policy-gradient methods run on any world they have units for;
+   - policy-gradient methods run on any world they have units for (the continuous states with tile features);
    - bandit methods run on bandits. */
 (function (RL) {
   "use strict";
@@ -36,7 +36,15 @@
       profile: { episode: 100000, gamma: 1, charts: ["return"], film: [1, 1000, 10000, 100000] } },
     { id: "mountain-car", group: "approx", blurb: "Rock an underpowered car out of a valley",
       profile: { episode: 500, gamma: 1, charts: ["steps"], success: { metric: "steps", max: 150, text: "end with episodes under 150 steps on average" }, film: [1, 10, 100, 500],
-        params: { features: "tiles", tilings: 8, cells: 8 } } },
+        params: { features: "tiles", tilings: 8, cells: 8, alpha: 0.06, alphaW: 0.05, epsilon: 0 } } },
+    { id: "cartpole", group: "approx", blurb: "Push a cart left or right to keep a pole up, for up to 500 steps",
+      profile: { episode: 500, round: 150, gamma: 0.99, maxSteps: 500, charts: ["steps"], film: [1, 10, 100, 500],
+        success: { metric: "steps", min: 300, text: "end up keeping the pole up for more than 300 steps an episode on average" },
+        params: { features: "tiles", tilings: 8, cells: 6, alpha: 0.06, alphaW: 0.05, epsilon: 0.05 } } },
+    { id: "acrobot", group: "approx", blurb: "Swing two links, with a motor only at the joint, until the tip clears a line",
+      profile: { episode: 300, round: 100, gamma: 1, maxSteps: 500, charts: ["steps"], film: [1, 10, 50, 300],
+        success: { metric: "steps", max: 150, text: "end up getting the tip over the line in under 150 steps on average" },
+        params: { features: "tiles", tilings: 8, cells: 6, alpha: 0.06, alphaW: 0.05, epsilon: 0 } } },
     { id: "random-walk", group: "walks", blurb: "Five states, a coin flip each step",
       profile: { episode: 100, runs: 100, gamma: 1, charts: ["error"], measures: ["error"], film: [1, 10, 100] } },
     { id: "random-walk-19", group: "walks", blurb: "Nineteen states; −1 on the left, +1 on the right",
@@ -74,7 +82,7 @@
       case "predict-linear": return w.id === "walk-1000";
       case "tabular": return w.group === "tables";
       case "linear": return w.group === "approx";
-      case "policy": return w.group === "tables" && w.id !== "blackjack";
+      case "policy": return (w.group === "tables" && w.id !== "blackjack") || w.group === "approx";
       default: return false;
     }
   }

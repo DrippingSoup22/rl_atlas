@@ -1171,6 +1171,15 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .cartview .phase-path { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; opacity: 0.75; }
 .cartview .phase-dot { fill: var(--rew); stroke: var(--surface); stroke-width: 2; }
 .cart-thumb { display: block; width: 100%; height: auto; }
+/* Acrobot: two links from a pivot, the motor's torque at the joint, the line the tip must clear */
+.acroview .goal-line { stroke: var(--rew); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.acroview .link { stroke: var(--ink-2); stroke-width: 7; stroke-linecap: round; }
+.acroview .link.two { stroke: var(--pol); }
+.acroview .joint { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+.acroview .torque { font-size: 17px; font-weight: 700; fill: var(--val); }
+.acroview .tip { fill: color-mix(in oklab, var(--rew) calc(var(--lift, 0) * 100%), var(--ink-3)); stroke: var(--surface); stroke-width: 1.5; }
+.acroview .tip-trail { fill: none; stroke: var(--pol); stroke-width: 1.5; stroke-linecap: round; opacity: 0.35; }
+.acroview .tq { font-size: 11px; font-weight: 700; fill: var(--ink); }
 .pendview .guide { fill: none; stroke: var(--line-2); stroke-width: 1.5; stroke-dasharray: 3 4; }
 .pendview .goal { stroke: var(--rew); stroke-width: 2.5; stroke-linecap: round; }
 .pendview .bob { fill: var(--pol); stroke: var(--surface); stroke-width: 2; }
@@ -2890,25 +2899,144 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
 </script>
 <script>
-/* Worlds of the recorded runs: Gymnasium's CartPole-v1 and Pendulum-v1, as the Lab draws and describes them. Their
-   physics ran offline, in recorder/record.py (Mountain Car's recordings use the Lab's own Mountain Car world): the page
-   only plays back what the recorder saw. */
+/* Classic control, as Gymnasium plays it, with the physics ported line for line so that runs can be trained in the
+   page. Each world's state is a few real numbers; the Lab scales them to the unit interval (coords) for tile coding.
+   - CartPole-v1 (Barto, Sutton & Anderson, 1983): push a cart left or right to keep a pole balanced on it.
+   - Acrobot-v1 (Sutton, 1996): two links hanging from a pivot, a motor only at the joint between them; swing the tip
+     above a line one link above the pivot. */
 (function (RL) {
   "use strict";
   const lab = (RL.lab = RL.lab || {});
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
-  // ---- CartPole: push a cart left or right to keep a pole balanced on it ----
-  // A state is (x, ẋ, θ, θ̇): the cart's position and speed, the pole's angle from upright and its angular speed. An
-  // episode ends when the pole leans more than 12° or the cart leaves the track (|x| > 2.4), or after 500 steps; every
-  // step it stays up pays +1.
+  // ---- CartPole: a state is (x, ẋ, θ, θ̇) ----
+  // The cart's position and speed, the pole's angle from upright and its angular speed. Each push is 10 N, for 0.02 s
+  // (Euler steps). An episode ends when the pole leans more than 12° or the cart leaves the track (|x| > 2.4), or after
+  // 500 steps; every step pays +1, the last one included. Episodes start with all four numbers within ±0.05.
+  const CP = { g: 9.8, mCart: 1.0, mPole: 0.1, half: 0.5, force: 10, tau: 0.02, xMax: 2.4, thetaMax: (12 * 2 * Math.PI) / 360 };
+  CP.total = CP.mCart + CP.mPole;
+  CP.pml = CP.mPole * CP.half;
+  // The ranges the features cover (the speeds have no limit; these hold nearly every state an episode visits).
+  const CP_RANGE = [[-CP.xMax, CP.xMax], [-3, 3], [-CP.thetaMax, CP.thetaMax], [-3.5, 3.5]];
+  // The map the views draw: angle × spin, the cart at rest in the middle (31 × 31, the spin from −2 to +2 rad/s).
+  const phaseGrid = (N, at) => { const out = []; for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) out.push(at(i / (N - 1), j / (N - 1))); return out; };
+  const CP_PHASE = { N: 31, states: phaseGrid(31, (u, v) => [0, 0, (2 * u - 1) * CP.thetaMax, (2 * v - 1) * 2]) };
+
   lab.cartpole = function () {
-    return {
+    const all = [0, 1];
+    const env = {
       name: "cartpole", key: "cartpole", kind: "cartpole", title: "CartPole", nA: 2, actionNames: ["push left", "push right"],
-      xMax: 2.4, thetaMax: (12 * Math.PI) / 180, poleLength: 1.0, maxSteps: 500, valueRange: 100, recorded: true,
-      describe: (s, a) => (a >= 0 ? (a ? "pushing right" : "pushing left") : "the cart and pole"),
+      xMax: CP.xMax, thetaMax: CP.thetaMax, poleLength: 2 * CP.half, maxSteps: 500, valueRange: 100, dims: 4, continuous: true,
+      pace: { line: 200, step: 22 }, phase: CP_PHASE,
+      acts: () => all,
+      terminal: (s) => s[0] < -CP.xMax || s[0] > CP.xMax || s[2] < -CP.thetaMax || s[2] > CP.thetaMax,
+      reset: (rng, s0) => s0 || [0, 0, 0, 0].map(() => -0.05 + 0.1 * rng.next()),
+      step(s, a) {
+        const [x, v, th, w] = s, F = a === 1 ? CP.force : -CP.force, cos = Math.cos(th), sin = Math.sin(th);
+        const temp = (F + CP.pml * w * w * sin) / CP.total;
+        const thAcc = (CP.g * sin - cos * temp) / (CP.half * (4 / 3 - (CP.mPole * cos * cos) / CP.total));
+        const xAcc = temp - (CP.pml * thAcc * cos) / CP.total;
+        return { s2: [x + CP.tau * v, v + CP.tau * xAcc, th + CP.tau * w, w + CP.tau * thAcc], r: 1 };
+      },
+      coords: (s) => s.map((v, j) => clamp01((v - CP_RANGE[j][0]) / (CP_RANGE[j][1] - CP_RANGE[j][0]))),
+      describe: (s, a) => (s && s.length === 4
+        ? `cart at ${lab.fmtSigned(s[0], 2)} m, pole at ${lab.fmtSigned((s[2] * 180) / Math.PI, 1)}°${a >= 0 ? `; ${env.actionNames[a]}` : ""}`
+        : a >= 0 ? (a ? "pushing right" : "pushing left") : "the cart and pole"),
     };
+    return env;
   };
   lab.worlds.cartpole = () => lab.cartpole();
+
+  // ---- Acrobot: a state is (θ₁, θ₂, θ̇₁, θ̇₂) ----
+  // θ₁ is the first link's angle from hanging straight down, θ₂ the second's relative to the first. The motor at the
+  // joint gives a torque of −1, 0 or +1, too weak to lift the links directly: they must be swung. Each step lasts 0.2 s
+  // (one Runge–Kutta step, as in Sutton & Barto's book version of the dynamics). Every step costs −1 until the tip
+  // rises more than one link length above the pivot; episodes are cut at 500 steps.
+  const AC = { l1: 1, m1: 1, m2: 1, lc1: 0.5, lc2: 0.5, I1: 1, I2: 1, g: 9.8, dt: 0.2, v1: 4 * Math.PI, v2: 9 * Math.PI };
+  const AC_RANGE = [[-Math.PI, Math.PI], [-Math.PI, Math.PI], [-AC.v1, AC.v1], [-AC.v2, AC.v2]];
+  function dsdt(y, a) {
+    const [t1, t2, d1t, d2t] = y, { m1, m2, l1, lc1, lc2, I1, I2, g } = AC;
+    const d1 = m1 * lc1 * lc1 + m2 * (l1 * l1 + lc2 * lc2 + 2 * l1 * lc2 * Math.cos(t2)) + I1 + I2;
+    const d2 = m2 * (lc2 * lc2 + l1 * lc2 * Math.cos(t2)) + I2;
+    const phi2 = m2 * lc2 * g * Math.cos(t1 + t2 - Math.PI / 2);
+    const phi1 = -m2 * l1 * lc2 * d2t * d2t * Math.sin(t2) - 2 * m2 * l1 * lc2 * d2t * d1t * Math.sin(t2) + (m1 * lc1 + m2 * l1) * g * Math.cos(t1 - Math.PI / 2) + phi2;
+    const dd2 = (a + (d2 / d1) * phi1 - m2 * l1 * lc2 * d1t * d1t * Math.sin(t2) - phi2) / (m2 * lc2 * lc2 + I2 - (d2 * d2) / d1);
+    const dd1 = -(d2 * dd2 + phi1) / d1;
+    return [d1t, d2t, dd1, dd2];
+  }
+  const wrap = (x) => { while (x > Math.PI) x -= 2 * Math.PI; while (x < -Math.PI) x += 2 * Math.PI; return x; };
+  const bound = (x, m) => Math.max(-m, Math.min(m, x));
+  const add = (y, k, h) => y.map((v, i) => v + h * k[i]);
+  const tipHeight = (s) => -Math.cos(s[0]) - Math.cos(s[0] + s[1]);
+
+  lab.acrobot = function () {
+    const all = [0, 1, 2];
+    const env = {
+      name: "acrobot", key: "acrobot", kind: "acrobot", title: "Acrobot", nA: 3, actionNames: ["torque −1", "no torque", "torque +1"],
+      maxSteps: 500, valueRange: 100, dims: 4, continuous: true, pace: { line: 200, step: 22 }, tipHeight,
+      // The map the views draw: the two angles, both links at rest.
+      phase: { N: 31, states: phaseGrid(31, (u, v) => [(2 * u - 1) * Math.PI, (2 * v - 1) * Math.PI, 0, 0]) },
+      acts: () => all,
+      terminal: (s) => tipHeight(s) > 1,
+      reset: (rng, s0) => s0 || [0, 0, 0, 0].map(() => -0.1 + 0.2 * rng.next()),
+      step(s, a) {
+        const u = a - 1, h = AC.dt, f = (y) => dsdt(y, u);
+        const k1 = f(s), k2 = f(add(s, k1, h / 2)), k3 = f(add(s, k2, h / 2)), k4 = f(add(s, k3, h));
+        const y = s.map((v, i) => v + (h / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+        const s2 = [wrap(y[0]), wrap(y[1]), bound(y[2], AC.v1), bound(y[3], AC.v2)];
+        return { s2, r: tipHeight(s2) > 1 ? 0 : -1 };
+      },
+      coords: (s) => s.map((v, j) => clamp01((v - AC_RANGE[j][0]) / (AC_RANGE[j][1] - AC_RANGE[j][0]))),
+      describe: (s, a) => `links at ${lab.fmtSigned((s[0] * 180) / Math.PI, 0)}° and ${lab.fmtSigned((s[1] * 180) / Math.PI, 0)}°${a >= 0 ? `; ${env.actionNames[a]}` : ""}`,
+    };
+    return env;
+  };
+  lab.worlds.acrobot = () => lab.acrobot();
+
+  // ---- what a live learner thinks, for the views: over the world's map (env.phase), and in one state ----
+  // From a snapshot of a linear learner (w, F: action values) or of a policy method (theta, F, and w for its critic).
+  // The map: v, the value of each state (the larger action value; the critic's estimate); act, the action it prefers;
+  // pr, for two actions, the probability of the second (a policy) or 0/1 (action values). Kept per snapshot.
+  const maps = new WeakMap();
+  lab.controlMap = function (env, d) {
+    if (maps.has(d)) return maps.get(d);
+    const { N, states } = env.phase, nA = env.nA, F = d.F, n = F.n, policy = !!d.theta;
+    const P = d.P, critic = policy && d.w && d.w.some((x) => x !== 0);
+    const v = new Float64Array(states.length), act = new Uint8Array(states.length), pr = new Float64Array(states.length);
+    states.forEach((s, k) => {
+      const x = F.of(s);
+      if (policy) {
+        const q = P.probs(d.theta, s);
+        let best = 0;
+        for (let a = 1; a < nA; a++) if (q[a] > q[best]) best = a;
+        act[k] = best; pr[k] = nA === 2 ? q[1] : q[best];
+        v[k] = critic ? lab.dot(d.w, x) : 0;
+      } else {
+        let best = 0, top = -Infinity;
+        for (let a = 0; a < nA; a++) { const q = lab.dot(d.w, x, a * n); if (q > top) { top = q; best = a; } }
+        act[k] = best; pr[k] = best; v[k] = top;
+      }
+    });
+    const out = { N, v, act, pr, kind: policy ? "pg" : "q", noValue: policy && !critic };
+    maps.set(d, out);
+    return out;
+  };
+  // The numbers a learner gives one state: its action values, or its probabilities.
+  lab.controlNumbers = function (env, d, s) {
+    const x = d.F.of(s);
+    if (d.theta) return { kind: "pg", vals: Array.from(d.P.probs(d.theta, s)) };
+    return { kind: "q", vals: Array.from({ length: env.nA }, (_, a) => lab.dot(d.w, x, a * d.F.n)) };
+  };
+})(globalThis.RL = globalThis.RL || {});
+
+</script>
+<script>
+/* A world of the recorded runs: Gymnasium's Pendulum-v1, as the Lab draws and describes it. Its physics ran offline,
+   in recorder/record.py: the page only plays back what the recorder saw. (CartPole's recordings use the Lab's own
+   CartPole, envs/control.js, which also trains live.) */
+(function (RL) {
+  "use strict";
+  const lab = (RL.lab = RL.lab || {});
 
   // ---- Pendulum: swing a weak motor's pendulum up and hold it upright ----
   // A state is (θ, θ̇), with θ = 0 upright; the action is a torque in [−2, 2], too weak to lift the pendulum straight up:
@@ -3360,7 +3488,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
    - tabular methods need discrete states and actions; dynamic programming also needs the world's model;
    - methods that predict the values of a fixed policy run on the walks (and Blackjack, tables only);
    - value methods with approximation need discrete actions, and features for continuous states;
-   - policy-gradient methods run on any world they have units for;
+   - policy-gradient methods run on any world they have units for (the continuous states with tile features);
    - bandit methods run on bandits. */
 (function (RL) {
   "use strict";
@@ -3391,7 +3519,15 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       profile: { episode: 100000, gamma: 1, charts: ["return"], film: [1, 1000, 10000, 100000] } },
     { id: "mountain-car", group: "approx", blurb: "Rock an underpowered car out of a valley",
       profile: { episode: 500, gamma: 1, charts: ["steps"], success: { metric: "steps", max: 150, text: "end with episodes under 150 steps on average" }, film: [1, 10, 100, 500],
-        params: { features: "tiles", tilings: 8, cells: 8 } } },
+        params: { features: "tiles", tilings: 8, cells: 8, alpha: 0.06, alphaW: 0.05, epsilon: 0 } } },
+    { id: "cartpole", group: "approx", blurb: "Push a cart left or right to keep a pole up, for up to 500 steps",
+      profile: { episode: 500, round: 150, gamma: 0.99, maxSteps: 500, charts: ["steps"], film: [1, 10, 100, 500],
+        success: { metric: "steps", min: 300, text: "end up keeping the pole up for more than 300 steps an episode on average" },
+        params: { features: "tiles", tilings: 8, cells: 6, alpha: 0.06, alphaW: 0.05, epsilon: 0.05 } } },
+    { id: "acrobot", group: "approx", blurb: "Swing two links, with a motor only at the joint, until the tip clears a line",
+      profile: { episode: 300, round: 100, gamma: 1, maxSteps: 500, charts: ["steps"], film: [1, 10, 50, 300],
+        success: { metric: "steps", max: 150, text: "end up getting the tip over the line in under 150 steps on average" },
+        params: { features: "tiles", tilings: 8, cells: 6, alpha: 0.06, alphaW: 0.05, epsilon: 0 } } },
     { id: "random-walk", group: "walks", blurb: "Five states, a coin flip each step",
       profile: { episode: 100, runs: 100, gamma: 1, charts: ["error"], measures: ["error"], film: [1, 10, 100] } },
     { id: "random-walk-19", group: "walks", blurb: "Nineteen states; −1 on the left, +1 on the right",
@@ -3429,7 +3565,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       case "predict-linear": return w.id === "walk-1000";
       case "tabular": return w.group === "tables";
       case "linear": return w.group === "approx";
-      case "policy": return w.group === "tables" && w.id !== "blackjack";
+      case "policy": return (w.group === "tables" && w.id !== "blackjack") || w.group === "approx";
       default: return false;
     }
   }
@@ -5296,7 +5432,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   // ---- what they show: the policy, as probabilities (or a mean and a spread), and the critic's values ----
   function show(critic) {
     return (m, env, p) => {
-      const P = lab.policy(env, p), d = { theta: m.theta, w: m.w, F: P.F };
+      const P = lab.policy(env, p), d = { theta: m.theta, w: m.w, F: P.F, P };
       if (P.kind === "gaussian") {
         d.mu = P.unit * P.mean(m.theta, 0);
         d.sd = P.unit * P.sd(m.theta, 0);
@@ -9058,7 +9194,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
 </script>
 <script>
-/* CartPole view, for recorded runs. On the left, the cart on its track and the pole on the cart: the push the network
+/* CartPole view, for recorded runs and for runs trained live (linear action values or a policy over tile features,
+   whose maps are worked out here from the snapshot's weights: RL.lab.controlMap). On the left, the cart on its track and the pole on the cart: the push the network
    chose, and its numbers for each push (action values for DQN, probabilities for a policy) as bars. On the right, what
    the network thinks of the pole's situations: a map over the pole's angle and spin (the cart at rest in the middle),
    colored by value, with the push it prefers in each region, and the path of the test episode drawn over it. */
@@ -9081,6 +9218,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   function rangeColor(box, lo, hi) {
     const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
     return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
+  }
+  // A live snapshot (weights) as a recording's map: v, and act (0/1, action values) or mean (P(right), a policy).
+  function liveMap(env, d) {
+    if (d.v || !(d.w || d.theta) || !env.phase) return d;
+    const m = RL.lab.controlMap(env, d);
+    return { v: m.v, act: m.kind === "q" ? m.act : null, mean: m.kind === "pg" ? m.pr : null, kind: m.kind === "pg" ? "pg" : "q", noValue: m.noValue, live: d };
   }
   const num = (v) => (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)).replace("-", "−");
 
@@ -9160,10 +9303,13 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     // What a snapshot knows: values over the grid (DQN: the larger action value; a policy method: its critic), and the
     // push it prefers (DQN: the larger value; a policy: its probabilities, drawn fainter where it is unsure).
     show(d) {
-      if (!d || !d.v) return;
+      if (!d) return;
+      d = liveMap(this.env, d);
+      if (!d.v) return;
       this.d = d;
       this.kind = d.kind;
-      const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action";
+      this.box.querySelector(".map-head b").textContent = d.live ? "What the learner thinks" : "What the network thinks";
+      const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action" && !d.noValue;
       for (let k = 0; k < this.cellEls.length; k++) {
         const pr = d.act ? d.act[k] : d.mean ? d.mean[k] : 0.5; // 1 or 0: right or left (DQN); P(right) (a policy)
         this.cellEls[k].setAttribute("fill", valueMode ? color(d.v[k]) : `color-mix(in oklab, var(--pol) ${Math.round(Math.abs(pr - 0.5) * 140)}%, var(--v-mid))`);
@@ -9173,7 +9319,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         e.setAttribute("d", right ? "M-3 -4.5l4.5 4.5l-4.5 4.5" : "M3 -4.5l-4.5 4.5l4.5 4.5");
         e.style.opacity = (0.25 + 1.5 * Math.abs(pr - 0.5)).toFixed(2);
       }
-      this.box.querySelector(".map-head span").textContent = valueMode
+      this.box.querySelector(".map-head span").textContent = d.noValue && this.o.map !== "action"
+        ? "no critic to color the map: color and chevrons show the push it prefers, paler where it is unsure"
+        : valueMode
         ? `color: the value of each angle and spin, from ${num(lo)} (${lo < 0 ? "orange" : "gray"}) to ${num(hi)} (${hi > 0 ? "blue" : "gray"}), the cart at rest in the middle; chevrons: the push it prefers`
         : "color and chevrons: the push it prefers, paler where it is unsure; the cart at rest in the middle";
     }
@@ -9219,20 +9367,30 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     event(ev, { p } = {}) {
       switch (ev.type) {
         case "start":
+          this.k = 0;
           this.points = [ev.s];
           this.place(ev.s);
           this.readout.textContent = "step 0";
           this._drawPath();
           return 0;
         case "choose":
+          if (ev.w) return 0; // several workers: the view follows the first
           this.pushArrow(ev.a);
-          this.numbers(ev.x, ev.a, this.kind);
+          this._numbersAt(ev);
           return 0;
-        case "move":
+        case "move": {
+          if (ev.w) return 0;
+          const k = ev.k ?? this.k ?? 0;
+          this.k = k + 1;
           this.place(ev.s2);
           this.points.push(ev.s2);
           this._drawPath();
-          this.readout.textContent = `step ${ev.k + 1} · angle ${sgn(deg(ev.s2[2]))}°`;
+          this.readout.textContent = `step ${k + 1} · angle ${sgn(deg(ev.s2[2]))}°`;
+          if (ev.k === undefined) { // trained live: the world says when the episode ends
+            const fell = this.env.terminal(ev.s2);
+            if (fell || k + 1 >= this.env.maxSteps) { this.pop(!fell ? `${this.env.maxSteps} steps: balanced!` : Math.abs(ev.s2[0]) > this.env.xMax ? "off the track" : "the pole fell"); return 600; }
+            return 0;
+          }
           if (ev.end) {
             // judged by length: a recording clamps its states to the track and to 12°, so the limits are never passed
             const lasted = ev.k + 1 >= this.env.maxSteps, edge = Math.abs(ev.s2[0]) >= this.env.xMax - 0.05;
@@ -9240,9 +9398,20 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
             return 600;
           }
           return 0;
+        }
         default:
           return 0;
       }
+    }
+
+    // The numbers for the state of a choice: a recording's (in the event), or a live learner's, from its snapshot.
+    _numbersAt(ev) {
+      if (Array.isArray(ev.x)) return this.numbers(ev.x, ev.a, this.kind);
+      const live = this.d?.live;
+      if (ev.pr !== undefined) return this.numbers([ev.pr], ev.a, "pg");
+      if (!live) return;
+      const { kind, vals } = RL.lab.controlNumbers(this.env, live, ev.s);
+      this.numbers(kind === "pg" ? [vals[1]] : vals, ev.a, kind);
     }
 
     pop(text) {
@@ -9253,12 +9422,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     // At rest after a unit: the last state of its test episode, and its whole path on the map.
     rest(events) {
-      const moves = events.filter((e) => e.type === "move"), start = events.find((e) => e.type === "start");
+      const moves = events.filter((e) => e.type === "move" && !e.w), start = events.find((e) => e.type === "start" && !e.w);
       this.points = start ? [start.s, ...moves.map((e) => e.s2)] : [];
       const last = moves[moves.length - 1];
       this.place(last ? last.s2 : [0, 0, 0, 0]);
-      if (last) { this.pushArrow(last.a); this.numbers(last.x, last.a, this.kind); }
-      this.readout.textContent = last ? `the test episode lasted ${moves.length} steps` : "";
+      if (last) { this.pushArrow(last.a); this._numbersAt({ ...last, s: last.s, x: last.x }); }
+      this.readout.textContent = !last ? "" : this.d?.live ? `this episode lasted ${moves.length} steps` : `the test episode lasted ${moves.length} steps`;
       this._drawPath();
     }
 
@@ -9273,20 +9442,256 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     // A filmstrip frame: the value map, small.
     static thumb(env, d) {
+      d = d && liveMap(env, d);
       if (!d?.v) return "";
       const N = 31, c = 4;
-      const [lo, hi] = span(d.v);
+      const vals = d.noValue ? d.mean : d.v, [lo, hi] = span(vals); // no critic: P(right) instead
       let cells = "";
       for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-        const t = Math.max(0, Math.min(1, (d.v[j * N + i] - lo) / Math.max(1e-9, hi - lo)));
+        const t = Math.max(0, Math.min(1, (vals[j * N + i] - lo) / Math.max(1e-9, hi - lo)));
         cells += `<rect x="${i * c}" y="${(N - 1 - j) * c}" width="${c + 0.3}" height="${c + 0.3}" fill="color-mix(in oklab, var(--v-pos) ${Math.round(100 * t ** 0.8)}%, var(--v-mid))"/>`;
       }
-      return `<svg viewBox="0 0 ${N * c} ${N * c}" class="cart-thumb" role="img" aria-label="Values over angle and spin">${cells}</svg><span class="thumb-note">test: ${d.steps} steps</span>`;
+      return `<svg viewBox="0 0 ${N * c} ${N * c}" class="cart-thumb" role="img" aria-label="Values over angle and spin">${cells}</svg>${d.steps !== undefined ? `<span class="thumb-note">test: ${d.steps} steps</span>` : ""}`;
     }
   }
 
   RL.CartPoleView = CartPoleView;
   (RL.labViews = RL.labViews || {}).cartpole = CartPoleView;
+})(globalThis.RL = globalThis.RL || {});
+
+</script>
+<script>
+/* Acrobot view, for runs trained live. On the left, the two links hanging from the pivot, the motor at the joint with
+   the torque it gives, the line the tip must rise above, and the learner's numbers for each torque as bars. On the
+   right, what the learner thinks of each pose: a map over the two angles (both links at rest), colored by value or by
+   the torque it prefers, with the episode's path drawn over it. */
+(function (RL) {
+  "use strict";
+  const NS = "http://www.w3.org/2000/svg";
+  const W = 330, H = 252, PX = W / 2, PY = 104, L = 48; // the pivot, and pixels per link
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  const deg = (r) => Math.round((r * 180) / Math.PI);
+  const sgn = (v, d = 2) => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(d)}`;
+  const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
+  function rangeColor(box, lo, hi) {
+    const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
+    return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
+  }
+  const num = (v) => (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)).replace("-", "−");
+  const GLYPH = ["↻", "·", "↺"]; // torque −1 (clockwise on screen), none, +1
+
+  class AcrobotView {
+    constructor(host, env, options = {}) {
+      this.env = env;
+      this.o = { path: true, map: "value", ...options };
+      this.box = RL.h('<div class="cartview acroview"><div class="track-pane"></div><div class="map-pane"><div class="map-head"><b>What the learner thinks</b><span></span></div><div class="map-host"></div></div></div>');
+      host.appendChild(this.box);
+      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The acrobot's two links" }, this.box.querySelector(".track-pane")));
+      // the line the tip must rise above: one link length above the pivot
+      el("line", { class: "goal-line", x1: 24, x2: W - 24, y1: PY - L, y2: PY - L }, svg);
+      el("text", { class: "track-note", x: W - 24, y: PY - L - 6, "text-anchor": "end" }, svg).textContent = "goal: the tip above this line";
+      this.trail = el("path", { class: "tip-trail" }, svg);
+      this.link1 = el("line", { class: "link", x1: PX, y1: PY }, svg);
+      this.link2 = el("line", { class: "link two" }, svg);
+      el("circle", { class: "pivot", cx: PX, cy: PY, r: 4 }, svg);
+      this.joint = el("circle", { class: "joint", r: 6 }, svg);
+      this.torque = el("text", { class: "torque", "text-anchor": "middle" }, svg);
+      this.tip = el("circle", { class: "tip", r: 4.5 }, svg);
+      this.readout = el("text", { class: "readout", x: W - 6, y: 16, "text-anchor": "end" }, svg);
+      // the learner's numbers for each torque, as three bars under the links
+      this.bars = [0, 1, 2].map((a) => {
+        const g = el("g", { class: "bar-row" }, svg), y = 186 + a * 18;
+        el("text", { class: "bar-name", x: 8, y: y + 9 }, g).textContent = env.actionNames[a];
+        el("rect", { class: "bar-bg", x: 88, y, width: 190, height: 11, rx: 3 }, g);
+        const fill = el("rect", { class: "bar-fill", x: 88, y, width: 0, height: 11, rx: 3 }, g);
+        const num = el("text", { class: "bar-num", x: 284, y: y + 9 }, g);
+        return { g, fill, num };
+      });
+      this.gFx = el("g", { class: "fx" }, svg);
+      this.mapHost = this.box.querySelector(".map-host");
+      this._map();
+      this.points = [];
+      this.k = 0;
+      this.place([0, 0, 0, 0]);
+      this.setOptions({});
+    }
+
+    setOptions(o) {
+      Object.assign(this.o, o);
+      if (this.d) this.show(this.d.live);
+      this._drawPath();
+    }
+
+    // The map: a heat map over the two angles, glyphs for the preferred torque, the episode's path.
+    _map() {
+      const S = 250, P = 36, N = this.env.phase.N;
+      this.map = el("svg", { class: "phase", viewBox: `0 0 ${S + P + 8} ${S + P}`, role: "img", "aria-label": "Values and choices over the two angles" }, this.mapHost);
+      this.cellEls = [];
+      const c = S / N, cells = el("g", {}, this.map);
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) this.cellEls.push(el("rect", { x: P + i * c, y: (N - 1 - j) * c, width: c + 0.4, height: c + 0.4 }, cells));
+      this.marks = [];
+      const marks = el("g", { class: "torques" }, this.map);
+      for (let j = 1; j < N; j += 3) for (let i = 1; i < N; i += 3) this.marks.push({ k: j * N + i, e: el("text", { class: "tq", x: P + (i + 0.5) * c, y: (N - j - 0.5) * c + 4, "text-anchor": "middle" }, marks) });
+      el("line", { class: "zero", x1: P + S / 2, x2: P + S / 2, y1: 0, y2: S }, this.map);
+      el("line", { class: "zero", x1: P, x2: P + S, y1: S / 2, y2: S / 2 }, this.map);
+      el("text", { class: "tick", x: P, y: S + 14 }, this.map).textContent = "−180°";
+      el("text", { class: "tick", x: P + S, y: S + 14, "text-anchor": "end" }, this.map).textContent = "+180°";
+      el("text", { class: "axis-name", x: P + S / 2, y: S + 28, "text-anchor": "middle" }, this.map).textContent = "the first link's angle (0: hanging down)";
+      el("text", { class: "tick", x: P - 4, y: 10, "text-anchor": "end" }, this.map).textContent = "+180°";
+      el("text", { class: "tick", x: P - 4, y: S, "text-anchor": "end" }, this.map).textContent = "−180°";
+      el("text", { class: "axis-name", transform: `translate(12 ${S / 2}) rotate(-90)`, "text-anchor": "middle" }, this.map).textContent = "the second link, bent";
+      this.mapPath = el("path", { class: "phase-path" }, this.map);
+      this.mapDot = el("circle", { class: "phase-dot", r: 4.5 }, this.map);
+      this.mapXY = (s) => [P + ((s[0] + Math.PI) / (2 * Math.PI)) * S, S / 2 - (s[1] / Math.PI) * (S / 2)];
+    }
+
+    show(d) {
+      if (!d || !(d.w || d.theta)) return;
+      const m = RL.lab.controlMap(this.env, d);
+      this.d = { ...m, live: d };
+      const valueMode = this.o.map !== "action" && !m.noValue, [lo, hi] = span(m.v), color = rangeColor(this.box, lo, hi);
+      const css = getComputedStyle(this.box), tint = [css.getPropertyValue("--v-neg"), css.getPropertyValue("--v-mid"), css.getPropertyValue("--v-pos")];
+      for (let k = 0; k < this.cellEls.length; k++) {
+        const a = m.act[k], sure = m.kind === "pg" ? Math.max(0, (m.pr[k] - 1 / 3) * 1.5) : 0.75;
+        this.cellEls[k].setAttribute("fill", valueMode ? color(m.v[k]) : `color-mix(in oklab, ${tint[a]} ${Math.round(100 * Math.min(1, sure))}%, ${tint[1]})`);
+      }
+      for (const { k, e } of this.marks) {
+        e.textContent = GLYPH[m.act[k]];
+        e.style.opacity = m.kind === "pg" ? (0.3 + Math.min(0.7, m.pr[k] - 1 / 3)).toFixed(2) : "0.75";
+      }
+      this.box.querySelector(".map-head span").textContent = valueMode
+        ? `color: the value of each pose, from ${num(lo)} (${lo < 0 ? "orange" : "gray"}) to ${num(hi)} (${hi > 0 ? "blue" : "gray"}), both links at rest; marks: the torque it prefers (↺ +1, ↻ −1, · none)`
+        : `color and marks: the torque it prefers in each pose (↺ +1 blue, ↻ −1 orange, · none)${m.kind === "pg" ? ", paler where it is unsure" : ""}${m.noValue ? "; no critic to give values" : ""}`;
+    }
+
+    // The links for state s: the elbow and the tip on the drawing.
+    pose(s) {
+      const ex = PX + L * Math.sin(s[0]), ey = PY + L * Math.cos(s[0]);
+      return [ex, ey, ex + L * Math.sin(s[0] + s[1]), ey + L * Math.cos(s[0] + s[1])];
+    }
+
+    place(s) {
+      const [ex, ey, tx, ty] = this.pose(s);
+      for (const [e, a] of [[this.link1, { x2: ex, y2: ey }], [this.link2, { x1: ex, y1: ey, x2: tx, y2: ty }], [this.joint, { cx: ex, cy: ey }], [this.tip, { cx: tx, cy: ty }]])
+        for (const k in a) e.setAttribute(k, a[k].toFixed(1));
+      this.torque.setAttribute("x", ex.toFixed(1));
+      this.torque.setAttribute("y", (ey - 10).toFixed(1));
+      this.box.style.setProperty("--lift", Math.max(0, Math.min(1, (this.env.tipHeight(s) + 2) / 3)).toFixed(2));
+      this.at = s;
+    }
+
+    gas(a) { this.torque.textContent = a === 1 ? "" : GLYPH[a]; }
+
+    numbers(vals, a, kind) {
+      const probs = kind === "pg", top = probs ? 1 : Math.max(1e-9, ...vals.map(Math.abs));
+      this.bars.forEach((b, i) => {
+        const v = vals[i];
+        b.fill.setAttribute("width", (190 * Math.max(0, Math.min(1, Math.abs(v) / top))).toFixed(1));
+        b.g.classList.toggle("chosen", i === a);
+        b.num.textContent = probs ? `${Math.round(100 * v)}%` : num(v);
+      });
+    }
+
+    _numbersAt(ev) {
+      const live = this.d?.live;
+      if (!live) return;
+      const { kind, vals } = RL.lab.controlNumbers(this.env, live, ev.s);
+      this.numbers(vals, ev.a, kind);
+    }
+
+    _drawPath() {
+      const pts = this.o.path ? this.points : [];
+      // the angles wrap at ±180°: the path breaks there instead of crossing the map
+      let d = "", prev = null;
+      for (const s of pts) {
+        const [x, y] = this.mapXY(s), jump = prev && (Math.abs(s[0] - prev[0]) > Math.PI || Math.abs(s[1] - prev[1]) > Math.PI);
+        d += `${!prev || jump ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+        prev = s;
+      }
+      this.mapPath.setAttribute("d", d);
+      if (this.at) { const [x, y] = this.mapXY(this.at); this.mapDot.setAttribute("cx", x); this.mapDot.setAttribute("cy", y); }
+      // the tip's last dozen positions, on the drawing
+      const tail = this.o.path ? pts.slice(-12) : [];
+      this.trail.setAttribute("d", tail.map((s, i) => { const p = this.pose(s); return `${i ? "L" : "M"}${p[2].toFixed(1)} ${p[3].toFixed(1)}`; }).join(""));
+    }
+
+    event(ev) {
+      if (ev.w) return 0; // several workers: the view follows the first
+      switch (ev.type) {
+        case "start":
+          this.k = 0;
+          this.points = [ev.s];
+          this.place(ev.s);
+          this.gas(1);
+          this.readout.textContent = "step 0";
+          this._drawPath();
+          return 0;
+        case "choose":
+          this.gas(ev.a);
+          this._numbersAt(ev);
+          return 0;
+        case "move": {
+          this.k += 1;
+          this.place(ev.s2);
+          this.points.push(ev.s2);
+          this._drawPath();
+          this.readout.textContent = `step ${this.k} · tip ${sgn(this.env.tipHeight(ev.s2))}`;
+          if (this.env.terminal(ev.s2)) { this.pop(`over the line in ${this.k} steps!`); return 600; }
+          if (this.k >= this.env.maxSteps) { this.pop(`${this.env.maxSteps} steps: cut short`); return 600; }
+          return 0;
+        }
+        default:
+          return 0;
+      }
+    }
+
+    pop(text) {
+      const t = el("text", { class: "pop", x: W / 2, y: 40, "text-anchor": "middle" }, this.gFx);
+      t.textContent = text;
+      t.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0, transform: "translateY(-12px)" }], { duration: 1400, easing: "ease-out" }).onfinish = () => t.remove();
+    }
+
+    // At rest after a unit: the episode's last pose, and its whole path on the map.
+    rest(events) {
+      const moves = events.filter((e) => e.type === "move" && !e.w), start = events.find((e) => e.type === "start" && !e.w);
+      this.points = start ? [start.s, ...moves.map((e) => e.s2)] : [];
+      const last = moves[moves.length - 1];
+      this.place(last ? last.s2 : [0, 0, 0, 0]);
+      this.gas(last ? last.a : 1);
+      if (last) this._numbersAt(last);
+      this.readout.textContent = last ? `this episode lasted ${moves.length} steps` : "";
+      this._drawPath();
+    }
+
+    destroy() { this.box.remove(); }
+
+    static options() {
+      return [
+        { key: "map", type: "seg", label: "What the map shows", choices: [["value", "Values"], ["action", "Choices"]], value: "value" },
+        { key: "path", type: "check", label: "The path of the episode", value: true },
+      ];
+    }
+
+    // A filmstrip frame: the value map, small (the preferred torques, for a policy without a critic).
+    static thumb(env, d) {
+      if (!d || !(d.w || d.theta)) return "";
+      const m = RL.lab.controlMap(env, d), N = m.N, c = 4, vals = m.noValue ? Array.from(m.act, (a) => a - 1) : m.v, [lo, hi] = span(vals);
+      let cells = "";
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+        const t = Math.max(0, Math.min(1, (vals[j * N + i] - lo) / Math.max(1e-9, hi - lo)));
+        cells += `<rect x="${i * c}" y="${(N - 1 - j) * c}" width="${c + 0.3}" height="${c + 0.3}" fill="color-mix(in oklab, var(--v-mid) ${Math.round(100 * t ** 0.8)}%, var(--v-neg))"/>`;
+      }
+      return `<svg viewBox="0 0 ${N * c} ${N * c}" class="cart-thumb" role="img" aria-label="Values over the two angles">${cells}</svg>`;
+    }
+  }
+
+  RL.AcrobotView = AcrobotView;
+  (RL.labViews = RL.labViews || {}).acrobot = AcrobotView;
 })(globalThis.RL = globalThis.RL || {});
 
 </script>
@@ -10197,7 +10602,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);
   // What a chart can plot.
   const METRICS = {
-    return: { title: (n, env) => (env.recorded ? "Training episodes: their average return in each block" : `Reward per ${n}`), smooth: 10 },
+    return: { title: (n, env, a) => (a?.recorded ? "Training episodes: their average return in each block" : `Reward per ${n}`), smooth: 10 },
     steps: { title: (n) => `Steps per ${n}`, smooth: 10, log: true }, // a first episode of 1000 steps would flatten the rest
     optimal: { title: () => "How often the best arm is pulled", percent: true },
     left: { title: () => "How often the agent goes left from A", percent: true },
@@ -10445,8 +10850,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         if (prof.maxSteps) preset.params.maxSteps = prof.maxSteps;
         knobs.units = prof.units;
       }
-      if ("gamma" in preset.params) knobs.gamma = preset.params.gamma;
-      for (const k in preset.params) if (!(k in KNOBS)) knobs[k] = preset.params[k];
+      Object.assign(knobs, preset.params); // the knobs start from the world's settings (a step size made for its features)
       knobs.runs = preset.runs;
       knobs.seed = "typical";
       P.e = 0;
@@ -10794,7 +11198,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         else groups.push({ key, r, i, base, name: k in r.params ? r.algorithm.title : r.name }); // its own value is overridden
       });
       const kinds = preset.success ? ["ok", "score"] : ["score"], current = recorded ? sweepData.knobs[k].current ?? rec0.config[k] ?? null : k in preset.params ? knobs[k] : null;
-      const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}` };
+      const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env, racers[0].algorithm) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}` };
       const grid = q(".sweep-grid");
       grid.className = `chart-grid sweep-grid n${kinds.length}`;
       grid.innerHTML = kinds.map((c) => `<div class="chart-box"><h3>${esc(titles[c])}</h3><div class="chart-host"></div></div>`).join("");

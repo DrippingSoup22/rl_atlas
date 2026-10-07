@@ -1,4 +1,5 @@
-/* CartPole view, for recorded runs. On the left, the cart on its track and the pole on the cart: the push the network
+/* CartPole view, for recorded runs and for runs trained live (linear action values or a policy over tile features,
+   whose maps are worked out here from the snapshot's weights: RL.lab.controlMap). On the left, the cart on its track and the pole on the cart: the push the network
    chose, and its numbers for each push (action values for DQN, probabilities for a policy) as bars. On the right, what
    the network thinks of the pole's situations: a map over the pole's angle and spin (the cart at rest in the middle),
    colored by value, with the push it prefers in each region, and the path of the test episode drawn over it. */
@@ -21,6 +22,12 @@
   function rangeColor(box, lo, hi) {
     const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
     return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
+  }
+  // A live snapshot (weights) as a recording's map: v, and act (0/1, action values) or mean (P(right), a policy).
+  function liveMap(env, d) {
+    if (d.v || !(d.w || d.theta) || !env.phase) return d;
+    const m = RL.lab.controlMap(env, d);
+    return { v: m.v, act: m.kind === "q" ? m.act : null, mean: m.kind === "pg" ? m.pr : null, kind: m.kind === "pg" ? "pg" : "q", noValue: m.noValue, live: d };
   }
   const num = (v) => (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)).replace("-", "−");
 
@@ -100,10 +107,13 @@
     // What a snapshot knows: values over the grid (DQN: the larger action value; a policy method: its critic), and the
     // push it prefers (DQN: the larger value; a policy: its probabilities, drawn fainter where it is unsure).
     show(d) {
-      if (!d || !d.v) return;
+      if (!d) return;
+      d = liveMap(this.env, d);
+      if (!d.v) return;
       this.d = d;
       this.kind = d.kind;
-      const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action";
+      this.box.querySelector(".map-head b").textContent = d.live ? "What the learner thinks" : "What the network thinks";
+      const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action" && !d.noValue;
       for (let k = 0; k < this.cellEls.length; k++) {
         const pr = d.act ? d.act[k] : d.mean ? d.mean[k] : 0.5; // 1 or 0: right or left (DQN); P(right) (a policy)
         this.cellEls[k].setAttribute("fill", valueMode ? color(d.v[k]) : `color-mix(in oklab, var(--pol) ${Math.round(Math.abs(pr - 0.5) * 140)}%, var(--v-mid))`);
@@ -113,7 +123,9 @@
         e.setAttribute("d", right ? "M-3 -4.5l4.5 4.5l-4.5 4.5" : "M3 -4.5l-4.5 4.5l4.5 4.5");
         e.style.opacity = (0.25 + 1.5 * Math.abs(pr - 0.5)).toFixed(2);
       }
-      this.box.querySelector(".map-head span").textContent = valueMode
+      this.box.querySelector(".map-head span").textContent = d.noValue && this.o.map !== "action"
+        ? "no critic to color the map: color and chevrons show the push it prefers, paler where it is unsure"
+        : valueMode
         ? `color: the value of each angle and spin, from ${num(lo)} (${lo < 0 ? "orange" : "gray"}) to ${num(hi)} (${hi > 0 ? "blue" : "gray"}), the cart at rest in the middle; chevrons: the push it prefers`
         : "color and chevrons: the push it prefers, paler where it is unsure; the cart at rest in the middle";
     }
@@ -159,20 +171,30 @@
     event(ev, { p } = {}) {
       switch (ev.type) {
         case "start":
+          this.k = 0;
           this.points = [ev.s];
           this.place(ev.s);
           this.readout.textContent = "step 0";
           this._drawPath();
           return 0;
         case "choose":
+          if (ev.w) return 0; // several workers: the view follows the first
           this.pushArrow(ev.a);
-          this.numbers(ev.x, ev.a, this.kind);
+          this._numbersAt(ev);
           return 0;
-        case "move":
+        case "move": {
+          if (ev.w) return 0;
+          const k = ev.k ?? this.k ?? 0;
+          this.k = k + 1;
           this.place(ev.s2);
           this.points.push(ev.s2);
           this._drawPath();
-          this.readout.textContent = `step ${ev.k + 1} · angle ${sgn(deg(ev.s2[2]))}°`;
+          this.readout.textContent = `step ${k + 1} · angle ${sgn(deg(ev.s2[2]))}°`;
+          if (ev.k === undefined) { // trained live: the world says when the episode ends
+            const fell = this.env.terminal(ev.s2);
+            if (fell || k + 1 >= this.env.maxSteps) { this.pop(!fell ? `${this.env.maxSteps} steps: balanced!` : Math.abs(ev.s2[0]) > this.env.xMax ? "off the track" : "the pole fell"); return 600; }
+            return 0;
+          }
           if (ev.end) {
             // judged by length: a recording clamps its states to the track and to 12°, so the limits are never passed
             const lasted = ev.k + 1 >= this.env.maxSteps, edge = Math.abs(ev.s2[0]) >= this.env.xMax - 0.05;
@@ -180,9 +202,20 @@
             return 600;
           }
           return 0;
+        }
         default:
           return 0;
       }
+    }
+
+    // The numbers for the state of a choice: a recording's (in the event), or a live learner's, from its snapshot.
+    _numbersAt(ev) {
+      if (Array.isArray(ev.x)) return this.numbers(ev.x, ev.a, this.kind);
+      const live = this.d?.live;
+      if (ev.pr !== undefined) return this.numbers([ev.pr], ev.a, "pg");
+      if (!live) return;
+      const { kind, vals } = RL.lab.controlNumbers(this.env, live, ev.s);
+      this.numbers(kind === "pg" ? [vals[1]] : vals, ev.a, kind);
     }
 
     pop(text) {
@@ -193,12 +226,12 @@
 
     // At rest after a unit: the last state of its test episode, and its whole path on the map.
     rest(events) {
-      const moves = events.filter((e) => e.type === "move"), start = events.find((e) => e.type === "start");
+      const moves = events.filter((e) => e.type === "move" && !e.w), start = events.find((e) => e.type === "start" && !e.w);
       this.points = start ? [start.s, ...moves.map((e) => e.s2)] : [];
       const last = moves[moves.length - 1];
       this.place(last ? last.s2 : [0, 0, 0, 0]);
-      if (last) { this.pushArrow(last.a); this.numbers(last.x, last.a, this.kind); }
-      this.readout.textContent = last ? `the test episode lasted ${moves.length} steps` : "";
+      if (last) { this.pushArrow(last.a); this._numbersAt({ ...last, s: last.s, x: last.x }); }
+      this.readout.textContent = !last ? "" : this.d?.live ? `this episode lasted ${moves.length} steps` : `the test episode lasted ${moves.length} steps`;
       this._drawPath();
     }
 
@@ -213,15 +246,16 @@
 
     // A filmstrip frame: the value map, small.
     static thumb(env, d) {
+      d = d && liveMap(env, d);
       if (!d?.v) return "";
       const N = 31, c = 4;
-      const [lo, hi] = span(d.v);
+      const vals = d.noValue ? d.mean : d.v, [lo, hi] = span(vals); // no critic: P(right) instead
       let cells = "";
       for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-        const t = Math.max(0, Math.min(1, (d.v[j * N + i] - lo) / Math.max(1e-9, hi - lo)));
+        const t = Math.max(0, Math.min(1, (vals[j * N + i] - lo) / Math.max(1e-9, hi - lo)));
         cells += `<rect x="${i * c}" y="${(N - 1 - j) * c}" width="${c + 0.3}" height="${c + 0.3}" fill="color-mix(in oklab, var(--v-pos) ${Math.round(100 * t ** 0.8)}%, var(--v-mid))"/>`;
       }
-      return `<svg viewBox="0 0 ${N * c} ${N * c}" class="cart-thumb" role="img" aria-label="Values over angle and spin">${cells}</svg><span class="thumb-note">test: ${d.steps} steps</span>`;
+      return `<svg viewBox="0 0 ${N * c} ${N * c}" class="cart-thumb" role="img" aria-label="Values over angle and spin">${cells}</svg>${d.steps !== undefined ? `<span class="thumb-note">test: ${d.steps} steps</span>` : ""}`;
     }
   }
 

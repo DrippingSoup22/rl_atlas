@@ -245,8 +245,10 @@ animations and hover effects this guide relies on would not be smooth.
     all); the fast rates of the ladder show what training actually manages ("training: 1,800 steps a second").
 
   **Steps.**
-  1. Port the new worlds; CartPole and Acrobot live; the compatibility table. *Frozen Lake 8 × 8, the windy gridworld
-     and Taxi done.*
+  1. Port the new worlds; CartPole and Acrobot live; the compatibility table. *Frozen Lake 8 × 8, the windy gridworld,
+     Taxi, and CartPole and Acrobot live done* (`lab/envs/control.js`, checked step for step against Gymnasium's own
+     trajectories; tile coding, 8 tilings of 6 cells per coordinate; new Acrobot view, the CartPole view drawing live
+     snapshots too). Linear SARSA and the policy-gradient methods run on them from the World panel.
   2. The world study for the classic algorithms: each on every world it may run, 20 seeds, sensible settings; a world
      is a good showcase when good settings succeed on most seeds, learning takes long enough to watch, the chapter's
      knob visibly matters, and the hero beats the foil on most seeds. Written up like the runs review; presets and

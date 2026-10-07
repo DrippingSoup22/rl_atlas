@@ -59,7 +59,7 @@
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);
   // What a chart can plot.
   const METRICS = {
-    return: { title: (n, env) => (env.recorded ? "Training episodes: their average return in each block" : `Reward per ${n}`), smooth: 10 },
+    return: { title: (n, env, a) => (a?.recorded ? "Training episodes: their average return in each block" : `Reward per ${n}`), smooth: 10 },
     steps: { title: (n) => `Steps per ${n}`, smooth: 10, log: true }, // a first episode of 1000 steps would flatten the rest
     optimal: { title: () => "How often the best arm is pulled", percent: true },
     left: { title: () => "How often the agent goes left from A", percent: true },
@@ -307,8 +307,7 @@
         if (prof.maxSteps) preset.params.maxSteps = prof.maxSteps;
         knobs.units = prof.units;
       }
-      if ("gamma" in preset.params) knobs.gamma = preset.params.gamma;
-      for (const k in preset.params) if (!(k in KNOBS)) knobs[k] = preset.params[k];
+      Object.assign(knobs, preset.params); // the knobs start from the world's settings (a step size made for its features)
       knobs.runs = preset.runs;
       knobs.seed = "typical";
       P.e = 0;
@@ -656,7 +655,7 @@
         else groups.push({ key, r, i, base, name: k in r.params ? r.algorithm.title : r.name }); // its own value is overridden
       });
       const kinds = preset.success ? ["ok", "score"] : ["score"], current = recorded ? sweepData.knobs[k].current ?? rec0.config[k] ?? null : k in preset.params ? knobs[k] : null;
-      const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}` };
+      const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env, racers[0].algorithm) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}` };
       const grid = q(".sweep-grid");
       grid.className = `chart-grid sweep-grid n${kinds.length}`;
       grid.innerHTML = kinds.map((c) => `<div class="chart-box"><h3>${esc(titles[c])}</h3><div class="chart-host"></div></div>`).join("");
