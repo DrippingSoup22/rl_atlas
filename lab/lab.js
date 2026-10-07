@@ -111,6 +111,19 @@
     // Racers that name a recording play back runs trained offline (recorder/record.py) instead of computing them.
     const recRuns = preset.racers.map((r) => (r.recording ? lab.recordedRun(RL.recordings[r.recording]) : null));
     const recorded = recRuns.some(Boolean), rec0 = recorded ? RL.recordings[preset.racers[0].recording] : null, sweepData = rec0 ? RL.sweeps?.[rec0.name] : null;
+    // Recordings of the JavaScript trainer (lab/deep/) are a starting point, not a limit: another seed, or a knob turned
+    // away from the recording's value, trains here in a Web Worker, and a seed of the recording comes out as recorded.
+    const recs = preset.racers.map((r) => (r.recording ? RL.recordings[r.recording] : null));
+    const trainable = recorded && recs.every(lab.trainable), homeRuns = recRuns.slice();
+    const turned = {}; // the knobs turned away from the recordings' settings
+    const configOf = (i) => ({ ...recs[i].config, ...turned });
+    const atHome = (i) => !Object.keys(turned).length && played === recs[i].shown;
+    // a knob's value in a recording: its setting, or the trainer's default (which the sweep names); switches as 0 and 1
+    const recValue = (rec, k) => { const v = rec.config[k] ?? sweepData?.knobs[k]?.current; return typeof v === "boolean" ? +v : v; };
+    // the knobs that can be turned: the sweep's, where every racer has the same value (a racer's own difference stays)
+    const deepKnobs = () => (trainable ? Object.keys(sweepData?.knobs || {}).filter((k) => recs.every((r) => recValue(r, k) === recValue(recs[0], k))) : []);
+    const deepValue = (k) => (k in turned ? (typeof turned[k] === "boolean" ? +turned[k] : turned[k]) : recValue(recs[0], k));
+    let deepBench = null; // the bench trained here, for settings off the precomputed ones
     let racers = preset.racers.map((r, i) => ({ ...r, algorithm: recRuns[i] ? recRuns[i].algorithm : lab.algorithms[r.algorithm] }));
     const unitOf = () => racers[0].algorithm.unit;
     const noun = () => NOUNS[env.unitName || (unitOf() === "step" ? "pull" : unitOf())];
@@ -223,8 +236,19 @@
     // ---- building the page around the current world and racers ----
     function knobPanel() {
       const box = q(".knobs");
-      if (recorded) { // nothing to turn: the runs were trained offline
-        box.innerHTML = `<p class="rec-note">Trained offline on Gymnasium's ${esc(env.title)}: ${rec0.steps.toLocaleString("en")} steps in ${plural(knobs.units, noun())} of ${rec0.block.toLocaleString("en")}, ${plural(rec0.seeds.length, ["seed", "seeds"])}. After each block the network played one test episode, from the same start every time: that is what plays here.</p>`;
+      const recNote = `${rec0?.steps.toLocaleString("en")} steps in ${plural(knobs.units, noun())} of ${rec0?.block.toLocaleString("en")}, ${plural(rec0?.seeds.length, ["seed", "seeds"])}. After each block the network played one test episode, from the same start every time: that is what plays here.`;
+      if (recorded && !trainable) { // nothing to turn: the runs were trained offline
+        box.innerHTML = `<p class="rec-note">Trained offline on Gymnasium's ${esc(env.title)}: ${recNote}</p>`;
+        return;
+      }
+      if (trainable) { // the recording's knobs, and any seed: what is not recorded trains here
+        box.innerHTML = deepKnobs().map((k) => {
+          const d = DEEP_KNOBS[k] || { sym: k, name: k }, values = sweepData.knobs[k].values, v = deepValue(k), own = recValue(recs[0], k);
+          return `<label class="knob"><span class="sym">${d.sym}</span><span class="name">${d.name}</span>
+            <select data-deep="${k}">${values.map((c, j) => `<option value="${j}"${c === v ? " selected" : ""}>${fmtSweep(k, c)}${c === own ? " · recorded" : ""}</option>`).join("")}</select></label>`;
+        }).join("") + seedControl() +
+          `<p class="rec-note wide">Trained offline with the trainer this page runs: ${recNote} Turn a knob or pick another seed, and the run trains here, in your browser.</p>`;
+        seedBox();
         return;
       }
       const slider = (k) => {
@@ -245,21 +269,22 @@
       box.innerHTML = shown().map(slider).join("") +
         `<label class="knob"><span class="name">${noun()[1]}</span><select data-knob="units">${options.map((n) => `<option value="${n}"${n === knobs.units ? " selected" : ""}>${n.toLocaleString("en")}</option>`).join("")}</select></label>` +
         (preset.runs > 1 ? `<label class="knob"><span class="name">averaged over</span><select data-knob="runs">${[...new Set([10, 100, preset.runs, 500, 2000])].sort((a, b) => a - b).map((n) => `<option value="${n}"${n === knobs.runs ? " selected" : ""}>${n} runs</option>`).join("")}</select></label>` : "") +
-        `<div class="seedbox" role="group" aria-label="Seed">
+        seedControl();
+      seedBox();
+    }
+    const seedControl = () => `<div class="seedbox" role="group" aria-label="Seed">
           <span class="name">seed</span>
           <button type="button" class="seed-typ" title="Play the typical run of these settings: the median of the 20 bench seeds">Typical</button>
           <input class="seed-in" type="number" min="1" max="999999" step="1" inputmode="numeric" aria-label="Seed number" title="Type a seed and press Enter">
           <button type="button" class="seed-dice" title="Roll a seed" aria-label="Roll a seed">${ICON.dice}</button>
         </div>`;
-      seedBox();
-    }
     // The seed control shows the seed playing, and whether it is the typical one.
     function seedBox() {
       const typ = q(".seed-typ"), input = q(".seed-in");
       if (!typ) return;
       const typical = knobs.seed === "typical";
       typ.classList.toggle("on", typical);
-      typ.classList.toggle("finding", typical && !bench?.complete);
+      typ.classList.toggle("finding", typical && (trainable ? typicalDeep() === null : !bench?.complete));
       typ.classList.toggle("ready", pendingTypical);
       typ.textContent = pendingTypical ? `Typical: seed ${bench.typical()}` : "Typical";
       typ.title = pendingTypical ? "The typical run is ready: click to play it" : typical && !bench?.complete ? "Finding the typical run: the bench is still running" : "Play the typical run of these settings: the median of the bench seeds";
@@ -467,7 +492,7 @@
     function simulate() {
       job?.cancel();
       startBench();
-      played = recorded ? knobs.seed : knobs.seed === "typical" ? (bench?.complete ? bench.typical() : bench?.seeds[0] ?? 1) : knobs.seed;
+      played = trainable && knobs.seed === "typical" ? typicalDeep() ?? played : recorded ? knobs.seed : knobs.seed === "typical" ? (bench?.complete ? bench.typical() : bench?.seeds[0] ?? 1) : knobs.seed;
       playRuns();
       clearSweep(sweepCharts.length ? "The settings changed: run the sweep again to see the odds with them." : sweepIdle());
       autoRuns();
@@ -482,6 +507,7 @@
       pendingTypical = false;
       job?.cancel();
       runs = [];
+      if (trainable) return playDeep();
       const jobs = racers.map((r, i) => (recRuns[i] ? null : lab.simulateJob({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: played, measures: preset.measures })));
       let spent = 0, timer = 0;
       const slice = (ms) => {
@@ -508,6 +534,69 @@
       job = { cancel() { clearTimeout(timer); job = null; } };
       timer = setTimeout(tick, 0);
     }
+    // The played runs of trainable recordings: the recording's own where the seed and settings are its, the others
+    // trained here, in a Worker each, with their progress under the racers' names.
+    function playDeep() {
+      const jobs = racers.map((_, i) => (atHome(i) ? null : lab.trainRun(recs[i], configOf(i), played, () => update())));
+      const ready = () => jobs.every((j) => !j || j.result);
+      const finish = () => {
+        job = null;
+        stages.forEach((st) => st.classList.remove("training"));
+        jobs.forEach((j, i) => { recRuns[i] = j ? j.result : homeRuns[i]; if (j) perRun = Math.max(perRun, j.secs); });
+        runs = recRuns.slice();
+        showRuns();
+      };
+      const update = () => {
+        if (job !== mine) return; // replaced since
+        if (ready()) return finish();
+        stages.forEach((st, i) => {
+          const j = jobs[i];
+          st.classList.toggle("training", !!j && !j.result);
+          st.querySelector(".stat").textContent = !j || j.result ? "" : j.error ? `The trainer stopped: ${j.error}`
+            : j.done ? `Training here: ${Math.round(100 * j.done)}%, about ${duration((j.secs / j.done) * (1 - j.done))} left` : "Training here…";
+        });
+      };
+      if (ready()) return finish();
+      pause();
+      const mine = (job = { cancel() { jobs.forEach((j) => j && !j.result && j.cancel()); job = null; } });
+      update();
+    }
+    const duration = (secs) => (secs < 90 ? `${Math.max(1, Math.round(secs / 5) * 5)} s` : `${Math.round(secs / 60)} min`);
+
+    // ---- the bench of trainable recordings ----
+    // Every seed's curves, with the settings as they are, for racer i: the recording's own, the offline sweep's (one
+    // knob turned, the recording's sweep), or those trained here on request; null while nobody has run them.
+    function benchOf(i) {
+      const ks = Object.keys(turned);
+      if (!ks.length) return recs[i].curves;
+      const sw = RL.sweeps?.[recs[i].name];
+      if (ks.length === 1 && sw?.knobs[ks[0]]) {
+        const d = sw.knobs[ks[0]], vi = d.values.indexOf(deepValue(ks[0]));
+        if (vi >= 0) return sw.seeds.map((seed, j) => ({ seed, train: d.train[vi][j], test: d.test[vi][j] }));
+      }
+      const b = deepBench?.racers[i];
+      return b && b.done === 1 ? [...b.curves.values()].sort((x, y) => x.seed - y.seed) : null;
+    }
+    // The typical seed of the bench as it stands (null while unknown).
+    function typicalDeep() {
+      const all = racers.map((_, i) => benchOf(i));
+      if (all.some((c) => !c)) return null;
+      const R = rule(), key = R.metric === "return" ? "train" : R.metric;
+      const scores = all.map((curves) => curves.map((c) => lab.success(R, { [R.metric]: Float64Array.from(c[key] || [], (x) => x ?? NaN) }).score));
+      return lab.typicalSeed(scores, all[0].map((c) => c.seed), false);
+    }
+    // Train the bench of the current settings here: every seed of the recordings, curves only, over spare cores.
+    function trainDeepBench() {
+      deepBench?.racers.forEach((b) => b?.cancel());
+      const key = JSON.stringify(turned);
+      deepBench = { key, racers: racers.map((_, i) => (benchOf(i) ? null : lab.trainBench(recs[i], configOf(i), recs[i].seeds, () => {
+        if (deepBench?.key !== key) return;
+        if (deepBench.racers.every((b) => !b || b.done === 1)) { averageRecorded(); if (knobs.seed === "typical") { const t = typicalDeep(); if (t !== null && t !== played && !P.playing && P.e === 0) { played = t; playRuns(); } } }
+        else tally();
+      }))) };
+      if (deepBench.racers.every((b) => !b || b.done === 1)) averageRecorded(); else tally();
+    }
+
     // The played runs are ready: show them.
     function showRuns() {
       views.forEach((v, i) => { v.env = runs[i].env; }); // each view looks at its own run's world (its bandit's machines, its cards)
@@ -560,9 +649,12 @@
 
     // A recording keeps the training curve of every seed: the average, the thin lines and the odds come at once.
     function averageRecorded() {
+      // the seeds' curves: the recording's, or for a trainable one, the bench of the settings as they are (if known)
+      const benches = racers.map((_, i) => ({ ...recs[i], curves: trainable ? benchOf(i) : recs[i].curves }));
+      if (benches.some((b) => !b.curves)) { avg = null; if (view.seeds) drawCharts(); tally(); return; }
       // the training returns of every seed, and any other curve every seed kept (DQN's Q-values)
-      const keyOf = (k) => (k === "return" ? "train" : k), kept = [...new Set([...preset.charts, preset.success?.metric].filter(Boolean))].filter((k) => recRuns.every((r) => r.rec.curves.every((c) => c[keyOf(k)])));
-      const per = recRuns.map((r) => Object.fromEntries(kept.map((k) => [k, lab.recordedCurves(r.rec, keyOf(k))]))), n = Math.min(...recRuns.map((r) => r.rec.curves.length));
+      const keyOf = (k) => (k === "return" ? "train" : k), kept = [...new Set([...preset.charts, preset.success?.metric].filter(Boolean))].filter((k) => benches.every((b) => b.curves.every((c) => c[keyOf(k)])));
+      const per = benches.map((b) => Object.fromEntries(kept.map((k) => [k, lab.recordedCurves(b, keyOf(k))]))), n = Math.min(...benches.map((b) => b.curves.length));
       const sums = per.map((c) => Object.fromEntries(kept.map((k) => [k, c[k].mean.map((v) => v * n)])));
       const lines = per.map((c) => Array.from({ length: n }, (_, j) => Object.fromEntries(kept.map((k) => [k, c[k].seeds[j]]))));
       const wins = per.map((c) => (preset.success ? c[preset.success.metric].seeds.filter((v) => lab.success(preset.success, { [preset.success.metric]: v }).ok).length : 0));
@@ -592,7 +684,7 @@
     function chartNote(n) {
       const smooth = !recorded && knobs.runs <= 1 && preset.charts.some((k) => METRICS[k].smooth) ? `Smoothed over 10 ${noun()[1]}. ` : "";
       if (knobs.runs > 1) return `Each line is the average of ${n < knobs.runs ? `the ${n} runs done so far (of ${knobs.runs})` : `${knobs.runs} runs`}, with seeds 1 to ${knobs.runs}; the views above play seed ${played}. Click a chart to jump there.`;
-      if (view.seeds && recorded) return `Thin lines: the ${n} seeds the recording trained, the same settings each time. Thick line: their average. The other charts follow the seed played above, ${knobs.seed}. Click a chart to jump there.`;
+      if (view.seeds && recorded) return `Thin lines: the ${n} seeds ${Object.keys(turned).length ? "trained with these settings" : "the recording trained"}, the same settings each time. Thick line: their average. The other charts follow the seed played above, ${knobs.seed}. Click a chart to jump there.`;
       if (!recorded && view.mode === "bench") return `${smooth}The line${racers.length > 1 ? "s are the runs" : " is the run"} playing above, seed ${played}. The soft band${racers.length > 2 ? ` (${racers[P.focus].name}'s; click another racer above to see its own)` : ""} holds the middle half of ${n < 20 ? `the ${n} bench seeds done so far` : "the 20 bench seeds"}, the dashed line their median. Click a chart to jump there.`;
       return `${smooth}Click a chart to jump there.`;
     }
@@ -726,6 +818,17 @@
 
     // How many of the runs so far ended as the success rule asks, for each racer (recorded runs).
     function tally() {
+      if (trainable && !avg && preset.success) { // settings nobody has run the seeds of yet
+        const n = recs[0].seeds.length, b = deepBench?.key === JSON.stringify(turned) ? deepBench : null;
+        if (b) {
+          const done = Math.min(...b.racers.map((x) => (x ? x.curves.size : n)));
+          q(".odds-tally").innerHTML = `Training the bench of these settings here: ${done} of ${n} seeds${racers.length > 1 ? " for every racer" : ""} so far. The odds come when they are all done.`;
+          return;
+        }
+        const need = racers.filter((_, i) => !benchOf(i)).length, cores = Math.max(1, (navigator.hardwareConcurrency || 2) - 1);
+        q(".odds-tally").innerHTML = `Nobody has run these settings' ${n} seeds yet: the recordings and their sweeps turn one knob at a time. <button type="button" class="bench-here">Train the ${plural(n * need, ["seed", "seeds"])} here</button> (about ${duration((Math.ceil((n * need) / cores) * (perRun || 90)))} on this computer, using ${plural(cores, ["core", "cores"])}).`;
+        return;
+      }
       if (!preset.success || !avg) return;
       const { wins, done, n, stuck } = avg, pct = (w) => Math.round((100 * w) / Math.max(1, done));
       q(".odds-tally").innerHTML = `Out of ${done} runs with these settings${done < n ? ` (${n - done} still to come)` : ""}, how many ${esc(preset.success.text)}: ` +
@@ -1195,7 +1298,7 @@
     // Play another seed with the same settings: the bench stays, only the played run changes.
     function chooseSeed(seed) {
       knobs.seed = seed;
-      played = seed === "typical" ? (bench?.complete ? bench.typical() : played) : seed;
+      played = seed !== "typical" ? seed : trainable ? typicalDeep() ?? played : bench?.complete ? bench.typical() : played;
       pause();
       playRuns();
     }
@@ -1204,6 +1307,16 @@
       else if (e.target.closest(".seed-typ")) chooseSeed("typical");
     });
     q(".knobs").addEventListener("change", (e) => {
+      const deep = e.target.closest("[data-deep]");
+      if (deep) { // a knob of a trainable recording: the recording's value, or one to train here
+        const k = deep.dataset.deep, v = sweepData.knobs[k].values[+deep.value];
+        if (v === recValue(recs[0], k)) delete turned[k]; else turned[k] = v;
+        deepBench?.racers.forEach((b) => b?.cancel());
+        deepBench = null;
+        pause();
+        simulate();
+        return;
+      }
       if (!e.target.closest(".seed-in")) return;
       const v = Math.round(+e.target.value);
       if (Number.isFinite(v) && v >= 1) chooseSeed(Math.min(999999, v));
@@ -1247,6 +1360,7 @@
     q(".world-list").addEventListener("click", (e) => { const b = e.target.closest("[data-world]"); if (b) switchWorld(b.dataset.world); });
     q(".pseudo-tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (b) focus(+b.dataset.i); });
     q(".sweep-go").addEventListener("click", sweep);
+    q(".odds-tally").addEventListener("click", (e) => { if (e.target.closest(".bench-here")) trainDeepBench(); });
     q(".sweep-runs").addEventListener("change", () => { runsChosen = true; });
     q(".sweep-knob").addEventListener("change", autoRuns);
     playBtn.addEventListener("click", () => (P.playing ? pause() : play()));
@@ -1324,6 +1438,7 @@
         cancelAnimationFrame(raf);
         cancelAnimationFrame(pending);
         job?.cancel();
+        deepBench?.racers.forEach((b) => b?.cancel());
         clearTimeout(benchTimer);
         strip?.destroy();
         clearSweep("");

@@ -10,7 +10,9 @@
   const unpacked = new WeakMap();
 
   // Numbers the recorder packed: quantized to 8 or 16 bits between lo and hi, in base64.
+  // Runs trained in the page (lab/deep/) keep their numbers as arrays: those pass through.
   lab.unpack = function (p) {
+    if (ArrayBuffer.isView(p) || Array.isArray(p)) return p;
     if (unpacked.has(p)) return unpacked.get(p);
     const bin = atob(p.data), bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -120,6 +122,63 @@
       at,
       replay(t) { const m = at(t + 1); return { m, events: algorithm.run({ m }) }; }, // unit t: the network at its end
     };
+  };
+
+  // ---- runs trained in the page ----
+  // A recording made by the JavaScript trainer (lab/deep/, recorder/deep.js) can be extended in the page: the same
+  // trainer, in a Web Worker, trains any seed or setting, and a seed of the recording comes out exactly as recorded.
+  lab.trainable = (rec) => rec?.trainer === "lab/deep" && typeof Worker !== "undefined" && !!RL.deepWorker;
+  let workerUrl = null;
+  const newWorker = () => new Worker((workerUrl ||= URL.createObjectURL(new Blob([RL.deepWorker], { type: "text/javascript" }))));
+  const specOf = (rec, config) => ({ world: rec.world, learner: rec.learner, steps: rec.steps, block: rec.block, cfg: config });
+  const keyOf = (rec, config, seed, kind) => JSON.stringify([kind, rec.world, rec.learner, rec.steps, rec.block, config, seed]);
+  const finished = new Map(); // what this visit already trained: runs, and bench seeds' curves
+
+  // One run, with its snapshots, as a job: { done (0 to 1), secs (so far), result (a recorded run, once trained),
+  // cancel() }. onBlock(job) after each block.
+  lab.trainRun = function (rec, config, seed, onBlock) {
+    const key = keyOf(rec, config, seed, "run"), blocks = Math.floor(rec.steps / rec.block);
+    if (finished.has(key)) return { done: 1, secs: 0, result: finished.get(key), cancel() {} };
+    const worker = newWorker(), job = { done: 0, secs: 0, result: null, cancel() { worker.terminate(); } };
+    worker.onmessage = ({ data }) => {
+      if (!data.run) { job.done = data.block / blocks; job.secs = data.secs; onBlock?.(job); return; }
+      const r = data.run;
+      job.result = lab.recordedRun({ ...rec, config, shown: seed, curves: [{ seed, train: r.train, test: r.test, episodes: r.episodes, ...(r.q ? { q: r.q } : {}) }], snapshots: r.snapshots });
+      job.done = 1;
+      finished.set(key, job.result);
+      worker.terminate();
+      onBlock?.(job);
+    };
+    worker.onerror = (e) => { job.error = e.message || "the trainer stopped"; onBlock?.(job); };
+    worker.postMessage({ id: 0, spec: specOf(rec, config), seed });
+    return job;
+  };
+
+  // A bench: the training and test curves of many seeds (no snapshots), over a pool of Workers, one per spare core.
+  // A job: { curves (by seed, as they finish), done, cancel() }; onSeed(job) after each seed.
+  lab.trainBench = function (rec, config, seeds, onSeed) {
+    const job = { curves: new Map(), done: 0, cancel() { pool.forEach((w) => w.terminate()); } }, todo = [];
+    for (const seed of seeds) {
+      const c = finished.get(keyOf(rec, config, seed, "seed"));
+      if (c) job.curves.set(seed, c); else todo.push(seed);
+    }
+    job.done = job.curves.size / seeds.length;
+    const n = Math.min(todo.length, Math.max(1, (navigator.hardwareConcurrency || 2) - 1)), pool = [];
+    for (let w = 0; w < n; w++) {
+      const worker = newWorker(), next = () => { const seed = todo.shift(); if (seed === undefined) worker.terminate(); else worker.postMessage({ id: seed, spec: specOf(rec, config), seed, snapshots: false }); };
+      worker.onmessage = ({ data }) => {
+        if (!data.run) return;
+        const r = data.run, c = { seed: data.id, train: r.train, test: r.test, episodes: r.episodes, ...(r.q ? { q: r.q } : {}) };
+        finished.set(keyOf(rec, config, data.id, "seed"), c);
+        job.curves.set(data.id, c);
+        job.done = job.curves.size / seeds.length;
+        onSeed?.(job);
+        next();
+      };
+      pool.push(worker);
+      next();
+    }
+    return job;
   };
 
   // The training curves of every seed, per block: { seeds: [Float64Array, …], mean: Float64Array }.

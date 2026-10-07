@@ -227,6 +227,7 @@
 .pendview .band { fill: var(--pol); opacity: 0.25; }
 .pendview .bar-row .zero { stroke: var(--ink-3); stroke-width: 1; }
 .knobs .rec-note { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 52ch; }
+.knobs .rec-note.wide { flex-basis: 100%; max-width: 110ch; font-size: 12.5px; }
 
 /* ---- charts ---- */
 .chart-card { padding: 14px 16px; }

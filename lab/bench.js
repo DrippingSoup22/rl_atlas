@@ -40,6 +40,18 @@
   };
 
   // Ranks of a list of scores, 1 for the best; tied scores share the average of their ranks.
+  // The typical seed of a bench: scores[racer][i] is how seed seeds[i] ended; the median seed, or for a race the one
+  // whose ranks are closest, summed over the racers, to the middle.
+  lab.typicalSeed = function (scores, seeds, lower) {
+    const n = scores[0].length, per = scores.map((s) => ranks(s, lower)), middle = (n + 1) / 2;
+    let best = 0, bestD = Infinity;
+    for (let si = 0; si < n; si++) {
+      const d = per.reduce((sum, rk) => sum + Math.abs(rk[si] - middle), 0);
+      if (d < bestD - 1e-9) { bestD = d; best = si; }
+    }
+    return seeds[best];
+  };
+
   function ranks(scores, lower) {
     const order = scores.map((s, i) => [Number.isNaN(s) ? (lower ? Infinity : -Infinity) : s, i]).sort((a, b) => (lower ? a[0] - b[0] : b[0] - a[0]));
     const out = new Array(scores.length);
@@ -119,14 +131,7 @@
     typical() {
       const n = this.seedsDone;
       if (!n) return this.seeds[0];
-      const per = this.racers.map((_, ri) => ranks(this.results[ri].slice(0, n).map((d) => d.score), this.lower));
-      const middle = (n + 1) / 2;
-      let best = 0, bestD = Infinity;
-      for (let si = 0; si < n; si++) {
-        const d = per.reduce((sum, rk) => sum + Math.abs(rk[si] - middle), 0);
-        if (d < bestD - 1e-9) { bestD = d; best = si; }
-      }
-      return this.seeds[best];
+      return lab.typicalSeed(this.racers.map((_, ri) => this.results[ri].slice(0, n).map((d) => d.score)), this.seeds, this.lower);
     }
 
     // Where a score falls among racer ri's bench: how many seeds it beats, ties, and loses to.
