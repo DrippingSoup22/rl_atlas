@@ -245,12 +245,16 @@ animations and hover effects this guide relies on would not be smooth.
     all); the fast rates of the ladder show what training actually manages ("training: 1,800 steps a second").
 
   **Steps.**
-  1. Port the new worlds; CartPole and Acrobot live; the compatibility table.
+  1. Port the new worlds; CartPole and Acrobot live; the compatibility table. *Frozen Lake 8 × 8, the windy gridworld
+     and Taxi done.*
   2. The world study for the classic algorithms: each on every world it may run, 20 seeds, sensible settings; a world
      is a good showcase when good settings succeed on most seeds, learning takes long enough to watch, the chapter's
      knob visibly matters, and the hero beats the foil on most seeds. Written up like the runs review; presets and
      stories move where a world shows the idea better.
-  3. The scenario picker in the Lab: any allowed world for any algorithm, with its bench.
+  3. The scenario picker in the Lab: any allowed world for any algorithm, with its bench. *Done for the discrete
+     worlds so far* (`lab/worlds.js`): a "World" panel in the Lab's side lists the shared worlds every racer may run,
+     grouped, with the lab's own world marked; a click switches the world, starting from that world's profile (units,
+     discount, charts, odds rule), with a bench of its own. Recorded labs and the sandbox keep their world.
   4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds; then the encoder tier.
   5. The map keeps its order, which follows Sutton & Barto. A new station goes only where a topic needs its own, and
      then between the two stations where it naturally fits (learning from pixels, say, after DQN).

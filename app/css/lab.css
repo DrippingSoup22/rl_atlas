@@ -71,6 +71,20 @@
 .live-num:empty { display: none; }
 .live-note { margin: 6px 0 0; font-size: 13px; }
 .panel .seg { margin-bottom: 4px; }
+/* The world panel: the shared worlds these racers may run, as chips in groups; the lab's own world is marked. */
+.world-panel .wgroup + .wgroup { margin-top: 10px; }
+.world-panel h4 { font-size: 11.5px; font-weight: 600; color: var(--ink-3); margin: 0 0 6px; }
+.world-panel .wchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wchip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border: 0; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-2); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2);
+  transition: box-shadow 0.15s, color 0.15s, background 0.15s;
+}
+.wchip:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-3); }
+.wchip:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 2px; }
+.wchip.on { color: var(--surface); background: var(--ink); box-shadow: none; cursor: default; }
+.wchip .home { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.55; }
+
 .check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13.5px; cursor: pointer; }
 .check input { accent-color: var(--ink); }
 .swatch { display: inline-block; width: 16px; height: 4px; margin-left: auto; border-radius: 2px; }
@@ -629,7 +643,8 @@
 @media (max-width: 1100px) and (min-width: 701px) {
   /* The pseudocode on the left, "This step" and "Show" stacked beside it: no half-empty cards. */
   .lab-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .lab-side > :first-child { grid-row: span 2; }
+  .lab-side > .pseudo-panel { grid-row: span 2; }
+  .lab-side > .world-panel { grid-column: 1 / -1; }
 }
 @media (max-width: 700px) { .lab-side { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) {

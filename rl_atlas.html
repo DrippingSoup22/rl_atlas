@@ -1087,6 +1087,20 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .live-num:empty { display: none; }
 .live-note { margin: 6px 0 0; font-size: 13px; }
 .panel .seg { margin-bottom: 4px; }
+/* The world panel: the shared worlds these racers may run, as chips in groups; the lab's own world is marked. */
+.world-panel .wgroup + .wgroup { margin-top: 10px; }
+.world-panel h4 { font-size: 11.5px; font-weight: 600; color: var(--ink-3); margin: 0 0 6px; }
+.world-panel .wchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wchip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border: 0; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-2); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2);
+  transition: box-shadow 0.15s, color 0.15s, background 0.15s;
+}
+.wchip:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-3); }
+.wchip:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 2px; }
+.wchip.on { color: var(--surface); background: var(--ink); box-shadow: none; cursor: default; }
+.wchip .home { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.55; }
+
 .check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13.5px; cursor: pointer; }
 .check input { accent-color: var(--ink); }
 .swatch { display: inline-block; width: 16px; height: 4px; margin-left: auto; border-radius: 2px; }
@@ -1645,7 +1659,8 @@ a.ref:hover { text-decoration-color: var(--ink); }
 @media (max-width: 1100px) and (min-width: 701px) {
   /* The pseudocode on the left, "This step" and "Show" stacked beside it: no half-empty cards. */
   .lab-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .lab-side > :first-child { grid-row: span 2; }
+  .lab-side > .pseudo-panel { grid-row: span 2; }
+  .lab-side > .world-panel { grid-column: 1 / -1; }
 }
 @media (max-width: 700px) { .lab-side { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) {
@@ -3334,6 +3349,111 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   lab.Bench = Bench;
   lab.BENCH_SEEDS = SEEDS;
   lab.benchQuantile = quantile;
+})(globalThis.RL = globalThis.RL || {});
+
+</script>
+<script>
+/* The shared worlds: the set every algorithm can be tried on in the Lab, where its kind allows. Each world has a
+   profile, the settings a run there starts from: how many units (episodes, rounds of workers, sweeps), the discount,
+   what to chart, and what counts as ending well. A world that has no units for an algorithm's kind is not offered to
+   it. Who may run where:
+   - tabular methods need discrete states and actions; dynamic programming also needs the world's model;
+   - methods that predict the values of a fixed policy run on the walks (and Blackjack, tables only);
+   - value methods with approximation need discrete actions, and features for continuous states;
+   - policy-gradient methods run on any world they have units for;
+   - bandit methods run on bandits. */
+(function (RL) {
+  "use strict";
+  const lab = (RL.lab = RL.lab || {});
+
+  const GROUPS = {
+    tables: "Grids and tables",
+    approx: "Continuous states",
+    walks: "Walks to predict",
+    bandits: "Bandits",
+  };
+
+  const lose = (n, what = "episode") => ({ metric: "return", min: -n, text: `end up losing less than ${n} per ${what} on average, while still exploring` });
+  const WORLDS = [
+    { id: "cliff", group: "tables", blurb: "A cliff along the bottom edge; each step costs 1",
+      profile: { episode: 500, round: 60, sweep: 100, gamma: 1, charts: ["return"], domain: [-100, 0], success: lose(40), film: [1, 10, 100, 500] } },
+    { id: "windy", group: "tables", blurb: "A wind pushes every move up; each step costs 1",
+      profile: { episode: 170, round: 60, sweep: 100, gamma: 1, charts: ["steps"], success: { metric: "steps", max: 25, text: "end with episodes under 25 steps on average, while still exploring" }, film: [1, 10, 50, 170] } },
+    { id: "dyna-maze", group: "tables", blurb: "Only the gem pays",
+      profile: { episode: 50, round: 60, sweep: 100, gamma: 0.95, charts: ["steps"], success: { metric: "steps", max: 40, text: "end with episodes under 40 steps on average" }, film: [1, 2, 10, 50] } },
+    { id: "frozen-lake", group: "tables", blurb: "Slippery ice and holes; only the gem pays",
+      profile: { episode: 3000, round: 200, sweep: 100, gamma: 0.99, charts: ["greedy"], measures: ["greedy"], success: { metric: "greedy", min: 0.5, text: "end with a greedy policy that reaches the gem at least half the time" }, film: [1, 100, 1000, 3000] } },
+    { id: "frozen-lake-8", group: "tables", blurb: "A larger lake with ten holes; gems are rare",
+      profile: { episode: 10000, round: 400, sweep: 200, gamma: 0.99, charts: ["greedy"], measures: ["greedy"], success: { metric: "greedy", min: 0.5, text: "end with a greedy policy that reaches the gem at least half the time" }, film: [1, 1000, 5000, 10000] } },
+    { id: "taxi", group: "tables", blurb: "Pick a passenger up, drop them off; 500 states",
+      profile: { episode: 2000, round: 300, sweep: 100, gamma: 0.99, maxSteps: 200, charts: ["return"], success: lose(5, "trip"), film: [1, 100, 500, 2000] } },
+    { id: "blackjack", group: "tables", blurb: "Hit or stick against the dealer",
+      profile: { episode: 100000, gamma: 1, charts: ["return"], film: [1, 1000, 10000, 100000] } },
+    { id: "mountain-car", group: "approx", blurb: "Rock an underpowered car out of a valley",
+      profile: { episode: 500, gamma: 1, charts: ["steps"], success: { metric: "steps", max: 150, text: "end with episodes under 150 steps on average" }, film: [1, 10, 100, 500],
+        params: { features: "tiles", tilings: 8, cells: 8 } } },
+    { id: "random-walk", group: "walks", blurb: "Five states, a coin flip each step",
+      profile: { episode: 100, runs: 100, gamma: 1, charts: ["error"], measures: ["error"], film: [1, 10, 100] } },
+    { id: "random-walk-19", group: "walks", blurb: "Nineteen states; −1 on the left, +1 on the right",
+      profile: { episode: 20, runs: 100, gamma: 1, charts: ["error"], measures: ["error"], film: [1, 5, 20] } },
+    { id: "walk-1000", group: "walks", blurb: "A thousand states, jumps of up to a hundred",
+      profile: { episode: 2000, gamma: 1, charts: ["ve"], measures: ["ve"], film: [1, 100, 2000] } },
+    { id: "testbed", group: "bandits", blurb: "Ten arms, means drawn around 0",
+      profile: { step: 1000, runs: 500, charts: ["return", "optimal"], success: { metric: "optimal", min: 0.5, text: "end up pulling the best arm most of the time" } } },
+    { id: "drifting", group: "bandits", blurb: "Ten arms whose means wander",
+      profile: { step: 10000, runs: 200, charts: ["return", "optimal"], success: { metric: "optimal", min: 0.5, text: "end up pulling the current best arm most of the time" } } },
+  ];
+
+  // The kind of each algorithm, for the rules above. Algorithms not listed stay in their own lab's world.
+  const FAMILY = {};
+  const kinds = {
+    bandit: ["epsilon-greedy", "optimistic-init", "ucb", "gradient-bandit"],
+    dp: ["policy-evaluation", "policy-iteration", "value-iteration"],
+    predict: ["td0", "mc-prediction", "n-step-td", "td-lambda", "offline-lambda"],
+    "predict-linear": ["gradient-mc", "semi-gradient-td"],
+    tabular: ["sarsa", "q-learning", "expected-sarsa", "double-q", "mc-control", "exploring-starts", "off-policy-mc", "n-step-sarsa", "sarsa-lambda", "dyna-q", "dyna-q-plus", "prioritized-sweeping"],
+    linear: ["semi-gradient-sarsa"],
+    policy: ["reinforce", "baseline", "actor-critic", "a2c", "trpo", "ppo"],
+  };
+  for (const [kind, ids] of Object.entries(kinds)) for (const id of ids) FAMILY[id] = kind;
+  const MODEL = new Set(["cliff", "windy", "dyna-maze", "frozen-lake", "frozen-lake-8", "taxi"]); // worlds whose rules are written out
+  const PREDICT = new Set(["random-walk", "random-walk-19", "blackjack"]);
+
+  function allows(algorithm, w) {
+    const kind = FAMILY[algorithm.id], unit = algorithm.unit;
+    if (!kind || w.profile[unit] === undefined) return false;
+    switch (kind) {
+      case "bandit": return w.group === "bandits";
+      case "dp": return MODEL.has(w.id);
+      case "predict": return PREDICT.has(w.id);
+      case "predict-linear": return w.id === "walk-1000";
+      case "tabular": return w.group === "tables";
+      case "linear": return w.group === "approx";
+      case "policy": return w.group === "tables" && w.id !== "blackjack";
+      default: return false;
+    }
+  }
+
+  // The shared worlds every one of these algorithms may run, grouped: [{ group, title, worlds: [{ id, title, blurb }] }].
+  lab.worldsFor = function (algorithms) {
+    const ok = WORLDS.filter((w) => algorithms.every((a) => allows(a, w)));
+    return Object.entries(GROUPS).map(([group, title]) => ({ group, title, worlds: ok.filter((w) => w.group === group).map((w) => ({ id: w.id, title: lab.make(w.id).title, blurb: w.blurb })) })).filter((g) => g.worlds.length);
+  };
+  // The settings a run of these algorithms on world id starts from: { units, runs (how many runs the charts average;
+  // none: the 20-seed bench), gamma, maxSteps, charts, measures, success,
+  // film, domain, params }. Dynamic programming charts its sweeps' largest change; prediction charts its error.
+  lab.worldProfile = function (id, algorithms) {
+    const w = WORLDS.find((x) => x.id === id);
+    if (!w) return null;
+    const p = w.profile, unit = algorithms[0].unit, kinds = new Set(algorithms.map((a) => FAMILY[a.id]));
+    const out = { units: p[unit], runs: p.runs, gamma: p.gamma, maxSteps: p.maxSteps, charts: p.charts, measures: p.measures || null, success: p.success || null, film: p.film, domain: p.domain || null, params: p.params || {} };
+    if (kinds.has("dp")) Object.assign(out, { charts: ["delta"], measures: null, success: null, film: [1, 10, out.units] });
+    if (kinds.has("predict") && w.group !== "walks") Object.assign(out, { charts: ["error"], measures: ["error"], success: null });
+    if (out.film) out.film = out.film.filter((u) => u <= out.units);
+    return out;
+  };
+  lab.worldBlurb = (id) => WORLDS.find((w) => w.id === id)?.blurb || "";
+  lab.WORLD_GROUPS = GROUPS;
 })(globalThis.RL = globalThis.RL || {});
 
 </script>
@@ -10111,7 +10231,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   const plural = (n, [one, many]) => `${n.toLocaleString("en")} ${n === 1 ? one : many}`;
 
   RL.views.lab = function (host, presetId) {
-    const preset = RL.content.presets[presetId];
+    const base = RL.content.presets[presetId];
+    // the working copy: switching to another world (the world panel) changes its world, units, charts and odds rule
+    const preset = base && { ...base, params: { ...base.params } };
     if (!preset) {
       host.innerHTML = '<section class="lab-missing card"><h1>There is no such lab yet</h1><p><a href="#/">Back to the map</a></p></section>';
       return {};
@@ -10184,7 +10306,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
             </section>
           </div>
           <aside class="lab-side">
-            <section class="panel card"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-tabs" hidden></div><div class="pseudo-host"></div><p class="pseudo-diff faint" hidden></p></section>
+            <section class="panel card world-panel" hidden><h3>World</h3><div class="world-list"></div></section>
+            <section class="panel card pseudo-panel"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-tabs" hidden></div><div class="pseudo-host"></div><p class="pseudo-diff faint" hidden></p></section>
             <section class="panel card live">
               <h3>This step</h3>
               <div class="live-sym"></div>
@@ -10285,12 +10408,51 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       idleNote();
       q(".legend").innerHTML = racers.map((r, i) => `<span><i class="key" style="--k: var(--s${i + 1})"></i>${esc(r.name)}</span>`).join("");
       knobPanel();
+      worldPanel();
       oddsPanel();
       chartsFor();
       pseudoTabs();
       focus(Math.min(P.focus, racers.length - 1));
       simulate();
       fitStages();
+    }
+
+    // ---- the world panel: every shared world these racers may run, and this lab's own ----
+    function worldPanel() {
+      const box = q(".world-panel");
+      const groups = recorded || sandbox ? [] : lab.worldsFor(racers.map((r) => r.algorithm));
+      const listed = groups.some((g) => g.worlds.some((w) => w.id === base.env));
+      const own = listed ? [] : [{ group: "own", title: "This lab", worlds: [{ id: base.env, title: lab.make(base.env).title, blurb: "the world this lab was made for" }] }];
+      const all = [...own, ...groups], count = all.reduce((n, g) => n + g.worlds.length, 0);
+      box.hidden = count < 2;
+      if (box.hidden) return;
+      q(".world-list").innerHTML = all.map((g) => `<div class="wgroup"><h4>${esc(g.title)}</h4><div class="wchips">${g.worlds.map((w) =>
+        `<button type="button" class="wchip${w.id === preset.env ? " on" : ""}" data-world="${w.id}" title="${esc(w.blurb)}">${esc(w.title)}${w.id === base.env && listed ? '<i class="home" aria-label="this lab\'s world"></i>' : ""}</button>`).join("")}</div></div>`).join("");
+    }
+    function switchWorld(id) {
+      if (id === preset.env) return;
+      pause();
+      if (id === base.env) {
+        for (const k of Object.keys(preset)) delete preset[k];
+        Object.assign(preset, base, { params: { ...base.params } });
+        knobs.units = base.units;
+      } else {
+        const prof = lab.worldProfile(id, racers.map((r) => r.algorithm));
+        Object.assign(preset, { env: id, units: prof.units, charts: prof.charts, measures: prof.measures, success: prof.success, film: prof.film, runs: prof.runs, sweep: null });
+        preset.params = { ...base.params, ...prof.params };
+        if (prof.gamma !== undefined && "gamma" in base.params) preset.params.gamma = prof.gamma;
+        if (prof.domain) preset.params.domain = prof.domain; else delete preset.params.domain;
+        if (prof.maxSteps) preset.params.maxSteps = prof.maxSteps;
+        knobs.units = prof.units;
+      }
+      if ("gamma" in preset.params) knobs.gamma = preset.params.gamma;
+      for (const k in preset.params) if (!(k in KNOBS)) knobs[k] = preset.params[k];
+      knobs.runs = preset.runs;
+      knobs.seed = "typical";
+      P.e = 0;
+      q(".lab-title h1").textContent = id === base.env ? base.title : `${racers.map((r) => r.name).join(" vs ")} · ${lab.make(id).title}`;
+      q(".intro").textContent = id === base.env ? base.intro || "" : `${lab.worldBlurb(id)}. The settings start from this world's defaults; the knobs are yours.`;
+      build();
     }
 
     // ---- the stages: every racer on screen at once ----
@@ -10406,7 +10568,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       bench = new lab.Bench({
         world: make, racers: racers.map((r) => ({ algorithm: r.algorithm, params: paramsOf(r) })), units: knobs.units, measures: preset.measures, rule: rule(),
         keys: preset.charts, smooth: Object.fromEntries(preset.charts.map((k) => [k, many ? (k === "return" && unitOf() === "episode" ? 5 : 1) : METRICS[k].smooth || 1])),
-        seeds: Array.from({ length: many ? knobs.runs : 20 }, (_, i) => i + 1), giveUp: GIVE_UP, key: sandbox ? null : presetId,
+        seeds: Array.from({ length: many ? knobs.runs : 20 }, (_, i) => i + 1), giveUp: GIVE_UP, key: sandbox ? null : `${presetId}@${preset.env}`,
       });
       benchDrawn = 0;
       const chunk = () => {
@@ -10702,7 +10864,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         else out.push(`Average reward per episode over the last ${last}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 0))}.`);
         const finals = runs.map((r) => r.algorithm.show(r.at(knobs.units), r.env, r.params));
         if (finals[0].t !== undefined) env.setTime?.(finals[0].t); // a maze whose walls moved: follow the final layout
-        if (!env.slip && finals.every((d) => d.Q)) {
+        if (!env.slip && env.start !== undefined && finals.every((d) => d.Q)) { // Taxi starts anywhere: no one path to follow
           out.push(`Greedy path at the end: ${each((r, i) => { const g = lab.greedyPath(env, finals[i].Q); if (g.reached) return plural(g.path.length - 1, ["step", "steps"]);
             // Still reaching the goal while learning, yet no greedy path: the greedy moves go round in circles
             // (Dyna-Q+'s bonuses can do this: its values include the pull of moves not tried in a while).
@@ -10728,7 +10890,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (unitOf() === "sweep") {
         out.push(`Settled (largest change below θ = ${knobs.theta}) after: ${each((r) => { const t = r.metrics.converged.findIndex((c) => c); return t < 0 ? "not yet" : plural(t + 1, noun()); })}.`);
       }
-      for (const k of preset.measures) {
+      for (const k of preset.measures || []) {
         if (k === "aim" && env.kind === "throw") continue; // said above, with the spread
         if (k === "ve" && env.kind === "line") continue; // said above
         const f = METRICS[k].percent ? (v) => `${(100 * v).toFixed(0)}%` : (v) => `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(Math.abs(v) >= 10 ? 1 : 3)}${k === "aim" ? "°" : ""}`;
@@ -11077,6 +11239,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       drawCharts();
       if (view.seeds || preset.success) averageRecorded();
     });
+    q(".world-list").addEventListener("click", (e) => { const b = e.target.closest("[data-world]"); if (b) switchWorld(b.dataset.world); });
     q(".pseudo-tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (b) focus(+b.dataset.i); });
     q(".sweep-go").addEventListener("click", sweep);
     q(".sweep-runs").addEventListener("change", () => { runsChosen = true; });
