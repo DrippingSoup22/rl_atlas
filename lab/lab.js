@@ -716,8 +716,11 @@
       });
       const inBench = bench.seeds.includes(played), typical = knobs.seed === "typical" && bench.complete && played === bench.typical(), bars = n > 60;
       const where = n && !inBench ? ` It is not one of the bench seeds; ${racers.length === 1 ? "it" : "each racer's run"} ends better than ${racers.map((r, i) => { const pl = bench.place(i, own[i]); return `${pl.beats} of ${pl.of}${racers.length > 1 ? ` (${esc(r.name)})` : ""}`; }).join(", ")}.` : "";
-      q(".strip-note").innerHTML = !n ? "" : bars
-        ? `Each bar counts the seeds that end there${preset.success ? ", filled where they end well" : ""}. The black mark: the run playing above, seed ${played}${typical ? ", the typical one" : ""}.${where} Click anywhere on a row to play the seed that ends closest.`
+      const fixed = st.every((x) => { const v = x.scores.filter(Number.isFinite); return v.length > 1 && Math.max(...v) - Math.min(...v) <= 1e-9 * Math.max(1, Math.abs(v[0])); });
+      q(".strip-note").innerHTML = !n ? "" : fixed
+        ? "This algorithm uses no randomness: every seed computes the same thing, so the seeds cannot differ. The sweep below shows what changes it."
+        : bars
+        ? `Each bar is as tall as the share of the seeds that end there${preset.success ? ", filled where they end well, pale where not" : ""}; a number over a bar counts its seeds. The black mark: the run playing above, seed ${played}${typical ? ", the typical one" : ""}.${where} Click anywhere on a row to play the seed that ends closest.`
         : `One dot per seed${preset.success ? ": filled if it ends well, hollow if not" : ""}. Ringed: the run playing above, seed ${played}${typical ? ", the typical one" : ""}.${where} Click a dot to play its seed.`;
     }
 

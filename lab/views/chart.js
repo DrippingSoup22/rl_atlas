@@ -37,16 +37,22 @@
     return out;
   }
   RL.ticks = ticks;
-  // Ticks on a log axis: the powers of ten in range, with 2 and 5 times them when the range is short, and both ends.
+  // Ticks on a log axis: the powers of ten in range, with 2 and 5 times them when the range is short, and both ends;
+  // over many decades, every second or third power only, so that no more than about six labels crowd the axis.
   function logTicks(lo, hi) {
     const short = Math.log10(hi / lo) <= 2.5, out = new Set(short ? [lo, hi] : []), mults = short ? [1, 2, 5] : [1];
-    for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) for (const m of mults) { const v = m * 10 ** e; if (v >= lo * (1 - 1e-9) && v <= hi * (1 + 1e-9)) out.add(v); }
+    const e0 = Math.floor(Math.log10(lo)), e1 = Math.ceil(Math.log10(hi)), every = short ? 1 : Math.max(1, Math.ceil((e1 - e0 + 1) / 6));
+    for (let e = e0; e <= e1; e++) if ((e - e1) % every === 0) for (const m of mults) { const v = m * 10 ** e; if (v >= lo * (1 - 1e-9) && v <= hi * (1 + 1e-9)) out.add(v); }
     return [...out].sort((a, b) => a - b);
   }
+  // A power of ten as 10⁻⁶ rather than 1e-6.
+  const SUP = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+  const pow10 = (e) => `10${[...String(e)].map((c) => SUP[c]).join("")}`;
   const trim = (t) => (t.includes(".") ? t.replace(/0+$/, "").replace(/\.$/, "") : t); // 2.50 → 2.5, but 100 stays 100
   const num = (v) => {
     const a = Math.abs(v), d = a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : a >= 0.01 ? 3 : 4;
-    return (v < 0 ? "−" : "") + (a === 0 ? "0" : a < 1e-4 ? a.toExponential(0) : trim(a.toFixed(d)));
+    if (a > 0 && a < 1e-4) { const e = Math.round(Math.log10(a)), m = a / 10 ** e; return (v < 0 ? "−" : "") + (Math.abs(m - 1) < 1e-6 ? pow10(e) : `${trim(m.toFixed(1))}×${pow10(e)}`); }
+    return (v < 0 ? "−" : "") + (a === 0 ? "0" : trim(a.toFixed(d)));
   };
   // Axis labels: the chart's own format, unless it rounds two ticks to the same text (−123.5 and −124.5 both "−124"
   // on a narrow range); then as many decimals as the ticks need, the same for all.
@@ -302,9 +308,13 @@
   }
   RL.SweepChart = SweepChart;
 
-  // How the runs of the bench end: per racer one row, a dot per seed at its final score. A dashed mark splits the
-  // seeds that end well (filled) from the others (hollow); the seed playing above is ringed. A click on a dot plays
-  // that seed. Dots that would overlap are stacked a little above and below the row.
+  // How the runs of the bench end, one row per racer, its name above it. The form follows the data:
+  // - up to 60 seeds, a dot per seed at its final score: each run can be seen, pointed at and played (a click);
+  // - more, a histogram in even bins, as tall as the share of the seeds there: the shape is what can be read then;
+  // - a racer whose seeds all end the same (dynamic programming has no randomness) gets that one value in words.
+  // A dashed mark splits the seeds that end well (filled) from the others (pale or hollow); the seed playing above is
+  // ringed. When a few seeds end far from the rest (a run that got stuck), the axis keeps to the bulk and the success
+  // mark, and those seeds wait at its edge, counted. On the right, each racer's odds: a bar and "wins of seeds".
   class SeedStrip {
     constructor(host, { onPick, label = "" } = {}) {
       Object.assign(this, { host, onPick });
@@ -321,97 +331,144 @@
       this.render();
     }
 
+    // The range the axis covers: every score, unless a few lie far out; then the middle 90% of them, widened a little,
+    // with the success mark (and a percent axis keeps 0 to 100%).
+    _range(d) {
+      const all = d.rows.flatMap((r) => r.scores).filter(Number.isFinite).sort((a, b) => a - b);
+      const goal = Number.isFinite(d.threshold) ? [d.threshold] : [];
+      if (!all.length) return { lo: 0, hi: 1 };
+      const q = (f) => all[Math.min(all.length - 1, Math.max(0, Math.round(f * (all.length - 1))))];
+      let lo = all[0], hi = all[all.length - 1];
+      const c0 = q(0.05), c1 = q(0.95), core = Math.max(c1 - c0, 1e-9);
+      if (!d.percent && all.length >= 8 && hi - lo > 3 * core) { lo = c0 - 0.25 * core; hi = c1 + 0.25 * core; }
+      for (const v of [...goal, ...d.rows.map((r) => r.played?.score).filter((v) => Number.isFinite(v) && v >= lo && v <= hi)]) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      if (d.percent) { lo = Math.min(lo, 0); hi = Math.max(hi, 1); }
+      if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+      return { lo, hi };
+    }
+
     render() {
       const d = this.data, svg = this.svg;
       svg.replaceChildren();
       if (!d || !d.rows.length) return;
-      const W = Math.max(280, this.host.clientWidth), ROW = d.rows.some((r) => r.scores.length > 40) ? 44 : 34, TOP = 22, H = TOP + d.rows.length * ROW + 24;
-      const L = Math.min(150, Math.max(80, ...d.rows.map((r) => 8 + 7 * r.name.length))), R = 70;
+      const many = d.rows.some((r) => r.scores.length > 60);
+      const W = Math.max(280, this.host.clientWidth), NAME = 16, ROW = many ? 58 : 34, TOP = 20, BLOCK = NAME + ROW + 6;
+      const H = TOP + d.rows.length * BLOCK + 22, L = 12, R = 132;
       svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
       svg.setAttribute("width", W);
       svg.setAttribute("height", H);
-      const all = d.rows.flatMap((r) => [...r.scores, r.played?.score]).filter(Number.isFinite);
-      if (Number.isFinite(d.threshold)) all.push(d.threshold);
-      let lo = Math.min(...all), hi = Math.max(...all);
-      if (d.percent) { lo = Math.min(lo, 0); hi = Math.max(hi, 1); }
-      if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+      let { lo, hi } = this._range(d);
       const t = ticks(lo, hi, W < 520 ? 3 : 5);
-      lo = Math.min(lo, t[0]); hi = Math.max(hi, t[t.length - 1]);
+      if (t[0] < lo && lo - t[0] < (hi - lo) * 0.15) lo = t[0];
+      if (t[t.length - 1] > hi && t[t.length - 1] - hi < (hi - lo) * 0.15) hi = t[t.length - 1];
       // the better end on the right, so "further right" always reads "better"
-      const flip = d.lower, x = (v) => L + ((flip ? hi - v : v - lo) / (hi - lo)) * (W - L - R);
+      const flip = d.lower, x0 = L + 30, x1 = W - R - 30, x = (v) => x0 + ((flip ? hi - v : v - lo) / (hi - lo)) * (x1 - x0);
+      const clampX = (v) => Math.max(x0, Math.min(x1, x(v)));
       const fmt = d.fmt || ((v) => (d.percent ? `${Math.round(v * 100)}%` : num(v)));
-      const grid = el("g", { class: "grid" }, svg);
-      t.filter((v) => x(v) < W - R - 22).forEach((v) => el("text", { class: "tick", x: x(v), y: H - 6, "text-anchor": "middle" }, grid).textContent = fmt(v));
-      el("text", { class: "tick end", x: W - R + 6, y: H - 6 }, grid).textContent = "better →";
-      if (Number.isFinite(d.threshold)) {
+      const grid = el("g", { class: "grid" }, svg), goal = Number.isFinite(d.threshold);
+      t.filter((v) => v >= lo - 1e-9 && v <= hi + 1e-9).forEach((v) => el("text", { class: "tick", x: x(v), y: H - 6, "text-anchor": "middle" }, grid).textContent = fmt(v));
+      el("text", { class: "tick end", x: W - R + 10, y: H - 6 }, grid).textContent = "better →";
+      if (goal) {
         const tx = x(d.threshold);
-        el("line", { class: "goal", x1: tx, x2: tx, y1: TOP - 6, y2: H - 20 }, grid);
-        el("text", { class: "goal-label", x: tx + 5, y: TOP - 8 }, grid).textContent = `ends well: ${d.lower ? "≤" : "≥"} ${fmt(d.threshold)}`;
+        el("line", { class: "goal", x1: tx, x2: tx, y1: TOP - 4, y2: H - 20 }, grid);
+        el("text", { class: "goal-label", x: tx + 5, y: TOP - 6 }, grid).textContent = `ends well: ${d.lower ? "≤" : "≥"} ${fmt(d.threshold)}`;
       }
       d.rows.forEach((r, ri) => {
-        const cy = TOP + ri * ROW + ROW / 2, g = el("g", { class: "row" }, svg), many = r.scores.length > 40, rad = many ? 2.6 : 4.2;
-        const goal = Number.isFinite(d.threshold);
-        el("line", { class: "axis", x1: L, x2: W - R, y1: cy, y2: cy }, g);
-        el("text", { class: "name", x: L - 10, y: cy + 4, "text-anchor": "end" }, g).textContent = r.name;
-        const wins = r.ok.filter(Boolean).length;
-        el("text", { class: "count", x: W - R + 6, y: cy + 4 }, g).textContent = Number.isFinite(d.threshold) ? `${wins} of ${r.scores.length}` : `${r.scores.length} seeds`;
-        if (r.scores.length > 60) { this._histogram(g, r, x, cy, ROW, goal, d, fmt); return; }
+        const top = TOP + ri * BLOCK, cy = top + NAME + ROW / 2, g = el("g", { class: "row" }, svg);
+        el("text", { class: "name", x: L, y: top + 12 }, g).textContent = r.name;
+        const n = r.scores.length, wins = r.ok.filter(Boolean).length;
+        el("line", { class: "axis", x1: x0, x2: x1, y1: n > 60 ? cy + ROW / 2 - 3 : cy, y2: n > 60 ? cy + ROW / 2 - 3 : cy }, g); // a histogram stands on it
+        // the odds, on the right: a bar of the share that ends well, and the count
+        if (goal) {
+          const bx = W - R + 10, bw = 40;
+          el("rect", { class: "odds-track", x: bx, y: cy - 4, width: bw, height: 8, rx: 4 }, g);
+          el("rect", { class: "odds-fill", x: bx, y: cy - 4, width: Math.max(n && wins ? 3 : 0, (bw * wins) / Math.max(1, n)), height: 8, rx: 4, style: `--c: var(${r.color})` }, g);
+          el("text", { class: "count", x: bx + bw + 6, y: cy + 4 }, g).textContent = `${wins} of ${n}`;
+        } else el("text", { class: "count", x: W - R + 10, y: cy + 4 }, g).textContent = `${n} seeds`;
+        const vals = r.scores.filter(Number.isFinite);
+        // every seed the same: say it
+        if (vals.length > 1 && Math.max(...vals) - Math.min(...vals) <= 1e-9 * Math.max(1, Math.abs(vals[0]))) {
+          el("circle", { class: `seed-dot${goal && !r.ok[0] ? " miss" : ""}`, r: 5, cx: clampX(vals[0]), cy, style: `--c: var(${r.color})` }, g);
+          const tx = clampX(vals[0]), right = tx < (x0 + x1) / 2;
+          el("text", { class: "same", x: tx + (right ? 12 : -12), y: cy + 4, "text-anchor": right ? "start" : "end" }, g).textContent = `every seed ends at ${fmt(vals[0])}: no randomness`;
+          return;
+        }
+        // seeds beyond the axis: counted at its edge
+        const out = { left: 0, right: 0 };
+        r.scores.forEach((v) => { if (!Number.isFinite(v)) return; const px = x(v); if (px < x0 - 0.5) out.left++; else if (px > x1 + 0.5) out.right++; });
+        for (const side of ["left", "right"]) if (out[side]) {
+          // in the gutter: an arrow out of the axis and how many seeds lie that way
+          const dir = side === "left" ? -1 : 1, ex = side === "left" ? x0 - 9 : x1 + 9;
+          const mark = el("g", { class: "beyond-mark" }, g);
+          el("path", { class: "beyond", d: `M${ex} ${cy - 4.5}L${ex + 6 * dir} ${cy}L${ex} ${cy + 4.5}Z`, style: `--c: var(${r.color})` }, mark);
+          el("text", { class: "beyond-n", x: ex + 9 * dir, y: cy + 4, "text-anchor": side === "left" ? "end" : "start" }, mark).textContent = out[side];
+          el("title", {}, mark).textContent = `${out[side]} ${out[side] === 1 ? "seed ends" : "seeds end"} far ${side === (flip ? "right" : "left") ? "below" : "above"} the others, off this axis`;
+        }
+        if (n > 60) { this._histogram(g, r, x, clampX, x0, x1, cy, ROW, goal, d, fmt); return; }
         // stack dots that would overlap: each pixel bin of a dot's width fills above and below the row in turn
-        const bins = new Map(), pos = r.scores.map((v) => {
+        const rad = 4.2, bins = new Map(), pos = r.scores.map((v) => {
           if (!Number.isFinite(v)) return null;
-          const px = x(v), b = Math.round(px / (rad * 2 + 1)), k = bins.get(b) || 0;
+          const px = clampX(v), b = Math.round(px / (rad * 2 + 1)), k = bins.get(b) || 0;
           bins.set(b, k + 1);
           const off = Math.min(ROW / 2 - rad - 1, Math.ceil(k / 2) * (rad * 1.6)) * (k % 2 ? -1 : 1);
           return [px, cy + off];
         });
         r.scores.forEach((v, i) => {
           if (!pos[i]) return;
-          const ok = Number.isFinite(d.threshold) ? r.ok[i] : true;
+          const ok = goal ? r.ok[i] : true;
           const dot = el("circle", { class: `seed-dot${ok ? "" : " miss"}`, r: rad, cx: pos[i][0], cy: pos[i][1], style: `--c: var(${r.color})` }, g);
-          dot.addEventListener("pointerenter", (ev) => RL.tip.show(ev.clientX, ev.clientY, `<div class="head">Seed ${r.seeds[i]}</div><div class="row"><i class="key" style="--k: var(${r.color})"></i><b>${fmt(v)}</b><span>${RL.esc(r.name)}${Number.isFinite(d.threshold) ? (ok ? " · ends well" : " · does not") : ""}</span></div><div class="faint">Click to play this seed</div>`));
+          dot.addEventListener("pointerenter", (ev) => RL.tip.show(ev.clientX, ev.clientY, `<div class="head">Seed ${r.seeds[i]}</div><div class="row"><i class="key" style="--k: var(${r.color})"></i><b>${fmt(v)}</b><span>${RL.esc(r.name)}${goal ? (ok ? " · ends well" : " · does not") : ""}</span></div><div class="faint">Click to play this seed</div>`));
           dot.addEventListener("pointerleave", () => RL.tip.hide());
           dot.addEventListener("click", () => { RL.tip.hide(); this.onPick?.(r.seeds[i]); });
         });
         const p = r.played;
         if (p && Number.isFinite(p.score)) {
-          const i = r.seeds.indexOf(p.seed), at = i >= 0 && pos[i] ? pos[i] : [x(p.score), cy];
+          const i = r.seeds.indexOf(p.seed), at = i >= 0 && pos[i] ? pos[i] : [clampX(p.score), cy];
           if (i < 0) el("circle", { class: "seed-dot own", r: rad, cx: at[0], cy: at[1], style: `--c: var(${r.color})` }, g);
           el("circle", { class: "seed-ring", r: rad + 4, cx: at[0], cy: at[1] }, g);
         }
       });
     }
 
-    // Many seeds: a small histogram above the row instead of dots, filled where runs end well; a click plays the seed
-    // whose ending is closest to where it lands.
-    _histogram(g, r, x, cy, ROW, goal, d, fmt) {
-      const x0 = x(d.lower ? Math.max(...r.scores.filter(Number.isFinite)) : Math.min(...r.scores.filter(Number.isFinite)));
-      const W = this.svg.viewBox.baseVal.width, bw = 6, counts = new Map();
+    // Many seeds: a histogram in 28 even bins over the axis, each bar as tall as its share of the seeds (the tallest
+    // reaching the row's height), split into the seeds that end well (filled) and the rest (pale); a click plays the
+    // seed whose ending is closest to where it lands.
+    _histogram(g, r, x, clampX, x0, x1, cy, ROW, goal, d, fmt) {
+      const B = 28, bw = (x1 - x0) / B, counts = Array.from({ length: B }, () => ({ n: 0, ok: 0 }));
       r.scores.forEach((v, i) => {
         if (!Number.isFinite(v)) return;
-        const b = Math.floor(x(v) / bw), c = counts.get(b) || { n: 0, ok: 0 };
-        c.n++;
-        if (r.ok[i]) c.ok++;
-        counts.set(b, c);
+        const b = Math.min(B - 1, Math.max(0, Math.floor((clampX(v) - x0) / bw)));
+        counts[b].n++;
+        if (r.ok[i]) counts[b].ok++;
       });
-      const top = Math.max(...[...counts.values()].map((c) => c.n)), hgt = ROW - 10;
-      for (const [b, c] of counts) {
-        const h = Math.max(1.5, (c.n / top) * hgt), ok = goal ? c.ok >= c.n / 2 : true;
-        el("rect", { class: `seed-bar${ok ? "" : " miss"}`, x: b * bw + 0.5, y: cy + ROW / 2 - 4 - h, width: bw - 1, height: h, rx: 1, style: `--c: var(${r.color})` }, g);
-      }
-      const hit = el("rect", { class: "hit", x: Math.min(x0, W) - 6, y: cy - ROW / 2, width: W, height: ROW }, g);
+      const top = Math.max(1, ...counts.map((c) => c.n)), hgt = ROW - 20, base = cy + ROW / 2 - 3, n = r.scores.length;
+      counts.forEach((c, b) => {
+        if (!c.n) return;
+        const h = Math.max(2, (c.n / top) * hgt), hOk = goal ? (h * c.ok) / c.n : h, bx = x0 + b * bw + 0.75;
+        if (h - hOk > 0.5) el("rect", { class: "seed-bar miss", x: bx, y: base - h, width: bw - 1.5, height: h - hOk, rx: 1.5, style: `--c: var(${r.color})` }, g);
+        if (hOk > 0.5) el("rect", { class: "seed-bar", x: bx, y: base - hOk, width: bw - 1.5, height: hOk, rx: 1.5, style: `--c: var(${r.color})` }, g);
+        // a bar holding a large share says how many
+        if (c.n / n >= 0.12) el("text", { class: "bar-n", x: bx + (bw - 1.5) / 2, y: base - h - 3, "text-anchor": "middle" }, g).textContent = c.n;
+      });
+      const W = this.svg.viewBox.baseVal.width;
+      const hit = el("rect", { class: "hit", x: x0 - 6, y: cy - ROW / 2, width: x1 - x0 + 12, height: ROW }, g);
       const nearest = (ev) => {
         const box = this.svg.getBoundingClientRect(), px = ((ev.clientX - box.left) / box.width) * W;
         let best = -1, bd = Infinity;
-        r.scores.forEach((v, i) => { const dd = Math.abs(x(v) - px); if (dd < bd) { bd = dd; best = i; } });
+        r.scores.forEach((v, i) => { const dd = Math.abs(clampX(v) - px); if (dd < bd) { bd = dd; best = i; } });
         return best;
       };
-      hit.addEventListener("pointermove", (ev) => { const i = nearest(ev); if (i >= 0) RL.tip.show(ev.clientX, ev.clientY, `<div class="head">Seed ${r.seeds[i]}</div><div class="row"><i class="key" style="--k: var(${r.color})"></i><b>${fmt(r.scores[i])}</b><span>${RL.esc(r.name)}</span></div><div class="faint">Click to play this seed</div>`); });
+      const binOf = (ev) => { const box = this.svg.getBoundingClientRect(), px = ((ev.clientX - box.left) / box.width) * W; return Math.min(B - 1, Math.max(0, Math.floor((px - x0) / bw))); };
+      hit.addEventListener("pointermove", (ev) => {
+        const i = nearest(ev), c = counts[binOf(ev)];
+        if (i >= 0) RL.tip.show(ev.clientX, ev.clientY, `<div class="head">${c.n} of ${n} seeds end here</div><div class="row"><i class="key" style="--k: var(${r.color})"></i><b>${fmt(r.scores[i])}</b><span>seed ${r.seeds[i]}, the closest</span></div><div class="faint">Click to play it</div>`);
+      });
       hit.addEventListener("pointerleave", () => RL.tip.hide());
       hit.addEventListener("click", (ev) => { const i = nearest(ev); RL.tip.hide(); if (i >= 0) this.onPick?.(r.seeds[i]); });
       const p = r.played;
       if (p && Number.isFinite(p.score)) {
-        const px = x(p.score);
-        el("line", { class: "seed-mark", x1: px, x2: px, y1: cy - ROW / 2 + 2, y2: cy + ROW / 2 - 2 }, g);
+        const px = clampX(p.score);
+        el("line", { class: "seed-mark", x1: px, x2: px, y1: cy - ROW / 2 + 2, y2: cy + ROW / 2 - 1 }, g);
       }
     }
 
