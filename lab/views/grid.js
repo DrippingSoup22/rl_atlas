@@ -54,8 +54,8 @@
       this.model = null; // a learned model: where each move led (−1: never tried)
       this.path_ = [];
       this.heat = new Map(); // "a,b" (tiles a < b) → how often recent episodes crossed between them, fading per episode
-      const W = env.cols * T, H = env.rows * T;
-      this.svg = el("svg", { class: `gridview${env.ice ? " ice" : ""}`, viewBox: `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`, role: "img", "aria-label": env.title });
+      const W = env.cols * T, H = env.rows * T, WIND = env.wind ? 26 : 0; // a strip under the grid for the wind
+      this.svg = el("svg", { class: `gridview${env.ice ? " ice" : ""}`, viewBox: `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + WIND + 2 * PAD}`, role: "img", "aria-label": env.title });
       this.svg.style.maxWidth = `${env.cols * (env.cols <= 5 ? 125 : 100)}px`; // small worlds stay a comfortable size instead of filling the page
       host.appendChild(this.svg);
       const layer = (cls) => el("g", { class: cls }, this.svg);
@@ -76,6 +76,7 @@
       this.nums = [];
       for (let s = 0; s < env.nS; s++) this._tile(s);
       if (env.jumps?.length) this._jumps();
+      if (env.wind) this._wind();
       this._agent();
       this.trailEl = el("path", { class: "trail", pathLength: 1 }, this.gTrail);
       this.pathEl = el("path", { class: "greedy", pathLength: 1 }, this.gPath);
@@ -153,6 +154,15 @@
         const at = (k) => 0.49 * p0[k] + 0.42 * p1[k] + 0.09 * p2[k];
         el("text", { class: "jump-r", x: at(0) + 6, y: at(1) + 4 }, this.gJumps).textContent = `+${j.reward}`;
       }
+    }
+
+    // The wind's strength under each column: as many small arrows as tiles it pushes up.
+    _wind() {
+      const g = el("g", { class: "wind" }, this.svg), y = this.env.rows * T + 18;
+      this.env.wind.forEach((k, c) => {
+        if (!k) return;
+        el("text", { x: c * T + HALF, y, "text-anchor": "middle" }, g).textContent = "↑".repeat(k);
+      });
     }
 
     _agent() {

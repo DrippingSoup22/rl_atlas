@@ -5,10 +5,7 @@
 // Some runs are rare on purpose (a failure the story names as rare); the flags only say where to look.
 // Usage, from rl_atlas/ after python build.py:  N=40 node tools/story-runs.js [story ids...]
 // To see the typical seed of one story (its runs' ranks closest to the middle):  TYPICAL=1 node tools/story-runs.js id
-const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "envs/approx", "envs/policy", "dp", "run", "measures", "features",
-  "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy", "agents/offline", "agents/model",
-  "envs/deep", "recorded", "mcts", "bench"];
-for (const file of FILES) require(`../lab/${file}.js`);
+require("../lab/node.js");
 require("../app/content.js");
 const { lab, content } = globalThis.RL;
 const N = Number(process.env.N || 40), only = process.argv.slice(2);

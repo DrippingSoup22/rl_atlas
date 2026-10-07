@@ -45,6 +45,26 @@
       ice: true,
       valueRange: 1,
     },
+    // Gymnasium's larger Frozen Lake, the same slippery ice on an 8 × 8 lake with ten holes. Gems are rare: a random
+    // walker reaches this one about once in five hundred episodes.
+    "frozen-lake-8": {
+      title: "Frozen Lake 8 × 8",
+      map: ["S.......", "........", "...H....", ".....H..", "...H....", ".HH...H.", ".H..H.H.", "...H...G"],
+      reward: { step: 0, goal: 1 },
+      slip: 2 / 3,
+      ice: true,
+      valueRange: 1,
+    },
+    // Sutton & Barto, Example 6.5: a wind blows up through the middle columns, pushing every move up by the strength of
+    // the column it starts from (0 to 2 tiles). Each step costs 1 until the goal; the walls of the grid stop the agent,
+    // and the wind cannot push it past the top row.
+    windy: {
+      title: "Windy gridworld",
+      map: ["..........", "..........", "..........", "S......G..", "..........", "..........", ".........."],
+      wind: [0, 0, 0, 1, 1, 1, 2, 2, 1, 0],
+      reward: { step: -1 },
+      valueRange: 20,
+    },
     // Sutton & Barto, Example 8.1: a small maze where only the gem pays (+1), discounted by γ = 0.95.
     "dyna-maze": {
       title: "Dyna maze",
@@ -129,9 +149,12 @@
     const isTerminal = (s) => cells[s] === "G" || cells[s] === "g" || cells[s] === "T" || cells[s] === "H";
     const all = [0, 1, 2, 3];
 
-    // Where a move in direction d from s ends, and what it pays.
+    // Where a move in direction d from s ends, and what it pays. In the wind, the move is shifted up by the wind of the
+    // column it starts from, and the edges of the grid clamp it.
+    const wind = w.wind || null;
     function land(s, d) {
-      const r = Math.floor(s / cols) + MOVES[d][0], c = (s % cols) + MOVES[d][1];
+      let r = Math.floor(s / cols) + MOVES[d][0], c = (s % cols) + MOVES[d][1];
+      if (wind) { r = Math.min(rows - 1, Math.max(0, r - wind[s % cols])); c = Math.min(cols - 1, Math.max(0, c)); }
       if (r < 0 || c < 0 || r >= rows || c >= cols) return { s2: s, r: wall };
       const s2 = r * cols + c, k = cells[s2];
       if (k === "#") return { s2: s, r: wall };
@@ -151,7 +174,7 @@
     const env = {
       name: typeof name === "string" ? name : "custom", key: typeof name === "string" ? name : JSON.stringify(w),
       kind: "grid", title: w.title, rows, cols, nS: rows * cols, nA: 4,
-      start, valueRange: w.valueRange ?? 10, jumps, slip, ice: !!w.ice, map: w.map, rewards: reward,
+      start, valueRange: w.valueRange ?? 10, jumps, slip, ice: !!w.ice, map: w.map, rewards: reward, wind,
       // Tiles an episode may start from (for exploring starts): anything that is not a wall, a cliff or an ending.
       starts: Array.from({ length: rows * cols }, (_, s) => s).filter((s) => !"#CGgTH".includes(cells[s])),
       tile: (s) => cells[s],

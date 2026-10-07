@@ -39,8 +39,8 @@
   // its remaining units as more of the same. `stopped` then says after how many units it stopped; 0 if it never did.
   lab.simulate = function ({ world, algorithm, params, units, seed, snapshots = true, measures = null, giveUp = 0 }) {
     const make = typeof world === "function" ? world : () => lab.make(world);
-    const p = { maxSteps: 5000, ...params };
     const env = make(), rng = lab.rng(seed);
+    const p = { maxSteps: env.maxSteps || 5000, ...params }; // a world may cap its own episodes (Taxi: 200 steps)
     env.init?.(rng);
     const layout = algorithm.memory(env, p);
     const { buf, m } = lab.memory(layout);

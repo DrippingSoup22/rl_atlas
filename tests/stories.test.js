@@ -9,10 +9,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const FILES = ["core", "envs/grid", "envs/bandit", "envs/chain", "envs/blackjack", "envs/mdp", "envs/approx", "envs/policy", "dp", "run", "measures", "features",
-  "policies", "agents/td", "agents/mc", "agents/dp", "agents/bandit", "agents/traces", "agents/planning", "agents/linear", "agents/policy", "agents/offline", "agents/model",
-  "envs/deep", "recorded", "mcts", "bench"];
-for (const file of FILES) require(`../lab/${file}.js`);
+require("../lab/node.js");
 require("../app/content.js");
 const { lab, content } = globalThis.RL;
 const STORE = path.join(__dirname, "story-runs.json");

@@ -466,6 +466,32 @@ film = [0, 100, 300, 1000]
 intro = "Every true value is 0, and nothing random can mislead the learner: rewards are always 0. Yet off-policy semi-gradient TD with these features walks its weights away to infinity. Take away any one of the three ingredients and the weights stay bounded: with a table they drift up for a few thousand steps, then come back down."
 success = { metric = "weights", max = 100, text = "keep the size of their weights under 100" }
 
+[windy-sarsa]
+title = "SARSA in the windy gridworld"
+env = "windy"
+algorithms = ["sarsa", "q-learning"]
+units = 170
+alpha = 0.5
+epsilon = 0.1
+gamma = 1.0
+charts = ["steps"]
+film = [1, 10, 50, 170]
+intro = "Sutton & Barto's Example 6.5. The wind pushes every move up by the strength of its column, so the straight way to the goal does not work. The first episode wanders for hundreds of steps; then the episodes shorten fast, toward the best path of 15 steps."
+success = { metric = "steps", max = 25, text = "end with episodes under 25 steps on average, while still exploring" }
+
+[taxi]
+title = "Q-learning drives a taxi"
+env = "taxi"
+algorithms = ["q-learning", "sarsa"]
+units = 2000
+alpha = 0.1
+epsilon = 0.1
+gamma = 0.99
+charts = ["return"]
+film = [1, 100, 500, 2000]
+intro = "Dietterich's taxi: pick the passenger up at one stand, drop them at another. Every action costs 1, a wrong pick-up or drop-off 10, and the right drop-off pays 20. Five hundred states: the tiles show the 25 that belong to the trip under way."
+success = { metric = "return", min = -5, text = "end up losing less than 5 per trip on average, while still exploring" }
+
 [sandbox]
 title = "Sandbox"
 env = "sandbox"
