@@ -66,7 +66,7 @@
       const every = Math.max(1, Math.round(units / 400)), P = new Float64Array(env.nS * env.nA), gamma = p.judge ?? p.gamma;
       let V = null;
       return (d, stats, t) => {
-        if (!V || t % every === 0 || t === units - 1) V = lab.evaluate(env, lab.greedyFromQ(env, d.Q, P), gamma, { theta: 1e-6, sweeps: 5000, start: V });
+        if (!V || t % every === 0 || t === units - 1) V = lab.evaluate(env, lab.greedyFromQ(env, d.Q || d.P, P), gamma, { theta: 1e-6, sweeps: 5000, start: V });
         stats.greedy = V[env.start];
       };
     },

@@ -121,7 +121,7 @@
       id: "mc-prediction", title: "Monte Carlo", unit: "episode", run: mcPrediction,
       memory: (env) => ({ V: env.nS, N: env.nS }),
       init: (m, env, p) => { for (let s = 0; s < env.nS; s++) m.V[s] = env.terminal(s) ? 0 : p.v0 || 0; },
-      show: (m) => ({ V: m.V, N: m.N }),
+      show: (m, env, p) => ({ V: m.V, N: m.N, P: lab.policyOf(env, p) }),
       rule: (p) => `\\val{V(S_t)} \\leftarrow \\val{V(S_t)} + ${avg(p)}\\,\\big[\\rew{G_t} - \\val{V(S_t)}\\big]`,
       numbers: (ev, p) => numbers(ev, stepTex(ev, p)),
     },

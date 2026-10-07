@@ -16,8 +16,20 @@
     return P;
   };
 
-  // A policy by name: "random", or one the world defines (like Blackjack's "stick-20").
-  lab.policyTable = (env, name = "random") => (name === "random" ? lab.randomPolicy(env) : env.policy(name));
+  // A policy by name: "random"; "mostly-best", the shortest way to the goal nine times in ten (the best moves for a
+  // discount of 0.95, tied ones shared) and a random move otherwise, which a prediction method can evaluate on any world
+  // whose rules are written out, in episodes of sensible length; or one the world defines (like Blackjack's "stick-20").
+  const named = new Map();
+  lab.policyTable = function (env, name = "random") {
+    if (name === "random") return lab.randomPolicy(env);
+    if (name !== "mostly-best") return env.policy(name);
+    const key = env.key || env.name;
+    if (!named.has(key)) {
+      const best = lab.greedyPolicy(env, lab.valueIteration(env, 0.95), 0.95, 1e-6), R = lab.randomPolicy(env);
+      named.set(key, best.map((b, i) => 0.9 * b + 0.1 * R[i]));
+    }
+    return named.get(key);
+  };
 
   // The value of taking a in s and then being worth V: expected reward plus discounted value of where it leads.
   lab.backup = function (env, V, s, a, gamma) {

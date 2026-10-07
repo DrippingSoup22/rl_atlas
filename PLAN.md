@@ -248,15 +248,26 @@ animations and hover effects this guide relies on would not be smooth.
   1. Port the new worlds; CartPole and Acrobot live; the compatibility table. *Frozen Lake 8 × 8, the windy gridworld,
      Taxi, and CartPole and Acrobot live done* (`lab/envs/control.js`, checked step for step against Gymnasium's own
      trajectories; tile coding, 8 tilings of 6 cells per coordinate; new Acrobot view, the CartPole view drawing live
-     snapshots too). Linear SARSA and the policy-gradient methods run on them from the World panel.
+     snapshots too). Linear SARSA and the policy-gradient methods run on them from the World panel. *Catch* (bsuite's
+     falling ball, 250 states: tables, DP and policy methods) added with its own view. *MinAtar-style Breakout moves to
+     the deep Lab*: a 10 × 10 image needs the small convolutional encoder, which linear features can't stand in for.
   2. The world study for the classic algorithms: each on every world it may run, 20 seeds, sensible settings; a world
      is a good showcase when good settings succeed on most seeds, learning takes long enough to watch, the chapter's
      knob visibly matters, and the hero beats the foil on most seeds. Written up like the runs review; presets and
-     stories move where a world shows the idea better.
+     stories move where a world shows the idea better. *First round done* (`recorder/WORLD-STUDY.md`): the settings
+     each algorithm starts from in each world (3 seeds per candidate), episode caps, Frozen Lake judged by its chance of
+     reaching the gem, prediction on the grids with a near-optimal policy and episodes starting anywhere; pairings that
+     rarely end well are marked "hard" in the World panel, not hidden. Still to do: the 20-seed showcase choice per
+     chapter, and moving presets or stories where another world shows the idea better.
   3. The scenario picker in the Lab: any allowed world for any algorithm, with its bench. *Done for the discrete
      worlds so far* (`lab/worlds.js`): a "World" panel in the Lab's side lists the shared worlds every racer may run,
      grouped, with the lab's own world marked; a click switches the world, starting from that world's profile (units,
      discount, charts, odds rule), with a bench of its own. Recorded labs and the sandbox keep their world.
+     *Lab review after it* (every lab × every world it offers, in the browser): Monte Carlo and the other prediction
+     methods now get every world whose values can be worked out; a racer's step size keeps its ratio to the lab's; the
+     views handle every kind of learner (action values, a policy with or without a critic, a fixed policy); playback
+     never runs more than one move per tick, so Monte Carlo and REINFORCE walk their episodes with the pseudocode in step;
+     long runs train in slices with their progress shown, the page staying responsive.
   4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds; then the encoder tier.
   5. The map keeps its order, which follows Sutton & Barto. A new station goes only where a topic needs its own, and
      then between the two stations where it naturally fits (learning from pixels, say, after DQN).

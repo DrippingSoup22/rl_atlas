@@ -37,8 +37,24 @@
   // world: a world's name or a function that makes one. measures: names of numbers to add after each unit (measures.js).
   // giveUp (runs without snapshots: the odds): stop a run once that many episodes in a row ran to the step cap, and take
   // its remaining units as more of the same. `stopped` then says after how many units it stopped; 0 if it never did.
-  lab.simulate = function ({ world, algorithm, params, units, seed, snapshots = true, measures = null, giveUp = 0 }) {
-    const make = typeof world === "function" ? world : () => lab.make(world);
+  lab.simulate = (opts) => {
+    const job = lab.simulateJob(opts);
+    job.step(Infinity);
+    return job.result;
+  };
+
+  // The same run as a job the page can spread over many short slices, so that a long one never freezes it:
+  // job.step(ms) runs units for about that long and says whether the run is done; then job.result is what
+  // lab.simulate returns. job.done is the share of units run so far (0 to 1).
+  lab.simulateJob = function ({ world, algorithm, params, units, seed, snapshots = true, measures = null, giveUp = 0 }) {
+    // params.anyStart: episodes start from any state (prediction on a world whose policy would visit only its own
+    // path; the values of a policy do not depend on where its episodes start)
+    const fresh = typeof world === "function" ? world : () => lab.make(world);
+    const make = !params.anyStart ? fresh : () => {
+      const e = fresh(), from = e.kind === "grid" ? e.starts : lab.dpStates(e);
+      e.reset = (r, s0) => (s0 !== undefined ? s0 : from[Math.floor(r.next() * from.length)]);
+      return e;
+    };
     const env = make(), rng = lab.rng(seed);
     const p = { maxSteps: env.maxSteps || 5000, ...params }; // a world may cap its own episodes (Taxi: 200 steps)
     env.init?.(rng);
@@ -51,9 +67,23 @@
     const marks = snapshots ? Math.ceil(units / every) : 0;
     const saved = new Float64Array(marks * size), rngAt = new Uint32Array(marks);
     const metrics = {};
-    let capped = 0, stopped = 0;
+    let capped = 0, stopped = 0, t = 0, result = null;
 
-    for (let t = 0; t < units; t++) {
+    const job = {
+      get done() { return result ? 1 : t / units; },
+      get result() { return result; },
+      step(ms) {
+        const until = performance.now() + ms;
+        while (!result && t < units) {
+          if (advance()) break;
+          if (performance.now() >= until) break;
+        }
+        if (!result && (t >= units || stopped)) result = finish();
+        return !!result;
+      },
+    };
+    // One unit: returns true when the run gives up (giveUp).
+    function advance() {
       if (snapshots && t % every === 0) {
         const k = t / every;
         saved.set(buf, k * size);
@@ -68,60 +98,66 @@
         if (capped >= giveUp) {
           for (const key in metrics) metrics[key].fill(metrics[key][t], t + 1);
           stopped = t + 1;
-          break;
+          return true;
         }
       }
+      t++;
+      return false;
     }
-    const end = { buf: Float64Array.from(buf), world: worldLen ? Float64Array.from(env.state) : null, rng: rng.state };
+    return job;
 
-    // A working copy that can be moved to the start of any unit, and the world the views look at.
-    const work = { env: make(), ...lab.memory(layout), rng: lab.rng(), t: -1 };
-    const shown = make();
-    function goTo(t) {
-      if (t >= units) {
-        work.buf.set(end.buf);
-        if (worldLen) work.env.state.set(end.world);
-        work.rng.state = end.rng;
-        work.t = units;
-      } else {
-        const k = Math.floor(t / every);
-        if (!(work.t >= k * every && work.t <= t)) {
-          work.buf.set(saved.subarray(k * size, k * size + bufLen));
-          if (worldLen) work.env.state.set(saved.subarray(k * size + bufLen, (k + 1) * size));
-          work.rng.state = rngAt[k];
-          work.t = k * every;
+    function finish() {
+      const end = { buf: Float64Array.from(buf), world: worldLen ? Float64Array.from(env.state) : null, rng: rng.state };
+
+      // A working copy that can be moved to the start of any unit, and the world the views look at.
+      const work = { env: make(), ...lab.memory(layout), rng: lab.rng(), t: -1 };
+      const shown = make();
+      function goTo(t) {
+        if (t >= units) {
+          work.buf.set(end.buf);
+          if (worldLen) work.env.state.set(end.world);
+          work.rng.state = end.rng;
+          work.t = units;
+        } else {
+          const k = Math.floor(t / every);
+          if (!(work.t >= k * every && work.t <= t)) {
+            work.buf.set(saved.subarray(k * size, k * size + bufLen));
+            if (worldLen) work.env.state.set(saved.subarray(k * size + bufLen, (k + 1) * size));
+            work.rng.state = rngAt[k];
+            work.t = k * every;
+          }
+          work.env.restore?.();
+          while (work.t < t) lab.play(algorithm, { env: work.env, m: work.m, rng: work.rng, p, t: work.t++ });
         }
-        work.env.restore?.();
-        while (work.t < t) lab.play(algorithm, { env: work.env, m: work.m, rng: work.rng, p, t: work.t++ });
+        if (worldLen) { shown.state.set(work.env.state); shown.restore?.(); }
       }
-      if (worldLen) { shown.state.set(work.env.state); shown.restore?.(); }
-    }
 
-    return {
-      env: shown, world, algorithm, params: p, units, seed, metrics, every, stopped,
-      // What the algorithm knew at the start of unit t (t = units: at the end), as a fresh copy.
-      at(t) {
-        if (!snapshots) throw new Error("this run kept no snapshots");
-        goTo(t);
-        return lab.memory(layout, Float64Array.from(work.buf)).m;
-      },
-      // Unit t again, from its own starting point: { m, events }, where events is the algorithm's generator.
-      replay(t) {
-        goTo(t);
-        const copy = lab.memory(layout, Float64Array.from(work.buf)), r = lab.rng();
-        r.state = work.rng.state;
-        return { m: copy.m, events: algorithm.run({ env: shown, m: copy.m, rng: r, p, t }) };
-      },
-      // The tiles unit t visited, in order; a fall adds the cliff tile, a −1 break, then where it landed.
-      trail(t) {
-        const { events } = this.replay(t), path = [];
-        for (const ev of events) {
-          if (ev.type === "start") path.push(ev.s);
-          else if (ev.type === "move") { if (ev.fell !== undefined) path.push(ev.fell, -1, ev.s2); else path.push(ev.s2); }
-        }
-        return path;
-      },
-    };
+      return {
+        env: shown, world, algorithm, params: p, units, seed, metrics, every, stopped,
+        // What the algorithm knew at the start of unit t (t = units: at the end), as a fresh copy.
+        at(t) {
+          if (!snapshots) throw new Error("this run kept no snapshots");
+          goTo(t);
+          return lab.memory(layout, Float64Array.from(work.buf)).m;
+        },
+        // Unit t again, from its own starting point: { m, events }, where events is the algorithm's generator.
+        replay(t) {
+          goTo(t);
+          const copy = lab.memory(layout, Float64Array.from(work.buf)), r = lab.rng();
+          r.state = work.rng.state;
+          return { m: copy.m, events: algorithm.run({ env: shown, m: copy.m, rng: r, p, t }) };
+        },
+        // The tiles unit t visited, in order; a fall adds the cliff tile, a −1 break, then where it landed.
+        trail(t) {
+          const { events } = this.replay(t), path = [];
+          for (const ev of events) {
+            if (ev.type === "start") path.push(ev.s);
+            else if (ev.type === "move") { if (ev.fell !== undefined) path.push(ev.fell, -1, ev.s2); else path.push(ev.s2); }
+          }
+          return path;
+        },
+      };
+    }
   };
 
   // Run many seeds without snapshots and average their numbers: { mean: { metric: Float64Array }, runs }.

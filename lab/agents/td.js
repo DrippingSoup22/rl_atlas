@@ -135,7 +135,7 @@
       id: "td0", title: "TD(0)", unit: "episode", run: td0,
       memory: (env) => ({ V: env.nS }),
       init: (m, env, p) => { for (let s = 0; s < env.nS; s++) m.V[s] = env.terminal(s) ? 0 : p.v0 || 0; },
-      show: (m) => ({ V: m.V }),
+      show: (m, env, p) => ({ V: m.V, P: lab.policyOf(env, p) }), // P: the policy being evaluated, for the arrows
       rule: "\\val{V(S)} \\leftarrow \\val{V(S)} + \\alp\\,\\big[\\rew{R} + \\gam\\,\\val{V(S')} - \\val{V(S)}\\big]",
       numbers: (ev, p) => numbers(ev, p, `\\val{${lab.texNum(ev.next)}}`),
     },

@@ -112,8 +112,14 @@
     // Shared knobs: the preset's, minus those every racer sets for itself.
     // seed: "typical" (the bench's median run for these settings) or a number the reader chose
     const knobs = { units: recorded ? recRuns[0].units : preset.units, seed: recorded ? recRuns[0].seed : "typical", runs: preset.runs, ...preset.params };
-    const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && racers.some((r) => !(k in r.params)));
-    const paramsOf = (r) => ({ ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...r.params });
+    // The knobs on the bar: the lab's settings that not every racer sets for itself. In another world, step sizes
+    // the racers all set are shown too: the knob is the reference their ratios apply to (lab.carryRacer).
+    const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && (racers.some((r) => !(k in r.params)) || (preset.env !== base.env && (k === "alpha" || k === "alphaW"))));
+    // A racer's settings: the lab's, the knobs', then its own (adapted when it runs in another world than the lab's).
+    const paramsOf = (r) => {
+      const own = preset.env === base.env ? r.params : lab.carryRacer(r.params, { env, base: base.params, racers: racers.map((x) => x.params), knobs });
+      return { ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...own };
+    };
     const view = { seeds: !!preset.seeds, mode: "bench", show: {} }; // seeds: a recording's thin lines; mode: "bench" or "run"
     const from = RL.app?.from?.name === "entry" ? racers.findLastIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
     const P = { e: 0, playing: false, speed: "step", acc: 0, wait: 0, walkers: null, focus: Math.max(0, from >= 0 ? from : racers.length - 1) };
@@ -288,8 +294,12 @@
       const all = [...own, ...groups], count = all.reduce((n, g) => n + g.worlds.length, 0);
       box.hidden = count < 2;
       if (box.hidden) return;
+      // a world where the study saw these racers' algorithms rarely end well is marked "hard": a run there may fail
+      const tip = (w) => w.blurb + (w.hard?.length ? `. Hard for ${w.hard.join(" and ")}: in our tests, with the settings it starts from, it rarely ended well here` : "");
+      const anyHard = all.some((g) => g.worlds.some((w) => w.hard?.length));
       q(".world-list").innerHTML = all.map((g) => `<div class="wgroup"><h4>${esc(g.title)}</h4><div class="wchips">${g.worlds.map((w) =>
-        `<button type="button" class="wchip${w.id === preset.env ? " on" : ""}" data-world="${w.id}" title="${esc(w.blurb)}">${esc(w.title)}${w.id === base.env && listed ? '<i class="home" aria-label="this lab\'s world"></i>' : ""}</button>`).join("")}</div></div>`).join("");
+        `<button type="button" class="wchip${w.id === preset.env ? " on" : ""}${w.hard?.length ? " hard" : ""}" data-world="${w.id}" title="${esc(tip(w))}">${esc(w.title)}${w.id === base.env && listed ? '<i class="home" aria-label="this lab\'s world"></i>' : ""}${w.hard?.length ? '<i class="hardmark">hard</i>' : ""}</button>`).join("")}</div></div>`).join("") +
+        (anyHard ? '<p class="faint world-note"><i class="hardmark">hard</i> our tests rarely saw it end well there: a run may struggle or fail, which is worth seeing too</p>' : "");
     }
     function switchWorld(id) {
       if (id === preset.env) return;
@@ -302,9 +312,11 @@
         const prof = lab.worldProfile(id, racers.map((r) => r.algorithm));
         Object.assign(preset, { env: id, units: prof.units, charts: prof.charts, measures: prof.measures, success: prof.success, film: prof.film, runs: prof.runs, sweep: null });
         preset.params = { ...base.params, ...prof.params };
+        // racers that all bring their own step sizes get a reference one here, for their ratios to apply to
+        for (const k of ["alpha", "alphaW"]) if (!(k in preset.params) && racers.some((r) => k in r.params)) preset.params[k] = 0.1;
         if (prof.gamma !== undefined && "gamma" in base.params) preset.params.gamma = prof.gamma;
         if (prof.domain) preset.params.domain = prof.domain; else delete preset.params.domain;
-        if (prof.maxSteps) preset.params.maxSteps = prof.maxSteps;
+        if (prof.maxSteps) preset.params.maxSteps = prof.maxSteps; else delete preset.params.maxSteps; // the world's own limit
         knobs.units = prof.units;
       }
       Object.assign(knobs, preset.params); // the knobs start from the world's settings (a step size made for its features)
@@ -401,13 +413,42 @@
       if (recorded && (view.seeds || preset.success)) averageRecorded();
     }
 
-    // Compute the played runs (seed `played`) with their snapshots, and show them.
+    // Compute the played runs (seed `played`) with their snapshots, and show them. A run that takes long (a policy
+    // gradient on CartPole, planning on the large lake) is computed in short slices, the page staying responsive,
+    // with its progress under each racer's name; until then nothing plays.
     function playRuns() {
       P.walkers = null;
       pendingTypical = false;
-      const t0 = performance.now();
-      runs = racers.map((r, i) => recRuns[i] || lab.simulate({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: played, measures: preset.measures }));
-      perRun = (performance.now() - t0) / racers.length; // how long one run takes here, for the sweep's default
+      job?.cancel();
+      runs = [];
+      const jobs = racers.map((r, i) => (recRuns[i] ? null : lab.simulateJob({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: played, measures: preset.measures })));
+      let spent = 0, timer = 0;
+      const slice = (ms) => {
+        const t0 = performance.now(), next = jobs.find((j) => j && !j.result);
+        next?.step(ms);
+        spent += performance.now() - t0;
+        return jobs.every((j) => !j || j.result);
+      };
+      const ready = () => {
+        job = null;
+        stages.forEach((st) => st.classList.remove("training"));
+        runs = racers.map((_, i) => recRuns[i] || jobs[i].result);
+        perRun = spent / racers.length; // how long one run takes here, for the sweep's default
+        showRuns();
+      };
+      if (slice(120)) return ready(); // most runs take a few milliseconds: no waiting at all
+      pause();
+      const progress = () => stages.forEach((st, i) => {
+        st.classList.add("training");
+        st.querySelector(".stat").textContent = jobs[i] ? `Training this run: ${Math.round(100 * jobs[i].done)}%` : "";
+      });
+      progress();
+      const tick = () => { if (slice(30)) ready(); else { progress(); timer = setTimeout(tick, 0); } };
+      job = { cancel() { clearTimeout(timer); job = null; } };
+      timer = setTimeout(tick, 0);
+    }
+    // The played runs are ready: show them.
+    function showRuns() {
       views.forEach((v, i) => { v.env = runs[i].env; }); // each view looks at its own run's world (its bandit's machines, its cards)
       scrub.max = knobs.units;
       filmstrip();
@@ -496,6 +537,7 @@
     }
 
     function drawCharts(avg) {
+      if (!runs.length) return; // the played runs are still training
       const st = bench && bench.seedsDone ? bench.stats() : null, many = knobs.runs > 1;
       preset.charts.forEach((k, j) => {
         const m = { ...METRICS[k], smooth: recorded ? 1 : METRICS[k].smooth }, series = [];
@@ -586,6 +628,7 @@
 
     // The bench, in words and as a strip of dots: how many seeds end well, and where the run playing above falls.
     function odds() {
+      if (!runs.length) return; // the played runs are still training
       if (recorded || !bench || !strip) return;
       const st = bench.stats(), n = st[0].n, R = rule(), m = METRICS[R.metric] || {}, total = bench.seeds.length;
       const still = n < total ? ` (${total - n} still to come)` : "";
@@ -682,12 +725,16 @@
         q(".sweep-note").textContent = `${plural(d.train[0].length, ["seed", "seeds"])} per value, ${sweepData.steps.toLocaleString("en")} steps each, trained offline with the recording's other settings. The shaded value is the recording's. Hover a dot for its numbers.`;
         return;
       }
+      let one = null; // the run under way, spread over chunks when it is long
       const chunk = () => {
         if (cancelled) return;
         const t0 = performance.now();
         while (done < total && performance.now() - t0 < 14) {
           const vi = Math.floor(done / (groups.length * n)), si = Math.floor(done / groups.length) % n, gi = done % groups.length, g = groups[gi];
-          const { metrics, stopped } = lab.simulate({ world: make, algorithm: g.r.algorithm, params: { ...g.base, [k]: values[vi] }, units: knobs.units, seed: 1 + si, snapshots: false, measures: preset.measures, giveUp: GIVE_UP });
+          one ||= lab.simulateJob({ world: make, algorithm: g.r.algorithm, params: { ...g.base, [k]: values[vi] }, units: knobs.units, seed: 1 + si, snapshots: false, measures: preset.measures, giveUp: GIVE_UP });
+          if (!one.step(Math.max(1, 14 - (performance.now() - t0)))) break;
+          const { metrics, stopped } = one.result;
+          one = null;
           const { ok, score } = lab.success(rule, metrics), x = res[gi][vi];
           if (stopped) { x.stuck++; stuck++; }
           x.runs++;
@@ -706,6 +753,7 @@
 
     // One sentence on where each run ended up.
     function summary() {
+      if (!runs.length) return; // the played runs are still training
       const out = [], last = Math.min(100, Math.max(1, Math.floor(knobs.units / 2))); // the second half at most: early episodes are a search
       const each = (f) => runs.map((r, i) => `<b>${esc(racers[i].name)}</b> ${f(r, i)}`).join(" · ");
       const pct = (v) => `${Math.round(100 * v)}%`;
@@ -743,8 +791,14 @@
       }
       if (env.kind === "grid" && !env.slip) {
         const finals = runs.map((r) => r.algorithm.show(r.at(knobs.units), r.env, r.params));
-        if (finals.every((d) => d.P && !d.Q)) out.push(`Most likely path at the end: ${each((r, i) => { const g = likelyPath(env, finals[i].P); return g.reached ? plural(g.steps, ["step", "steps"]) : "none, its most likely moves go round in circles"; })}.`);
+        if (finals.every((d) => d.P && !d.Q && (d.theta || !d.V))) out.push(`Most likely path at the end: ${each((r, i) => { const g = likelyPath(env, finals[i].P); return g.reached ? plural(g.steps, ["step", "steps"]) : "none, its most likely moves go round in circles"; })}.`);
       }
+      // the shared worlds of the World panel (over episodes, or rounds of several workers)
+      const lastN = `the last ${plural(last, noun())}`, avgOf = (k, d) => each((r) => lab.mean(r.metrics[k], knobs.units - last).toFixed(d));
+      if (env.kind === "taxi") out.push(`Average reward per trip over ${lastN}: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 1))} (about +8 is the best possible).`);
+      if (env.kind === "catch") out.push(`Caught over ${lastN}: ${each((r) => pct((lab.mean(r.metrics.return, knobs.units - last) + 1) / 2))} of the balls.`);
+      if (env.kind === "cartpole" && !recorded) out.push(`Average steps the pole stays up, over ${lastN}: ${avgOf("steps", 0)} (500 at most).`);
+      if (env.kind === "acrobot") out.push(`Average steps to swing the tip over the line, over ${lastN}: ${avgOf("steps", 0)} (500: cut short; a good swing takes under 100).`);
       if (env.kind === "line") out.push(`Value error √VE at the end: ${each((r) => r.metrics.ve ? r.metrics.ve[knobs.units - 1].toFixed(3) : "—")} (0 would be a perfect fit; how close the features allow is in the textbook).`);
       if (env.kind === "car") out.push(`${knobs.runs > 1 ? `In the run with seed ${played}, average` : "Average"} steps per episode over the last ${last}: ${each((r) => lab.mean(r.metrics.steps, knobs.units - last).toFixed(0))} (the best possible from a typical start is a little over 100).`);
       if (env.kind === "star") out.push(`Size of the weights at the end: ${each((r) => fmtBig(r.metrics.weights[knobs.units - 1]))}, from ${fmtBig(runs[0].metrics.weights[0])} after the first step.`);
@@ -784,6 +838,7 @@
 
     // ---- the filmstrip: what the focused racer knew at a few moments ----
     function filmstrip() {
+      if (!runs.length) return; // the played runs are still training
       const View = RL.labViews[env.kind], frames = [...new Set((preset.film || []).map((t) => Math.min(t, knobs.units)))];
       q(".film").hidden = !frames.length || !View.thumb;
       if (q(".film").hidden) return;
@@ -797,6 +852,7 @@
     // heat: "keep" when the units since the last position were already added to the views' maps of where the agent
     // goes; otherwise the maps are rebuilt from the 20 units before the new position.
     function seek(t, draw = false, heat = "rebuild") {
+      if (!runs.length) return; // the played runs are still training
       P.e = Math.max(0, Math.min(knobs.units, t));
       P.walkers = null;
       P.acc = 0;
@@ -838,6 +894,7 @@
 
     // The line under a racer's name: how its last unit went, or how the current one is going.
     function caption(i, w) {
+      if (!runs[i]) return;
       const stat = stages[i].querySelector(".stat"), r = runs[i], [one] = noun();
       if (w) { stat.textContent = `${cap(one)} ${P.e + 1}: ${live(w)}`; return; }
       if (!P.e) { stat.textContent = "Ready: nothing learned yet"; return; }
@@ -861,17 +918,29 @@
 
     // ---- walking through a unit, event by event ----
     function walk(toUpdate) {
+      if (!runs.length) return; // the played runs are still training
       if (!P.walkers) {
         if (P.e >= knobs.units) { pause(); return; }
         P.walkers = runs.map((r, i) => ({ ...r.replay(P.e), done: false, G: 0, n: 0, p: paramsOf(racers[i]), log: [] }));
         if (recorded) P.walkers.forEach((w, i) => views[i].show(w.m, w.p)); // the network that plays this test episode
       }
       let wait = 0;
+      // A tick shows one event ("line by line"), or runs to the next update, but never past a second move: an
+      // algorithm that updates only after the episode (Monte Carlo, REINFORCE), or n steps later, still walks it step
+      // by step, its pseudocode in step with the agent. (A round's workers all move in the same tick.)
       P.walkers.forEach((w, i) => {
+        let moved = false;
         while (!w.done) {
-          const { value: ev, done } = w.events.next();
-          if (done) { w.done = true; break; }
+          let ev = w.held;
+          w.held = null;
+          if (!ev) {
+            const next = w.events.next();
+            if (next.done) { w.done = true; break; }
+            ev = next.value;
+          }
+          if (toUpdate && moved && ev.type === "move" && ev.w === undefined) { w.held = ev; break; }
           wait = Math.max(wait, on(i, w, ev));
+          if (ev.type === "move") moved = true;
           if (!toUpdate || ev.type === "update" || ev.type === "improve" || ev.type === "plan" || ev.type === "tick" || ev.type === "advantage") break;
         }
       });

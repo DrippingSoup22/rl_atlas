@@ -93,8 +93,10 @@
 .metro .st.planned text { fill: var(--ink-3); font-weight: 500; }
 .metro .st.visited .dot { fill: var(--c); }
 .metro .st .halo { fill: var(--c); opacity: 0; transition: opacity 0.2s; transform-box: fill-box; transform-origin: center; }
-.metro .st:hover .halo, .metro .st:focus-visible .halo, .metro .st.hot .halo { opacity: 0.18; }
-.metro .st:hover .dot, .metro .st.hot .dot { r: 9; }
+/* Pointing at a station lights it, and its lineage, in the tree only: on the metro and unified views, sweeping the
+   cursor across many stations would make the whole map flicker. */
+.metro .st:focus-visible .halo, .metro[data-lens="tree"] .st:hover .halo, .metro .st.hot .halo { opacity: 0.18; }
+.metro[data-lens="tree"] .st:hover .dot, .metro .st.hot .dot { r: 9; }
 .metro .st.rel .halo { opacity: 0.14; }
 .metro .st.rel .dot { stroke-width: 5; }
 .metro .st.next .halo { animation: station-pulse 1.8s ease-out infinite; }

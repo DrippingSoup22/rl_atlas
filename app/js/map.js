@@ -468,7 +468,8 @@
 
     // ---- hover: everything a station builds on ----
     // Its path up its line's tree, and, for an algorithm whose parent lives in another line, that parent's path too.
-    // In every view those stations stay lit while the rest fade; in the tree their branches light up as well.
+    // Only in the tree: those stations stay lit while the rest fade, and their branches light up. (On the metro and
+    // unified views, a cursor sweeping across the stations made the whole map flicker.)
     function lineage(id) {
       const T = layouts.tree, seen = new Set(), cross = [];
       const walk = (k) => {
@@ -484,6 +485,7 @@
     const curve = (a, b) => `<path d="M${a.x - 9} ${a.y} Q${Math.min(a.x, b.x) - 46 - Math.abs(a.y - b.y) * 0.15} ${(a.y + b.y) / 2} ${b.x - 9} ${b.y}"/>`;
     svg.addEventListener("pointerover", (e) => {
       if (drag?.moved) return;
+      if (lens !== "tree") return;
       const g = e.target.closest?.(".st:not(.out)");
       if (!g || g.classList.contains("hot")) return;
       clear();
@@ -491,7 +493,6 @@
       const id = g.dataset.id, pos = L().pos, { seen, cross } = lineage(id);
       for (const r of seen) nodes.get(r)?.classList.add("rel");
       svg.classList.add("tracing");
-      if (lens !== "tree") return;
       for (const k of [id, ...seen]) {
         svg.querySelector(`.edge[data-to="${k}"]`)?.classList.add("hot");
         svg.querySelector(`.tree-hub[data-line="${station(k).line}"]`)?.classList.add("hot");

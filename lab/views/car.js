@@ -21,8 +21,10 @@
     let top = 0;
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const s = [env.xMin + ((env.xMax - env.xMin) * i) / (N - 1), -env.vMax + (2 * env.vMax * j) / (N - 1)], x = F.of(s);
+      // action values: the best one; a policy method: its critic's value (one copy of the weights, not one per action)
       let best = -Infinity;
-      for (let a = 0; a < env.nA; a++) best = Math.max(best, lab().dot(d.w, x, a * n));
+      if (d.theta) best = lab().dot(d.w, x);
+      else for (let a = 0; a < env.nA; a++) best = Math.max(best, lab().dot(d.w, x, a * n));
       // a learner whose step size is too large diverges: its runaway estimates are drawn at the top of a tall scale
       Z[j * N + i] = Number.isFinite(best) ? Math.min(1e6, Math.max(0, -best)) : 1e6;
       top = Math.max(top, Z[j * N + i]);

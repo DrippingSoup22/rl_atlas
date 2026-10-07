@@ -100,10 +100,11 @@ A pilot who trains in a flight simulator: thousands of hours of practice for the
 ::: pseudocode
 Model: how moves work, the goal, and what each tile does once stepped on; unseen tiles guessed ordinary
 First episode: follow the route you are shown, writing each tile into the model {#guided}
-Repeat for each step $t$ of the later episodes:
-  Plan: value iteration in the model, an unseen tile costing $d$ more {#plan}
-  Take the first move of the best plan, in the real world {#act}
-  Write the tile it led to into the model {#model}
+Repeat for each later episode, from the start: {#start}
+  Repeat for each step:
+    Plan: value iteration in the model, an unseen tile costing $d$ more {#plan}
+    Take the first move of the best plan, in the real world {#act}
+    Write the tile it led to into the model {#model}
 :::
 
 ### Pitfalls

@@ -132,7 +132,7 @@
   const vTable = {
     memory: (env) => ({ V: env.nS }),
     init: (m, env, p) => { for (let s = 0; s < env.nS; s++) m.V[s] = env.terminal(s) ? 0 : p.v0 || 0; },
-    show: (m) => ({ V: m.V }),
+    show: (m, env, p) => ({ V: m.V, P: lab.policyOf(env, p) }),
   };
   lab.algorithms = Object.assign(lab.algorithms || {}, {
     "n-step-td": {
@@ -149,7 +149,7 @@
       id: "td-lambda", title: "TD(λ)", unit: "episode", run: lambda(false),
       memory: (env) => ({ V: env.nS, Z: env.nS }),
       init: vTable.init,
-      show: (m) => ({ V: m.V, Z: m.Z }),
+      show: (m, env, p) => ({ V: m.V, Z: m.Z, P: lab.policyOf(env, p) }),
       rule: "\\val{V(s)} \\leftarrow \\val{V(s)} + \\alp\\,\\del\\,\\htmlClass{q-trc}{z(s)} \\quad \\text{for every } s",
       numbers: lambdaNumbers, note: lambdaNote,
     },

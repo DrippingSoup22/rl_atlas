@@ -71,6 +71,10 @@
 .live-num:empty { display: none; }
 .live-note { margin: 6px 0 0; font-size: 13px; }
 .panel .seg { margin-bottom: 4px; }
+/* A played run still training: the view waits, faded, its progress under the racer's name */
+.stage.training .view-host { opacity: 0.35; transition: opacity 0.2s; pointer-events: none; }
+.stage.training .stat { color: var(--ink-2); font-weight: 600; }
+
 /* The world panel: the shared worlds these racers may run, as chips in groups; the lab's own world is marked. */
 .world-panel .wgroup + .wgroup { margin-top: 10px; }
 .world-panel h4 { font-size: 11.5px; font-weight: 600; color: var(--ink-3); margin: 0 0 6px; }
@@ -84,6 +88,9 @@
 .wchip:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 2px; }
 .wchip.on { color: var(--surface); background: var(--ink); box-shadow: none; cursor: default; }
 .wchip .home { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.55; }
+.wchip .hardmark, .world-note .hardmark { font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; padding: 0 5px; border-radius: 999px; color: var(--err-ink); background: color-mix(in oklab, var(--err) 14%, transparent); }
+.wchip.on .hardmark { color: var(--surface); background: color-mix(in oklab, var(--surface) 25%, transparent); }
+.world-panel .world-note { font-size: 12px; margin: 10px 0 0; line-height: 1.4; }
 
 .check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13.5px; cursor: pointer; }
 .check input { accent-color: var(--ink); }
@@ -419,6 +426,9 @@
 .cardsview .verdict.lose { color: var(--bad-ink); }
 .cardsview .verdict.act { color: var(--pol-ink); }
 .cardsview .maps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; }
+/* a narrow stage (three racers): the maps go under the table */
+.view-host:has(> .cardsview) { container-type: inline-size; }
+@container (max-width: 560px) { .cardsview { grid-template-columns: minmax(0, 1fr); } .cardsview .table { min-height: 0; } }
 .bj-map { margin: 0; min-width: 0; }
 .bj-map figcaption { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; margin-bottom: 2px; }
 .bj-map svg { display: block; width: 100%; height: auto; }
@@ -692,3 +702,17 @@
 .taxiview .flag line { stroke: var(--ink); stroke-width: 2; }
 .taxiview .flag path { fill: var(--rew); }
 .taxiview .trip { font: 600 12.5px var(--font); text-anchor: middle; fill: var(--ink-2); }
+/* Catch: the board, the falling ball, the paddle */
+.catchview { display: block; width: 100%; height: auto; margin: 0 auto; overflow: visible; }
+.catchview .tile { stroke: var(--surface); stroke-width: 2; transition: fill 0.25s; }
+.catchview .floor { fill: var(--surface-3); }
+.catchview .edge { fill: none; stroke: var(--ink-2); stroke-width: 2.5; }
+.catchview .best { font: 700 17px var(--font); text-anchor: middle; fill: var(--ink); opacity: 0.55; pointer-events: none; }
+.catchview .num { font: 600 9.5px var(--font); text-anchor: middle; fill: var(--ink-2); font-variant-numeric: tabular-nums; pointer-events: none; }
+.catchview .ball, .catchview .paddle { transition: transform 0.25s ease-out; pointer-events: none; }
+.catchview.instant .ball, .catchview.instant .paddle { transition: none; }
+.catchview .ball { fill: var(--rew); stroke: var(--surface); stroke-width: 2; }
+.catchview .paddle { fill: var(--ink); }
+.catchview .fall { stroke: var(--rew); stroke-width: 2; stroke-dasharray: 2 5; opacity: 0.5; }
+.catchview .trip { font: 600 12px var(--font); text-anchor: middle; fill: var(--ink-2); }
+.catchview .spark { fill: none; stroke: var(--err); stroke-width: 3; transform-box: fill-box; transform-origin: center; }

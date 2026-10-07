@@ -12,6 +12,7 @@
     const env = {
       name: "chain", key: `chain-${n}-${left}`, kind: "chain", title, n, nS, nA: 2, start: (n + 1) >> 1, names, valueRange: 1,
       exits: { left, right: 1 },
+      dims: 1, coords: (s) => [(s - 1) / Math.max(1, n - 1)], // the states in a row, scaled to [0, 1], for features
       acts: (s) => (s === 0 || s === n + 1 ? none : both),
       terminal: (s) => s === 0 || s === n + 1,
       describe: (s, a) => `state ${names[s]}${a >= 0 ? `, stepping ${a === LEFT ? "left" : "right"}` : ""}`,

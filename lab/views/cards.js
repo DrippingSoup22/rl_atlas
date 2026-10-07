@@ -16,6 +16,15 @@
     return e;
   }
 
+  // What a learner prefers in state s, from its action values or its learned policy (a policy method): hit, or a tie;
+  // and its value of s (none for a policy method without a critic).
+  const choice = (d, s) => {
+    const src = d.Q || (d.theta && d.P);
+    if (!src) return null;
+    return { hit: src[s * 2 + 1] > src[s * 2], tie: src[s * 2 + 1] === src[s * 2] };
+  };
+  const worth = (d, s) => (d.V ? d.V[s] : d.Q ? Math.max(d.Q[s * 2], d.Q[s * 2 + 1]) : 0);
+
   class CardsView {
     constructor(host, env, options = {}) {
       this.env = env;
@@ -60,7 +69,7 @@
       this.root.dataset.tiles = this._mode();
       this._paint();
     }
-    _mode() { return this.d.Q ? this.o.tiles : "v"; }
+    _mode() { return this.d.Q || this.d.theta ? (this.d.V || this.d.Q ? this.o.tiles : "policy") : "v"; }
 
     show(d) {
       this.d = d;
@@ -69,13 +78,13 @@
     }
 
     _paint() {
-      const d = this.d, mode = this._mode(), { STICK, HIT } = this.env;
+      const d = this.d, mode = this._mode();
       for (let s = 0; s < 200; s++) {
         const g = this.cells[s];
         if (!g) continue;
-        const v = d.V ? d.V[s] : Math.max(d.Q[s * 2 + STICK], d.Q[s * 2 + HIT]);
+        const v = worth(d, s);
         if (mode === "policy") {
-          const hit = d.Q[s * 2 + HIT] > d.Q[s * 2 + STICK], tie = d.Q[s * 2 + HIT] === d.Q[s * 2 + STICK];
+          const { hit, tie } = choice(d, s);
           g.bg.style.fill = tie ? "" : hit ? "color-mix(in oklab, var(--pol) 72%, var(--surface))" : "color-mix(in oklab, var(--pol) 10%, var(--surface))";
           g.txt.textContent = tie ? "" : hit ? "H" : "S";
           g.classList.toggle("hit", hit && !tie);
@@ -174,14 +183,15 @@
       const head = `<div class="head">Player ${sum}${usable ? " with a usable ace" : ""}, dealer shows ${rank(dealer)}</div>`;
       const row = (v, text) => `<div class="row"><b>${v}</b><span>${text}</span></div>`;
       const body = d.Q ? row(fmt(d.Q[s * 2 + this.env.STICK]), "stick: Q") + row(fmt(d.Q[s * 2 + this.env.HIT]), "hit: Q") + (d.N ? row(d.N[s * 2] + d.N[s * 2 + 1], "visits") : "")
-        : row(fmt(d.V[s]), "V, the value of this state") + (d.N ? row(d.N[s], "visits") : "");
+        : d.V ? row(fmt(d.V[s]), "V, the value of this state") + (d.N ? row(d.N[s], "visits") : "")
+          : d.P ? row(`${Math.round(100 * d.P[s * 2 + this.env.HIT])}%`, "hit: its probability") : "";
       RL.tip.show(e.clientX, e.clientY, head + body);
     }
 
     destroy() { RL.tip.hide(); this.root.remove(); }
 
     static options(env, displays) {
-      const hasQ = displays.some((d) => d.Q);
+      const hasQ = displays.some((d) => d.Q || d.theta);
       return [
         ...(hasQ ? [{ key: "tiles", type: "seg", label: "Color the states by", value: "policy", choices: [["policy", "Policy"], ["v", "Values"]] }] : []),
         { key: "numbers", type: "check", label: "Values as numbers", value: false },
@@ -201,10 +211,11 @@
           for (let dl = 1; dl <= 10; dl++) {
             const s = env.encode(sum, dl, usable);
             let fill;
-            if (d.Q) {
-              const hit = d.Q[s * 2 + 1] > d.Q[s * 2], tie = d.Q[s * 2 + 1] === d.Q[s * 2];
+            const c = choice(d, s);
+            if (c) {
+              const { hit, tie } = c;
               fill = tie ? "var(--surface-3)" : hit ? "color-mix(in oklab, var(--pol) 72%, var(--surface))" : "color-mix(in oklab, var(--pol) 10%, var(--surface))";
-            } else fill = RL.GridView.valueColor(d.V[s], 1);
+            } else fill = RL.GridView.valueColor(worth(d, s), 1);
             g += `<rect x="${ox + (dl - 1) * S}" y="${(21 - sum) * S}" width="${S - 0.6}" height="${S - 0.6}" style="fill:${fill}"/>`;
           }
         }

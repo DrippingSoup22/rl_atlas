@@ -70,13 +70,17 @@
     get complete() { return this.next >= this.total; }
     get seedsDone() { return Math.floor(this.next / this.racers.length); }
 
-    // Run until the budget (in ms) is spent or the bench is complete; true when complete.
+    // Run until the budget (in ms) is spent or the bench is complete; true when complete. A long run is itself
+    // spread over several steps (lab.simulateJob), so no step overruns its budget by more than one unit of a run.
     step(budget = 14) {
       const t0 = Date.now();
       while (!this.complete && (budget === Infinity || Date.now() - t0 < budget)) {
         const si = Math.floor(this.next / this.racers.length), ri = this.next % this.racers.length, r = this.racers[ri];
         const seed = this.seeds[si];
-        const { metrics, stopped } = lab.simulate({ world: this.world, algorithm: r.algorithm, params: r.params, units: this.units, seed, snapshots: false, measures: this.measures, giveUp: this.giveUp });
+        this.job ||= lab.simulateJob({ world: this.world, algorithm: r.algorithm, params: r.params, units: this.units, seed, snapshots: false, measures: this.measures, giveUp: this.giveUp });
+        if (!this.job.step(budget === Infinity ? Infinity : Math.max(1, budget - (Date.now() - t0)))) break;
+        const { metrics, stopped } = this.job.result;
+        this.job = null;
         const { score, ok } = lab.success(this.rule, metrics);
         const series = {};
         for (const k of this.keys) if (metrics[k]) series[k] = shrink(metrics[k], this.smooth[k] || 1);
