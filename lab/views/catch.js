@@ -55,7 +55,7 @@
     setOptions(o) {
       Object.assign(this.o, o);
       this.gArrows.style.display = this.o.arrows ? "" : "none";
-      this.gNums.style.display = this.o.numbers ? "" : "none";
+      this.gNums.style.display = this.o.numbers && !this.noValue ? "" : "none";
       this.gPieces.style.display = this.o.agent === false ? "none" : "";
       this._draw();
     }
@@ -65,6 +65,8 @@
       if (d.Q) this.Q = d.Q;
       this.V = d.V || null;
       this.P = d.P || null;
+      this.noValue = !d.Q && !d.V; // a policy with no critic (REINFORCE): no values to write
+      this.gNums.style.display = this.o.numbers && !this.noValue ? "" : "none";
       this._draw();
     }
     value(s) {
@@ -145,7 +147,7 @@
       const r = Math.floor(y / T), c = Math.floor(x / T);
       if (r < 0 || c < 0 || r >= this.env.rows - 1 || c >= this.env.cols) { RL.tip.hide(); return; }
       const s = this.env.encode(r, c, this.px), nA = this.env.nA;
-      const rows = this.V ? `<div class="row"><b>${signed(this.V[s])}</b><span>value</span></div>` : this.env.actionNames.map((name, a) => `<div class="row"><b>${signed(this.Q[s * nA + a])}</b><span>${name}</span></div>`).join("");
+      const rows = this.noValue && this.P ? this.env.actionNames.map((name, a) => `<div class="row"><b>${Math.round(100 * this.P[s * nA + a])}%</b><span>${name}</span></div>`).join("") : this.V ? `<div class="row"><b>${signed(this.V[s])}</b><span>value</span></div>` : this.env.actionNames.map((name, a) => `<div class="row"><b>${signed(this.Q[s * nA + a])}</b><span>${name}</span></div>`).join("");
       RL.tip.show(e.clientX, e.clientY, `<div class="head">Ball at row ${r + 1}, column ${c + 1}; paddle in column ${this.px + 1}</div>${rows}`);
     }
 

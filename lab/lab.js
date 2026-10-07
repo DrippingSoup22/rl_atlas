@@ -116,6 +116,15 @@
     // the racers all set are shown too: the knob is the reference their ratios apply to (lab.carryRacer).
     const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && (racers.some((r) => !(k in r.params)) || (preset.env !== base.env && (k === "alpha" || k === "alphaW"))));
     // A racer's settings: the lab's, the knobs', then its own (adapted when it runs in another world than the lab's).
+    // "α = 2⁻¹³" or "αw = 0.1" in a racer's name, written again for the step sizes p it runs with
+    const SUP = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+    const stepText = (v) => {
+      const e = Math.log2(v);
+      return Number.isInteger(e) && e < -3 ? `2${[...String(e)].map((c) => SUP[c]).join("")}` : String(+v.toPrecision(2));
+    };
+    const stepNamed = (name, p) => name
+      .replace(/αw = [^,)·]+/, (m) => (p.alphaW > 0 ? `αw = ${stepText(p.alphaW)}` : m))
+      .replace(/α = (?!1\/n)[^,)·]+/, (m) => (p.alpha > 0 ? `α = ${stepText(p.alpha)}` : m));
     const paramsOf = (r) => {
       const own = preset.env === base.env ? r.params : lab.carryRacer(r.params, { env, base: base.params, racers: racers.map((x) => x.params), knobs });
       return { ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...own };
@@ -326,6 +335,8 @@
       knobs.runs = preset.runs;
       knobs.seed = "typical";
       P.e = 0;
+      // a racer named by its step size is renamed by the one it has here (its home world's numbers would be wrong)
+      racers.forEach((r) => { r.baseName ??= r.name; r.name = id === base.env ? r.baseName : stepNamed(r.baseName, paramsOf(r)); });
       q(".lab-title h1").textContent = id === base.env ? base.title : `${racers.map((r) => r.name).join(" vs ")} · ${lab.make(id).title}`;
       q(".intro").textContent = id === base.env ? base.intro || "" : `${lab.worldBlurb(id)}. The settings start from this world's defaults; the knobs are yours.`;
       build();

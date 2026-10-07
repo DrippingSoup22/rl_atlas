@@ -122,8 +122,11 @@
   // onTick(team, tick) may update during the round (A2C); the team is returned for the update after it.
   function* round({ env, m, rng, p }, P, onTick) {
     const N = workersOf(p), team = [];
+    // each worker plays its own copy of a world that keeps the episode's state (Blackjack's cards); the first plays
+    // the world itself, the one the views show
+    const envs = Array.from({ length: N }, (_, k) => (k && env.fork ? env.fork() : env));
     for (let k = 0; k < N; k++) {
-      const s = env.reset(rng);
+      const s = envs[k].reset(rng);
       team.push({ S: [s], A: [], R: [0], done: false, cut: false, from: 0, falls: 0 });
       yield { line: "start", type: "start", s, w: k };
     }
@@ -133,11 +136,11 @@
         if (tr.done) continue;
         const s = tr.S[tr.S.length - 1], a = P.sample(m.theta, s, rng);
         yield { line: "act", type: "choose", s, a, w: k };
-        const o = env.step(s, a, rng);
+        const o = envs[k].step(s, a, rng);
         yield { line: "act", type: "move", s, a, ...o, w: k };
         tr.A.push(a); tr.S.push(o.s2); tr.R.push(o.r);
         if (o.fell !== undefined) tr.falls++;
-        if (env.terminal(o.s2) || tr.A.length >= p.maxSteps) { tr.done = true; tr.cut = !env.terminal(o.s2); }
+        if (envs[k].terminal(o.s2) || tr.A.length >= p.maxSteps) { tr.done = true; tr.cut = !envs[k].terminal(o.s2); }
       }
       yield { line: "act", type: "tick", tick, active: team.filter((tr) => !tr.done).length };
       if (onTick) yield* onTick(team, tick);

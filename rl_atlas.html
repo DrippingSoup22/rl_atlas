@@ -2429,6 +2429,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       name: "blackjack", kind: "blackjack", title: "Blackjack", nS: 201, nA: 2, TERMINAL, STICK, HIT, valueRange: 1, unitName: "hand",
       encode, decode,
       hand: null, // the cards of the episode being played (the dealer's hidden card included)
+      fork: () => lab.blackjack(), // a table of its own, for each extra worker of a round: a hand is not shared
       starts: Array.from({ length: 200 }, (_, s) => s),
       acts: (s) => (s === TERMINAL ? none : both),
       terminal: (s) => s === TERMINAL,
@@ -3769,6 +3770,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     if (tu !== undefined) out.units = tu;
     if (tm !== undefined) out.maxSteps = tm;
     if (out.film) out.film = out.film.filter((u) => u <= out.units);
+    // frames made for longer runs (episodes, where these are rounds): spread four over this one instead
+    if (!out.film || out.film.length < 3) out.film = [...new Set([1, Math.round(out.units / 10), Math.round(out.units / 3), out.units])].filter((u) => u >= 1);
     // a world without features of its own is learned with a table (a lab's own features, like Baird's, stay home);
     // on a walk, a lab's features (its groups, say) work as well as at home, and stay
     if (w.group !== "approx" && w.group !== "walks" && !out.params.features) out.params = { features: "table", ...out.params };
@@ -5396,8 +5399,11 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   // onTick(team, tick) may update during the round (A2C); the team is returned for the update after it.
   function* round({ env, m, rng, p }, P, onTick) {
     const N = workersOf(p), team = [];
+    // each worker plays its own copy of a world that keeps the episode's state (Blackjack's cards); the first plays
+    // the world itself, the one the views show
+    const envs = Array.from({ length: N }, (_, k) => (k && env.fork ? env.fork() : env));
     for (let k = 0; k < N; k++) {
-      const s = env.reset(rng);
+      const s = envs[k].reset(rng);
       team.push({ S: [s], A: [], R: [0], done: false, cut: false, from: 0, falls: 0 });
       yield { line: "start", type: "start", s, w: k };
     }
@@ -5407,11 +5413,11 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         if (tr.done) continue;
         const s = tr.S[tr.S.length - 1], a = P.sample(m.theta, s, rng);
         yield { line: "act", type: "choose", s, a, w: k };
-        const o = env.step(s, a, rng);
+        const o = envs[k].step(s, a, rng);
         yield { line: "act", type: "move", s, a, ...o, w: k };
         tr.A.push(a); tr.S.push(o.s2); tr.R.push(o.r);
         if (o.fell !== undefined) tr.falls++;
-        if (env.terminal(o.s2) || tr.A.length >= p.maxSteps) { tr.done = true; tr.cut = !env.terminal(o.s2); }
+        if (envs[k].terminal(o.s2) || tr.A.length >= p.maxSteps) { tr.done = true; tr.cut = !envs[k].terminal(o.s2); }
       }
       yield { line: "act", type: "tick", tick, active: team.filter((tr) => !tr.done).length };
       if (onTick) yield* onTick(team, tick);
@@ -6403,6 +6409,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     // What an algorithm knows (its `show`): Q, or V, and maybe a policy P; greedy: draw the greedy policy of Q.
     show(d, p = {}) {
       this.hasQ = !!d.Q;
+      this.noValue = !d.Q && !d.V; // a policy with no critic (REINFORCE): no number to show
       if (d.Q) this.Q.set(d.Q);
       else this.Q.fill(0);
       this.V = d.V ? Float64Array.from(d.V) : null;
@@ -6500,10 +6507,11 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const num = this.nums[s];
       // a number on a tile nobody has seen would mislead; large numbers drop decimals, so they fit their tile
       const d = this.o.digits ?? 2, place = Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? Math.min(d, 1) : d;
-      num.textContent = this.o.numbers && !fogged ? fmt(v, place) : "";
+      const numbers = this.o.numbers && !this.noValue;
+      num.textContent = numbers && !fogged ? fmt(v, place) : "";
       if (!this.o.arrows) return;
       // With numbers on, the number owns the middle of the tile and the arrows become chevrons by its edges.
-      const p = this._probs(s), edge = this.o.numbers;
+      const p = this._probs(s), edge = numbers;
       for (let a = 0; a < nA; a++) {
         const arrow = this.arrows[s][a], [dx, dy] = DIRS[a];
         if (p[a] < 0.06) { arrow.style.opacity = 0; continue; }
@@ -7599,6 +7607,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     event(ev, { line = false } = {}) {
+      if (ev.w) return 0; // several workers: the view follows the first
       const env = this.env, h = env.hand;
       switch (ev.type) {
         case "start":
@@ -7636,7 +7645,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.mark(-1);
       const h = this.env.hand;
       if (!events.length || !h) { this._cards("dealer", []); this._cards("player", []); this._sum("dealer", ""); this._sum("player", ""); this._verdict("waiting for the first hand"); return; }
-      const start = events.find((e) => e.type === "start"), last = [...events].reverse().find((e) => e.type === "move");
+      const start = events.find((e) => e.type === "start" && !e.w), last = [...events].reverse().find((e) => e.type === "move" && !e.w);
       const stuck = last && last.a === this.env.STICK;
       this._cards("dealer", stuck ? h.dealer : h.dealer.slice(0, 2), stuck ? 0 : 1);
       this._sum("dealer", stuck ? (last.dealer > 21 ? "over 21" : String(last.dealer)) : `shows ${rank(h.dealer[0])}`);
@@ -8428,7 +8437,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         const lo = getComputedStyle(this.box).getPropertyValue("--v-mid"), hi = getComputedStyle(this.box).getPropertyValue("--v-neg");
         for (let k = 0; k < Z.length; k++) this.cellEls[k].setAttribute("fill", `color-mix(in oklab, ${hi} ${Math.round(100 * Math.min(1, Z[k] / zMax) ** 0.85)}%, ${lo})`);
       }
-      this.box.querySelector(".map-head span").textContent = `steps the learner expects before the flag (top of the scale: ${zMax})`;
+      const critic = !d.theta || d.w.some((x) => x !== 0); // a policy with no critic (REINFORCE) expects nothing
+      this.box.querySelector(".map-head span").textContent = critic ? `steps the learner expects before the flag (top of the scale: ${zMax})` : "this learner keeps no values (it has no critic): the map stays flat";
     }
 
     place(s, instant = false) {
@@ -8455,6 +8465,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     event(ev) {
+      if (ev.w) return 0; // several workers: the view follows the first
       switch (ev.type) {
         case "start": this.points = [ev.s]; this.place(ev.s, true); this._drawPath(); return 0;
         case "choose": this.gas(ev.a); return 0;
@@ -8475,7 +8486,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     rest(events) {
-      const moves = events.filter((e) => e.type === "move"), start = events.find((e) => e.type === "start");
+      const moves = events.filter((e) => e.type === "move" && !e.w), start = events.find((e) => e.type === "start" && !e.w);
       this.points = start ? [start.s, ...moves.map((e) => e.s2)] : [];
       this.place(moves.length ? moves[moves.length - 1].s2 : [-0.5, 0], true);
       this.gas(1);
@@ -9002,7 +9013,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     setOptions(o) {
       Object.assign(this.o, o);
       this.gArrows.style.display = this.o.arrows ? "" : "none";
-      this.gNums.style.display = this.o.numbers ? "" : "none";
+      this.gNums.style.display = this.o.numbers && !this.noValue ? "" : "none";
       this.car.classList.toggle("gone", this.o.agent === false);
       this._draw();
     }
@@ -9012,6 +9023,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (d.Q) this.Q = d.Q;
       this.V = d.V || null;
       this.P = d.P || null;
+      this.noValue = !d.Q && !d.V; // a policy with no critic (REINFORCE): no values to write
+      this.gNums.style.display = this.o.numbers && !this.noValue ? "" : "none";
       this._draw();
     }
 
@@ -9074,6 +9087,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     event(ev, { line = false } = {}) {
+      if (ev.w) return 0; // several workers: the view follows the first
       const motion = !RL.reducedMotion();
       switch (ev.type) {
         case "start": this.place(ev.s, true); return 0;
@@ -9096,8 +9110,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     // After a jump to another moment: the taxi where the last episode ended.
     rest(events) {
-      const moves = events.filter((e) => e.type === "move");
-      const first = events.find((e) => e.type === "start");
+      const moves = events.filter((e) => e.type === "move" && !e.w);
+      const first = events.find((e) => e.type === "start" && !e.w);
       if (moves.length) this.place(moves[moves.length - 1].s2, true);
       else if (first) this.place(first.s, true);
     }
@@ -9108,7 +9122,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const r = Math.floor(y / T), c = Math.floor(x / T);
       if (r < 0 || c < 0 || r >= N || c >= N) { RL.tip.hide(); return; }
       const s = this.env.encode(r, c, this.trip.pass, this.trip.dest), nA = this.env.nA;
-      const rows = this.env.actionNames.map((name, a) => `<div class="row"><b>${signed(this.Q[s * nA + a], 2)}</b><span>${name}</span></div>`).join("");
+      // a policy method: its probabilities (and its critic's value); otherwise the action values
+      const rows = this.P ? (this.V ? `<div class="row"><b>${signed(this.V[s], 2)}</b><span>value</span></div>` : "") + this.env.actionNames.map((name, a) => `<div class="row"><b>${Math.round(100 * this.P[s * nA + a])}%</b><span>${name}</span></div>`).join("")
+        : this.env.actionNames.map((name, a) => `<div class="row"><b>${signed(this.Q[s * nA + a], 2)}</b><span>${name}</span></div>`).join("");
       RL.tip.show(e.clientX, e.clientY, `<div class="head">Row ${r + 1}, column ${c + 1}, this trip</div>${rows}`);
     }
 
@@ -9192,7 +9208,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     setOptions(o) {
       Object.assign(this.o, o);
       this.gArrows.style.display = this.o.arrows ? "" : "none";
-      this.gNums.style.display = this.o.numbers ? "" : "none";
+      this.gNums.style.display = this.o.numbers && !this.noValue ? "" : "none";
       this.gPieces.style.display = this.o.agent === false ? "none" : "";
       this._draw();
     }
@@ -9202,6 +9218,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (d.Q) this.Q = d.Q;
       this.V = d.V || null;
       this.P = d.P || null;
+      this.noValue = !d.Q && !d.V; // a policy with no critic (REINFORCE): no values to write
+      this.gNums.style.display = this.o.numbers && !this.noValue ? "" : "none";
       this._draw();
     }
     value(s) {
@@ -9282,7 +9300,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const r = Math.floor(y / T), c = Math.floor(x / T);
       if (r < 0 || c < 0 || r >= this.env.rows - 1 || c >= this.env.cols) { RL.tip.hide(); return; }
       const s = this.env.encode(r, c, this.px), nA = this.env.nA;
-      const rows = this.V ? `<div class="row"><b>${signed(this.V[s])}</b><span>value</span></div>` : this.env.actionNames.map((name, a) => `<div class="row"><b>${signed(this.Q[s * nA + a])}</b><span>${name}</span></div>`).join("");
+      const rows = this.noValue && this.P ? this.env.actionNames.map((name, a) => `<div class="row"><b>${Math.round(100 * this.P[s * nA + a])}%</b><span>${name}</span></div>`).join("") : this.V ? `<div class="row"><b>${signed(this.V[s])}</b><span>value</span></div>` : this.env.actionNames.map((name, a) => `<div class="row"><b>${signed(this.Q[s * nA + a])}</b><span>${name}</span></div>`).join("");
       RL.tip.show(e.clientX, e.clientY, `<div class="head">Ball at row ${r + 1}, column ${c + 1}; paddle in column ${this.px + 1}</div>${rows}`);
     }
 
@@ -11054,6 +11072,15 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     // the racers all set are shown too: the knob is the reference their ratios apply to (lab.carryRacer).
     const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && (racers.some((r) => !(k in r.params)) || (preset.env !== base.env && (k === "alpha" || k === "alphaW"))));
     // A racer's settings: the lab's, the knobs', then its own (adapted when it runs in another world than the lab's).
+    // "α = 2⁻¹³" or "αw = 0.1" in a racer's name, written again for the step sizes p it runs with
+    const SUP = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+    const stepText = (v) => {
+      const e = Math.log2(v);
+      return Number.isInteger(e) && e < -3 ? `2${[...String(e)].map((c) => SUP[c]).join("")}` : String(+v.toPrecision(2));
+    };
+    const stepNamed = (name, p) => name
+      .replace(/αw = [^,)·]+/, (m) => (p.alphaW > 0 ? `αw = ${stepText(p.alphaW)}` : m))
+      .replace(/α = (?!1\/n)[^,)·]+/, (m) => (p.alpha > 0 ? `α = ${stepText(p.alpha)}` : m));
     const paramsOf = (r) => {
       const own = preset.env === base.env ? r.params : lab.carryRacer(r.params, { env, base: base.params, racers: racers.map((x) => x.params), knobs });
       return { ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...own };
@@ -11264,6 +11291,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       knobs.runs = preset.runs;
       knobs.seed = "typical";
       P.e = 0;
+      // a racer named by its step size is renamed by the one it has here (its home world's numbers would be wrong)
+      racers.forEach((r) => { r.baseName ??= r.name; r.name = id === base.env ? r.baseName : stepNamed(r.baseName, paramsOf(r)); });
       q(".lab-title h1").textContent = id === base.env ? base.title : `${racers.map((r) => r.name).join(" vs ")} · ${lab.make(id).title}`;
       q(".intro").textContent = id === base.env ? base.intro || "" : `${lab.worldBlurb(id)}. The settings start from this world's defaults; the knobs are yours.`;
       build();

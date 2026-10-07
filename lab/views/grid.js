@@ -191,6 +191,7 @@
     // What an algorithm knows (its `show`): Q, or V, and maybe a policy P; greedy: draw the greedy policy of Q.
     show(d, p = {}) {
       this.hasQ = !!d.Q;
+      this.noValue = !d.Q && !d.V; // a policy with no critic (REINFORCE): no number to show
       if (d.Q) this.Q.set(d.Q);
       else this.Q.fill(0);
       this.V = d.V ? Float64Array.from(d.V) : null;
@@ -288,10 +289,11 @@
       const num = this.nums[s];
       // a number on a tile nobody has seen would mislead; large numbers drop decimals, so they fit their tile
       const d = this.o.digits ?? 2, place = Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? Math.min(d, 1) : d;
-      num.textContent = this.o.numbers && !fogged ? fmt(v, place) : "";
+      const numbers = this.o.numbers && !this.noValue;
+      num.textContent = numbers && !fogged ? fmt(v, place) : "";
       if (!this.o.arrows) return;
       // With numbers on, the number owns the middle of the tile and the arrows become chevrons by its edges.
-      const p = this._probs(s), edge = this.o.numbers;
+      const p = this._probs(s), edge = numbers;
       for (let a = 0; a < nA; a++) {
         const arrow = this.arrows[s][a], [dx, dy] = DIRS[a];
         if (p[a] < 0.06) { arrow.style.opacity = 0; continue; }

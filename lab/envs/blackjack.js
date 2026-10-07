@@ -21,6 +21,7 @@
       name: "blackjack", kind: "blackjack", title: "Blackjack", nS: 201, nA: 2, TERMINAL, STICK, HIT, valueRange: 1, unitName: "hand",
       encode, decode,
       hand: null, // the cards of the episode being played (the dealer's hidden card included)
+      fork: () => lab.blackjack(), // a table of its own, for each extra worker of a round: a hand is not shared
       starts: Array.from({ length: 200 }, (_, s) => s),
       acts: (s) => (s === TERMINAL ? none : both),
       terminal: (s) => s === TERMINAL,

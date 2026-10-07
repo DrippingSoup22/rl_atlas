@@ -129,6 +129,7 @@
     }
 
     event(ev, { line = false } = {}) {
+      if (ev.w) return 0; // several workers: the view follows the first
       const env = this.env, h = env.hand;
       switch (ev.type) {
         case "start":
@@ -166,7 +167,7 @@
       this.mark(-1);
       const h = this.env.hand;
       if (!events.length || !h) { this._cards("dealer", []); this._cards("player", []); this._sum("dealer", ""); this._sum("player", ""); this._verdict("waiting for the first hand"); return; }
-      const start = events.find((e) => e.type === "start"), last = [...events].reverse().find((e) => e.type === "move");
+      const start = events.find((e) => e.type === "start" && !e.w), last = [...events].reverse().find((e) => e.type === "move" && !e.w);
       const stuck = last && last.a === this.env.STICK;
       this._cards("dealer", stuck ? h.dealer : h.dealer.slice(0, 2), stuck ? 0 : 1);
       this._sum("dealer", stuck ? (last.dealer > 21 ? "over 21" : String(last.dealer)) : `shows ${rank(h.dealer[0])}`);

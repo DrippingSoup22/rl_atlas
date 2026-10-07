@@ -117,7 +117,8 @@
         const lo = getComputedStyle(this.box).getPropertyValue("--v-mid"), hi = getComputedStyle(this.box).getPropertyValue("--v-neg");
         for (let k = 0; k < Z.length; k++) this.cellEls[k].setAttribute("fill", `color-mix(in oklab, ${hi} ${Math.round(100 * Math.min(1, Z[k] / zMax) ** 0.85)}%, ${lo})`);
       }
-      this.box.querySelector(".map-head span").textContent = `steps the learner expects before the flag (top of the scale: ${zMax})`;
+      const critic = !d.theta || d.w.some((x) => x !== 0); // a policy with no critic (REINFORCE) expects nothing
+      this.box.querySelector(".map-head span").textContent = critic ? `steps the learner expects before the flag (top of the scale: ${zMax})` : "this learner keeps no values (it has no critic): the map stays flat";
     }
 
     place(s, instant = false) {
@@ -144,6 +145,7 @@
     }
 
     event(ev) {
+      if (ev.w) return 0; // several workers: the view follows the first
       switch (ev.type) {
         case "start": this.points = [ev.s]; this.place(ev.s, true); this._drawPath(); return 0;
         case "choose": this.gas(ev.a); return 0;
@@ -164,7 +166,7 @@
     }
 
     rest(events) {
-      const moves = events.filter((e) => e.type === "move"), start = events.find((e) => e.type === "start");
+      const moves = events.filter((e) => e.type === "move" && !e.w), start = events.find((e) => e.type === "start" && !e.w);
       this.points = start ? [start.s, ...moves.map((e) => e.s2)] : [];
       this.place(moves.length ? moves[moves.length - 1].s2 : [-0.5, 0], true);
       this.gas(1);

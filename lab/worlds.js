@@ -166,6 +166,8 @@
     if (tu !== undefined) out.units = tu;
     if (tm !== undefined) out.maxSteps = tm;
     if (out.film) out.film = out.film.filter((u) => u <= out.units);
+    // frames made for longer runs (episodes, where these are rounds): spread four over this one instead
+    if (!out.film || out.film.length < 3) out.film = [...new Set([1, Math.round(out.units / 10), Math.round(out.units / 3), out.units])].filter((u) => u >= 1);
     // a world without features of its own is learned with a table (a lab's own features, like Baird's, stay home);
     // on a walk, a lab's features (its groups, say) work as well as at home, and stay
     if (w.group !== "approx" && w.group !== "walks" && !out.params.features) out.params = { features: "table", ...out.params };

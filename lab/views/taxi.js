@@ -82,7 +82,7 @@
     setOptions(o) {
       Object.assign(this.o, o);
       this.gArrows.style.display = this.o.arrows ? "" : "none";
-      this.gNums.style.display = this.o.numbers ? "" : "none";
+      this.gNums.style.display = this.o.numbers && !this.noValue ? "" : "none";
       this.car.classList.toggle("gone", this.o.agent === false);
       this._draw();
     }
@@ -92,6 +92,8 @@
       if (d.Q) this.Q = d.Q;
       this.V = d.V || null;
       this.P = d.P || null;
+      this.noValue = !d.Q && !d.V; // a policy with no critic (REINFORCE): no values to write
+      this.gNums.style.display = this.o.numbers && !this.noValue ? "" : "none";
       this._draw();
     }
 
@@ -154,6 +156,7 @@
     }
 
     event(ev, { line = false } = {}) {
+      if (ev.w) return 0; // several workers: the view follows the first
       const motion = !RL.reducedMotion();
       switch (ev.type) {
         case "start": this.place(ev.s, true); return 0;
@@ -176,8 +179,8 @@
 
     // After a jump to another moment: the taxi where the last episode ended.
     rest(events) {
-      const moves = events.filter((e) => e.type === "move");
-      const first = events.find((e) => e.type === "start");
+      const moves = events.filter((e) => e.type === "move" && !e.w);
+      const first = events.find((e) => e.type === "start" && !e.w);
       if (moves.length) this.place(moves[moves.length - 1].s2, true);
       else if (first) this.place(first.s, true);
     }
@@ -188,7 +191,9 @@
       const r = Math.floor(y / T), c = Math.floor(x / T);
       if (r < 0 || c < 0 || r >= N || c >= N) { RL.tip.hide(); return; }
       const s = this.env.encode(r, c, this.trip.pass, this.trip.dest), nA = this.env.nA;
-      const rows = this.env.actionNames.map((name, a) => `<div class="row"><b>${signed(this.Q[s * nA + a], 2)}</b><span>${name}</span></div>`).join("");
+      // a policy method: its probabilities (and its critic's value); otherwise the action values
+      const rows = this.P ? (this.V ? `<div class="row"><b>${signed(this.V[s], 2)}</b><span>value</span></div>` : "") + this.env.actionNames.map((name, a) => `<div class="row"><b>${Math.round(100 * this.P[s * nA + a])}%</b><span>${name}</span></div>`).join("")
+        : this.env.actionNames.map((name, a) => `<div class="row"><b>${signed(this.Q[s * nA + a], 2)}</b><span>${name}</span></div>`).join("");
       RL.tip.show(e.clientX, e.clientY, `<div class="head">Row ${r + 1}, column ${c + 1}, this trip</div>${rows}`);
     }
 
