@@ -589,7 +589,7 @@
       if (all.some((c) => !c)) return null;
       const R = rule(), key = R.metric === "return" ? "train" : R.metric;
       const scores = all.map((curves) => curves.map((c) => lab.success(R, { [R.metric]: Float64Array.from(c[key] || [], (x) => x ?? NaN) }).score));
-      return lab.typicalSeed(scores, all[0].map((c) => c.seed), false);
+      return lab.typicalSeed(scores, all[0].map((c) => c.seed), lab.lowerIsBetter(R));
     }
     // Train the bench of the current settings here: every seed of the recordings, curves only, over spare cores.
     function trainDeepBench() {

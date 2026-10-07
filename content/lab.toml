@@ -762,7 +762,7 @@ env = "cartpole"
 racers = [{ recording = "dqn-cartpole", name = "DQN" }, { recording = "double-dqn-cartpole", name = "Double DQN" }, { recording = "dueling-dqn-cartpole", name = "dueling DQN" }, { recording = "prioritized-dqn-cartpole", name = "prioritized replay" }]
 charts = ["return", "q"]
 film = [0, 10, 20, 40]
-intro = "DQN and three of its extensions, each changing one thing, from the same seeds. Double DQN changes the target, the dueling network its head, prioritized replay how the memory is sampled. Switch the charts to all 20 seeds: Double DQN keeps its values under the ceiling of 100 most often (it passed it on 7 seeds, DQN on 15), prioritized replay learns fastest but slips back (8 of 20 end well), and the dueling split, which needs many actions of similar value, does not help here (11 of 20)."
+intro = "DQN and three of its extensions, each changing one thing, from the same seeds. Double DQN changes the target, the dueling network its head, prioritized replay how the memory is sampled. Switch the charts to all 20 seeds: Double DQN keeps its values under the ceiling of 100 most often (it passed it on 9 seeds, by at most 11%; DQN on 12, by up to 30%), prioritized replay changes little here (15 of 20 end well, DQN 13), and the dueling split, which needs many actions of similar value, does not help either (12 of 20)."
 success = { metric = "return", min = 450, text = "end up balancing the pole in training, 450 steps or more on average" }
 
 [ppo-cartpole]

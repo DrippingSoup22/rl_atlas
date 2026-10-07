@@ -30,19 +30,19 @@ learn = { recording = "dqn-cartpole", name = "DQN's network" }
 :::
 
 ::: step {run = "learn", at = 0, formula = 2, map = "action"}
-**Two outputs, one per push.** The last layer is a linear method on the features: one weighted sum for “push left”, one for “push right”. Before training the values are small, but not noisy: a network is a smooth function, so nearby states get nearby values. This one happens to prefer pushing left everywhere on the map.
+**Two outputs, one per push.** The last layer is a linear method on the features: one weighted sum for “push left”, one for “push right”. Before training the values are small, but not noisy: a network is a smooth function, so nearby states get nearby values. This one happens to prefer pushing right everywhere on the map.
 :::
 
 ::: step {run = "learn", at = 1, formula = 2}
-**One update moves everything.** Each gradient step changes weights that every state uses. After 1,000 of them, the whole map has moved, its values now between 1.9 and 9.9, including states the cart has never visited. A table would only have changed the states it saw.
+**One update moves everything.** Each gradient step changes weights that every state uses. After 1,000 of them, the whole map has moved, its values now between 2.6 and 10.0, including states the cart has never visited. A table would only have changed the states it saw.
 :::
 
-::: step {run = "learn", at = 2}
-**Features appear.** After 2,250 steps of learning the map has a shape: low values in the two corners where the pole leans one way and spins further that way. No one told the network that this is dangerous: the hidden units found it because it predicts the targets.
+::: step {run = "learn", at = 3}
+**Features appear.** After 3,500 steps of learning the map has a shape: low values in the two corners where the pole leans one way and spins further that way. No one told the network that this is dangerous: the hidden units found it because it predicts the targets.
 :::
 
 ::: step {run = "learn", at = 40}
-**After 200,000 steps** those corners are still the worst, about 44 against 99 in the middle, and the pole stays up for the full 500 steps. Tile coding would have needed someone to choose the tiles. The network grew its own features, with the same gradient steps that fit the values.
+**After 200,000 steps** those corners are still the worst, about 51 and 66 against 100 in the middle, and the pole stays up for the full 500 steps. Tile coding would have needed someone to choose the tiles. The network grew its own features, with the same gradient steps that fit the values.
 :::
 
 ## Textbook

@@ -199,14 +199,14 @@
 
   // Checkpoints: a run at a few moments of its training, each held in turn, instead of a fast replay of every event
   // between them. spec: a list of units, or n for n moments evenly spaced up to the run's end (n = 5: every 20%).
-  function checkpoints(view, r, spec, { later, note, noun, hold = 1800, each }) {
+  function checkpoints(view, r, spec, { later, note, noun, text, hold = 1800, each }) {
     const list = Array.isArray(spec) ? spec.map((t) => Math.min(t, r.units)) : Array.from({ length: spec }, (_, k) => Math.round((r.units * (k + 1)) / spec));
     let k = 0;
     const next = () => {
       const t = list[k];
       showRun(view, r, t);
       each?.(t);
-      note.textContent = t === 0 ? "at the start" : `after ${t.toLocaleString("en")} ${noun(t)}`;
+      note.textContent = t === 0 ? "at the start" : text ? text(t) : `after ${t.toLocaleString("en")} ${noun(t)}`;
       if (++k < list.length) later(next, hold);
     };
     next();
@@ -236,7 +236,9 @@
             note.textContent = st.note || "";
             more?.(st, view, r, t);
             const noun = r.env.unitName || (r.algorithm.unit === "sweep" ? "sweep" : "episode");
-            if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${noun}${n === 1 ? "" : "s"}`, each: (u) => more?.(st, view, r, u) });
+            // a recorded run's units are blocks of training steps: its checkpoints say how many steps
+            const block = r.recorded ? RL.recordings?.[cfg.runs[st.run || names[0]].recording]?.block : 0;
+            if (st.checkpoints) checkpoints(view, r, st.checkpoints, { later, note, hold: st.hold, noun: (n) => `${noun}${n === 1 ? "" : "s"}`, text: block ? (u) => `after ${(u * block).toLocaleString("en")} steps of training` : null, each: (u) => more?.(st, view, r, u) });
             else if (st.play) {
               play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, updates: st.updates, instant: !!st.instant, lead: st.lead, after: (u) => { if (!st.note) note.textContent = `${u.toLocaleString("en")} ${noun}${u === 1 ? "" : "s"} played`; } });
             } else if (test && t > 0 && !RL.reducedMotion()) {

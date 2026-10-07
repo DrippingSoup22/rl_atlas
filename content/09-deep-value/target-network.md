@@ -23,31 +23,31 @@ none = { recording = "dqn-cartpole-no-target", name = "no target network" }
 ## Story
 
 ::: step {run = "none", at = 0}
-**The same DQN, one thing taken away.** Same pole, same seed, same network, memory and batches. The only change: the targets are computed with the weights being trained, not with a frozen copy. Before any learning, the values on the map run from 0 to 1.8.
+**The same DQN, one thing taken away.** Same pole, same seed, same network, memory and batches. The only change: the targets are computed with the weights being trained, not with a frozen copy. Before any learning, the values on the map run from −0.1 to 1.2.
 :::
 
 ::: step {run = "none", at = 1, formula = 1}
-**5,000 steps later, the values run from 140 to 323**, though no state here is worth more than 100. Each update raises $\val{\hat q(s, a)}$ toward its target; but $s'$, a fiftieth of a second later, looks almost the same to the network, so its values rise too, and with them the target. The network chases its own tail. The pole falls after 9 steps; with the copy, the same seed kept it up for 87.
+**5,000 steps later, the values run from 161 to 257**, though no state here is worth more than 100. Each update raises $\val{\hat q(s, a)}$ toward its target; but $s'$, a fiftieth of a second later, looks almost the same to the network, so its values rise too, and with them the target. The network chases its own tail. The pole falls after 10 steps; with the copy, the same seed kept it up for 162.
 :::
 
 ::: step {run = "none", at = 3}
-**And yet, after 15,000 steps, it balances** for the full 500 steps, with values up to 206. A greedy policy needs only the right *order* of the two pushes in each state: two estimates that are both far too high can still say which push is better.
+**And yet, after 15,000 steps, it balances** for 414 steps, until the cart runs off the track, with values up to 234. A greedy policy needs only the right *order* of the two pushes in each state: two estimates that are both far too high can still say which push is better.
 :::
 
-::: step {run = "none", checkpoints = [5, 8, 11], hold = 2200}
-**It does not last.** The loop keeps feeding itself: the values reach 630, then 2,325, then 14,306. On numbers that large, the gap between the two pushes drowns in the errors, and which push wins changes from one update to the next. The test episodes last 15, 222 and 92 steps.
+::: step {run = "none", checkpoints = [4, 5], hold = 2200}
+**It does not last.** The loop keeps feeding itself: the values reach 495, then 1,060. On numbers that large, the gap between the two pushes drowns in the errors, and which push wins changes from one update to the next. The test episodes last 125 and 20 steps.
 :::
 
 ::: step {run = "none", at = 40, map = "action"}
-**At the end**, the values run from $-389$ to $171$, though every step pays $\rew{+1}$. The map's dividing line has gone flat: the pushes follow the spin alone, the pole drifts over and falls after 81 steps. The run balanced the pole once, early on, and lost it for good.
+**At the end**, the values run from $-75$ to $163$, though every step pays $\rew{+1}$ and no state is worth more than 100. The order of the pushes still looks sensible on the map, yet the cart runs off the track after 122 steps. Along the way the run kept the pole up for the full 500 steps six times, and lost it every time.
 :::
 
 ::: step {run = "copy", at = 40, curves = ["copy", "none"], metric = "q", log = true, ref = [100, "the most a state is worth"]}
-**Twenty seeds each**, on a log scale. Without the copy, every seed's values pass 100 within 15,000 steps, and peak between 1,550 and 109,320. With the copy, the values creep up from below and reach 100 only near the end: each period moves them one backup further, never more.
+**Twenty seeds each**, on a log scale. Without the copy, every seed's values pass 100 within 15,000 steps, and peak between 3,329 and 107,559. With the copy, the values creep up from below and pass 100, if at all, only in the second half of training: each period moves them one backup further, never more.
 :::
 
 ::: step {run = "copy", at = 40, formula = 2, curves = ["copy", "none"], metric = "return"}
-**The copy holds the target still.** Between copies, the targets are fixed numbers and each period is a plain regression: the loop is cut. Without it, no run of 20 ends well; with a copy every 500 steps, 16 do. [The Lab sweeps the copy period](lab:dqn-target).
+**The copy holds the target still.** Between copies, the targets are fixed numbers and each period is a plain regression: the loop is cut. Without it, no run of 20 ends well; with a copy every 500 steps, 13 do. [The Lab sweeps the copy period](lab:dqn-target).
 :::
 
 ## Textbook

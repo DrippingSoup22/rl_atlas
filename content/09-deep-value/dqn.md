@@ -26,31 +26,31 @@ notarget = { recording = "dqn-cartpole-no-target", name = "without a target netw
 ## Story
 
 ::: step {run = "learn", at = 0, map = "action"}
-**A pole on a cart**, and two moves: push left or push right. Every step the pole stays up pays $\rew{+1}$, for at most 500 steps. The state is four numbers; the map on the right is a slice of them, the pole's angle across and its spin up and down, with the cart at rest. A network gives each push a value. Before any learning the values are noise, and here it pushes left everywhere.
+**A pole on a cart**, and two moves: push left or push right. Every step the pole stays up pays $\rew{+1}$, for at most 500 steps. The state is four numbers; the map on the right is a slice of them, the pole's angle across and its spin up and down, with the cart at rest. A network gives each push a value. Before any learning the values are noise, and here it pushes right everywhere.
 :::
 
 ::: step {run = "learn", at = 1, formula = 2}
-**Play, remember, replay.** The agent acts ε-greedily, at first almost always at random, and keeps every step in a **replay memory**. Every few steps the network learns from a random batch of old steps, not just the latest. After 5,000 steps, played greedily, the pole stays up for 87 steps.
+**Play, remember, replay.** The agent acts ε-greedily, at first almost always at random, and keeps every step in a **replay memory**. Every few steps the network learns from a random batch of old steps, not just the latest. After 5,000 steps, played greedily, the pole stays up for 162 steps.
 :::
 
 ::: step {run = "learn", at = 2, formula = 1}
-**After 10,000 steps: 311.** The map has split in two. Where the pole leans or spins right, push right, under it; where it leans left, push left. That is the whole trick of balancing, found from the reward alone. The targets come from a **frozen copy** of the network, refreshed every 500 steps, so the network chases something that holds still.
+**After 10,000 steps: 227.** The map has split in two. Where the pole leans or spins right, push right, under it; where it leans left, push left. That is the whole trick of balancing, found from the reward alone. The targets come from a **frozen copy** of the network, refreshed every 500 steps, so the network chases something that holds still.
 :::
 
 ::: step {run = "learn", at = 10}
-**Then a long plateau.** For most of training the tests last between 170 and 350 steps, and almost always end the same way: the cart drifts off the end of its track. Keeping the pole up pays at once; where the cart is matters only hundreds of steps later, and discounting makes that faint.
+**Then a long stretch of ups and downs.** Until 100,000 steps the tests mostly last 150 to 440 steps, and from the sixth block on they nearly all end the same way: the cart drifts off the end of its track. Keeping the pole up pays at once; where the cart is matters only hundreds of steps later, and discounting makes that faint.
 :::
 
-::: step {run = "learn", at = 30}
-**After 150,000 steps: 500**, the most an episode lasts. The values now approach 100, what a pole that stays up forever is worth with $\gam = 0.99$: $1 + 0.99 + 0.99^2 + \dots = 100$.
+::: step {run = "learn", at = 21}
+**After 105,000 steps: 500**, the most an episode lasts, and every test after it lasts as long. The values now approach 100, what a pole that stays up forever is worth with $\gam = 0.99$: $1 + 0.99 + 0.99^2 + \dots = 100$.
 :::
 
 ::: step {run = "learn", at = 40, map = "value"}
-**At the end**, the highest value on the map is $101.6$, more than any state can be worth. The max in the target picks up the noise of the estimates, and the copy passes it on. Modest here, large on harder games: [[dqn-extensions|Double DQN]] is the cure.
+**At the end**, the highest value on the map is $100.7$, more than any state can be worth. The max in the target picks up the noise of the estimates, and the copy passes it on. Modest here, large on harder games: [[dqn-extensions|Double DQN]] is the cure.
 :::
 
 ::: step {run = "learn", at = 40, curves = ["learn", "noreplay", "notarget"], metric = "return"}
-**Take away either remedy**, 20 seeds each. Without replay the runs still learn but wobble, and only 7 of 20 end well. Without a target network, none does. With both, 16 of 20. [The runs, in the Lab](lab:dqn-cartpole).
+**Take away either remedy**, 20 seeds each. Without replay the runs still learn but wobble, and only 9 of 20 end well. Without a target network, none does. With both, 13 of 20. [The runs, in the Lab](lab:dqn-cartpole).
 :::
 
 ## Textbook
