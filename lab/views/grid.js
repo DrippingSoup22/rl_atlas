@@ -651,6 +651,7 @@
     // A ring where an update just happened: on the triangle of action a, or on the whole tile when a < 0.
     // kind: "trc" for a trace being laid down, "dream" for a planning update; delay in milliseconds.
     spark(s, a, kind = "", delay = 0) {
+      if (!(s >= 0)) return; // an update with no single state (a pass over a whole batch)
       let [x, y] = this.center(s);
       if (a >= 0) { x += DIRS[a][0] * 17; y += DIRS[a][1] * 17; }
       const c = el("circle", { class: `spark${kind ? ` k-${kind}` : ""}`, cx: x, cy: y, r: a >= 0 ? 9 : 20, opacity: 0 }, this.gFx);

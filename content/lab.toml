@@ -462,6 +462,7 @@ gamma = 0.99
 policy = "target"
 charts = ["weights", "error"]
 measures = ["error"]
+home = "This lab stays on Baird's star: its three learners differ in features and in a behavior policy that only this world has. Elsewhere they would be one learner, three times."
 film = [0, 100, 300, 1000]
 intro = "Every true value is 0, and nothing random can mislead the learner: rewards are always 0. Yet off-policy semi-gradient TD with these features walks its weights away to infinity. Take away any one of the three ingredients and the weights stay bounded: with a table they drift up for a few thousand steps, then come back down."
 success = { metric = "weights", max = 100, text = "keep the size of their weights under 100" }
@@ -872,9 +873,9 @@ success = { metric = "policy-value", min = 0.8, text = "reach the gem 80% of the
 title = "A2C with rewards in other units"
 env = "dyna-maze"
 racers = [
-  { algorithm = "a2c", name = "the gem pays 0.01", rewardScale = 0.01 },
-  { algorithm = "a2c", name = "the gem pays 1", rewardScale = 1.0 },
-  { algorithm = "a2c", name = "the gem pays 100", rewardScale = 100.0 },
+  { algorithm = "a2c", name = "rewards × 0.01", rewardScale = 0.01 },
+  { algorithm = "a2c", name = "rewards × 1", rewardScale = 1.0 },
+  { algorithm = "a2c", name = "rewards × 100", rewardScale = 100.0 },
 ]
 units = 60
 runs = 20

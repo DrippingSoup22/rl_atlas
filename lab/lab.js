@@ -288,22 +288,24 @@
     // ---- the world panel: every shared world these racers may run, and this lab's own ----
     function worldPanel() {
       const box = q(".world-panel");
-      const groups = recorded || sandbox ? [] : lab.worldsFor(racers.map((r) => r.algorithm));
+      const groups = recorded || sandbox || base.home ? [] : lab.worldsFor(racers.map((r) => r.algorithm));
       const listed = groups.some((g) => g.worlds.some((w) => w.id === base.env));
       const own = listed ? [] : [{ group: "own", title: "This lab", worlds: [{ id: base.env, title: lab.make(base.env).title, blurb: "the world this lab was made for" }] }];
       const all = [...own, ...groups], count = all.reduce((n, g) => n + g.worlds.length, 0);
-      box.hidden = count < 2;
+      box.hidden = count < 2 && !base.home; // a lab tied to its world says why
       if (box.hidden) return;
       // a world where the study saw these racers' algorithms rarely end well is marked "hard": a run there may fail
       const tip = (w) => w.blurb + (w.hard?.length ? `. Hard for ${w.hard.join(" and ")}: in our tests, with the settings it starts from, it rarely ended well here` : "");
       const anyHard = all.some((g) => g.worlds.some((w) => w.hard?.length));
       q(".world-list").innerHTML = all.map((g) => `<div class="wgroup"><h4>${esc(g.title)}</h4><div class="wchips">${g.worlds.map((w) =>
         `<button type="button" class="wchip${w.id === preset.env ? " on" : ""}${w.hard?.length ? " hard" : ""}" data-world="${w.id}" title="${esc(tip(w))}">${esc(w.title)}${w.id === base.env && listed ? '<i class="home" aria-label="this lab\'s world"></i>' : ""}${w.hard?.length ? '<i class="hardmark">hard</i>' : ""}</button>`).join("")}</div></div>`).join("") +
-        (anyHard ? '<p class="faint world-note"><i class="hardmark">hard</i> our tests rarely saw it end well there: a run may struggle or fail, which is worth seeing too</p>' : "");
+        (anyHard ? '<p class="faint world-note"><i class="hardmark">hard</i> our tests rarely saw it end well there: a run may struggle or fail, which is worth seeing too</p>' : "") +
+        (base.home ? `<p class="faint world-note">${esc(base.home)}</p>` : "");
     }
     function switchWorld(id) {
       if (id === preset.env) return;
       pause();
+      const before = Object.keys(preset.params || {});
       if (id === base.env) {
         for (const k of Object.keys(preset)) delete preset[k];
         Object.assign(preset, base, { params: { ...base.params } });
@@ -319,6 +321,7 @@
         if (prof.maxSteps) preset.params.maxSteps = prof.maxSteps; else delete preset.params.maxSteps; // the world's own limit
         knobs.units = prof.units;
       }
+      for (const k of before) if (!(k in preset.params)) delete knobs[k]; // nothing stays from the world before
       Object.assign(knobs, preset.params); // the knobs start from the world's settings (a step size made for its features)
       knobs.runs = preset.runs;
       knobs.seed = "typical";
@@ -766,6 +769,7 @@
         out.push(`This run's last ${last} pulls: ${each((r) => `${lab.mean(r.metrics.return, knobs.units - last).toFixed(2)} per pull, a best arm ${pct(lab.mean(r.metrics.optimal, knobs.units - last))} of the time`)}.`);
       }
       if (env.kind === "graph") out.push(`Went left from A in this run: ${each((r) => `${pct(lab.mean(r.metrics.left))} of the episodes`)}.`);
+      if (env.kind === "blackjack" && unitOf() === "round") out.push(`Average reward per hand over the last ${last} rounds: ${each((r) => signed(lab.mean(r.metrics.return, knobs.units - last), 2))} (+1 a win, −1 a loss; the best play averages about −0.05).`);
       if (env.kind === "blackjack" && unitOf() === "episode") out.push(`Hands won in this run: ${each((r) => pct(r.metrics.return.reduce((n, g) => n + (g > 0), 0) / knobs.units))}.`);
       if (env.kind === "grid" && unitOf() === "episode") {
         if (env.ice) out.push(`Reached the gem in the last ${last} episodes: ${each((r) => pct(lab.mean(r.metrics.return, knobs.units - last)))}.`);
@@ -981,7 +985,7 @@
       let big = 0;
       for (const u of ev.list) if (Math.abs(u.delta) > Math.abs(big)) big = u.delta;
       liveNote.innerHTML = !n ? "Nothing in the queue is worth an update: no planning this step"
-        : `<b>${plural(n, ["planning update", "planning updates"])}</b> on remembered moves${ev.ordered ? `, the most urgent first; ${plural(ev.left, ["pair waits", "pairs wait"])} in the queue` : ", picked at random"} · the largest surprise was <b class="q-err">${signed(big, 3)}</b>${ev.list.some((u) => u.bonus > 1e-9) ? " · bonuses for moves not tried in a while included" : ""}`;
+        : `<b>${plural(n, ["planning update", "planning updates"])}</b> on remembered moves${ev.ordered ? `, the most urgent first${ev.left !== undefined ? `; ${plural(ev.left, ["pair waits", "pairs wait"])} in the queue` : ""}` : ", picked at random"} · the largest surprise was <b class="q-err">${signed(big, 3)}</b>${ev.list.some((u) => u.bonus > 1e-9) ? " · bonuses for moves not tried in a while included" : ""}`;
       liveNote.classList.remove("faint");
     }
 

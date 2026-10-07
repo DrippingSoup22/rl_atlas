@@ -138,7 +138,7 @@
   // so with 50 tilings each update moves it 50 times as far as α alone says.
   const sq = (x) => { let v = 0; for (let i = 0; i < x.k; i++) v += x.val[i] * x.val[i]; return v; };
   const target = (ev, p) => {
-    const g = ev.k === 1 ? p.gamma : +ev.discount.toFixed(3);
+    const g = ev.k === 1 || ev.discount === undefined ? p.gamma : +ev.discount.toFixed(3);
     return `\\rew{${tex(ev.rewards ?? ev.target)}}${ev.boot ? ` + ${g === 1 ? "" : `${g}\\,`}\\val{${tex(ev.next)}}` : ""}`;
   };
   const moved = (sym) => (ev, p) => {

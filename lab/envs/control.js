@@ -86,7 +86,7 @@
         return { s2, r: tipHeight(s2) > 1 ? 0 : -1 };
       },
       coords: (s) => s.map((v, j) => clamp01((v - AC_RANGE[j][0]) / (AC_RANGE[j][1] - AC_RANGE[j][0]))),
-      describe: (s, a) => `links at ${lab.fmtSigned((s[0] * 180) / Math.PI, 0)}° and ${lab.fmtSigned((s[1] * 180) / Math.PI, 0)}°${a >= 0 ? `; ${env.actionNames[a]}` : ""}`,
+      describe: (s, a) => (!s || s.length !== 4 ? (a >= 0 ? env.actionNames[a] : "the two links") : `links at ${lab.fmtSigned((s[0] * 180) / Math.PI, 0)}° and ${lab.fmtSigned((s[1] * 180) / Math.PI, 0)}°${a >= 0 ? `; ${env.actionNames[a]}` : ""}`),
     };
     return env;
   };

@@ -5,8 +5,8 @@
    - tabular methods need discrete states and actions; dynamic programming also needs the world's model;
    - methods that predict the values of a fixed policy run on every world whose true values can be worked out, to
      judge them by: the walks, Blackjack, and the grids and Taxi, where the policy is the shortest way nine times in
-     ten (tables only; with features, the walks);
-   - value methods with approximation need discrete actions, and features for continuous states;
+     ten;
+   - value methods with approximation need discrete actions, and features for continuous states (a table otherwise);
    - policy-gradient methods run on any world they have units for (the continuous states with tile features);
    - bandit methods run on bandits. */
 (function (RL) {
@@ -53,9 +53,9 @@
         success: { metric: "steps", max: 150, text: "end up getting the tip over the line in under 150 steps on average" },
         params: { features: "tiles", tilings: 8, cells: 6, alpha: 0.06, alphaW: 0.05, epsilon: 0 } } },
     { id: "random-walk", group: "walks", blurb: "Five states, a coin flip each step",
-      profile: { episode: 100, runs: 100, gamma: 1, charts: ["error"], measures: ["error"], film: [1, 10, 100], params: { features: "table", policy: "random" } } },
+      profile: { episode: 100, runs: 100, gamma: 1, charts: ["error"], measures: ["error"], film: [1, 10, 100], params: { policy: "random" } } },
     { id: "random-walk-19", group: "walks", blurb: "Nineteen states; −1 on the left, +1 on the right",
-      profile: { episode: 20, runs: 100, gamma: 1, charts: ["error"], measures: ["error"], film: [1, 5, 20], params: { features: "table", policy: "random" } } },
+      profile: { episode: 20, runs: 100, gamma: 1, charts: ["error"], measures: ["error"], film: [1, 5, 20], params: { policy: "random" } } },
     { id: "walk-1000", group: "walks", blurb: "A thousand states, jumps of up to a hundred",
       profile: { episode: 2000, gamma: 1, charts: ["ve"], measures: ["ve"], film: [1, 100, 2000], params: { policy: "random" } } },
     { id: "testbed", group: "bandits", blurb: "Ten arms, means drawn around 0",
@@ -92,8 +92,8 @@
     "mountain-car": { policy: { alpha: 0.01, alphaW: 0.06, maxSteps: 1000 }, hard: [...PG, "ppo"] },
     cartpole: { policy: { alpha: 0.03, alphaW: 0.06 }, baseline: { alpha: 0.01, alphaW: 0.06 }, reinforce: { alpha: 0.01 }, ppo: { alpha: 0.03, alphaW: 0.05 }, hard: ["reinforce"] },
     acrobot: { policy: { alpha: 0.01, alphaW: 0.02 }, hard: PG },
-    "random-walk": { predict: { alpha: 0.1 } },
-    "random-walk-19": { predict: { alpha: 0.1 } },
+    "random-walk": { predict: { alpha: 0.1 }, "predict-linear": { alpha: 0.02 } },
+    "random-walk-19": { predict: { alpha: 0.1 }, "predict-linear": { alpha: 0.0005, units: 200 } }, // every-visit updates, about 90 steps an episode
     "walk-1000": { predict: { alpha: 0.1 } },
     drifting: { hard: ["ucb", "gradient-bandit"] }, // sample averages and long memories lose track of drifting arms
   };
@@ -120,9 +120,10 @@
       case "bandit": return w.group === "bandits";
       case "dp": return MODEL.has(w.id);
       case "predict": return PREDICT.has(w.id);
-      case "predict-linear": return w.group === "walks";
+      case "predict-linear": return PREDICT.has(w.id);
       case "tabular": return w.group === "tables";
-      case "linear": return w.group === "approx";
+      // with discrete states, features are a table (one weight per state and action): the tabular method again
+      case "linear": return w.group === "tables" || w.group === "approx";
       // TRPO's natural gradient is worked out exactly for one preference per state and action: tables only
       case "policy": return w.group === "tables" || (w.group === "approx" && algorithm.id !== "trpo");
       default: return false;
@@ -144,7 +145,13 @@
     if (!w) return null;
     const p = w.profile, unit = algorithms[0].unit, kinds = new Set(algorithms.map((a) => FAMILY[a.id]));
     // the settings found to work here (TUNED): the lead racer's family's, then its own algorithm's
-    const lead = algorithms[0], t = TUNED[id] || {}, { gamma: tg, units: tu, maxSteps: tm, ...tuned } = { ...t[FAMILY[lead.id]], ...t[lead.id] };
+    const lead = algorithms[0], t = TUNED[id] || {}, fam = FAMILY[lead.id];
+    // a linear method learning a table takes the tabular settings
+    const famT = t[fam] || (w.group !== "approx" && t[{ linear: "tabular", "predict-linear": "predict" }[fam]]) || {};
+    // a linear method learning a table explores as the tabular methods do (its home lab counts on optimistic starting
+    // values, which a world of zero rewards does not give)
+    const explore = fam === "linear" && w.group === "tables" ? { epsilon: 0.1 } : {};
+    const { gamma: tg, units: tu, maxSteps: tm, ...tuned } = { ...explore, ...famT, ...t[lead.id] };
     const out = { units: p[unit], runs: p.runs, gamma: p.gamma, maxSteps: p.maxSteps, charts: p.charts, measures: p.measures || null, success: p.success || null, film: p.film, domain: p.domain || null, params: p.params || {} };
     if (kinds.has("dp")) Object.assign(out, { charts: ["delta"], measures: null, success: null, film: [1, 10, out.units] });
     // policy evaluation evaluates the same policy prediction does (iteration starts from random play, as in the book)
@@ -159,8 +166,9 @@
     if (tu !== undefined) out.units = tu;
     if (tm !== undefined) out.maxSteps = tm;
     if (out.film) out.film = out.film.filter((u) => u <= out.units);
-    // a world without features of its own is learned with a table (a lab's own features, like Baird's, stay home)
-    if (w.group !== "approx" && !out.params.features) out.params = { features: "table", ...out.params };
+    // a world without features of its own is learned with a table (a lab's own features, like Baird's, stay home);
+    // on a walk, a lab's features (its groups, say) work as well as at home, and stay
+    if (w.group !== "approx" && w.group !== "walks" && !out.params.features) out.params = { features: "table", ...out.params };
     return out;
   };
 

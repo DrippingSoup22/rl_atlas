@@ -38,7 +38,7 @@ FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story", "stor
 # imitation on the ice bridge, planning in a learned model among hidden cliffs. Their pseudocode is the station's.
 RUNNABLE_CONCEPTS = {"dpg": "dpg", "offline-q": "offline-rl", "offline-bcq": "offline-rl", "bc": "imitation", "dagger": "imitation",
                      "model-planner": "model-based-deep"}
-PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds"}
+PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds", "home"}
 CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights",
           "policy-value", "right", "aim", "kl", "clipped", "deployed", "labels"}
 # What a preset of recorded runs (racers that name a recording) can chart: from the recordings, nothing is recomputed.
@@ -496,6 +496,7 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
         **({"success": success} if success is not None else {}),
         **({"sweep": sweep} if sweep is not None else {}),
         **({"seeds": True} if raw.get("seeds") is True else {}),
+        **({"home": raw["home"]} if raw.get("home") else {}),
     }
 
 
