@@ -770,7 +770,7 @@ title = "PPO balances a pole"
 env = "cartpole"
 racers = [{ recording = "ppo-cartpole" }]
 charts = ["return", "test", "kl"]
-film = [0, 2, 6, 20, 40]
+film = [0, 2, 4, 20, 40]
 intro = "Eight workers play at once; every 128 of their steps, PPO takes ten clipped passes over the batch. After every block of 2,500 steps the policy plays one test episode, always from the same start: the pole stays up at most 500 steps. On the right, the critic's values over the pole's angle and spin, with the push the policy prefers."
 success = { metric = "return", min = 450, text = "end up balancing the pole in training, 450 steps or more on average" }
 
@@ -789,7 +789,7 @@ title = "DDPG swings a pendulum up"
 env = "pendulum"
 racers = [{ recording = "ddpg-pendulum" }]
 charts = ["return", "test", "q"]
-film = [0, 2, 3, 5, 40]
+film = [0, 2, 3, 4, 40]
 intro = "The actor names one torque for each angle and spin; the critic says what that choice is worth, and the actor follows the critic's slope. Exploration is noise added to the actor's torque. Every step is stored in a memory of 100,000, and each step a batch of 128 is replayed, with targets from slowly following copies of both networks. After every block of 1,500 steps the actor plays one test episode of 200 steps without noise, from the same start every time; every step costs the angle from upright, the spin and the torque, so 0 is the best there is."
 success = { metric = "test", min = -250, text = "end up swinging it up and holding it in the test episodes, −250 or better" }
 
@@ -798,7 +798,7 @@ title = "TD3 against DDPG: twin critics"
 env = "pendulum"
 racers = [{ recording = "ddpg-pendulum" }, { recording = "td3-pendulum" }]
 charts = ["test", "q"]
-film = [0, 3, 5, 40]
+film = [0, 3, 6, 40]
 intro = "The same pendulum, the same memory and networks. TD3 changes three things: two critics, and the target uses the smaller of their estimates; the actor and the target copies move only every second critic step; and the target action is blurred with clipped noise. Watch the critics' targets: every reward here is 0 or less, so no value can be above 0."
 success = { metric = "test", min = -250, text = "end up swinging it up and holding it in the test episodes, −250 or better" }
 
@@ -816,7 +816,7 @@ title = "A2C balances a pole"
 env = "cartpole"
 racers = [{ recording = "a2c-cartpole" }]
 charts = ["return", "test", "kl"]
-film = [0, 5, 13, 21, 40]
+film = [0, 6, 12, 20, 40]
 intro = "Eight workers play at once; every 5 of their steps, A2C takes one gradient step on the batch, with n-step returns and a critic as the baseline. After every block of 3,000 steps the policy plays one test episode, always from the same start: the pole stays up at most 500 steps. On the right, the critic's values over the pole's angle and spin, with the push the policy prefers."
 success = { metric = "return", min = 450, text = "end up balancing the pole in training, 450 steps or more on average" }
 
@@ -825,7 +825,7 @@ title = "TRPO balances a pole"
 env = "cartpole"
 racers = [{ recording = "trpo-cartpole" }]
 charts = ["return", "test", "kl"]
-film = [0, 4, 9, 12, 40]
+film = [0, 4, 8, 11, 40]
 intro = "Eight workers collect 256 steps each; TRPO then takes the largest natural-gradient step whose average KL divergence from the old policy stays within δ = 0.01, found by conjugate gradients and a line search. After every block of 2,500 steps the policy plays one test episode, always from the same start: the pole stays up at most 500 steps."
 success = { metric = "return", min = 450, text = "end up balancing the pole in training, 450 steps or more on average" }
 

@@ -25,20 +25,20 @@ learn = { recording = "ddpg-pendulum", name = "DDPG" }
 **A pendulum, and a motor too weak to lift it.** The torque goes from −2 to 2; far from the top, gravity wins, so the pendulum has to swing up. Every step costs its distance from upright, its spin and a little torque: 0 is the best a step can do. The map shows the **actor**: for each angle and spin, the torque it would apply. Before learning, those torques are small and arbitrary.
 :::
 
-::: step {run = "learn", at = 2, formula = 1}
-**A critic learns what each torque is worth**, from batches replayed from memory, with targets from slow copies of both networks (formula 1). After 3,000 steps the test episode still swings back and forth and ends near the bottom, at −842.
+::: step {run = "learn", at = 3, formula = 1}
+**A critic learns what each torque is worth**, from batches replayed from memory, with targets from slow copies of both networks (formula 1). After 4,500 steps the test episode comes near the top again and again but cannot stay, and ends at −539.
 :::
 
-::: step {run = "learn", at = 3, map = "action", formula = 2}
-**The actor follows the critic's slope** (formula 2): in each state it nudges its torque the way the critic says the value rises. After 4,500 steps the test changes completely: one swing back, upright by step 35, held to the end. The map shows the plan: below the horizontal, push with the spin to pump the swing; near the top, push against the lean.
+::: step {run = "learn", at = 4, map = "action", formula = 2}
+**The actor follows the critic's slope** (formula 2): in each state it nudges its torque the way the critic says the value rises. After 6,000 steps the test changes completely: one swing back, upright by step 30, held to the end. The map shows the plan: below the horizontal, push with the spin to pump the swing; near the top, push against the lean.
 :::
 
 ::: step {run = "learn", at = 40, map = "value"}
-**The critic after 60,000 steps** rates some states at **+30**, though every step costs something and no state can be worth more than 0. DDPG's critic overestimates, and the actor, following its slope, goes where it is most wrong. Here the pendulum still holds; [[td3]] attacks the overestimation.
+**The critic after 60,000 steps** rates some states at **+32**, though every step costs something and no state can be worth more than 0. DDPG's critic overestimates, and the actor, following its slope, goes where it is most wrong. Here the pendulum still holds; [[td3]] attacks the overestimation.
 :::
 
 ::: step {run = "learn", at = 40, curves = ["learn"], metric = "test"}
-**Twenty seeds**, the test return after each block. Every seed swings the pendulum up within 4,500 to 9,000 steps and holds it to the end. [Play it in the Lab](lab:ddpg-pendulum).
+**Twenty seeds**, the test return after each block. Every seed swings the pendulum up within 4,500 to 7,500 steps and holds it to the end. [Play it in the Lab](lab:ddpg-pendulum).
 :::
 
 ## Textbook
@@ -92,7 +92,7 @@ How much do the knobs matter? A sweep trained each of three knobs at several val
 
 ### Overestimation {#overestimation}
 
-The critic is trained on values, and the actor chases its slopes: wherever the critic errs upward, the actor goes, and the target then reads the same inflated value through the target actor. The errors feed on themselves. On Pendulum this shows plainly, because no value can be above 0. In the shown run, along the greedy test episodes of blocks 11 to 40, the critic rated the states 52 above the discounted return that actually followed. Over the 20 seeds, the average target in the last 10 blocks ended above 0, an impossible value, in 11 of them. Here the bias does no visible harm, and every seed still learns. On harder tasks Fujimoto et al. (2018) found it degrades the policy, and their fixes became [[td3]].
+The critic is trained on values, and the actor chases its slopes: wherever the critic errs upward, the actor goes, and the target then reads the same inflated value through the target actor. The errors feed on themselves. On Pendulum this shows plainly, because no value can be above 0. In the shown run, along the greedy test episodes of blocks 11 to 40, the critic rated the states 31 above the discounted return that actually followed. Over the 20 seeds, the average target in the last 10 blocks ended above 0, an impossible value, in 10 of them. Here the bias does no visible harm, and every seed still learns. On harder tasks Fujimoto et al. (2018) found it degrades the policy, and their fixes became [[td3]].
 
 ### Why it works, and when it does not {#theory}
 
@@ -182,7 +182,7 @@ The actor should improve against the current estimate of its actions' values, an
 :::
 
 ::: question
-On Pendulum every step's reward is 0 or less. What does a critic value of +30 say?
+On Pendulum every step's reward is 0 or less. What does a critic value of +32 say?
 ---
 That the critic overestimates: no sum of non-positive rewards can be positive. The errors of the critic are amplified by the actor, which moves toward actions the critic rates too high, and by the target, which reads those same actions through the target actor.
 :::

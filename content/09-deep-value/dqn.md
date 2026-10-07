@@ -161,7 +161,7 @@ Repeat for each step:
 - Overestimates values: the max picks up noise.
 - Sensitive to its knobs and its seed. On CartPole a step size five times too large drops the runs that end well from 13 in 20 to 2.
 - Only discrete actions: the max over $a'$ needs a short list of actions.
-- Needs many samples: the recorded run first kept the pole up for 500 steps after 35,000 steps of training; the recorded PPO, after 15,000.
+- Needs many samples: the recorded run first kept the pole up for 500 steps after 35,000 steps of training; the recorded PPO, after 10,000.
 
 ### Knobs
 

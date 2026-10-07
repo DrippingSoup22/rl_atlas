@@ -44,7 +44,7 @@ The guide's Pendulum runs show the trade between the two families of continuous-
 | PPO | on-policy | 35,000 | 20 |
 | DDPG | off-policy | 6,000 | 20 |
 | TD3 | off-policy | 9,000 | 20 |
-| SAC | off-policy | 7,500 | 20 |
+| SAC | off-policy | 6,000 | 20 |
 
 The off-policy methods need four to six times fewer steps, because they learn from every transition many times over. But they take a gradient step on a replayed batch after every single step of experience, while PPO spends its computation in large batches after thousands of steps. When steps of experience are cheap, as in a fast simulator, PPO's cheap steps can make up much of the difference in time. When they are expensive, as with a robot or a slow simulator, sample efficiency is what counts ([[ddpg]], [[ppo]]).
 
@@ -91,7 +91,7 @@ Choosing a vehicle: you ask where you are going, what you carry and what roads t
 ### Check yourself {#check}
 
 ::: question
-On Pendulum, SAC needs about 7,500 steps of experience and PPO about 35,000. When might PPO still be the better choice?
+On Pendulum, SAC needs about 6,000 steps of experience and PPO about 35,000. When might PPO still be the better choice?
 ---
 When steps of experience are cheap: a fast simulator that runs many copies in parallel. SAC takes a gradient step after every step of experience, so its computation per step is much higher. If time and computation are the limit rather than experience, PPO's cheap steps can make up the difference.
 :::

@@ -22,7 +22,7 @@ td3 = { recording = "td3-pendulum", name = "TD3" }
 ## Story
 
 ::: step {run = "ddpg", at = 40, map = "value"}
-**Overestimation, measured.** On Pendulum every reward is 0 or less, so every true value is too. DDPG's critic rates some states at **+30**, and along its test episodes it rates the states it passes 52 above the return that actually followed. The actor follows the critic's slope, straight to these errors ([[ddpg]]).
+**Overestimation, measured.** On Pendulum every reward is 0 or less, so every true value is too. DDPG's critic rates some states at **+32**, and along its test episodes it rates the states it passes 31 above the return that actually followed. The actor follows the critic's slope, straight to these errors ([[ddpg]]).
 :::
 
 ::: step {run = "td3", at = 0, formula = 1}
@@ -30,15 +30,15 @@ td3 = { recording = "td3-pendulum", name = "TD3" }
 :::
 
 ::: step {run = "td3", at = 40, map = "value"}
-**TD3's critic after 60,000 steps:** from −316 to −16. Nothing above 0. Along its test episodes it errs the other way, rating the states 20 *below* the return that followed. The smaller of two estimates is a cautious estimate.
+**TD3's critic after 60,000 steps:** from −329 to −26. Nothing above 0. Along its test episodes it errs the other way, rating the states 44 *below* the return that followed. The smaller of two estimates is a cautious estimate.
 :::
 
 ::: step {run = "td3", at = 40, curves = ["ddpg", "td3"], metric = "q"}
-**The critics' targets, averaged over 20 seeds each.** DDPG's average climbs above 0, an impossible value, and stays there for most of training. TD3's never comes near: −52 at the end.
+**The critics' targets, averaged over 20 seeds each.** DDPG's average climbs above 0, an impossible value, and stays there for most of training. TD3's never comes near: −47 at the end.
 :::
 
-::: step {run = "td3", at = 5, map = "action", formula = 2}
-**The actor waits for the critic.** TD3 moves the actor only once every two critic steps (formula 2), so the critic's errors shrink before the actor follows them. Caution costs some speed: this run holds the pendulum up after 7,500 steps, DDPG's after 4,500.
+::: step {run = "td3", at = 6, map = "action", formula = 2}
+**The actor waits for the critic.** TD3 moves the actor only once every two critic steps (formula 2), so the critic's errors shrink before the actor follows them. Caution costs some speed: this run holds the pendulum up after 9,000 steps, DDPG's after 6,000.
 :::
 
 ::: step {run = "td3", at = 40, curves = ["ddpg", "td3"], metric = "test"}
@@ -95,7 +95,7 @@ Repeat for each step $t$:
 
 The recording uses DDPG's settings exactly, plus the three changes. Over 20 seeds:
 
-- **Values.** No seed's average target over its last 10 blocks is above 0; DDPG's is above 0 in 11 seeds of 20.
+- **Values.** No seed's average target over its last 10 blocks is above 0; DDPG's is above 0 in 10 seeds of 20.
 - **Speed.** Half of TD3's seeds have a block of training episodes averaging −250 or better within 9,000 steps; half of DDPG's, within 6,000. The first test at −250 or better comes at block 5 in the median, against DDPG's block 3.
 - **The end.** Every seed of both holds the pendulum up in its last tests.
 
@@ -151,13 +151,13 @@ Repeat for each step $t$:
 
 ### Perks
 
-- Removes the overestimation that DDPG's actor feeds on: on Pendulum, no seed's average target ends above 0, against 11 of 20 for DDPG.
+- Removes the overestimation that DDPG's actor feeds on: on Pendulum, no seed's average target ends above 0, against 10 of 20 for DDPG.
 - More robust than DDPG across tasks and seeds, at the same cost per step.
 - Simple: three small changes, each with its own reason.
 
 ### Flaws
 
-- Can underestimate: on Pendulum, 20 below the return that followed, along the shown run's tests.
+- Can underestimate: on Pendulum, 44 below the return that followed, along the shown run's tests.
 - Slower when overestimation was harmless: on Pendulum, a median of 9,000 steps to good training episodes, against DDPG's 6,000.
 - Still a deterministic actor with hand-set exploration noise.
 

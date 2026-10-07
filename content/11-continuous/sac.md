@@ -27,12 +27,12 @@ td3 = { recording = "td3-pendulum", name = "TD3" }
 **Random on purpose.** SAC's actor does not name one torque: for each angle and spin it gives a mean and a spread, and the torque is drawn from them. It is also paid for staying random: each reward comes with a bonus of $\alpha$ times the policy's entropy. Before learning, the spread is very wide. The map shows the mean, which is what the test episodes play.
 :::
 
-::: step {run = "learn", at = 3, formula = 1}
-**Soft values.** Two critics, as in [[td3]], learn the reward to come *plus* the entropy to come (formula 1). After 4,500 steps the test still fails. But the entropy weight has already moved on its own, from 0.2 to 0.07: the policy is more random than it needs to be, so the bonus shrinks.
+::: step {run = "learn", at = 2, formula = 1}
+**Soft values.** Two critics, as in [[td3]], learn the reward to come *plus* the entropy to come (formula 1). After 3,000 steps the test still fails. But the entropy weight has already moved on its own, from 0.2 to 0.11: the policy is more random than it needs to be, so the bonus shrinks.
 :::
 
 ::: step {run = "learn", at = 4, map = "action"}
-**After 6,000 steps:** one swing back, upright by step 25, and held to the end, at −124. Every seed of the 20 gets its first test at −250 or better after 3 or 4 blocks.
+**After 6,000 steps:** one swing back, upright by step 27, and held to the end, at −117. Of the 20 seeds, 19 get their first test at −250 or better after 3 or 4 blocks, the last after 6.
 :::
 
 ::: step {run = "learn", at = 40, formula = 2}
@@ -40,7 +40,7 @@ td3 = { recording = "td3-pendulum", name = "TD3" }
 :::
 
 ::: step {run = "learn", at = 40, curves = ["ddpg", "td3", "learn"], metric = "test"}
-**Three methods, 20 seeds each.** All three swing the pendulum up on every seed. SAC is nearly as quick as DDPG, without its overestimation, and its final tests are the tightest. [Try it in the Lab](lab:sac-pendulum).
+**Three methods, 20 seeds each.** All three swing the pendulum up on every seed. SAC is as quick as DDPG, without its overestimation. [Try it in the Lab](lab:sac-pendulum).
 :::
 
 ## Textbook
@@ -89,7 +89,7 @@ summed over the action's dimensions. Forgetting this term makes the policy think
 
 The right $\alpha$ depends on the scale of the rewards and changes as learning goes on, so the second version of SAC tunes it. It picks a target entropy $\bar{\mathcal H}$, by default minus the number of action dimensions, and adjusts $\ln\alpha$ by gradient steps on
 $$J(\alpha) = \mathbb E_{a \sim \pi}\big[-\alpha\,(\ln \pol{\pi(a \mid s)} + \bar{\mathcal H})\big]. \label{alpha-loss}$$
-When the policy is less random than the target, $\alpha$ grows and the bonus pushes randomness back up; when it is more random, $\alpha$ shrinks. In the recorded run, $\alpha$ fell from 0.2 to 0.034 within 7,500 steps and to 0.0005 by the end.
+When the policy is less random than the target, $\alpha$ grows and the bonus pushes randomness back up; when it is more random, $\alpha$ shrinks. In the recorded run, $\alpha$ fell from 0.2 to 0.034 within 7,500 steps and to 0.0007 by the end.
 
 ### The algorithm {#algorithm}
 
@@ -112,10 +112,10 @@ The recording uses the settings of the DDPG and TD3 recordings: networks of 64 +
 | | DDPG | TD3 | SAC |
 | --- | --- | --- | --- |
 | seeds that hold the pendulum up at the end | 20 | 20 | 20 |
-| first test at −250 or better, median block | 3 | 5 | 3.5 |
-| steps until half the seeds train at −250 or better | 6,000 | 9,000 | 7,500 |
-| last four tests, range over seeds | −121 to −132 | −122 to −139 | −121 to −128 |
-| seeds whose average target ends above 0 | 11 | 0 | 0 |
+| first test at −250 or better, median block | 3 | 5 | 3 |
+| steps until half the seeds train at −250 or better | 6,000 | 9,000 | 6,000 |
+| last four tests, range over seeds | −115 to −128 | −115 to −132 | −115 to −227 |
+| seeds whose average target ends above 0 | 10 | 0 | 0 |
 
 A sweep of two knobs, 10 seeds per value (the Lab's sweep panel shows every run), finds all 90 runs holding the pendulum up at the end.
 
@@ -173,7 +173,7 @@ Repeat for each step:
 ### Perks
 
 - Explores by itself, from its objective; no noise schedule to tune.
-- Robust across seeds: on Pendulum, every seed's last tests within 7 of each other.
+- Robust across seeds: on Pendulum, the last tests of 19 seeds within 9 of each other; the twentieth swings once more from the test's start and holds at −227.
 - Honest values: twin critics, and along the shown run's tests a critic within 1 of the true return, on average.
 - The entropy weight tunes itself.
 
