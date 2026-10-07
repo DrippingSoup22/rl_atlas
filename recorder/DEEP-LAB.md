@@ -5,6 +5,31 @@ typical run, any seed on demand. The deep presets (CartPole and Pendulum) can't 
 recorded seed, and only a few knobs were swept, one at a time. This note weighs the options at each decision point and
 recommends one.
 
+## Status: option D, being built
+
+The spike settled the open questions, and the build follows option D below.
+
+- **It learns.** The JavaScript trainer (`lab/deep/`) learns CartPole like the NumPy recorder. On 20 seeds of
+  `dqn-cartpole`, 15 end with a 500-step test (NumPy 16) and 13 end well by the Lab's rule (NumPy 16). On 20 more
+  seeds NumPy itself scored 13: the gap is luck.
+- **It is exact.** The same seed gives the same run, bit for bit, in Node and in a browser's Worker: seed 2 trained in
+  Chromium ended where the offline recording did. The trainer's math (`lab/deep/dmath.js`) uses only + − × ÷ and the
+  square root, which every engine rounds alike.
+- **It is fast enough.** One 200k-step DQN seed takes about 75 s on one core. The network's loops work on two rows
+  and four units at a time, 1.8 times faster than the first version. A bench of 20 seeds takes 5–10 minutes on a
+  laptop's spare cores: offered on request, never automatic.
+
+What runs where:
+- `recorder/deep.js` trains recordings and sweeps in Node, one thread per core, resumable (`recorder/.cache`).
+- The page (`lab/recorded.js`, `lab/lab.js`) treats a recording made by this trainer as a starting point:
+  - its knobs (those of its sweep) and its seed can be changed;
+  - a seed of the recording plays at once, and any other seed or setting trains in a Worker, with its progress shown;
+  - the odds come from the recording (its settings), the sweep (one knob turned), or a bench trained here on request.
+- Network shape: depth (1–3), width (16–128) and activation are knobs of the DQN sweep.
+
+Done so far: the DQN family on CartPole. Still to port: A2C, PPO, TRPO, DDPG, TD3, SAC and Pendulum's recordings;
+the network view.
+
 ## What we have, and what it costs
 
 - **The recorder** (`recorder/`) trains its own NumPy networks on Gymnasium's CartPole and Pendulum. Every network is

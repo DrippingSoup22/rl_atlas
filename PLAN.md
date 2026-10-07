@@ -271,6 +271,11 @@ animations and hover effects this guide relies on would not be smooth.
      views handle every kind of learner (action values, a policy with or without a critic, a fixed policy); playback
      never runs more than one move per tick, so Monte Carlo and REINFORCE walk their episodes with the pseudocode in step;
      long runs train in slices with their progress shown, the page staying responsive.
-  4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds; then the encoder tier.
+  4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds; then the encoder tier. *Under way*: the trainer in
+     JavaScript (`lab/deep/`: deterministic math, so a seed is the same run in Node and in any browser), recordings and
+     sweeps made with it (`recorder/deep.js`), and the Lab training other seeds and settings of those recordings in a
+     Web Worker, with the odds from the recording, its sweep, or a bench trained in the page on request. The DQN family
+     on CartPole first, network depth, width and activation among its knobs; then the policy gradients and the
+     actor–critics, and the network view.
   5. The map keeps its order, which follows Sutton & Barto. A new station goes only where a topic needs its own, and
      then between the two stations where it naturally fits (learning from pixels, say, after DQN).

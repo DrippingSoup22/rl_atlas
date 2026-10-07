@@ -44,7 +44,7 @@ CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error
 # What a preset of recorded runs (racers that name a recording) can chart: from the recordings, nothing is recomputed.
 RECORDED_CHARTS = {"return", "test", "steps", "loss", "td", "q", "eps", "kl", "clipped"}
 RECORDINGS = CONTENT / "recordings"
-DEEP_WORKER = ["dmath", "nn", "worlds", "dqn", "record", "worker"]  # lab/deep/, in load order: the Worker's text
+DEEP_WORKER = ["dmath", "nn", "worlds", "dqn", "pg", "ac", "record", "worker"]  # lab/deep/, in load order: the Worker's text
 MEASURES = {"error", "optimal-error", "match", "greedy", "ve", "policy-value", "right", "aim", "deployed"}
 # Stations the math macros of app/js/math.js link to.
 MACRO_TERMS = ("step-size", "discount", "epsilon-greedy", "lambda-return", "td-error")

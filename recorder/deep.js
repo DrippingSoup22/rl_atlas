@@ -32,13 +32,36 @@ const CATALOG = {
   "double-dqn-cartpole": { ...CARTPOLE, cfg: { ...DQN_CARTPOLE, double: true }, station: "dqn-extensions", title: "Double DQN" },
   "dueling-dqn-cartpole": { ...CARTPOLE, cfg: { ...DQN_CARTPOLE, dueling: true }, station: "dqn-extensions", title: "Dueling DQN" },
   "prioritized-dqn-cartpole": { ...CARTPOLE, cfg: { ...DQN_CARTPOLE, prioritized: true }, station: "dqn-extensions", title: "Prioritized replay" },
+  // Policy gradients with networks, the deep versions of Part 10's methods
+  "a2c-cartpole": { world: "cartpole", learner: "pg", station: "a2c", title: "A2C", steps: 120000, block: 3000, seeds: SEEDS,
+    cfg: { algo: "a2c", workers: 8, steps: 5, lr: 1e-3, lam: 1.0, v_epochs: 1, minibatch: 40, lr_v: 1e-3 } },
+  "ppo-cartpole": { world: "cartpole", learner: "pg", station: "ppo", title: "PPO", steps: 100000, block: 2500, seeds: SEEDS,
+    cfg: { algo: "ppo", workers: 8, steps: 128, epochs: 10, minibatch: 64, lr: 3e-4, clip: 0.2, lam: 0.95 } },
+  "trpo-cartpole": { world: "cartpole", learner: "pg", station: "trpo", title: "TRPO", steps: 100000, block: 2500, seeds: SEEDS,
+    cfg: { algo: "trpo", workers: 8, steps: 256, delta: 0.01, lam: 0.95, v_epochs: 10, minibatch: 64 } },
+  "ppo-pendulum": { world: "pendulum", learner: "pg", station: "ppo", title: "PPO", steps: 200000, block: 5000, seeds: SEEDS,
+    cfg: { algo: "ppo", workers: 4, steps: 512, epochs: 10, minibatch: 64, lr: 1e-3, gamma: 0.9, lam: 0.95, reward_scale: 0.1 } },
+  // Off-policy actor-critics for continuous actions (Part 11)
+  "ddpg-pendulum": { world: "pendulum", learner: "ac", station: "ddpg", title: "DDPG", steps: 60000, block: 1500, seeds: SEEDS, sweepSeeds: SEEDS.slice(0, 10), cfg: { algo: "ddpg", reward_scale: 0.1 } },
+  "td3-pendulum": { world: "pendulum", learner: "ac", station: "td3", title: "TD3", steps: 60000, block: 1500, seeds: SEEDS, sweepSeeds: SEEDS.slice(0, 10), cfg: { algo: "td3", reward_scale: 0.1 } },
+  "sac-pendulum": { world: "pendulum", learner: "ac", station: "sac", title: "SAC", steps: 60000, block: 1500, seeds: SEEDS, sweepSeeds: SEEDS.slice(0, 10), cfg: { algo: "sac", reward_scale: 0.1 } },
 };
 // The knobs each recording's sweep tries, its own value among them. target_every = 0: no target network; buffer = 128
 // (the batch size): no replay, each batch is the latest experience.
 const SWEEPS = {
-  "dqn-cartpole": { lr: [1e-4, 2.5e-4, 5e-4, 1e-3, 2.5e-3], target_every: [0, 100, 500, 2000], buffer: [128, 1000, 10000, 100000], huber: [0, 1] },
+  "dqn-cartpole": { lr: [1e-4, 2.5e-4, 5e-4, 1e-3, 2.5e-3], target_every: [0, 100, 500, 2000], buffer: [128, 1000, 10000, 100000], huber: [0, 1],
+    depth: [1, 2, 3], width: [16, 32, 64, 128], act: ["relu", "tanh"] },
+  "a2c-cartpole": { lr: [3e-4, 1e-3, 3e-3, 1e-2], steps: [1, 5, 20] },
+  "ppo-cartpole": { clip: [0.0, 0.1, 0.2, 0.3, 0.5], epochs: [1, 4, 10, 30], lr: [1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2] },
+  "trpo-cartpole": { delta: [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0] },
+  "ppo-pendulum": { lr: [3e-4, 1e-3, 3e-3], gamma: [0.9, 0.95, 0.99], clip: [0.0, 0.1, 0.2, 0.3, 0.5], epochs: [1, 4, 10, 30] },
+  "ddpg-pendulum": { tau: [0.001, 0.005, 0.02, 0.1], noise: [0.0, 0.1, 0.3, 0.6], reward_scale: [0.01, 0.1, 1.0] },
+  "td3-pendulum": { delay: [1, 2, 4, 8], policy_noise: [0.0, 0.2, 0.5, 1.0] },
+  "sac-pendulum": { alpha: ["auto", 0.01, 0.05, 0.2, 1.0], tau: [0.001, 0.005, 0.02, 0.1] },
 };
-const DEFAULTS = { dqn: require("../lab/deep/node.js").DQN_DEFAULTS };
+// Sweep values that set more than one knob: SAC's α is either tuned ("auto") or fixed.
+const SWEEP_AS = { alpha: (v) => (v === "auto" ? { auto_alpha: true } : { alpha: v, auto_alpha: false }) };
+const { DQN_DEFAULTS, PG_DEFAULTS, AC_DEFAULTS } = require("../lab/deep/node.js"), DEFAULTS = { dqn: DQN_DEFAULTS, pg: PG_DEFAULTS, ac: AC_DEFAULTS };
 
 // ---- a pool of threads, with every finished run cached on disk ----
 function pool(jobs, label) {
@@ -79,14 +102,17 @@ async function record(name) {
 
 // The recording's own value of a knob: its setting, or the learner's default (a switch is swept as 0 and 1).
 function current(spec, knob) {
-  const v = { ...DEFAULTS[spec.learner], ...spec.cfg }[knob];
+  const cfg = { ...DEFAULTS[spec.learner], ...spec.cfg };
+  if (knob === "alpha" && cfg.auto_alpha) return "auto";
+  const v = cfg[knob];
   return typeof v === "boolean" ? +v : v;
 }
 
 async function sweep(name) {
   const spec = CATALOG[name], knobs = SWEEPS[name], seeds = spec.sweepSeeds || spec.seeds;
   const jobs = Object.entries(knobs).flatMap(([knob, values]) => values.flatMap((v) => seeds.map((seed) => ({ knob, v, seed }))));
-  const results = await pool(jobs.map(({ knob, v, seed }) => ({ spec: { ...spec, cfg: { ...spec.cfg, [knob]: typeof DEFAULTS[spec.learner][knob] === "boolean" ? !!v : v } }, seed, snapshots: false })), `${name} sweep`);
+  const setting = (knob, v) => (SWEEP_AS[knob] ? SWEEP_AS[knob](v) : { [knob]: typeof DEFAULTS[spec.learner][knob] === "boolean" ? !!v : v });
+  const results = await pool(jobs.map(({ knob, v, seed }) => ({ spec: { ...spec, cfg: { ...spec.cfg, ...setting(knob, v) } }, seed, snapshots: false })), `${name} sweep`);
   const at = (knob, v, seed) => results[jobs.findIndex((j) => j.knob === knob && j.v === v && j.seed === seed)];
   const out = {
     name, world: spec.world, steps: spec.steps, block: spec.block, seeds, config: spec.cfg, trainer: "lab/deep",

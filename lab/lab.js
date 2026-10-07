@@ -116,7 +116,12 @@
     const recs = preset.racers.map((r) => (r.recording ? RL.recordings[r.recording] : null));
     const trainable = recorded && recs.every(lab.trainable), homeRuns = recRuns.slice();
     const turned = {}; // the knobs turned away from the recordings' settings
-    const configOf = (i) => ({ ...recs[i].config, ...turned });
+    // a racer's settings: its recording's, with the knobs turned (SAC's α is either tuned, "auto", or fixed)
+    const configOf = (i) => {
+      const c = { ...recs[i].config, ...turned };
+      if ("alpha" in turned && recs[i].learner === "ac") { if (c.alpha === "auto") { delete c.alpha; c.auto_alpha = true; } else c.auto_alpha = false; }
+      return c;
+    };
     const atHome = (i) => !Object.keys(turned).length && played === recs[i].shown;
     // a knob's value in a recording: its setting, or the trainer's default (which the sweep names); switches as 0 and 1
     const recValue = (rec, k) => { const v = rec.config[k] ?? sweepData?.knobs[k]?.current; return typeof v === "boolean" ? +v : v; };
@@ -747,7 +752,8 @@
       noise: { sym: "σ", name: "exploration noise" }, delay: { sym: "d", name: "critic updates per actor update" },
       policy_noise: { sym: "σ′", name: "noise on the target action" }, alpha: { sym: "α", name: "entropy weight (auto: tuned)" }, clip: { sym: "ε", name: "clip range (0: no clip)" }, epochs: { sym: "K", name: "passes over each batch" },
       steps: { sym: "n", name: "steps per worker between updates" }, delta: { sym: "δ", name: "trust region (KL)" }, gamma: { sym: "γ", name: "discount" },
-      huber: { sym: "L", name: "loss (0: squared error, 1: Huber)" }, reward_scale: { sym: "c", name: "reward scale (rewards × c for learning)" } };
+      huber: { sym: "L", name: "loss (0: squared error, 1: Huber)" }, depth: { sym: "D", name: "hidden layers" }, width: { sym: "W", name: "units per layer" },
+      act: { sym: "f", name: "activation" }, reward_scale: { sym: "c", name: "reward scale (rewards × c for learning)" } };
     const knobOf = (k) => (recorded ? DEEP_KNOBS[k] || { sym: k, name: k } : { ...KNOBS[k], ...racers.find((r) => r.algorithm.knobs?.[k])?.algorithm.knobs[k] });
     // The values a sweep tries: a knob's choices or its sweep list. Tiny step sizes (linear methods, policy gradients)
     // try the ladder around the ones in use; averaging methods also try 1/n.
@@ -889,7 +895,7 @@
           if (!Number.isNaN(score)) { x.sum += score; x.scored++; }
         }));
         draw();
-        q(".sweep-note").textContent = `${plural(d.train[0].length, ["seed", "seeds"])} per value, ${sweepData.steps.toLocaleString("en")} steps each, trained offline with the recording's other settings. The shaded value is the recording's. Hover a dot for its numbers.`;
+        q(".sweep-note").textContent = `${plural(d.train[0].length, ["seed", "seeds"])} per value, ${sweepData.steps.toLocaleString("en")} steps each, trained offline with the recording's other settings${Object.keys(turned).some((t) => t !== k) ? " (not the knobs as turned above)" : ""}. The shaded value is the recording's. Hover a dot for its numbers.`;
         return;
       }
       let one = null; // the run under way, spread over chunks when it is long

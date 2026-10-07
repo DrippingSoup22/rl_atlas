@@ -9,8 +9,10 @@
   deep.DQN_DEFAULTS = {
     lr: 1e-3, gamma: 0.99, batch: 64, buffer: 50000, start: 1000, train_every: 1, target_every: 500, tau: 1, grad_steps: 1,
     eps: [1, 0.05, 10000], double: false, dueling: false, prioritized: false, alpha: 0.6, beta: [0.4, 1],
-    hidden: [64, 64], act: "relu", clip: 10, huber: true,
+    depth: 2, width: 64, act: "relu", clip: 10, huber: true, // the network: depth hidden layers of width units
   };
+  // The hidden layers of a configuration: its own list, or depth layers of width units.
+  deep.hiddenOf = (cfg) => cfg.hidden || Array.from({ length: cfg.depth }, () => cfg.width);
 
   // A circular buffer of transitions, sampled uniformly. With capacity = batch it is just the latest experience.
   class Replay {
@@ -71,7 +73,7 @@
   class QNet {
     constructor(dim, nA, cfg, rng) {
       this.nA = nA; this.dueling = cfg.dueling;
-      this.net = new deep.MLP([dim, ...cfg.hidden, nA + (cfg.dueling ? 1 : 0)], rng, cfg.act);
+      this.net = new deep.MLP([dim, ...deep.hiddenOf(cfg), nA + (cfg.dueling ? 1 : 0)], rng, cfg.act);
       this.out = new Float64Array(0); this.dout = new Float64Array(0);
     }
     copyFrom(o) { this.net.copyFrom(o.net); }

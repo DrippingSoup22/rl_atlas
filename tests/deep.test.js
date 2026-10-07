@@ -43,3 +43,15 @@ test("DQN on CartPole: a seed is the same run every time, and the network learns
     assert.equal(out.test.length, 1, JSON.stringify(v));
   }
 });
+
+test("policy gradients and actor-critics: every algorithm runs, and a seed is the same run every time", () => {
+  const pg = (algo, extra) => ({ world: "cartpole", learner: "pg", steps: 2000, block: 1000, seeds: [1], cfg: { algo, workers: 4, steps: 50, minibatch: 50, ...extra } });
+  const ac = (algo) => ({ world: "pendulum", learner: "ac", steps: 1300, block: 650, seeds: [1], cfg: { algo, start: 1000, batch: 32, reward_scale: 0.1 } });
+  for (const spec of [pg("a2c"), pg("ppo", { epochs: 2 }), pg("trpo", { v_epochs: 2 }), { ...pg("ppo", { epochs: 2 }), world: "pendulum", block: 800, steps: 1600 }, ac("ddpg"), ac("td3"), ac("sac")]) {
+    const a = deep.run(spec, 2, { snapshots: true }), b = deep.run(spec, 2, { snapshots: true }), label = `${spec.cfg.algo} on ${spec.world}`;
+    assert.deepEqual(a, b, label);
+    assert.equal(a.test.length, 2, label);
+    assert.equal(a.snapshots.length, 3, label);
+    assert.ok(a.test.every(Number.isFinite), label);
+  }
+});
