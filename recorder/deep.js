@@ -40,7 +40,7 @@ const CATALOG = {
     cfg: { algo: "ppo", workers: 8, steps: 128, epochs: 10, minibatch: 64, lr: 3e-4, clip: 0.2, lam: 0.95 } },
   "trpo-cartpole": { world: "cartpole", learner: "pg", station: "trpo", title: "TRPO", steps: 100000, block: 2500, seeds: SEEDS,
     cfg: { algo: "trpo", workers: 8, steps: 256, delta: 0.01, lam: 0.95, v_epochs: 10, minibatch: 64 } },
-  "ppo-pendulum": { world: "pendulum", learner: "pg", station: "ppo", title: "PPO", steps: 200000, block: 5000, seeds: SEEDS,
+  "ppo-pendulum": { world: "pendulum", learner: "pg", station: "ppo", title: "PPO", steps: 200000, block: 5000, seeds: SEEDS, sweepSeeds: SEEDS.slice(0, 10),
     cfg: { algo: "ppo", workers: 4, steps: 512, epochs: 10, minibatch: 64, lr: 1e-3, gamma: 0.9, lam: 0.95, reward_scale: 0.1 } },
   // Off-policy actor-critics for continuous actions (Part 11)
   "ddpg-pendulum": { world: "pendulum", learner: "ac", station: "ddpg", title: "DDPG", steps: 60000, block: 1500, seeds: SEEDS, sweepSeeds: SEEDS.slice(0, 10), cfg: { algo: "ddpg", reward_scale: 0.1 } },

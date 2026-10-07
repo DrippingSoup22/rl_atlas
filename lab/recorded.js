@@ -140,7 +140,9 @@
   lab.trainRun = function (rec, config, seed, onBlock) {
     const key = keyOf(rec, config, seed, "run"), blocks = Math.floor(rec.steps / rec.block);
     if (finished.has(key)) return { done: 1, secs: 0, result: finished.get(key), cancel() {} };
-    const worker = newWorker(), job = { done: 0, secs: 0, result: null, cancel() { worker.terminate(); } };
+    let worker;
+    try { worker = newWorker(); } catch (e) { return { done: 0, secs: 0, result: null, error: "this browser would not start the trainer", cancel() {} }; }
+    const job = { done: 0, secs: 0, result: null, cancel() { worker.terminate(); } };
     worker.onmessage = ({ data }) => {
       if (!data.run) { job.done = data.block / blocks; job.secs = data.secs; onBlock?.(job); return; }
       const r = data.run;
@@ -166,7 +168,9 @@
     job.done = job.curves.size / seeds.length;
     const n = Math.min(todo.length, Math.max(1, (navigator.hardwareConcurrency || 2) - 1)), pool = [];
     for (let w = 0; w < n; w++) {
-      const worker = newWorker(), next = () => { const seed = todo.shift(); if (seed === undefined) worker.terminate(); else worker.postMessage({ id: seed, spec: specOf(rec, config), seed, snapshots: false }); };
+      let worker;
+      try { worker = newWorker(); } catch (e) { job.error = "this browser would not start the trainer"; break; }
+      const next = () => { const seed = todo.shift(); if (seed === undefined) worker.terminate(); else worker.postMessage({ id: seed, spec: specOf(rec, config), seed, snapshots: false }); };
       worker.onmessage = ({ data }) => {
         if (!data.run) return;
         const r = data.run, c = { seed: data.id, train: r.train, test: r.test, episodes: r.episodes, ...(r.q ? { q: r.q } : {}) };

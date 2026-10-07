@@ -828,6 +828,8 @@
       if (trainable && !avg && preset.success) { // settings nobody has run the seeds of yet
         const n = recs[0].seeds.length, b = deepBench?.key === JSON.stringify(turned) ? deepBench : null;
         if (b) {
+          const failed = b.racers.find((x) => x?.error);
+          if (failed) { q(".odds-tally").textContent = `The bench could not train here: ${failed.error}.`; return; }
           const done = Math.min(...b.racers.map((x) => (x ? x.curves.size : n)));
           q(".odds-tally").innerHTML = `Training the bench of these settings here: ${done} of ${n} seeds${racers.length > 1 ? " for every racer" : ""} so far. The odds come when they are all done.`;
           return;
