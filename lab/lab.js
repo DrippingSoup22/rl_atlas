@@ -416,7 +416,7 @@
       // Some views reflow when narrowed (a recorded run's two panels stack), so nothing is predicted: each arrangement
       // is laid out and measured, its panes narrowed until everything fits, and the one with the widest panes wins.
       const apply = (cols, w) => { box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`; box.style.setProperty("--pane", `${Math.floor(w + padX)}px`); return box.offsetHeight; };
-      const MIN = 260;
+      const MIN = RL.labViews[env.kind]?.minWidth || 260; // a view may stay legible narrower (a deep run's, stacked)
       const widest = (cols, H) => {
         let hi = Math.min(w0, (W - gap * (cols - 1)) / cols - padX), lo = MIN;
         if (hi < lo) return 0;

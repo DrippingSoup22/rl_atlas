@@ -490,6 +490,8 @@
 .view-host:has(> .cardsview) { container-type: inline-size; }
 @container (max-width: 560px) { .cardsview { grid-template-columns: minmax(0, 1fr); } .cardsview .table { min-height: 0; } }
 .bj-map { margin: 0; min-width: 0; }
+.view-host:has(> .cartview) { container-type: inline-size; }
+@container (max-width: 640px) { .cartview .map-head span { display: none; } } /* a small map's legend wraps to many lines: in its title's tooltip instead */
 .bj-map figcaption { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; margin-bottom: 2px; }
 .bj-map svg { display: block; width: 100%; height: auto; }
 .bj-map .tick { font: 10px var(--font); fill: var(--ink-3); }

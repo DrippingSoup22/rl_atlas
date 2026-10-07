@@ -1498,6 +1498,8 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .view-host:has(> .cardsview) { container-type: inline-size; }
 @container (max-width: 560px) { .cardsview { grid-template-columns: minmax(0, 1fr); } .cardsview .table { min-height: 0; } }
 .bj-map { margin: 0; min-width: 0; }
+.view-host:has(> .cartview) { container-type: inline-size; }
+@container (max-width: 640px) { .cartview .map-head span { display: none; } } /* a small map's legend wraps to many lines: in its title's tooltip instead */
 .bj-map figcaption { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; margin-bottom: 2px; }
 .bj-map svg { display: block; width: 100%; height: auto; }
 .bj-map .tick { font: 10px var(--font); fill: var(--ink-3); }
@@ -9908,6 +9910,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         : valueMode
         ? `color: the value of each angle and spin, from ${num(lo)} (${lo < 0 ? "orange" : "gray"}) to ${num(hi)} (${hi > 0 ? "blue" : "gray"}), the cart at rest in the middle; chevrons: the push it prefers`
         : "color and chevrons: the push it prefers, paler where it is unsure; the cart at rest in the middle";
+      this.box.querySelector(".map-head").title = this.box.querySelector(".map-head span").textContent; // narrow panes hide it
     }
 
     place(s) {
@@ -10016,6 +10019,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     destroy() { this.box.remove(); }
+
+    // Narrow panes stay legible down to this width (the panels stack): four racers can sit side by side.
+    static get minWidth() { return 170; }
 
     static options() {
       return [
@@ -10390,6 +10396,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.box.querySelector(".map-head span").textContent = valueMode
         ? `color: the value of each angle and spin, from ${num(lo)} (${ends(lo, hi)[0]}) to ${num(hi)} (${ends(lo, hi)[1]}); chevrons: the way the policy pushes, darker the harder`
         : "color and chevrons: the way the policy pushes, darker the harder";
+      this.box.querySelector(".map-head").title = this.box.querySelector(".map-head span").textContent; // narrow panes hide it
     }
 
     place(s) {
@@ -10476,6 +10483,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     destroy() { this.box.remove(); }
+
+    // Narrow panes stay legible down to this width (the panels stack): four racers can sit side by side.
+    static get minWidth() { return 170; }
 
     static options() {
       return [
@@ -11603,7 +11613,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       // Some views reflow when narrowed (a recorded run's two panels stack), so nothing is predicted: each arrangement
       // is laid out and measured, its panes narrowed until everything fits, and the one with the widest panes wins.
       const apply = (cols, w) => { box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`; box.style.setProperty("--pane", `${Math.floor(w + padX)}px`); return box.offsetHeight; };
-      const MIN = 260;
+      const MIN = RL.labViews[env.kind]?.minWidth || 260; // a view may stay legible narrower (a deep run's, stacked)
       const widest = (cols, H) => {
         let hi = Math.min(w0, (W - gap * (cols - 1)) / cols - padX), lo = MIN;
         if (hi < lo) return 0;

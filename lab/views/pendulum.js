@@ -108,6 +108,7 @@
       this.box.querySelector(".map-head span").textContent = valueMode
         ? `color: the value of each angle and spin, from ${num(lo)} (${ends(lo, hi)[0]}) to ${num(hi)} (${ends(lo, hi)[1]}); chevrons: the way the policy pushes, darker the harder`
         : "color and chevrons: the way the policy pushes, darker the harder";
+      this.box.querySelector(".map-head").title = this.box.querySelector(".map-head span").textContent; // narrow panes hide it
     }
 
     place(s) {
@@ -194,6 +195,9 @@
     }
 
     destroy() { this.box.remove(); }
+
+    // Narrow panes stay legible down to this width (the panels stack): four racers can sit side by side.
+    static get minWidth() { return 170; }
 
     static options() {
       return [

@@ -136,6 +136,7 @@
         : valueMode
         ? `color: the value of each angle and spin, from ${num(lo)} (${lo < 0 ? "orange" : "gray"}) to ${num(hi)} (${hi > 0 ? "blue" : "gray"}), the cart at rest in the middle; chevrons: the push it prefers`
         : "color and chevrons: the push it prefers, paler where it is unsure; the cart at rest in the middle";
+      this.box.querySelector(".map-head").title = this.box.querySelector(".map-head span").textContent; // narrow panes hide it
     }
 
     place(s) {
@@ -244,6 +245,9 @@
     }
 
     destroy() { this.box.remove(); }
+
+    // Narrow panes stay legible down to this width (the panels stack): four racers can sit side by side.
+    static get minWidth() { return 170; }
 
     static options() {
       return [
