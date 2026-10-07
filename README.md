@@ -46,10 +46,10 @@ deleted.
 | --- | --- |
 | `content/` | `map.toml` (every station in reading order, with each algorithm's parent and labels), `lab.toml` (Lab presets), `notation.toml` (symbols page), one Markdown file per written entry, and `recordings/` (what the recorder wrote) |
 | `app/` | the page: `index.html`, `css/` and `js/` (shell, map, pages, stories and their scenes, textbook, diagrams, figures, demos, math), and the generated `content.js` and `recordings.js` |
-| `lab/` | worlds, features, algorithms, runs (computed live, or played back from recordings) and dynamic programming (no DOM, also used by the tests), and their views |
+| `lab/` | worlds, features, algorithms, runs (computed live, or played back from recordings) and dynamic programming (no DOM, also used by the tests), and their views; `lab/deep/` is the trainer of the networks (deterministic math, so a seed gives the same run in Node and in any browser), which the page also runs in a Web Worker for seeds and settings off the recordings |
 | `vendor/` | KaTeX 0.19 (MIT license) |
 | `tests/` | `lab.test.js` |
-| `recorder/` | the recorder of the runs with neural networks (NumPy 2.4 and Gymnasium 1.4, the versions the recordings were made with): `python recorder/record.py [name …]` trains 20 seeds and writes `content/recordings/<name>.json` (every seed's training and test returns, and one seed's snapshots), and `--sweep` writes `content/recordings/sweeps/<name>.json` (each knob's values over many seeds); `build.py` bundles both. `RECORDINGS_OUT` sends them elsewhere, to compare before replacing |
+| `recorder/` | the recorders of the runs with neural networks. `node recorder/deep.js [name …]` trains with `lab/deep/`, one thread per core, resumable (`recorder/.cache`), and `--sweep` makes the sweeps. The older NumPy recorder (NumPy 2.4 and Gymnasium 1.4) stays as a cross-check: `python recorder/record.py [name …]` trains 20 seeds and writes `content/recordings/<name>.json` (every seed's training and test returns, and one seed's snapshots), and `--sweep` writes `content/recordings/sweeps/<name>.json` (each knob's values over many seeds); `build.py` bundles both. `RECORDINGS_OUT` sends them elsewhere, to compare before replacing |
 
 ## Writing an entry
 

@@ -563,6 +563,7 @@
       };
       if (ready()) return finish();
       pause();
+      q(".summary").textContent = racers.length > 1 ? "These runs are training: their summary comes when they are done." : "This run is training: its summary comes when it is done.";
       const mine = (job = { cancel() { jobs.forEach((j) => j && !j.result && j.cancel()); job = null; } });
       update();
     }
