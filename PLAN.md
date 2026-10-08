@@ -114,7 +114,7 @@ animations and hover effects this guide relies on would not be smooth.
   replay, target network, double, dueling and prioritized replay; A2C, PPO and TRPO with exact Fisher-vector products),
   tuned settings (DQN balances CartPole with a squared loss and lr 5·10⁻⁴; A2C, PPO and TRPO balance it within the
   first 20–40% of their training; PPO swings Pendulum up), the first two recordings, their decoder and a CartPole view.
-- [ ] **M7 · The rest**: continuous control, toolbox, where next, quizzes everywhere, polish.
+- [x] **M7 · The rest**: continuous control, toolbox, where next, quizzes everywhere, polish.
   Done: Parts 11–13 written (95 of 95 stations); every story reviewed for calm visuals and concept first (checkpoints
   instead of fast replays); new stories for DPG (a deterministic aim on the throw, with a Lab), on/off-policy,
   exploration and bias–variance; deep recordings over 20 seeds, and their sweeps for DQN, PPO on Pendulum and TRPO.
@@ -129,12 +129,12 @@ animations and hover effects this guide relies on would not be smooth.
   order, and the unified view places all 37 algorithms (bandits in a strip of their own); the panel became a view switch,
   a legend that counts what you have read and lights up a line, and the filters. The hand shows only while dragging; a
   click opens the page out of the station instead of flying the camera in.
-  Still open:
+  Decided:
   - No story, on purpose: which-algorithm (a decision guide, not a run), pg-theorem (a derivation; REINFORCE and the
     baseline show it at work), multi-agent and RLHF (they need worlds with several learners or a learned reward, beyond
     the guide's), debugging until a fair bug-hunt run is found.
 
-- [ ] **M8 · Honest runs**: stories show a run chosen offline that sells the idea; the Lab lets anyone test settings
+- [x] **M8 · Honest runs**: stories show a run chosen offline that sells the idea; the Lab lets anyone test settings
   and seeds. One phase at a time, each reviewed with screenshots before the next. The deep presets (recorded on
   CartPole and Pendulum) wait until the live ones work; they then adopt the same method.
 
@@ -158,7 +158,7 @@ animations and hover effects this guide relies on would not be smooth.
     middle half, the median as a faint line). At the end: a **seed strip** per racer, the 20 final scores as dots on one
     row, the success threshold as a mark that splits them into the odds, and the played seed ringed.
 
-  **Phase 1 · The bench (lab engine, no visible change yet)**
+  **Phase 1 · The bench (lab engine, no visible change yet)** (done)
   - The bench: seeds 1–20 per racer, run in the background in small slices (as the odds already are). Results are cached
     by settings, so going back to a setting is instant.
   - Typical seed: the median of the success score (or of the preset's main measure when it has no success rule). For a
@@ -166,14 +166,14 @@ animations and hover effects this guide relies on would not be smooth.
   - Rank of any seed against the bench; paired wins between racers; the band (quartiles and median per unit).
   - Tests: typical seeds, ranks and bands are deterministic.
 
-  **Phase 2 · Seed and odds in the Lab**
+  **Phase 2 · Seed and odds in the Lab** (done)
   - The seed control: *Typical* (the default), a box to type any seed, and the dice to roll one.
   - Each racer's pane header: its odds on the bench, and where the played seed falls ("better than 14 of 20").
   - Charts: the played run, the bench band, the seed strip (see Principles). "This run" alone stays as an option.
   - The sweep keeps its form (every value on the same bench) and marks the played settings.
   - The preset `seed` keys go. Preset intros that quote numbers from one run are checked and reworded.
 
-  **Phase 3 · A layout made for comparing, and playback speeds that each mean something**
+  **Phase 3 · A layout made for comparing, and playback speeds that each mean something** (done)
   Today the racers are stacked full-width, so two worlds never fit on one screen, the transport bar covers the second,
   and the charts and odds sit far below. There are 45 live presets: 6 with one racer, 25 with two, 13 with three, 1 with
   four.
@@ -219,20 +219,17 @@ animations and hover effects this guide relies on would not be smooth.
   - The Pendulum and CartPole stories play their recorded test episodes instead of stills (code only). *Done*: a step
     after some training plays the test episode of the network it shows, in a loop, at the world's own pace.
 
-- [ ] **M9 · Worlds for every algorithm** (draft, to agree on): a shared set of worlds that every algorithm can be tried
-  on, where its kind allows; for each algorithm, a study of which world shows it best; then the deep Lab on top
-  (`recorder/DEEP-LAB.md`). Classic algorithms first.
+- [x] **M9 · Worlds for every algorithm** (closed with release 1.0.0): a shared set of worlds that every algorithm can
+  be tried on, where its kind allows; for each algorithm, a study of which world shows it best; then the deep Lab on top
+  (`recorder/DEEP-LAB.md`). Classic algorithms first. What it set out to do and was left out is listed at its end.
 
   **The shared worlds.** All of them run in the page: Gymnasium's equations ported exactly, or, where Gymnasium's
   physics can't be ported (Box2D, MuJoCo), a world of our own in the same spirit, named as such.
   - *Discrete actions, discrete states* (tables can hold them): Cliff Walking; Frozen Lake 4 × 4; Frozen Lake 8 × 8
     (new); Taxi (new, 500 states); the windy gridworld (new, Sutton & Barto's Example 6.5); the Dyna maze; Blackjack.
   - *Discrete actions, continuous or large states* (approximation only): CartPole (now live, not only recorded);
-    Mountain Car; Acrobot (new); Catch (new, bsuite's tiny pixel game: a falling ball, a paddle, 10 × 5 pixels);
-    MinAtar-style Breakout (new, a 10 × 10 image, several channels).
-  - *Continuous actions* (approximation only): Pendulum; continuous Mountain Car (new); CartPole pushed with any force
-    (new, our own); Acrobot driven with any torque (new, our own); a two-link arm reaching a target (new, our own, in
-    the spirit of MuJoCo's Reacher); a puck pushed to a goal around obstacles (new, our own).
+    Mountain Car; Acrobot (new); Catch (new, bsuite's tiny game: a falling ball, a paddle, 10 × 5 cells, 250 states).
+  - *Continuous actions* (approximation only): Pendulum.
   - The chapter worlds built to make one point (the short corridor, two gems, the ice bridge, the hidden cliffs, the
     max-bias pair, Baird's star, the random walks) stay in their chapters; they are not part of the shared set.
 
@@ -254,9 +251,7 @@ animations and hover effects this guide relies on would not be smooth.
   small. Training runs in a Web Worker, so the animation never waits for the weights.
 
   **The network.** Two hidden layers by default, with depth (1–3), width (16–128) and activation as knobs: small, as the
-  networks of most control work still are, robots included. Depth earns its keep in perception: Catch and Breakout get
-  a small convolutional encoder in front (one or two layers), precomputed rather than trained live. The very deep
-  encoders of image-based agents are explained (a story, an animation), not run.
+  networks of most control work still are, robots included.
   - *Smoothness first.* Before the knobs open, every network shape is timed on every world: updates per second, and so
     the fastest playback it can keep. Shapes that would stall the page at a speed are not offered at that speed (or at
     all); the fast rates of the ladder show what training actually manages ("training: 1,800 steps a second").
@@ -266,16 +261,14 @@ animations and hover effects this guide relies on would not be smooth.
      Taxi, and CartPole and Acrobot live done* (`lab/envs/control.js`, checked step for step against Gymnasium's own
      trajectories; tile coding, 8 tilings of 6 cells per coordinate; new Acrobot view, the CartPole view drawing live
      snapshots too). Linear SARSA and the policy-gradient methods run on them from the World panel. *Catch* (bsuite's
-     falling ball, 250 states: tables, DP and policy methods) added with its own view. *MinAtar-style Breakout moves to
-     the deep Lab*: a 10 × 10 image needs the small convolutional encoder, which linear features can't stand in for.
+     falling ball, 250 states: tables, DP and policy methods) added with its own view.
   2. The world study for the classic algorithms: each on every world it may run, 20 seeds, sensible settings; a world
      is a good showcase when good settings succeed on most seeds, learning takes long enough to watch, the chapter's
      knob visibly matters, and the hero beats the foil on most seeds. Written up like the runs review; presets and
      stories move where a world shows the idea better. *First round done* (`recorder/WORLD-STUDY.md`): the settings
      each algorithm starts from in each world (3 seeds per candidate), episode caps, Frozen Lake judged by its chance of
      reaching the gem, prediction on the grids with a near-optimal policy and episodes starting anywhere; pairings that
-     rarely end well are marked "hard" in the World panel, not hidden. Still to do: the 20-seed showcase choice per
-     chapter, and moving presets or stories where another world shows the idea better.
+     rarely end well are marked "hard" in the World panel, not hidden. The second round is left for after 1.0 (below).
   3. The scenario picker in the Lab: any allowed world for any algorithm, with its bench. *Done for the discrete
      worlds so far* (`lab/worlds.js`): a "World" panel in the Lab's side lists the shared worlds every racer may run,
      grouped, with the lab's own world marked; a click switches the world, starting from that world's profile (units,
@@ -285,7 +278,7 @@ animations and hover effects this guide relies on would not be smooth.
      views handle every kind of learner (action values, a policy with or without a critic, a fixed policy); playback
      never runs more than one move per tick, so Monte Carlo and REINFORCE walk their episodes with the pseudocode in step;
      long runs train in slices with their progress shown, the page staying responsive.
-  4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds; then the encoder tier. *Deep Lab done*: the trainer in
+  4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds. *Done*: the trainer in
      JavaScript (`lab/deep/`: deterministic math, so a seed is the same run in Node and in any browser); every recording
      and sweep made with it (`recorder/deep.js`): the DQN family on CartPole, network depth, width and activation among
      its knobs, A2C, PPO and TRPO on CartPole, and PPO, DDPG, TD3 and SAC on Pendulum; the Lab training other seeds and
@@ -293,6 +286,27 @@ animations and hover effects this guide relies on would not be smooth.
      the page on request; and a strip under each recorded world showing how often each hidden unit fires. A test keeps
      the trainer from drifting off the recordings (`tests/recordings.test.js`), and every lab offers only knobs that
      change its runs (`lab/knobs.js`). What the long runs cost, and the rules for the next: `recorder/DEEP-LAB.md`.
-     Next: the encoder tier.
   5. The map keeps its order, which follows Sutton & Barto. A new station goes only where a topic needs its own, and
-     then between the two stations where it naturally fits (learning from pixels, say, after DQN).
+     then between the two stations where it naturally fits.
+
+  **Left out, on purpose.**
+  - Learning from pixels (a MinAtar-style Breakout behind a small convolutional encoder): convolutional networks belong
+    to a course on neural networks, not to this guide. The DQN chapter tells the Atari story in words.
+  - More continuous worlds of our own (continuous Mountain Car, CartPole pushed with any force, a torque-driven Acrobot,
+    a reaching arm, a pushed puck): Pendulum already shows what continuous actions change, and each new world would
+    need its recordings, sweeps and checks.
+
+  **After 1.0** (not scheduled)
+  - The world study's second round: the 20-seed showcase choice per chapter, and moving presets or stories where
+    another world shows the idea better.
+  - A check on real browsers and devices, which the headless checks here cannot replace: open the downloaded file in
+    Chrome, Brave, Firefox and Safari, and on a phone; scroll a few stories fast and slow (the PPO and MCTS ones
+    included); play a lab at every speed, with the pseudocode folded and open; train another seed of a deep lab (the
+    Web Worker must start from a local file); switch the dark theme; drag and zoom the map.
+
+- [x] **M10 · Release 1.0.0**: a design pass over the stories, the animations and the Lab's layout, then the release.
+  The Lab's panes take the largest size that fits for any number and shape of racers, and the algorithm column folds
+  into a tab at the edge; playback holds its rate at every speed without forced layouts; stories follow the scroll
+  position frame by frame, prepare their runs and the moments their steps draw in slices that stop between two events
+  of a unit, and show their charts at once (averaged offline, `tools/story-curves.js`). The README got pictures; a
+  workflow (`.github/workflows/release.yml`) publishes `rl_atlas.html` as the download of each version tag.

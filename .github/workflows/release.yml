@@ -1,0 +1,45 @@
+# Publishes a release when a version tag (v1.2.3) is pushed: the page is built from the tagged sources and must match
+# the committed rl_atlas.html, the tests must pass, and the single file rl_atlas.html becomes the release's download,
+# with the notes in docs/releases/<tag>.md. Run it by hand (Actions → Release → Run workflow) to publish an existing tag.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The tag to publish (for example v1.0.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build, and check the committed page is the build of its sources
+        run: |
+          python build.py
+          git diff --stat --exit-code -- rl_atlas.html app/
+      - name: Test
+        run: node --test
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/releases/$TAG.md"
+          if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
+          gh release create "$TAG" rl_atlas.html --title "RL Atlas ${TAG#v}" --verify-tag --latest "$@"
