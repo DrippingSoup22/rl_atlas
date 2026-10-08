@@ -129,7 +129,8 @@ git push origin v1.0.0
 ```
 
 The release workflow (`.github/workflows/release.yml`) builds the page from the tagged sources, checks that it matches
-the committed `rl_atlas.html`, runs the tests, and publishes the release with `rl_atlas.html` as its download.
+the committed `rl_atlas.html`, runs the tests, and publishes the release with `rl_atlas.html` as its download. It also
+runs by hand (Actions → Release → Run workflow, on `main`) with the version to publish, and then makes the tag itself.
 
 ## Folders
 

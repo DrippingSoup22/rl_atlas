@@ -1,6 +1,7 @@
-# Publishes a release when a version tag (v1.2.3) is pushed: the page is built from the tagged sources and must match
-# the committed rl_atlas.html, the tests must pass, and the single file rl_atlas.html becomes the release's download,
-# with the notes in docs/releases/<tag>.md. Run it by hand (Actions → Release → Run workflow) to publish an existing tag.
+# Publishes a release: the page is built from the release's sources and must match the committed rl_atlas.html, the
+# tests must pass, and the single file rl_atlas.html becomes the release's download, with the notes in
+# docs/releases/<tag>.md. It runs when a version tag (v1.2.3) is pushed, or by hand (Actions → Release → Run workflow)
+# with the version: an existing tag is published as it is, a new one is made on the commit the workflow runs on.
 name: Release
 
 on:
@@ -9,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "The tag to publish (for example v1.0.0)"
+        description: "The version to publish (for example v1.0.0)"
         required: true
 
 permissions:
@@ -23,7 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TAG }}
+          fetch-depth: 0
+      - name: Check out the tag, if it exists
+        run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then git checkout -q "refs/tags/$TAG"; fi
+          echo "SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -42,4 +47,4 @@ jobs:
         run: |
           notes="docs/releases/$TAG.md"
           if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
-          gh release create "$TAG" rl_atlas.html --title "RL Atlas ${TAG#v}" --verify-tag --latest "$@"
+          gh release create "$TAG" rl_atlas.html --target "$SHA" --title "RL Atlas ${TAG#v}" --latest "$@"
