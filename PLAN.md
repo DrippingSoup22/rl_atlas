@@ -299,7 +299,8 @@ animations and hover effects this guide relies on would not be smooth.
   **After 1.0** (not scheduled)
   - The world study's second round: the 20-seed showcase choice per chapter, and moving presets or stories where
     another world shows the idea better.
-  - A check on real browsers and devices, which the headless checks here cannot replace: open the downloaded file in
+  - A check on real browsers and devices, which the headless checks here cannot replace (`docs/browser-check.md`, with
+    `tools/browser-check.js` for what can be measured): open the downloaded file in
     Chrome, Brave, Firefox and Safari, and on a phone; scroll a few stories fast and slow (the PPO and MCTS ones
     included); play a lab at every speed, with the pseudocode folded and open; train another seed of a deep lab (the
     Web Worker must start from a local file); switch the dark theme; drag and zoom the map.

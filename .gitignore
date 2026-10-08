@@ -7,6 +7,10 @@ venv/
 # Node
 node_modules/
 
+# Browser checks (tools/browser-check.js, docs/browser-check.md)
+browser-check-results/
+downloads/
+
 # Editors and OS
 .vscode/
 .idea/
