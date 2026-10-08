@@ -8,8 +8,11 @@
 //   npm install --no-save playwright-core
 //   node tools/browser-check.js --browser chrome     (or brave, edge; --exe <path> for another Chromium-based browser)
 // Options: --file <html> (default: rl_atlas.html here), --out <dir> (default: browser-check-results/<browser>),
-// --quick (fewer stories and labs; formulas only where they were too wide before 1.0.1), --headless.
-// Keep the window visible while it runs: a hidden or minimized window slows its frames and timers down.
+// --quick (fewer stories and labs; formulas only where some were too wide before; no phone pass over every page),
+// --headless. The measures run in the browser's own maximized window, at the screen's pixel ratio; the layout pass
+// then emulates each window size. Keep the window in front and uncovered while it runs: a browser slows the frames and
+// timers of a window it takes for hidden (Chrome on Windows does for a covered one), and the report flags any measure
+// taken while the page was hidden.
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -27,12 +30,15 @@ const URL = pathToFileURL(FILE).href;
 const STORIES = QUICK ? ["q-learning", "mcts", "a2c", "ppo", "dqn"]
   : ["q-learning", "expected-sarsa", "dyna-q", "deadly-triad", "reinforce", "baseline", "a2c", "gae", "trpo", "ppo", "dqn", "sac", "mcts", "bias-variance", "imitation"];
 const LABS = QUICK ? ["cliff-race", "ppo-maze", "dqn-cartpole"] : ["cliff-race", "dyna-maze", "mountain-car", "a2c-maze", "ppo-maze", "dqn-cartpole", "ppo-pendulum"];
-const FORMULAS = ["mcts", "imitation", "prioritized-sweeping", "mc-vs-td", "value-error", "pg-theorem"]; // too wide before 1.0.1
+const FORMULAS = ["mcts", "a2c", "bias-variance", "prioritized-sweeping", "imitation", "mc-vs-td", "value-error", "pg-theorem"]; // once too wide
 const SIZES = [[1920, 1080], [1440, 900], [1366, 768], [1280, 800], [1024, 768]];
-const PAGES = [["map", "#/map"], ["story", "#/e/mcts/story", 5], ["textbook", "#/e/td0/textbook"], ["card", "#/e/q-learning/card"], ["lab", "#/lab/cliff-race"], ["deep-lab", "#/lab/dqn-cartpole"]];
+const PAGES = [["map", "#/map"], ["story", "#/e/mcts/story", 5], ["textbook", "#/e/td0/textbook"], ["card", "#/e/q-learning/card"], ["lab", "#/lab/cliff-race"], ["deep-lab", "#/lab/dqn-cartpole"], ["symbols", "#/symbols"]];
 
 function launchOptions() {
-  const headless = flag("headless"), exe = arg("exe");
+  const headless = flag("headless"), exe = arg("exe"), args = [headless ? "--window-size=1440,900" : "--start-maximized"];
+  return { args, ...browserOptions(headless, exe) };
+}
+function browserOptions(headless, exe) {
   if (exe) return { executablePath: exe, headless };
   if (BROWSER === "chrome") return { channel: "chrome", headless };
   if (BROWSER === "edge") return { channel: "msedge", headless };
@@ -50,19 +56,30 @@ function launchOptions() {
   throw new Error(`unknown browser "${BROWSER}": use chrome, brave or edge, or --exe <path>`);
 }
 
-// In the page: long tasks, frames (the worst gap between two), and how long a story said "Working out this run…"
+// In the page: long tasks, frames (the worst gap between two, and the usual one), how long a story said "Working out
+// this run…", and how long the page was hidden (its frames and timers then slow down: such a measure says nothing)
 function probe() {
-  const s = (window.__check = { on: false, long: [], frames: 0, worst: 0, last: 0, busy: 0, t0: 0 });
+  const s = (window.__check = { on: false, long: [], frames: 0, worst: 0, last: 0, gaps: [], busy: 0, hidden: 0, hid: 0, t0: 0 });
   try { new PerformanceObserver((list) => { if (s.on) for (const e of list.getEntries()) s.long.push(Math.round(e.duration)); }).observe({ type: "longtask" }); } catch {}
-  const tick = (t) => { if (s.on) { s.frames++; if (s.last) s.worst = Math.max(s.worst, t - s.last); s.last = t; } requestAnimationFrame(tick); };
+  const tick = (t) => {
+    if (s.on) { s.frames++; if (s.last) { s.worst = Math.max(s.worst, t - s.last); if (s.gaps.length < 5000) s.gaps.push(t - s.last); } s.last = t; }
+    requestAnimationFrame(tick);
+  };
   requestAnimationFrame(tick);
   setInterval(() => { if (s.on && /^Working out/.test(document.querySelector(".scene-note")?.textContent || "")) s.busy += 0.1; }, 100);
+  s.hid = document.visibilityState === "hidden" ? performance.now() : 0;
+  document.addEventListener("visibilitychange", () => {
+    const now = performance.now();
+    if (document.visibilityState === "hidden") s.hid = now;
+    else if (s.hid) { if (s.on) s.hidden += now - Math.max(s.hid, s.t0); s.hid = 0; }
+  });
 }
-const start = (page) => page.evaluate(() => Object.assign(window.__check, { on: true, long: [], frames: 0, worst: 0, last: 0, busy: 0, t0: performance.now() }));
+const start = (page) => page.evaluate(() => Object.assign(window.__check, { on: true, long: [], frames: 0, worst: 0, last: 0, gaps: [], busy: 0, hidden: 0, t0: performance.now() }));
 const stop = (page) => page.evaluate(() => {
-  const s = window.__check, secs = (performance.now() - s.t0) / 1000;
+  const s = window.__check, now = performance.now(), secs = (now - s.t0) / 1000, gaps = s.gaps.sort((a, b) => a - b);
   s.on = false;
-  return { secs: +secs.toFixed(1), fps: Math.round(s.frames / secs), worst: Math.round(s.worst), long: s.long.length, longest: Math.max(0, ...s.long), busy: +s.busy.toFixed(1) };
+  const hidden = (s.hidden + (s.hid ? now - Math.max(s.hid, s.t0) : 0)) / 1000;
+  return { secs: +secs.toFixed(1), fps: Math.round(s.frames / secs), worst: Math.round(s.worst), usual: +(gaps[gaps.length >> 1] || 0).toFixed(1), long: s.long.length, longest: Math.max(0, ...s.long), busy: +s.busy.toFixed(1), hidden: +hidden.toFixed(1) };
 });
 const toStep = (page, k) => page.evaluate((k) => { const el = document.querySelectorAll(".story-step")[k]; if (el) scrollTo(0, el.getBoundingClientRect().top + scrollY - innerHeight * 0.3); }, k);
 
@@ -190,17 +207,31 @@ async function layouts(page, sizes, tag) {
   }
 }
 
+// Every page on the phone: a phone widens its layout to fit what is too wide, so the page's width tells
+async function phonePages(page) {
+  const { ids, labs } = await page.evaluate(() => ({ ids: Object.keys(RL.content.entries), labs: Object.keys(RL.content.presets) }));
+  for (const hash of ["#/map", "#/symbols", ...ids.flatMap((id) => [`#/e/${id}/story`, `#/e/${id}/textbook`, `#/e/${id}/card`]), ...labs.map((l) => `#/lab/${l}`)]) {
+    where = `phone ${hash}`;
+    await page.goto(URL + hash);
+    await page.waitForTimeout(hash.includes("/lab/") ? 900 : 600);
+    const [inner, content] = await page.evaluate(() => [innerWidth, document.documentElement.scrollWidth]);
+    if (Math.max(inner, content) > 391) R.layout.push(`${hash} on the phone (390 wide): ${Math.max(inner, content)}px wide`);
+  }
+}
+
 function report(env) {
-  const hz = env.hz, look = [];
+  const hz = env.hz, look = [], hid = (m) => m.hidden > 0.2;
   const row = (cells) => `| ${cells.join(" | ")} |`;
   const lines = [`# Browser check: ${env.browser} ${env.version}`, "",
-    `${env.os} · ${env.cpu} · screen ${env.screen} at ${env.dpr}× · the display refreshes about ${hz} times a second · ${env.when}`,
+    `${env.os} · ${env.cpu} · screen ${env.screen} at ${env.dpr}×, window ${env.window} CSS pixels · the display refreshes about ${hz} times a second · ${env.when}`,
     `File: ${FILE}${QUICK ? " · quick run" : ""}`, ""];
-  for (const s of R.stories) if (s.long > 2 || s.longest > 200 || s.worst > 250 || !s.end || s.busy > 2) look.push(`story ${s.id} (${s.mode}): ${s.long} long tasks (longest ${s.longest} ms), worst frame ${s.worst} ms${s.end ? "" : ", the last step was not reached"}${s.busy > 2 ? `, "Working out this run…" for ${s.busy} s` : ""}`);
-  for (const l of R.labs) if (l.fps < 0.85 * hz || l.long > 1 || l.longest > 200) look.push(`lab ${l.lab} at "${l.speed}": ${l.fps} frames/s, ${l.long} long tasks (longest ${l.longest} ms)`);
+  const hidden = [...R.stories.filter(hid).map((s) => `story ${s.id} (${s.mode})`), ...R.labs.filter(hid).map((l) => `lab ${l.lab} at "${l.speed}"`), ...(R.training && hid(R.training) ? ["deep training"] : [])];
+  if (hidden.length) lines.push(`**The page was hidden during ${hidden.length} measures** (${hidden.join(", ")}): the browser then slows its frames and timers, so these say nothing. Run again with the window in front and uncovered.`, "");
+  for (const s of R.stories.filter((m) => !hid(m))) if (s.long > 2 || s.longest > 200 || s.worst > 250 || !s.end || s.busy > 2) look.push(`story ${s.id} (${s.mode}): ${s.long} long tasks (longest ${s.longest} ms), worst frame ${s.worst} ms${s.end ? "" : ", the last step was not reached"}${s.busy > 2 ? `, "Working out this run…" for ${s.busy} s` : ""}`);
+  for (const l of R.labs.filter((m) => !hid(m))) if (l.fps < 0.85 * hz || l.long > 1 || l.longest > 200) look.push(`lab ${l.lab} at "${l.speed}": ${l.fps} frames/s, ${l.long} long tasks (longest ${l.longest} ms)`);
   for (const l of R.lab) if (!l.ok) look.push(`lab ${l.lab}: drawer and pseudocode went ${l.steps}`);
   const t = R.training;
-  if (t && (!t.done || t.long > 2 || t.longest > 200)) look.push(`deep training: ${t.began ? (t.done ? `done in ${t.took} s` : "did not finish in 5 minutes") : "did not start"}, ${t.long} long tasks (longest ${t.longest} ms)`);
+  if (t && (!t.done || (!hid(t) && (t.long > 2 || t.longest > 200)))) look.push(`deep training: ${t.began ? (t.done ? `done in ${t.took} s` : "did not finish in 5 minutes") : "did not start"}, ${t.long} long tasks (longest ${t.longest} ms)`);
   if (R.kept === false) look.push("progress: a station read before a reload was no longer marked read");
   if (R.theme && R.theme !== "dark") look.push(`theme: the switch left data-theme="${R.theme}"`);
   look.push(...R.formulas.map((f) => `formula too wide: ${f}`), ...R.layout.map((l) => `layout: ${l}`));
@@ -208,15 +239,15 @@ function report(env) {
   lines.push(`## Console errors (${R.errors.length})`, "", ...([...new Set(R.errors)].map((e) => `- ${e}`)), "");
   lines.push(`## Requests to the network (${R.external.length}; there should be none)`, "", ...([...new Set(R.external)].slice(0, 20).map((e) => `- ${e}`)), "");
   lines.push("## Stories, scrolled with the mouse wheel", "", "Bounds: at most 2 long tasks and none over 200 ms, no frame over 250 ms, the last step reached, \"Working out this run…\" at most 2 s.", "",
-    row(["story", "scroll", "seconds", "frames/s", "worst frame (ms)", "long tasks", "longest (ms)", "working out (s)", "last step"]), row(Array(9).fill("---")),
-    ...R.stories.map((s) => row([s.id, s.mode, s.secs, s.fps, s.worst, s.long, s.longest, s.busy, s.end ? "yes" : "**no**"])), "");
+    row(["story", "scroll", "seconds", "frames/s", "worst frame (ms)", "long tasks", "longest (ms)", "working out (s)", "last step", "hidden (s)"]), row(Array(10).fill("---")),
+    ...R.stories.map((s) => row([s.id, s.mode, s.secs, s.fps, s.worst, s.long, s.longest, s.busy, s.end ? "yes" : "**no**", s.hidden])), "");
   lines.push("## Labs, played at each speed", "", `Bounds: at least ${Math.round(0.85 * hz)} frames/s (85% of the display's rate), at most 1 long task and none over 200 ms.`, "",
-    row(["lab", "speed", "seconds", "frames/s", "worst frame (ms)", "long tasks", "longest (ms)"]), row(Array(7).fill("---")),
-    ...R.labs.map((l) => row([l.lab, l.speed, l.secs, l.fps, l.worst, l.long, l.longest])), "",
+    row(["lab", "speed", "seconds", "frames/s", "worst frame (ms)", "long tasks", "longest (ms)", "hidden (s)"]), row(Array(8).fill("---")),
+    ...R.labs.map((l) => row([l.lab, l.speed, l.secs, l.fps, l.worst, l.long, l.longest, l.hidden])), "",
     ...R.lab.map((l) => `- ${l.lab}: drawer/pseudocode ${l.steps}${l.ok ? "" : " (expected closed/open → open/open → closed/open → closed/folded → closed/open)"}`), "");
   if (t) lines.push("## A deep lab training in its Web Worker", "", `${t.preset}, seed ${t.seed}: ${t.began ? "started" : "**did not start**"}, ${t.done ? `done in ${t.took} s` : "**not done**"}; meanwhile ${t.fps} frames/s, worst frame ${t.worst} ms, ${t.long} long tasks (longest ${t.longest} ms).`, "");
-  lines.push("## Formulas wider than their column", "", ...(R.formulas.length ? R.formulas.map((f) => `- ${f}`) : ["None."]), "");
-  lines.push("## Pages wider than the window", "", ...(R.layout.length ? R.layout.map((l) => `- ${l}`) : ["None."]), "");
+  lines.push("## Formulas wider than their column, in a 1024×768 window", "", ...(R.formulas.length ? R.formulas.map((f) => `- ${f}`) : ["None."]), "");
+  lines.push(`## Pages wider than the window${QUICK ? "" : " (and every page on a phone)"}`, "", ...(R.layout.length ? R.layout.map((l) => `- ${l}`) : ["None."]), "");
   lines.push("## Other", "", `- Progress kept across a reload: ${R.kept ? "yes" : "**no**"}`, `- Theme after the switch: ${R.theme}`, "", `Screenshots: ${OUT}`, "");
   return lines.join("\n");
 }
@@ -225,7 +256,7 @@ function report(env) {
   fs.mkdirSync(OUT, { recursive: true });
   if (!fs.existsSync(FILE)) throw new Error(`no such file: ${FILE}`);
   const browser = await chromium.launch(launchOptions());
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({ viewport: null }); // the browser's own window, at the screen's pixel ratio
   await context.addInitScript(probe);
   const page = await context.newPage();
   watch(page);
@@ -237,8 +268,8 @@ function report(env) {
   const idle = await stop(page);
   const env = {
     browser: BROWSER, version: browser.version(), os: `${process.platform} ${os.release()}`, cpu: `${os.cpus()[0]?.model} × ${os.cpus().length}`,
-    when: new Date().toISOString().slice(0, 16).replace("T", " "), hz: idle.fps,
-    ...(await page.evaluate(() => ({ screen: `${screen.width}×${screen.height}`, dpr: devicePixelRatio, ua: navigator.userAgent }))),
+    when: new Date().toISOString().slice(0, 16).replace("T", " "), hz: Math.round(1000 / (idle.usual || 1000 / 60)),
+    ...(await page.evaluate(() => ({ screen: `${screen.width}×${screen.height}`, window: `${innerWidth}×${innerHeight}`, dpr: devicePixelRatio, ua: navigator.userAgent }))),
   };
   console.log(`${env.browser} ${env.version}, display at ${env.hz} Hz`);
 
@@ -274,7 +305,7 @@ function report(env) {
   await page.waitForTimeout(2000);
   R.kept = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem("rl-atlas:v1") || "{}").visited?.td0 === 1; } catch { return false; } });
 
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1024, height: 768 }); // the narrowest window here: the columns are narrowest too
   await page.goto(`${URL}#/map`);
   await page.waitForTimeout(1000);
   await formulas(page, QUICK ? FORMULAS : await page.evaluate(() => Object.keys(RL.content.entries)));
@@ -284,6 +315,7 @@ function report(env) {
   const p2 = await phone.newPage();
   watch(p2, "phone · ");
   await layouts(p2, [[390, 844]], "phone");
+  if (!QUICK) await phonePages(p2);
   console.log(`layouts: ${R.layout.length} pages wider than the window`);
 
   await browser.close();

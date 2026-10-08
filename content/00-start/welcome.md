@@ -18,12 +18,12 @@ A metro map of a city you are about to explore. You can ride the lines in order,
 
 ### The map {#map}
 
-- Stations you have visited fill with color, so the map shows how far you have come.
+- Stations you have visited fill with color, so the map shows how far you have come. Your browser keeps this record for this file; a browser set to clear its site data when it closes forgets it.
 - **Metro** shows the curriculum in reading order: the foundations, then methods that keep a table, then methods that scale.
 - **Tree** gives each line its own tree, read from the top: every station grows from the one it builds on, and an algorithm from the one it changes. Most algorithms are their parent plus **one change**.
 - **Unified** places every algorithm by how far its updates look ahead and whether they sample or average.
-- In every view, pointing at a station keeps lit everything it builds on, so you can see what to read first.
-- **Lines** in the panel count what you have read; point at one to light up its stations, click it to bring them into view.
+- Pointing at a station shows what it is about, and a click opens it.
+- **Lines** in the panel count what you have read; click one to bring its stations into view.
 - **Show only** dims every algorithm without the chosen labels, such as *off-policy* or *model-based*.
 
 ### Reading an entry {#reading}

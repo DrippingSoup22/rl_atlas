@@ -62,9 +62,7 @@
       peek = h(`<div class="hovercard peek" style="--c:var(--ink-3)"></div>`);
       peek.append(t.cloneNode(true));
       document.body.appendChild(peek);
-      const r = a.getBoundingClientRect(), w = peek.offsetWidth, ht = peek.offsetHeight;
-      peek.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8)}px`;
-      peek.style.top = `${r.bottom + 10 + ht < innerHeight ? r.bottom + 10 : r.top - ht - 10}px`;
+      RL.place(peek, a);
     }
     const onOut = (ev) => { if (ev.target.closest("a.ref")) hidePeek(); };
     host.addEventListener("pointerover", onOver);

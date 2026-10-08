@@ -77,11 +77,17 @@
       ${tip ? `<span class="soon">Explained in: ${esc(st.title)}${e ? "" : " (planned)"}</span>` : e ? "" : `<span class="soon">Planned: this station is not written yet.</span>`}
     </div>`);
     document.body.appendChild(card);
-    const r = target.getBoundingClientRect(), w = card.offsetWidth, hgt = card.offsetHeight;
-    const x = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8);
-    const below = r.bottom + 10 + hgt < innerHeight;
-    card.style.left = `${x}px`;
-    card.style.top = `${below ? r.bottom + 10 : r.top - hgt - 10}px`;
+    if (card.offsetHeight > 300) card.classList.add("wide"); // a long card reads better wider than taller
+    place(card, target);
+  }
+  // A hover card by what it describes: below it if it fits there, else above it if it fits there, else on the side with
+  // more room, kept inside the window under the header (it may then cover what it describes: it lets the pointer through)
+  function place(card, target) {
+    const r = target.getBoundingClientRect(), w = card.offsetWidth, hgt = card.offsetHeight, top = 64, bottom = innerHeight - 8;
+    const y = r.bottom + 10 + hgt <= bottom ? r.bottom + 10 : r.top - 10 - hgt >= top ? r.top - 10 - hgt
+      : bottom - r.bottom > r.top - top ? bottom - hgt : top;
+    card.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8)}px`;
+    card.style.top = `${Math.max(top, y)}px`;
   }
   document.addEventListener("pointerover", (ev) => {
     const t = ev.target.closest?.("[data-term]") || null;
@@ -114,7 +120,7 @@
     hide() { tipEl?.remove(); tipEl = null; },
   };
 
-  Object.assign(RL, { $, $$, h, esc, asIs, warn, reducedMotion, token, scrolling, station, entry, stations, order, lineColor, store, hideCard, tip });
+  Object.assign(RL, { $, $$, h, esc, asIs, warn, reducedMotion, token, scrolling, station, entry, stations, order, lineColor, store, hideCard, place, tip });
   RL.views = RL.views || {};
   RL.demos = RL.demos || {};
 })(globalThis.RL = globalThis.RL || {});

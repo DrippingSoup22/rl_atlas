@@ -548,6 +548,9 @@ a.ref:hover { text-decoration-color: var(--ink); }
 /* small screens: a wide table scrolls inside its own box instead of widening the page */
 @media (max-width: 640px) {
   .tb-paper table, .sec table { display: block; max-width: 100%; overflow-x: auto; }
+  .notation { padding: 14px 12px; }
+  .notation td { padding: 7px 5px; }
+  .notation td.sym { width: auto; } /* the symbol's own width: the page fits a phone */
 }
 .story-in { margin: 10px 0 0; font-size: 14.5px; color: var(--ink-2); }
 .story-in::before { content: "▸ "; color: var(--c); }

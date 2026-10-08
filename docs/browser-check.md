@@ -48,9 +48,11 @@ Add `--file downloads/rl_atlas.html` if you test the downloaded copy. If Brave i
 `--exe "<path to brave.exe or Brave Browser>"`. Edge runs with `--browser edge`. Firefox and Safari cannot be driven by
 playwright-core, so check them by hand (Part B) if they are installed.
 
-Each run takes about 15 minutes; `--quick` takes about 5. It opens a browser window and drives it, so **leave the
-window visible and do not use the mouse or keyboard meanwhile**: a covered or minimized window slows its frames and
-timers down and spoils the numbers. Close heavy apps, and keep a laptop plugged in. A run:
+A full run takes 25 to 35 minutes; `--quick` takes about 8. It opens the browser in a maximized window and drives
+it there, at the screen's own pixel ratio. **Keep that window in front and uncovered, and do not use the mouse or
+keyboard meanwhile.** A browser slows the frames and timers of a window it takes for hidden: Chrome on Windows does so
+for a window covered by another app, down to one frame a second. The report flags any measure taken while the page
+was hidden; run those again. Close heavy apps, and keep a laptop plugged in. A run:
 
 - measures the display's refresh rate on the idle map;
 - scrolls 15 stories from top to bottom with the mouse wheel, once slowly and once in a fast flick. For each pass it
@@ -62,9 +64,10 @@ timers down and spoils the numbers. Close heavy apps, and keep a laptop plugged 
   training starts and ends and that the page stays free meanwhile;
 - switches to the dark theme and takes screenshots;
 - reloads after visiting a station and checks it is still marked read;
-- looks for formulas wider than their column on every page;
-- screenshots the map, a story, a textbook chapter, a card, a lab and a deep lab at 1920×1080, 1440×900, 1366×768,
-  1280×800 and 1024×768, and in an emulated phone (390×844). It checks that no page is wider than its window;
+- looks for formulas wider than their column on every page, in a 1024×768 window, where the columns are narrowest;
+- screenshots the map, a story, a textbook chapter, a card, a lab, a deep lab and the symbols page at 1920×1080,
+  1440×900, 1366×768, 1280×800 and 1024×768, and in an emulated phone (390×844). It checks that no page is wider than
+  its window. A full run also opens every page on the phone for that check;
 - records console errors, and any request to the network.
 
 It writes `browser-check-results/<browser>/report.md`, `report.json` and the screenshots. The report's first section,
@@ -90,10 +93,11 @@ and in Brave. Note the browser, page and window size of anything wrong, and take
   every symbol of its kind. Math and figures render.
 - **Lab** (open "SARSA vs Q-learning on the cliff"): play at each speed. With **Change world** or **World & display**,
   move the experiment to another world; Esc closes the drawer. Fold the pseudocode with the arrow at its top. Roll a
-  seed with the dice. Run a sweep: it shows "Running N of M runs…" and can take a minute or two. Then click a dot in
-  the odds to play that seed.
+  seed with the dice. Run a sweep: it shows "Running N of M runs…" and can take a few minutes (about 3 on a laptop).
+  Then click a dot in the odds to play that seed.
 - **Deep lab** ("DQN balances a pole"): it plays at once. Change a knob (for example units per layer). The run should
-  train in the page with its progress shown, the page should stay responsive meanwhile, and the new run should play.
+  train in the page with its progress shown, and the page should stay responsive meanwhile. The new run is then ready:
+  it waits for Play, like a recorded one.
 - **Everywhere:** `Ctrl K` opens search; type "sarsa", use the arrow keys and Enter. Check the **Symbols** page. Switch
   the theme with the button at the top right. Then put the operating system in dark mode and reload: the page should
   follow it unless switched by hand. Tab through the controls: focus should be visible. Esc closes drawers and search.
@@ -112,7 +116,9 @@ and in Brave. Note the browser, page and window size of anything wrong, and take
 
 - After a lab opens, its odds fill in within some seconds: 20 seeds run in the background.
 - A deep lab plays its recorded seeds at once. Any other seed or setting trains first, for about 10 seconds to a few
-  minutes, with progress under the racer's name.
+  minutes, with progress under the racer's name; the trained run then waits for Play.
+- A lab whose seeds were still running when you pressed Play keeps playing seed 1; once they are done, its seed button
+  offers "▸ Typical: seed N".
 - The cloud checks found at most one long task (50 to 60 ms) in two of the 79 stories, and slow frames that seemed
   due to software rendering. A real GPU should do better, and confirming that is a goal of this check.
 - The page saves progress under the `localStorage` key `rl-atlas:v1`. Clear it, or use a fresh browser profile, to

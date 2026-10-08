@@ -30,11 +30,13 @@ header.top {
 }
 .brand { display: flex; align-items: center; gap: 9px; text-decoration: none; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
 .brand svg { width: 26px; height: 26px; }
-.crumbs { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; font-size: 13.5px; }
+.crumbs { display: flex; flex: 1 1 auto; align-items: center; gap: 4px; min-width: 0; overflow: hidden; font-size: 13.5px; }
 .crumbs a, .crumbs span { white-space: nowrap; text-decoration: none; color: var(--ink-2); padding: 4px 8px; border-radius: 999px; }
 .crumbs a:hover { background: var(--surface-3); color: var(--ink); }
 .crumbs .sep { color: var(--ink-3); padding: 0 2px; }
-.crumbs .here { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.crumbs > :not(.sep) { overflow: hidden; text-overflow: ellipsis; flex-shrink: 3; } /* too long, a crumb ends in "…": the page's own last */
+.crumbs .sep { flex-shrink: 0; }
+.crumbs .here { color: var(--ink); font-weight: 600; flex: 0 0 auto; max-width: calc(100% - 3em); } /* room for "5…" */
 .spacer { flex: 1; }
 #view { padding-top: 56px; }
 
@@ -96,6 +98,7 @@ body[data-hot="knob"] .q-knob, body[data-hot="knob"] [data-q="knob"] { backgroun
   border-top: 4px solid var(--c, var(--ink));
   animation: card-in 0.18s var(--ease) both;
 }
+.hovercard.wide { width: min(400px, calc(100vw - 16px)); }
 .hovercard .meta { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
 .hovercard h4 { font-size: 15.5px; margin: 3px 0 4px; }
 .hovercard p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
@@ -153,5 +156,5 @@ html.vt-side::view-transition-new(root) { animation: vt-fade-in 0.3s ease both; 
 @media (max-width: 720px) {
   header.top { padding: 0 10px; gap: 6px; }
   .brand span, .pill.search span, .pill kbd { display: none; }
-  .crumbs a:not(:last-of-type) { display: none; }
+  .crumbs > a:first-child:not(:only-child), .crumbs > a:first-child:not(:only-child) + .sep { display: none; } /* the logo leads to the map */
 }

@@ -14,22 +14,61 @@
     return { later: (fn, ms) => { list.push(setTimeout(fn, ms)); }, stop: () => { list.forEach(clearTimeout); list = []; } };
   }
 
+  // KaTeX's fonts load as first used: a formula fitted before one arrived is fitted again
+  let fonts = 0;
+  document.fonts?.addEventListener?.("loadingdone", () => fonts++);
+
+  // A formula made of \step pieces alone, as a column: one piece a line, without the \qquad that spaced them in a row.
+  // Null for any other formula, or a single piece.
+  function column(src) {
+    const s = (src || "").trim(), out = [];
+    for (let i = 0; i < s.length;) {
+      const m = /^\\step\{(\d+)\}\{/.exec(s.slice(i));
+      if (!m) return null;
+      let j = i + m[0].length;
+      for (let depth = 1; depth; j++) {
+        if (j >= s.length) return null;
+        if (s[j] === "\\") j++;
+        else if (s[j] === "{") depth++;
+        else if (s[j] === "}") depth--;
+      }
+      out.push(`\\step{${m[1]}}{${s.slice(i + m[0].length, j - 1).replace(/^\s*\\qquad\s*|\s*\\qquad\s*$/g, "")}}`);
+      for (i = j; /\s/.test(s[i] || ""); i++);
+    }
+    return out.length > 1 ? RL.math.tex(`\\begin{gathered} ${out.join(" \\\\[3pt] ")} \\end{gathered}`, true) : null;
+  }
+
   // A story formula whose \step{n}{..} pieces appear one step at a time, and named lines of numbers under it.
   function formula(card, cfg) {
     const sym = card.querySelector(".f-sym"), num = card.querySelector(".f-num");
-    sym.innerHTML = cfg.formula ? RL.math.tex(cfg.formula, true) : "";
-    const pieces = Array.from(sym.querySelectorAll("[data-step]"));
-    pieces.forEach((p) => p.style.setProperty("--k", p.dataset.step));
+    const shapes = { row: cfg.formula ? RL.math.tex(cfg.formula, true) : "", column: column(cfg.formula) };
+    let pieces = [], n = 0, shape = null, fitted = "";
+    const draw = (to) => {
+      if (shape === to) return;
+      shape = to;
+      sym.innerHTML = shapes[to];
+      pieces = Array.from(sym.querySelectorAll("[data-step]"));
+      pieces.forEach((p) => { p.style.setProperty("--k", p.dataset.step); p.classList.toggle("shown", +p.dataset.step <= n); });
+    };
+    draw("row");
     const lines = typeof cfg.numbers === "string" ? { main: cfg.numbers } : cfg.numbers || {};
     // a story without lines of numbers keeps room for the formula alone
     card.querySelector(".scene-formula")?.classList.toggle("bare", !Object.keys(lines).length);
-    // too wide for the card: shrink it, down to 70% (the pieces stay side by side, as the steps reveal them)
+    // too wide for the card: shrink it, down to 70%, the pieces side by side as the steps reveal them; still too wide,
+    // put them in a column, shrunk the same way. Fitted again when the card's width or the fonts change.
     const fit = () => {
+      const room = sym.clientWidth, key = `${room} ${fonts}`;
+      if (!room || key === fitted) return;
+      fitted = key;
+      draw("row");
       sym.style.fontSize = "";
-      if (sym.clientWidth) RL.math.shrink(sym, 0.7);
+      if (RL.math.shrink(sym, 0.7) || !shapes.column) return;
+      draw("column");
+      sym.style.fontSize = "";
+      RL.math.shrink(sym, 0.7);
     };
     return (st) => {
-      const n = st.formula || 0;
+      n = st.formula || 0;
       pieces.forEach((p) => p.classList.toggle("shown", +p.dataset.step <= n));
       sym.classList.toggle("on", n > 0);
       fit(); // its faint preview too
@@ -147,10 +186,10 @@
       timer = setTimeout(work, 0);
     };
     const todo = Object.keys(cfg.runs || {}).filter((n) => !cfg.runs[n].recording);
-    // a slice of 10 ms on a run, or (once it is made, in the next slice) on one of its units: true when both are done
-    const slice = (name, u) => {
-      if (!made_(name)) { if (!job(name).step(10)) return false; made[name] = job(name).result; return u < 0; }
-      return u < 0 || !!spec(name).recording || restAhead(runOf(name), u, 10);
+    // a slice of ms on a run, or (once it is made, in the next slice) on one of its units: true when both are done
+    const slice = (name, u, ms = 10) => {
+      if (!made_(name)) { if (!job(name).step(ms)) return false; made[name] = job(name).result; return u < 0; }
+      return u < 0 || !!spec(name).recording || restAhead(runOf(name), u, ms);
     };
     function work() {
       timer = 0;
@@ -163,14 +202,15 @@
         return;
       }
       if (!host) return;
-      // slices of 10 ms (a run stops between two events of a unit, lab.simulateJob), a frame drawn between them
+      // slices of 10 ms (a run stops between two events of a unit, lab.simulateJob), a frame drawn between them; while
+      // the reader scrolls, of 5 ms a frame, so that the runs later steps need go on being made without holding the
+      // picture that follows the scroll
       const name = todo.find((n) => !made[n]), next = name ? null : ahead.find((a) => !a.done);
       if (!name && !next) return;
-      if (!RL.scrolling()) {
-        if (name) { if (job(name).step(10)) made[name] = job(name).result; }
-        else if (slice(next.name, next.u)) next.done = true;
-      }
-      timer = setTimeout(work, RL.scrolling() ? 120 : 4);
+      const ms = RL.scrolling() ? 5 : 10;
+      if (name) { if (job(name).step(ms)) made[name] = job(name).result; }
+      else if (slice(next.name, next.u, ms)) next.done = true;
+      timer = setTimeout(work, ms === 5 ? 16 : 4);
     }
     if (host) timer = setTimeout(work, 300);
     return runOf;

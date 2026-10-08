@@ -300,10 +300,8 @@ animations and hover effects this guide relies on would not be smooth.
   - The world study's second round: the 20-seed showcase choice per chapter, and moving presets or stories where
     another world shows the idea better.
   - A check on real browsers and devices, which the headless checks here cannot replace (`docs/browser-check.md`, with
-    `tools/browser-check.js` for what can be measured): open the downloaded file in
-    Chrome, Brave, Firefox and Safari, and on a phone; scroll a few stories fast and slow (the PPO and MCTS ones
-    included); play a lab at every speed, with the pseudocode folded and open; train another seed of a deep lab (the
-    Web Worker must start from a local file); switch the dark theme; drag and zoom the map.
+    `tools/browser-check.js` for what can be measured). *First round done* on a Windows laptop in Chrome, Brave and
+    Edge; release 1.0.2 fixes what it found. Still to do: Firefox, Safari and a real phone.
 
 - [x] **M10 · Release 1.0.0**: a design pass over the stories, the animations and the Lab's layout, then the release.
   The Lab's panes take the largest size that fits for any number and shape of racers, and the algorithm column folds
@@ -311,4 +309,7 @@ animations and hover effects this guide relies on would not be smooth.
   position frame by frame, prepare their runs and the moments their steps draw in slices that stop between two events
   of a unit, and show their charts at once (averaged offline, `tools/story-curves.js`). The README got pictures; a
   workflow (`.github/workflows/release.yml`) publishes `rl_atlas.html` as the download of each version tag. 1.0.1 fixes
-  formulas that stopped a few pixels short of fitting their column (they now shrink until they fit).
+  formulas that stopped a few pixels short of fitting their column (they now shrink until they fit). 1.0.2 fixes what
+  the first check in real browsers found: hover cards kept inside the window, story formulas stacked in narrow
+  windows, story runs prepared while the reader scrolls, labs at a few rounds a second without freezes, and the phone's
+  header and symbols page.

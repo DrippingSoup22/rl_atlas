@@ -5,6 +5,7 @@
 
 .lab { max-width: 1880px; margin: 0 auto; padding: 22px 24px 60px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .lab-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; animation: rise-in 0.6s var(--ease) both; }
+.lab-head:has([data-deep]) { align-items: flex-start; } /* a network's knobs make a tall card: the title stays at the top */
 /* the knobs sit beside the title and wrap inside their card, rather than taking a row of their own above the stages */
 .lab-title { flex: 1 1 340px; min-width: 0; }
 .lab-title h1 .nobr { white-space: nowrap; }

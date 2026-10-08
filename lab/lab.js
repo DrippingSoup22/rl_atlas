@@ -303,7 +303,7 @@
       typ.classList.toggle("on", typical);
       typ.classList.toggle("finding", typical && (trainable ? typicalDeep() === null : !bench?.complete));
       typ.classList.toggle("ready", pendingTypical);
-      typ.textContent = pendingTypical ? `Typical: seed ${bench.typical()}` : "Typical";
+      typ.textContent = pendingTypical ? `▸ Typical: seed ${bench.typical()}` : "Typical";
       typ.title = pendingTypical ? "The typical run is ready: click to play it" : typical && !bench?.complete ? "Finding the typical run: the bench is still running" : "Play the typical run of these settings: the median of the bench seeds";
       if (document.activeElement !== input) input.value = played;
     }
@@ -1096,12 +1096,34 @@
     // A unit's events, replayed from the snapshot before it. Playing at a rate asks twice for the unit just passed (the
     // map of where the agent goes, then the view at rest): the last one of each racer is kept.
     const replays = [];
+    let ahead = null; // the unit worked out ahead (prepare, below)
     function eventsOf(i, u) {
       const kept = replays[i];
       if (kept?.run === runs[i] && kept.u === u) return kept.events;
-      const events = [...runs[i].replay(u).events];
+      const it = ahead?.runs === runs && ahead.u === u ? ahead.its[i] : null; // worked out ahead, or partly
+      if (it && !ahead.done[i]) for (const ev of it.gen) it.events.push(ev);
+      const events = it ? it.events : [...runs[i].replay(u).events];
       replays[i] = { run: runs[i], u, events };
       return events;
+    }
+    // Playing at a rate, the unit the next tick passes is worked out ahead, a few milliseconds a frame: one unit can
+    // take longer than a frame (a PPO round updates its network over ten passes), and the tick then finds it ready. Not
+    // in worlds that keep a state of their own, which a replay in pieces would share (as the stories do).
+    function prepare(ms) {
+      const u = P.e;
+      if (!rate() || !runs.length || u >= knobs.units) return;
+      if (ahead?.runs !== runs || ahead.u !== u) ahead = { runs, u, done: [], its: [] };
+      const until = performance.now() + ms;
+      for (let i = 0; i < runs.length; i++) {
+        if (ahead.done[i] || runs[i].env.state || (replays[i]?.run === runs[i] && replays[i].u === u)) continue;
+        const it = (ahead.its[i] ||= { events: [], gen: runs[i].replay(u).events });
+        for (;;) {
+          const { value, done } = it.gen.next();
+          if (done) { ahead.done[i] = it.events; break; }
+          it.events.push(value);
+          if (performance.now() >= until) return;
+        }
+      }
     }
 
     // ---- moving the playhead: t is the start of unit t; t = units is the end of the run ----
@@ -1395,7 +1417,7 @@
     function frame(t) {
       const dt = last ? Math.min(100, t - last) : 0;
       last = t;
-      if (P.playing) tick(dt);
+      if (P.playing && !tick(dt)) prepare(rate() >= 10 ? 8 : 4); // not in the frame that draws a unit
       raf = requestAnimationFrame(frame);
     }
     function tick(dt) {
@@ -1408,8 +1430,9 @@
           runs.forEach((r, i) => views[i].heatEpisode?.(P.e + k - 1 >= 0 && k > 0 ? eventsOf(i, P.e + k - 1) : []));
           seek(P.e + k, rate() <= 1, "keep");
           P.acc = rest; // seek starts the count again: the part of a unit already waited stays, so the rate holds
+          return true;
         }
-        return;
+        return false;
       }
       if (P.wait > 0) { P.wait -= dt; return; }
       P.acc += dt;
