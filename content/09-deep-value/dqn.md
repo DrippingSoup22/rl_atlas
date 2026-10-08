@@ -195,7 +195,7 @@ Falling off the track happens hundreds of steps after the drift that causes it b
 :::
 
 ::: question
-Why are DQN's values on CartPole bounded by 100, and what does a value of 101.6 mean?
+Why are DQN's values on CartPole bounded by 100, and what does a value of 100.7 mean?
 ---
 Each step pays at most 1, and the learner bootstraps through the 500-step time limit, which the state does not show, so to it a state is worth at most $1 + \gam + \gam^2 + \dots = 1/(1 - 0.99) = 100$. An estimate above that is an overestimate, the bias the max in the target introduces.
 :::
