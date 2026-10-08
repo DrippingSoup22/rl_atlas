@@ -110,8 +110,9 @@
       }
       const name = host && todo.find((n) => !made[n]);
       if (!name) return;
-      if (!RL.scrolling() && job(name).step(6)) made[name] = job(name).result;
-      timer = setTimeout(work, RL.scrolling() ? 120 : 10);
+      // slices of 10 ms (a run stops between two events of a unit, lab.simulateJob), a frame drawn between them
+      if (!RL.scrolling() && job(name).step(10)) made[name] = job(name).result;
+      timer = setTimeout(work, RL.scrolling() ? 120 : 4);
     }
     if (host) timer = setTimeout(work, 300);
     return runOf;
@@ -203,6 +204,14 @@
         chart.playhead(first.units);
         status.textContent = acc.done < total ? ` · averaging ${acc.done} of ${total} runs…` : total === 1 ? " · one run" : ` · average of ${total} runs`;
       };
+      // averaged offline (tools/story-curves.js): the same runs, the same seeds, shown at once
+      const kept = RL.storyCurves?.[RL.lab.curveKey(cfg, names, metric)];
+      if (kept) { // (a long curve keeps the mean of each stretch of units: the chart spreads its points over the run)
+        chart.set(names.map((n, i) => ({ name: cfg.runs[n].name || n, color: `--s${i + 1}`, values: kept.curves[n].map((v) => v ?? NaN), units: first.units })), refs);
+        chart.playhead(first.units);
+        status.textContent = total === 1 ? " · one run" : ` · average of ${total} runs`;
+        return;
+      }
       if (names.every((n) => cfg.runs[n].recording)) { // trained offline: every seed's curve is in the recording
         const seeds = names.map((n) => RL.lab.recordedCurves(RL.recordings[cfg.runs[n].recording]));
         // every seed kept its training returns (and in newer recordings its test returns), DQN's and the actor-critics'
@@ -221,8 +230,8 @@
         if (RL.scrolling()) { timer = setTimeout(more, 120); return; } // the reader is scrolling: later
         const t0 = performance.now();
         while (acc.done < total && performance.now() - t0 < 8) {
-          const c = (acc.cur ||= { i: 0, job: null }), spec = cfg.runs[names[c.i]], { algorithm, units, seed, world, measures, name: _label, ...params } = spec;
-          c.job ||= RL.lab.simulateJob({ world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params }, units: units || cfg.units, seed: 1000 + acc.done, snapshots: false, measures });
+          const c = (acc.cur ||= { i: 0, job: null });
+          c.job ||= RL.lab.simulateJob(RL.lab.curveRun(cfg, names[c.i], acc.done));
           if (!c.job.step(Math.max(2, 8 - (performance.now() - t0)))) break;
           const s = acc.sums[c.i], v = c.job.result.metrics[metric];
           for (let t = 0; t < s.length; t++) s[t] += v[t];

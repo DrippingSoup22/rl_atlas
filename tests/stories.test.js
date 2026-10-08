@@ -51,3 +51,32 @@ test("the runs the stories play are the ones pinned", () => {
   const changed = Object.keys(now).filter((k) => pinned[k] !== now[k]), gone = Object.keys(pinned).filter((k) => !(k in now));
   assert.deepEqual([...changed, ...gone], [], "story runs that changed or are new (see the note at the top of this file)");
 });
+
+// The averages the story charts show are worked out offline (tools/story-curves.js) with the page's own runs and seeds.
+// They must still be the engine's: each curve's first run is made again and compared with the fingerprint kept for it
+// (the sum of its finite values, and how many are not finite). When this fails, or a chart has no averages kept (it
+// would be averaged live, slowly), run  node tools/story-curves.js  and then python build.py.
+test("the story charts' averages kept offline are the engine's, and no chart is left to average live", () => {
+  const kept = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "content", "story-curves.json"), "utf8"));
+  const seen = new Set(), missing = [], stale = [];
+  for (const [id, entry] of Object.entries(content.entries)) {
+    const cfg = entry.story?.config;
+    if (!cfg?.runs) continue;
+    for (const { state: st } of entry.story.steps) {
+      if (!st.curves?.length || st.curves.every((n) => cfg.runs[n].recording)) continue;
+      const key = lab.curveKey(cfg, st.curves, st.metric || "optimal");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (!kept[key]) { missing.push(`${id}: ${st.curves.join(", ")}`); continue; }
+      for (const n of st.curves) {
+        const v = lab.simulate(lab.curveRun(cfg, n, 0)).metrics[kept[key].metric];
+        let sum = 0, odd = 0;
+        for (const x of v) if (Number.isFinite(x)) sum += x; else odd++;
+        const [s0, o0] = kept[key].check[n];
+        if (odd !== o0 || Math.abs(sum - s0) > 1e-9 * Math.max(1, Math.abs(s0))) stale.push(`${id}/${n}`);
+      }
+    }
+  }
+  const unused = Object.keys(kept).filter((k) => !seen.has(k)).map((k) => kept[k].story);
+  assert.deepEqual({ missing, stale, unused }, { missing: [], stale: [], unused: [] }, "run node tools/story-curves.js, then python build.py");
+});

@@ -18,24 +18,30 @@
     });
     const wins = { uct: SIMS.map(() => 0), flat: SIMS.map(() => 0) };
     RL.fig.whenVisible(host, () => {
-      let done = 0;
+      // One seed's search climbs the budgets a piece at a time (at most 500 simulations, or one budget's random games),
+      // so that no piece holds the page long; a seed counts once every budget of it is read.
+      let done = 0, cur = null, drawn = 0;
       const more = () => {
         if (!host.isConnected) return;
         if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
-        while (done < RUNS && performance.now() - t0 < 30) {
-          const seed = 1 + done, search = lab.mcts(BOARD, { c: 1.4, seed });
-          let ran = 0;
-          SIMS.forEach((n, i) => {
-            search.run(n - ran); // one search per seed, read at each budget on its way up
-            ran = n;
-            if (search.best() === WIN) wins.uct[i]++;
-            if (lab.flatMC(BOARD, Math.max(1, Math.round(n / 7)), { seed }).best === WIN) wins.flat[i]++;
-          });
+        while (done < RUNS && performance.now() - t0 < 10) {
+          const seed = 1 + done;
+          cur ||= { search: lab.mcts(BOARD, { c: 1.4, seed }), i: 0, ran: 0, uct: [], flat: [] };
+          const n = SIMS[cur.i];
+          if (cur.ran < n) { const k = Math.min(500, n - cur.ran); cur.search.run(k); cur.ran += k; continue; } // one search per seed, read at each budget on its way up
+          cur.uct[cur.i] = cur.search.best() === WIN;
+          cur.flat[cur.i] = lab.flatMC(BOARD, Math.max(1, Math.round(n / 7)), { seed }).best === WIN;
+          if (++cur.i < SIMS.length) continue;
+          SIMS.forEach((_, i) => { wins.uct[i] += cur.uct[i]; wins.flat[i] += cur.flat[i]; });
+          cur = null;
           done++;
         }
-        p.draw({ uct: { xs: SIMS, ys: wins.uct.map((w) => w / done) }, flat: { xs: SIMS, ys: wins.flat.map((w) => w / done) } });
-        p.status(done < RUNS ? `Searching, seed ${done} of ${RUNS}…` : `Each point: ${RUNS} searches from the story's position, each with its own seed. Flat Monte Carlo spreads the same number of random games evenly over the seven moves. UCT uses c = 1.4 and plays its most visited move.`);
+        if (done && (done === RUNS || performance.now() - drawn > 250)) {
+          drawn = performance.now();
+          p.draw({ uct: { xs: SIMS, ys: wins.uct.map((w) => w / done) }, flat: { xs: SIMS, ys: wins.flat.map((w) => w / done) } });
+          p.status(done < RUNS ? `Searching, seed ${done} of ${RUNS}…` : `Each point: ${RUNS} searches from the story's position, each with its own seed. Flat Monte Carlo spreads the same number of random games evenly over the seven moves. UCT uses c = 1.4 and plays its most visited move.`);
+        }
         if (done < RUNS) setTimeout(more, 16);
       };
       more();

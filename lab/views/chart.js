@@ -182,11 +182,12 @@
           }
           flush();
         } else {
+          const per = len === n ? 1 : n / len; // units a point stands for (a series shorter than the run)
           for (let b = 0; b < buckets; b++) {
             const i0 = Math.floor((b * len) / buckets), i1 = Math.max(i0 + 1, Math.floor(((b + 1) * len) / buckets));
             let sum = 0;
             for (let i = i0; i < i1; i++) sum += L[i];
-            d += `${d ? "L" : "M"}${x((i0 + i1) / 2).toFixed(1)} ${y(sum / (i1 - i0)).toFixed(1)}`;
+            d += `${d ? "L" : "M"}${x(((i0 + i1) / 2) * per).toFixed(1)} ${y(sum / (i1 - i0)).toFixed(1)}`;
           }
         }
         const style = `stroke: var(${s.color})`, cls = s.faint ? " faint" : "";

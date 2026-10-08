@@ -203,6 +203,12 @@ animations and hover effects this guide relies on would not be smooth.
     the clip, TRPO with δ = 0.2, the thrown REINFORCE run, a gem worth 100) already say how rare they are.
   - `tests/stories.test.js` keeps a fingerprint of every pinned run (`tests/story-runs.json`); it is a developer check
     only and shows nowhere in the guide. A faint line at the end of each story names its seeds.
+  - The story charts' averages (up to 100 runs a curve; the REINFORCE-with-baseline chart alone took 100 s) are worked
+    out offline by `tools/story-curves.js` with the page's own runs and seeds, kept in `content/story-curves.json`,
+    and shown at once; `tests/stories.test.js` replays each curve's first run against the fingerprint kept for it, and
+    fails when a chart has none (it would be averaged live, in slices, as before). The runs a story steps through are
+    still made in the page, in slices of 10 ms that stop between two events of a unit (`lab.simulateJob`), while the
+    reader is on the first steps; a step that comes to an unfinished run says so and shows it when it is ready.
 
   **Later (decided separately)**
   - The deep presets: the same bench-and-typical method on recorded grids (each value's seeds trained offline), how much

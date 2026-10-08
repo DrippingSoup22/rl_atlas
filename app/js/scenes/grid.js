@@ -139,10 +139,21 @@
         view.glow([]);
         view.path(null);
         showRun(view, r, t);
-        // advantages: how the batch of the round just played judged each move (batch methods only)
+        // advantages: how the batch of the round just played judged each move (batch methods only). The round is played
+        // again to find them, a few milliseconds at a time (a round of four long episodes takes a while): they come a
+        // frame or two after the rest.
         if (st.advantages && t > 0) {
-          const ev = [...r.replay(t - 1).events].find((e) => e.type === "advantage");
-          if (ev) view.showAdvantages(ev.list, st.range);
+          const events = r.replay(t - 1).events;
+          const look = () => {
+            const t0 = performance.now();
+            for (;;) {
+              const { value: ev, done } = events.next();
+              if (done) return;
+              if (ev.type === "advantage") return view.showAdvantages(ev.list, st.range);
+              if (performance.now() - t0 > 8) return later(look, 0);
+            }
+          };
+          look();
         }
         const focus = st.focus ? tile(st.focus) : -1;
         view.mark(focus < 0 ? [] : [focus], "focus");

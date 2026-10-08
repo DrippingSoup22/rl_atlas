@@ -388,6 +388,27 @@ test("recorded runs play back what was recorded: each block's test episode, step
   }
 });
 
+test("a run worked out in short slices, cut in the middle of its units, comes out exactly as in one go", () => {
+  // the page spreads runs over slices of a few milliseconds (lab.simulateJob); a slice may end inside a round of
+  // several workers or an episode, and the next one goes on from there
+  const runs = [
+    ["dyna-maze", "ppo", { clip: 0.2, alpha: 0.3, alphaW: 0.1, workers: 4, epochs: 10, lambda: 0.9, beta: 0, gamma: 0.95, maxSteps: 1000 }, 5],
+    ["dyna-maze", "a2c", { alpha: 2, alphaW: 0.3, workers: 4, n: 5, beta: 0, gamma: 0.95, maxSteps: 1000 }, 6],
+    ["corridor", "reinforce", { alpha: 2 ** -13, right0: 0.05, gamma: 1, features: "own", maxSteps: 1000 }, 40],
+  ];
+  for (const [world, id, params, units] of runs) {
+    const opts = { world, algorithm: lab.algorithms[id], params, units, seed: 3 };
+    const whole = lab.simulate(opts), job = lab.simulateJob(opts);
+    let slices = 1;
+    while (!job.step(0)) slices++; // a step of 0 ms: one event, then the time is up
+    const cut = job.result;
+    assert.ok(slices > 2 * units, `${id}: its units were cut (${slices} slices for ${units} units)`);
+    assert.deepEqual(cut.metrics, whole.metrics, `${id}: the same numbers`);
+    for (const t of [0, 1, units >> 1, units]) assert.deepEqual(cut.at(t), whole.at(t), `${id}: the same memory at ${t}`);
+    assert.deepEqual([...cut.replay(units - 1).events], [...whole.replay(units - 1).events], `${id}: the same last unit`);
+  }
+});
+
 test("the odds give up on a stuck run: 20 episodes in a row at the step limit", () => {
   // Actor–critic with α = 1 on the cliff: the policy saturates and its episodes run to the limit.
   const params = { alpha: 1, alphaW: 0.1, lambda: 0, gamma: 1 };

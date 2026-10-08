@@ -18,21 +18,27 @@
 
   // Play one unit and return its numbers: the reward collected, the steps taken, the falls, and whatever the
   // algorithm returns (a sweep's largest change, say) or the world tracks (did a bandit pull a best arm?).
-  lab.play = function (algorithm, ctx, onEvent) {
+  lab.play = (algorithm, ctx, onEvent) => unit(algorithm, ctx, onEvent)();
+  // The same unit, played in pieces: each call plays its events until the unit ends (and returns its numbers) or the
+  // time runs out (null: the next call goes on from there). A round of many workers then never holds the page long.
+  function unit(algorithm, ctx, onEvent) {
     const stats = { return: 0, steps: 0, falls: 0 };
     const it = algorithm.run(ctx);
-    for (;;) {
-      const { value: ev, done } = it.next();
-      if (done) { if (ev) Object.assign(stats, ev); return stats; }
-      if (ev.type === "move") {
-        stats.return += ev.r;
-        stats.steps += 1;
-        if (ev.fell !== undefined) stats.falls += 1;
-        ctx.env.track?.(ev, stats);
+    return (until = Infinity) => {
+      for (;;) {
+        const { value: ev, done } = it.next();
+        if (done) { if (ev) Object.assign(stats, ev); return stats; }
+        if (ev.type === "move") {
+          stats.return += ev.r;
+          stats.steps += 1;
+          if (ev.fell !== undefined) stats.falls += 1;
+          ctx.env.track?.(ev, stats);
+        }
+        onEvent?.(ev);
+        if (until !== Infinity && performance.now() >= until) return null; // looked at after every event: some take ms
       }
-      onEvent?.(ev);
-    }
-  };
+    };
+  }
 
   // world: a world's name or a function that makes one. measures: names of numbers to add after each unit (measures.js).
   // giveUp (runs without snapshots: the odds): stop a run once that many episodes in a row ran to the step cap, and take
@@ -69,7 +75,7 @@
     const marks = snapshots ? Math.ceil(units / every) : 0;
     const saved = new Float64Array(marks * size), rngAt = new Uint32Array(marks);
     const metrics = {};
-    let capped = 0, stopped = 0, t = 0, result = null;
+    let capped = 0, stopped = 0, t = 0, result = null, playing = null;
 
     const job = {
       get done() { return result ? 1 : t / units; },
@@ -77,22 +83,28 @@
       step(ms) {
         const until = performance.now() + ms;
         while (!result && t < units) {
-          if (advance()) break;
+          if (advance(until)) break;
           if (performance.now() >= until) break;
         }
         if (!result && (t >= units || stopped)) result = finish();
         return !!result;
       },
     };
-    // One unit: returns true when the run gives up (giveUp).
-    function advance() {
-      if (snapshots && t % every === 0) {
-        const k = t / every;
-        saved.set(buf, k * size);
-        if (worldLen) saved.set(env.state, k * size + bufLen);
-        rngAt[k] = rng.state;
+    // One unit, or as much of it as the time allows (the rest comes at the next step, the same as if it had not
+    // stopped): returns true when the run gives up (giveUp) or the time ran out in the middle of the unit.
+    function advance(until) {
+      if (!playing) {
+        if (snapshots && t % every === 0) {
+          const k = t / every;
+          saved.set(buf, k * size);
+          if (worldLen) saved.set(env.state, k * size + bufLen);
+          rngAt[k] = rng.state;
+        }
+        playing = unit(algorithm, { env, m, rng, p, t });
       }
-      const stats = lab.play(algorithm, { env, m, rng, p, t });
+      const stats = playing(until);
+      if (!stats) return true;
+      playing = null;
       measure?.(m, stats, t);
       for (const key in stats) (metrics[key] ||= new Float64Array(units))[t] = stats[key];
       if (giveUp && !snapshots && t < units - 1) {
@@ -161,6 +173,15 @@
       };
     }
   };
+
+  // A story chart's averaged runs (app/js/scenes/common.js: curves): run `name` of the story config cfg, the k-th time,
+  // on seed 1000 + k and without snapshots. Its key names a chart (its runs, settings and metric) among the averages
+  // worked out offline (tools/story-curves.js), which the page then shows at once instead of averaging them itself.
+  lab.curveRun = (cfg, name, k) => {
+    const { algorithm, units, seed: _seed, world, measures, name: _label, ...params } = cfg.runs[name];
+    return { world: world || cfg.world || cfg.env, algorithm: lab.algorithms[algorithm], params: { ...cfg.params, ...params }, units: units || cfg.units, seed: 1000 + k, snapshots: false, measures };
+  };
+  lab.curveKey = (cfg, names, metric) => JSON.stringify([names.map((n) => cfg.runs[n]), cfg.world || cfg.env || null, cfg.params || null, cfg.units || null, metric, cfg.average || 200]);
 
   // Run many seeds without snapshots and average their numbers: { mean: { metric: Float64Array }, runs }.
   lab.average = function ({ world, algorithm, params, units, seeds, measures = null }) {

@@ -30,12 +30,12 @@ python build.py
 node --test
 ```
 
-`build.py` (Python 3.11+, standard library only) checks `content/`, writes `app/content.js` and `app/recordings.js`,
-and bundles `rl_atlas.html`. It stops on broken links and lists what is still missing. `node --test` (Node 22+)
+`build.py` (Python 3.11+, standard library only) checks `content/`, writes `app/content.js`, `app/recordings.js`,
+`app/deep-worker.js` and `app/story-curves.js`, and bundles `rl_atlas.html`. It stops on broken links and lists what is still missing. `node --test` (Node 22+)
 checks the Lab against the textbook results it teaches. After a build, `app/index.html` also opens
 directly, which is handier while editing.
 
-The three generated files are committed with their sources, so build before committing. `main` is always the guide
+The generated files are committed with their sources, so build before committing. `main` is always the guide
 as it stands, and every commit on it builds with no warnings and passes the tests. Work is committed straight to
 `main` in such steps. A branch, when one is needed, is short-lived: it ends merged into `main` and deleted, or just
 deleted.
@@ -44,11 +44,12 @@ deleted.
 
 | Folder | What is in it |
 | --- | --- |
-| `content/` | `map.toml` (every station in reading order, with each algorithm's parent and labels), `lab.toml` (Lab presets), `notation.toml` (symbols page), one Markdown file per written entry, and `recordings/` (what the recorder wrote) |
+| `content/` | `map.toml` (every station in reading order, with each algorithm's parent and labels), `lab.toml` (Lab presets), `notation.toml` (symbols page), one Markdown file per written entry, `recordings/` (what the recorder wrote) and `story-curves.json` (the story charts' averages, worked out offline) |
 | `app/` | the page: `index.html`, `css/` and `js/` (shell, map, pages, stories and their scenes, textbook, diagrams, figures, demos, math), and the generated `content.js` and `recordings.js` |
 | `lab/` | worlds, features, algorithms, runs (computed live, or played back from recordings) and dynamic programming (no DOM, also used by the tests), and their views; `lab/deep/` is the trainer of the networks (deterministic math, so a seed gives the same run in Node and in any browser), which the page also runs in a Web Worker for seeds and settings off the recordings |
 | `vendor/` | KaTeX 0.19 (MIT license) |
-| `tests/` | `lab.test.js` |
+| `tests/` | `lab.test.js`, `deep.test.js`, `recordings.test.js` and `stories.test.js` (the pinned story runs, and the story charts' averages against the engine) |
+| `tools/` | `story-runs.js` (how each story run's seed compares with others) and `story-curves.js`, which works out the story charts' averages (up to 100 runs a curve) once, so that the page shows them at once: run it after changing a story's runs or the engine, then build (`stories.test.js` says when) |
 | `recorder/` | the recorders of the runs with neural networks. `node recorder/deep.js [name …]` trains with `lab/deep/`, one thread per core, resumable (`recorder/.cache`), and `--sweep` makes the sweeps. The older NumPy recorder (NumPy 2.4 and Gymnasium 1.4) stays as a cross-check: `python recorder/record.py [name …]` trains 20 seeds and writes `content/recordings/<name>.json` (every seed's training and test returns, and one seed's snapshots), and `--sweep` writes `content/recordings/sweeps/<name>.json` (each knob's values over many seeds); `build.py` bundles both. `RECORDINGS_OUT` sends them elsewhere, to compare before replacing |
 
 ## Writing an entry

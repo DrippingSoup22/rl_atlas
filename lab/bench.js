@@ -83,7 +83,8 @@
     get seedsDone() { return Math.floor(this.next / this.racers.length); }
 
     // Run until the budget (in ms) is spent or the bench is complete; true when complete. A long run is itself
-    // spread over several steps (lab.simulateJob), so no step overruns its budget by more than one unit of a run.
+    // spread over several steps (lab.simulateJob), cut between the events of a unit, so no step overruns its budget by
+    // more than one event of a run.
     step(budget = 14) {
       const t0 = Date.now();
       while (!this.complete && (budget === Infinity || Date.now() - t0 < budget)) {
