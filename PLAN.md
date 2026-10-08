@@ -208,7 +208,9 @@ animations and hover effects this guide relies on would not be smooth.
     and shown at once; `tests/stories.test.js` replays each curve's first run against the fingerprint kept for it, and
     fails when a chart has none (it would be averaged live, in slices, as before). The runs a story steps through are
     still made in the page, in slices of 10 ms that stop between two events of a unit (`lab.simulateJob`), while the
-    reader is on the first steps; a step that comes to an unfinished run says so and shows it when it is ready.
+    reader is on the first steps, and then the units the steps draw at rest (the one before each moment shown: a PPO
+    round with its ten passes takes tens of milliseconds to replay); a step that comes before they are ready says so
+    and shows them when they are.
 
   **Later (decided separately)**
   - The deep presets: the same bench-and-typical method on recorded grids (each value's seeds trained offline), how much
