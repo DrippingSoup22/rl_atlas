@@ -2,11 +2,11 @@
 (function (RL) {
   "use strict";
   const { lab } = RL;
-  const { timers, formula, FORMULA, ACTION, signed, runs, player, showRun, checkpoints, curves } = RL.sceneKit;
+  const { timers, formula, FORMULA, ACTION, signed, runs, restsOf, restUnit, player, showRun, checkpoints, curves } = RL.sceneKit;
 
   // ---- grid: a grid world with values, a policy and the agent ----
   RL.scenes.grid = {
-    create(card, cfg) {
+    create(card, cfg, states = []) {
       const env = lab.make(cfg.env), nA = env.nA, gamma = cfg.gamma ?? 1;
       const algorithm = cfg.algorithm ? lab.algorithms[cfg.algorithm] : null;
       card.innerHTML = `<div class="scene-grid"></div>${FORMULA}
@@ -16,7 +16,7 @@
       // Without an ε of its own, a story draws the greedy arrows of Q.
       const view = new RL.GridView(card.querySelector(".scene-grid"), env, { tiles: "q", epsilon: cfg.epsilon ?? 0, digits: cfg.digits ?? 2 });
       const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
-      const { later, stop } = timers(), runOf = runs(cfg, card), play = player(later);
+      const { later, stop } = timers(), runOf = runs(cfg, card, restsOf(cfg, states, null)), play = player(later);
       const chart = cfg.runs ? curves(card.querySelector(".scene-chart"), cfg, runOf) : () => {};
       const tile = (v) => (v === "start" ? env.start : v[0] * env.cols + v[1]);
 
@@ -179,10 +179,10 @@
           wanted = st;
           note.textContent = "";
           chart(st);
-          if (st.run && !runOf.ready(st.run)) { // still being worked out: the step comes as soon as its run does
+          if (st.run && !runOf.ready(st.run, restUnit(cfg, st, st.run))) { // still being worked out: the step comes when its run does
             note.textContent = "Working out this run…";
             showFormula(st);
-            return runOf.when(st.run, () => { if (wanted === st) fromRun(st); });
+            return runOf.when(st.run, restUnit(cfg, st, st.run), () => { if (wanted === st) fromRun(st); });
           }
           if (st.run) return fromRun(st);
           const q = Float64Array.from(st.q ? Q[st.q]() : zeros);

@@ -15839,14 +15839,62 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     return e;
   }
 
+  // A unit of a run replayed: its events, kept. A step drawn at rest replays the unit before its moment (a round of
+  // PPO, with its ten passes over the batch, takes tens of milliseconds), and steps often come back to the same moment.
+  const rests = new WeakMap();
+  const restsKept = (r) => rests.get(r) || rests.set(r, new Map()).get(r);
+  function restOf(r, u) {
+    const kept = restsKept(r), k = kept.get(u);
+    if (k?.done) return k.events;
+    const events = [...r.replay(u).events]; // (one half worked out ahead is dropped: the replay starts over)
+    kept.set(u, { done: true, events });
+    return events;
+  }
+  // The same, worked out ahead a few milliseconds at a time; true once kept. Not for a world with a state of its own
+  // (a bandit's drifting arms): replays share the run's world, and two at once would mix it up; its units are short.
+  function restAhead(r, u, ms) {
+    if (r.env.state) return true;
+    const kept = restsKept(r);
+    let k = kept.get(u);
+    if (k?.done) return true;
+    if (!k) kept.set(u, (k = { done: false, events: [], it: r.replay(u).events }));
+    const until = performance.now() + ms;
+    for (;;) {
+      const { value, done } = k.it.next();
+      if (done) { k.done = true; k.it = null; return true; }
+      k.events.push(value);
+      if (performance.now() >= until) return false;
+    }
+  }
+  const restReady = (r, u) => u < 0 || !!r.env.state || !!rests.get(r)?.get(u)?.done;
+
+  // The unit a step draws at rest: the one before the moment it shows (-1: none, or a step of checkpoints, which shows
+  // several in turn). name: the step's run.
+  function restUnit(cfg, st, name) {
+    if (st.checkpoints || !cfg.runs?.[name] || cfg.runs[name].recording) return -1;
+    return Math.min(st.at ?? 0, cfg.runs[name].units || cfg.units || 100) - 1;
+  }
+  // Every unit the steps will draw at rest, checkpoints included: { name, u }. fallback: the run of a step naming none.
+  function restsOf(cfg, states, fallback) {
+    const out = new Map();
+    for (const st of states) {
+      const name = st.run || fallback;
+      if (!name || !cfg.runs?.[name] || cfg.runs[name].recording) continue;
+      const units = cfg.runs[name].units || cfg.units || 100, n = st.checkpoints;
+      const ts = !n ? [Math.min(st.at ?? 0, units)] : Array.isArray(n) ? n.map((t) => Math.min(t, units)) : Array.from({ length: n }, (_, k) => Math.round((units * (k + 1)) / n));
+      for (const t of ts) if (t > 0) out.set(`${name} ${t - 1}`, { name, u: t - 1 });
+    }
+    return [...out.values()];
+  }
+
   // Named runs a story shows and replays, from its config: [story.runs] name = { algorithm, units, seed, <knobs> }, or
   // name = { recording } for a run trained offline (recorder/record.py). The world, the shared knobs and the seed come
   // from the story config unless a run says otherwise.
   // With host, the runs are also worked out in the background, a few milliseconds at a time, while the reader is on
-  // the first steps (and the host on the page): a step then finds its run ready instead of making the page wait. A
-  // step that comes to a run not finished yet asks for it (runOf.when): that run goes first, still in slices, and the
-  // page keeps scrolling meanwhile.
-  function runs(cfg, host = null) {
+  // the first steps (and the host on the page), and then the units the steps draw at rest (ahead: restsOf): a step
+  // then finds them ready instead of making the page wait. A step that comes to a run, or a unit, not ready yet asks
+  // for it (runOf.when): it goes first, still in slices, and the page keeps scrolling meanwhile.
+  function runs(cfg, host = null, ahead = []) {
     const made = {}, jobs = {};
     const spec = (name) => {
       const s = cfg.runs?.[name];
@@ -15865,35 +15913,46 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       job(name).step(Infinity); // the same run, finished now (sliced or not, a run comes out the same)
       return (made[name] = job(name).result);
     };
-    runOf.ready = (name) => !!(made[name] || spec(name).recording || jobs[name]?.result);
+    const made_ = (name) => !!(made[name] || spec(name).recording || jobs[name]?.result);
+    // the run, and the unit it draws at rest (u ≥ 0), ready
+    runOf.ready = (name, u = -1) => made_(name) && (spec(name).recording || restReady(runOf(name), u));
     // what a run is (its world, its algorithm, how many units), known without running it
     runOf.about = (name) => {
-      if (runOf.ready(name)) return runOf(name);
+      if (made_(name)) return runOf(name);
       const { world, algorithm, units } = setup(name);
       return { env: RL.lab.make(world), algorithm, units };
     };
     let urgent = null, timer = 0;
-    runOf.when = (name, then) => {
-      if (runOf.ready(name)) return then(runOf(name));
-      urgent = { name, then }; // the step asking last is the one shown: an earlier request is dropped
+    runOf.when = (name, u, then) => {
+      if (runOf.ready(name, u)) return then(runOf(name));
+      urgent = { name, u, then }; // the step asking last is the one shown: an earlier request is dropped
       clearTimeout(timer);
       timer = setTimeout(work, 0);
     };
     const todo = Object.keys(cfg.runs || {}).filter((n) => !cfg.runs[n].recording);
+    // a slice of 10 ms on a run, or (once it is made, in the next slice) on one of its units: true when both are done
+    const slice = (name, u) => {
+      if (!made_(name)) { if (!job(name).step(10)) return false; made[name] = job(name).result; return u < 0; }
+      return u < 0 || !!spec(name).recording || restAhead(runOf(name), u, 10);
+    };
     function work() {
       timer = 0;
       if (host && !host.isConnected) return;
       if (urgent) { // a step waits for it: slices of 10 ms, scrolling or not
-        const u = urgent;
-        if (job(u.name).step(10)) { urgent = null; made[u.name] = job(u.name).result; }
+        const w = urgent;
+        if (slice(w.name, w.u)) urgent = null;
         timer = setTimeout(work, urgent ? 0 : 10);
-        if (!urgent) u.then(made[u.name]);
+        if (!urgent) setTimeout(() => w.then(runOf(w.name)), 0); // drawn in a task of its own
         return;
       }
-      const name = host && todo.find((n) => !made[n]);
-      if (!name) return;
+      if (!host) return;
       // slices of 10 ms (a run stops between two events of a unit, lab.simulateJob), a frame drawn between them
-      if (!RL.scrolling() && job(name).step(10)) made[name] = job(name).result;
+      const name = todo.find((n) => !made[n]), next = name ? null : ahead.find((a) => !a.done);
+      if (!name && !next) return;
+      if (!RL.scrolling()) {
+        if (name) { if (job(name).step(10)) made[name] = job(name).result; }
+        else if (slice(next.name, next.u)) next.done = true;
+      }
       timer = setTimeout(work, RL.scrolling() ? 120 : 4);
     }
     if (host) timer = setTimeout(work, 300);
@@ -15933,7 +15992,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         const quiet = ev.type === "info" || ev.type === "next" || ev.type === "skip";
         return quiet ? 40 : ev.type === "choose" ? P / 2 : ev.type === "plan" ? P / 2 : P + wait;
       };
-      if (instant) { while (one() >= 0); return; }
+      // instant: as fast as the page allows, in slices of a few milliseconds (hundreds of events, each drawn, would hold
+      // the page a while); the picture runs ahead over a few frames to where they lead
+      if (instant) {
+        const burst = () => { const t0 = performance.now(); while (one() >= 0) if (performance.now() - t0 > 8) return later(burst, 0); };
+        return burst();
+      }
       // waits of 0 run on at once, in one go, so the picture jumps instead of flickering through them
       const next = () => { let ms = one(); while (ms === 0) ms = one(); if (ms >= 0) later(next, ms); };
       next();
@@ -16032,7 +16096,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   function showRun(view, r, t) {
     view.env = r.env;
     view.show(r.algorithm.show(r.at(t), r.env, r.params, t), r.params);
-    view.rest(t > 0 ? [...r.replay(t - 1).events] : []);
+    view.rest(t > 0 ? restOf(r, t - 1) : []);
   }
 
   // Checkpoints: a run at a few moments of its training, each held in turn, instead of a fast replay of every event
@@ -16059,9 +16123,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   // plays nothing else plays the test episode of the network it shows, in a loop, instead of a still.
   function runScene(View, { options = () => ({}), more = null, test = false } = {}) {
     return {
-      create(card, cfg) {
+      create(card, cfg, states = []) {
         card.innerHTML = `<div class="scene-view"></div>${RL.sceneKit.FORMULA}<div class="scene-chart" hidden></div><div class="scene-foot"><span class="scene-note"></span></div>`;
-        const runOf = runs(cfg, card), names = Object.keys(cfg.runs || {});
+        const names = Object.keys(cfg.runs || {}), runOf = runs(cfg, card, restsOf(cfg, states, names[0]));
         const view = new View(card.querySelector(".scene-view"), runOf.about(names[0]).env, options({}));
         const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
         const { later, stop } = timers(), play = player(later), chart = curves(card.querySelector(".scene-chart"), cfg, runOf);
@@ -16070,11 +16134,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
           apply(st) {
             stop();
             wanted = st;
-            if (!runOf.ready(st.run || names[0])) { // still being worked out: the step comes as soon as its run does
+            const u = restUnit(cfg, st, st.run || names[0]);
+            if (!runOf.ready(st.run || names[0], u)) { // still being worked out: the step comes as soon as its run does
               note.textContent = "Working out this run…";
               chart(st);
               showFormula(st);
-              return runOf.when(st.run || names[0], () => { if (wanted === st) stage.apply(st); });
+              return runOf.when(st.run || names[0], u, () => { if (wanted === st) stage.apply(st); });
             }
             const r = runOf(st.run || names[0]), t = Math.min(st.at ?? 0, r.units);
             view.setOptions(options(st));
@@ -16117,7 +16182,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   }
 
   RL.sceneKit = {
-    timers, formula, along, svgEl, runs, player, curves, showRun, checkpoints, runScene,
+    timers, formula, along, svgEl, runs, restsOf, restUnit, player, curves, showRun, checkpoints, runScene,
     FORMULA: '<div class="scene-formula"><div class="f-sym"></div><div class="f-num"></div></div>',
     ACTION: { up: 0, right: 1, down: 2, left: 3 },
     sub: (n) => String(n).replace(/\d/g, (d) => SUB[d]),
@@ -16131,11 +16196,11 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 (function (RL) {
   "use strict";
   const { lab } = RL;
-  const { timers, formula, FORMULA, ACTION, signed, runs, player, showRun, checkpoints, curves } = RL.sceneKit;
+  const { timers, formula, FORMULA, ACTION, signed, runs, restsOf, restUnit, player, showRun, checkpoints, curves } = RL.sceneKit;
 
   // ---- grid: a grid world with values, a policy and the agent ----
   RL.scenes.grid = {
-    create(card, cfg) {
+    create(card, cfg, states = []) {
       const env = lab.make(cfg.env), nA = env.nA, gamma = cfg.gamma ?? 1;
       const algorithm = cfg.algorithm ? lab.algorithms[cfg.algorithm] : null;
       card.innerHTML = `<div class="scene-grid"></div>${FORMULA}
@@ -16145,7 +16210,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       // Without an ε of its own, a story draws the greedy arrows of Q.
       const view = new RL.GridView(card.querySelector(".scene-grid"), env, { tiles: "q", epsilon: cfg.epsilon ?? 0, digits: cfg.digits ?? 2 });
       const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
-      const { later, stop } = timers(), runOf = runs(cfg, card), play = player(later);
+      const { later, stop } = timers(), runOf = runs(cfg, card, restsOf(cfg, states, null)), play = player(later);
       const chart = cfg.runs ? curves(card.querySelector(".scene-chart"), cfg, runOf) : () => {};
       const tile = (v) => (v === "start" ? env.start : v[0] * env.cols + v[1]);
 
@@ -16308,10 +16373,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
           wanted = st;
           note.textContent = "";
           chart(st);
-          if (st.run && !runOf.ready(st.run)) { // still being worked out: the step comes as soon as its run does
+          if (st.run && !runOf.ready(st.run, restUnit(cfg, st, st.run))) { // still being worked out: the step comes when its run does
             note.textContent = "Working out this run…";
             showFormula(st);
-            return runOf.when(st.run, () => { if (wanted === st) fromRun(st); });
+            return runOf.when(st.run, restUnit(cfg, st, st.run), () => { if (wanted === st) fromRun(st); });
           }
           if (st.run) return fromRun(st);
           const q = Float64Array.from(st.q ? Q[st.q]() : zeros);
