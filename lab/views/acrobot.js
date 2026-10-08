@@ -5,7 +5,7 @@
 (function (RL) {
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
-  const W = 330, H = 252, PX = W / 2, PY = 104, L = 48; // the pivot, and pixels per link
+  const W = 330, H = 210, PX = W / 2, PY = 104, L = 48; // the pivot, and pixels per link
   function el(tag, attrs, parent) {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -28,7 +28,10 @@
       this.o = { path: true, map: "value", ...options };
       this.box = RL.h('<div class="cartview acroview"><div class="track-pane"></div><div class="map-pane"><div class="map-head"><b>What the learner thinks</b><span></span></div><div class="map-host"></div></div></div>');
       host.appendChild(this.box);
-      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The acrobot's two links" }, this.box.querySelector(".track-pane")));
+      const pane = this.box.querySelector(".track-pane"), { caption, draw } = RL.readouts.frame(pane);
+      this.readout = caption;
+      this.draw = draw;
+      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The acrobot's two links" }, draw));
       // the line the tip must rise above: one link length above the pivot
       el("line", { class: "goal-line", x1: 24, x2: W - 24, y1: PY - L, y2: PY - L }, svg);
       el("text", { class: "track-note", x: W - 24, y: PY - L - 6, "text-anchor": "end" }, svg).textContent = "goal: the tip above this line";
@@ -39,17 +42,8 @@
       this.joint = el("circle", { class: "joint", r: 6 }, svg);
       this.torque = el("text", { class: "torque", "text-anchor": "middle" }, svg);
       this.tip = el("circle", { class: "tip", r: 4.5 }, svg);
-      this.readout = el("text", { class: "readout", x: W - 6, y: 16, "text-anchor": "end" }, svg);
       // the learner's numbers for each torque, as three bars under the links
-      this.bars = [0, 1, 2].map((a) => {
-        const g = el("g", { class: "bar-row" }, svg), y = 186 + a * 18;
-        el("text", { class: "bar-name", x: 8, y: y + 9 }, g).textContent = env.actionNames[a];
-        el("rect", { class: "bar-bg", x: 88, y, width: 190, height: 11, rx: 3 }, g);
-        const fill = el("rect", { class: "bar-fill", x: 88, y, width: 0, height: 11, rx: 3 }, g);
-        const num = el("text", { class: "bar-num", x: 284, y: y + 9 }, g);
-        return { g, fill, num };
-      });
-      this.gFx = el("g", { class: "fx" }, svg);
+      ({ rows: this.bars } = RL.readouts.bars(pane, env.actionNames.slice(0, 3)));
       this.mapHost = this.box.querySelector(".map-host");
       this._map();
       this.points = [];
@@ -128,9 +122,9 @@
       const probs = kind === "pg", top = probs ? 1 : Math.max(1e-9, ...vals.map(Math.abs));
       this.bars.forEach((b, i) => {
         const v = vals[i];
-        b.fill.setAttribute("width", (190 * Math.max(0, Math.min(1, Math.abs(v) / top))).toFixed(1));
-        b.g.classList.toggle("chosen", i === a);
-        b.num.textContent = probs ? `${Math.round(100 * v)}%` : num(v);
+        b.set(Math.abs(v) / top);
+        b.chosen(i === a);
+        b.num(probs ? `${Math.round(100 * v)}%` : num(v));
       });
     }
 
@@ -187,11 +181,7 @@
       }
     }
 
-    pop(text) {
-      const t = el("text", { class: "pop", x: W / 2, y: 40, "text-anchor": "middle" }, this.gFx);
-      t.textContent = text;
-      t.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0, transform: "translateY(-12px)" }], { duration: 1400, easing: "ease-out" }).onfinish = () => t.remove();
-    }
+    pop(text) { RL.readouts.pop(this.draw, text, 0.08); }
 
     // At rest after a unit: the episode's last pose, and its whole path on the map.
     rest(events) {

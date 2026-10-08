@@ -5,7 +5,7 @@
 (function (RL) {
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
-  const W = 330, H = 230, CX = 165, CY = 92, R = 62, BAR = 78; // pivot, rod length, half a torque bar (pixels)
+  const W = 330, H = 168, CX = 165, CY = 92, R = 62; // the drawing, the pivot and the rod's length (pixels)
   function el(tag, attrs, parent) {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -29,7 +29,10 @@
       this.o = { path: true, map: "value", ...options };
       this.box = RL.h('<div class="cartview pendview"><div class="track-pane"></div><div class="map-pane"><div class="map-head"><b>What the critic thinks</b><span></span></div><div class="map-host"></div></div></div>');
       host.appendChild(this.box);
-      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The pendulum" }, this.box.querySelector(".track-pane")));
+      const pane = this.box.querySelector(".track-pane"), { caption, draw } = RL.readouts.frame(pane);
+      this.readout = caption;
+      this.draw = draw;
+      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The pendulum" }, draw));
       el("circle", { class: "guide", cx: CX, cy: CY, r: R }, svg);
       el("line", { class: "goal", x1: CX, x2: CX, y1: CY - R - 12, y2: CY - R + 6 }, svg);
       el("text", { class: "track-note", x: CX - 8, y: CY - R - 4, "text-anchor": "end" }, svg).textContent = "upright: 0°";
@@ -37,20 +40,11 @@
       this.rod = el("line", { class: "pole-rod", x1: CX, y1: CY, x2: CX, y2: CY - R }, svg);
       this.bob = el("circle", { class: "bob", r: 9, cx: CX, cy: CY - R }, svg);
       el("circle", { class: "pivot", cx: CX, cy: CY, r: 3.5 }, svg);
-      this.readout = el("text", { class: "readout", x: W - 6, y: 16, "text-anchor": "end" }, svg);
-      // the torque drawn this step, and the policy's aim with its spread: bars from the middle, −2 to +2
-      const row = (y, name) => {
-        const g = el("g", { class: "bar-row chosen" }, svg);
-        el("text", { class: "bar-name", x: 8, y: y + 9 }, g).textContent = name;
-        el("rect", { class: "bar-bg", x: 88, y, width: 2 * BAR, height: 11, rx: 3 }, g);
-        const band = el("rect", { class: "band", x: 88 + BAR, y, width: 0, height: 11 }, g);
-        const fill = el("rect", { class: "bar-fill", x: 88 + BAR, y, width: 0, height: 11 }, g);
-        el("line", { class: "zero", x1: 88 + BAR, x2: 88 + BAR, y1: y - 2, y2: y + 13 }, g);
-        return { band, fill, num: el("text", { class: "bar-num", x: 88 + 2 * BAR + 6, y: y + 9 }, g) };
-      };
-      this.drawn = row(CY + R + 30, "torque");
-      this.aim = row(CY + R + 50, "aim μ ± σ");
-      this.gFx = el("g", { class: "fx" }, svg);
+      // the torque drawn this step, and the policy's aim with its spread: bars from the middle, −2 to +2 (and the
+      // network strip under them)
+      ({ grid: this.grid, rows: [this.drawn, this.aim] } = RL.readouts.bars(pane, ["torque", "aim μ ± σ"], { centered: true }));
+      this.drawn.chosen(true);
+      this.aim.chosen(true);
       this._map();
       this.points = [];
       this.place([Math.PI, 0]);
@@ -92,9 +86,7 @@
     show(d) {
       if (!d || !d.v) return;
       this.d = d;
-      // the network strip under the bars (runs of lab/deep/): the drawing grows to hold it
-      this.svg.setAttribute("viewBox", `0 0 ${W} ${H + RL.netStrip.height(d.units && d.net)}`);
-      RL.netStrip.draw(this.svg, d.net, d.units, { y: CY + R + 70 });
+      RL.netStrip.draw(this.grid, d.net, d.units); // the network strip under the bars (runs of lab/deep/)
       const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action";
       for (let k = 0; k < this.cellEls.length; k++) {
         const mu = d.mean ? d.mean[k] : 0;
@@ -132,13 +124,13 @@
 
     // The policy's numbers for this state: the torque it drew, and its mean and spread.
     numbers(x, u) {
-      const at = (v) => (Math.max(-2, Math.min(2, v)) / 2) * BAR, bar = (b, from, to) => { b.setAttribute("x", (88 + BAR + Math.min(from, to)).toFixed(1)); b.setAttribute("width", Math.abs(to - from).toFixed(1)); };
-      bar(this.drawn.fill, 0, at(u));
-      this.drawn.num.textContent = sgn(u, 2);
+      const at = (v) => 0.5 + Math.max(-2, Math.min(2, v)) / 4; // a torque, as a share of the bar's width
+      this.drawn.span(0.5, at(u));
+      this.drawn.num(sgn(u, 2));
       const [mu, sd] = x;
-      bar(this.aim.band, at(mu - sd), at(mu + sd));
-      bar(this.aim.fill, 0, at(mu));
-      this.aim.num.textContent = `${sgn(mu, 2)} ± ${sd.toFixed(2)}`;
+      this.aim.band(at(mu - sd), at(mu + sd));
+      this.aim.span(0.5, at(mu));
+      this.aim.num(`${sgn(mu, 2)} ± ${sd.toFixed(2)}`);
     }
 
     _drawPath() {
@@ -177,11 +169,7 @@
       }
     }
 
-    pop(text) {
-      const t = el("text", { class: "pop", x: CX, y: CY + R + 21, "text-anchor": "middle" }, this.gFx); // under the swing, clear of the labels
-      t.textContent = text;
-      t.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0, transform: "translateY(-12px)" }], { duration: 1400, easing: "ease-out" }).onfinish = () => t.remove();
-    }
+    pop(text) { RL.readouts.pop(this.draw, text, 0.62); } // in the lower half of the swing, clear of the labels
 
     // At rest after a unit: the last state of its test episode, and its whole path on the map.
     rest(events) {

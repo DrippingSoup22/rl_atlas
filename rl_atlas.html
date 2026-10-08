@@ -1204,15 +1204,37 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .cartview .pole-rod { stroke: var(--pol); stroke-width: 5; stroke-linecap: round; }
 .cartview .pivot { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.5; }
 .cartview .push { fill: var(--val); }
-.cartview .readout, .cartview .bar-num { font-size: 12px; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
-.cartview .bar-name { font-size: 12px; fill: var(--ink-3); }
-.cartview .bar-bg { fill: var(--surface-3); }
-.cartview .bar-fill { fill: var(--val); opacity: 0.45; }
-.cartview .chosen .bar-fill { opacity: 1; }
-.cartview .chosen .bar-name, .cartview .chosen .bar-num { fill: var(--ink); font-weight: 600; }
-.cartview .net-title { font-size: 11.5px; fill: var(--ink-2); font-weight: 600; }
-.cartview .netstrip .unit.dead { fill: none; stroke: var(--ink-3); stroke-width: 0.4; stroke-dasharray: 1 1; }
-.cartview .netstrip .bar-num { font-size: 11px; }
+/* the numbers around the drawing (lab/views/readouts.js, netstrip.js): HTML, so they keep their size in a narrow pane */
+.cartview .track-pane, .cartview .map-pane { min-width: 0; container: ctlpane / inline-size; }
+.track-draw { position: relative; }
+.ctl-cap { min-height: 17px; padding: 0 6px; font-size: 12px; color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctl-grid { display: grid; gap: 4px; margin-top: 6px; padding: 0 6px; font-size: 12px; }
+.ctl-row { display: grid; grid-template-columns: 74px minmax(0, 1fr) 84px; align-items: center; column-gap: 8px; }
+.ctl-row .bar-name { color: var(--ink-3); white-space: nowrap; }
+.ctl-row .bar-num { color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctl-row.chosen .bar-name, .ctl-row.chosen .bar-num { color: var(--ink); font-weight: 600; }
+.hbar { position: relative; height: 11px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.hbar i { position: absolute; top: 0; bottom: 0; left: 0; width: 0; }
+.hbar .fill { background: var(--val); opacity: 0.45; }
+.ctl-row.chosen .hbar .fill { opacity: 1; }
+.hbar .band { background: var(--pol); opacity: 0.25; }
+.hbar .zero { left: 50%; width: 1px; background: var(--ink-3); }
+.ctl-grid .net-title { margin-top: 4px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); overflow-wrap: anywhere; }
+.net-row .cells { display: flex; height: 9px; }
+.net-row .cells i { flex: 1 1 0; min-width: 0; background: color-mix(in oklab, var(--v-pos) var(--s), var(--v-mid)); }
+.net-row.tanh .cells i { background: color-mix(in oklab, var(--v-neg) var(--s), var(--v-mid)); }
+.net-row .cells i.dead { background: none; box-shadow: inset 0 0 0 0.5px var(--ink-3); }
+.net-row .bar-num { font-size: 11px; }
+.ctl-pop { position: absolute; left: 50%; transform: translate(-50%, 0); font: 800 13px var(--font); color: var(--rew-ink); white-space: nowrap; pointer-events: none; text-shadow: 0 0 3px var(--surface), 0 0 3px var(--surface), 0 0 3px var(--surface); }
+/* a narrow pane: each bar on a line of its own, under its name and number; the drawing's and the map's words larger,
+   since the drawings shrink with the pane */
+@container ctlpane (max-width: 300px) {
+  .ctl-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }
+  .ctl-row .hbar, .ctl-row .cells { grid-column: 1 / -1; grid-row: 2; }
+  .cartview .track-note { font-size: 17px; }
+  .cartview .phase .tick { font-size: 15px; }
+  .cartview .phase .axis-name { font-size: 14px; }
+}
 .cartview .map-head { display: flex; flex-direction: column; gap: 2px; font-size: 13px; margin-bottom: 6px; }
 .cartview .map-head b { white-space: nowrap; }
 .cartview .map-head span { color: var(--ink-3); font-size: 12px; line-height: 1.35; }
@@ -1235,8 +1257,6 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .pendview .goal { stroke: var(--rew); stroke-width: 2.5; stroke-linecap: round; }
 .pendview .bob { fill: var(--pol); stroke: var(--surface); stroke-width: 2; }
 .pendview .torque { fill: none; stroke: var(--val); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.pendview .band { fill: var(--pol); opacity: 0.25; }
-.pendview .bar-row .zero { stroke: var(--ink-3); stroke-width: 1; }
 .knobs .rec-note { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 52ch; }
 .knobs .rec-note.wide { flex-basis: 100%; max-width: 110ch; font-size: 12.5px; }
 
@@ -1498,8 +1518,8 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .view-host:has(> .cardsview) { container-type: inline-size; }
 @container (max-width: 560px) { .cardsview { grid-template-columns: minmax(0, 1fr); } .cardsview .table { min-height: 0; } }
 .bj-map { margin: 0; min-width: 0; }
-.view-host:has(> .cartview) { container-type: inline-size; }
-@container (max-width: 640px) { .cartview .map-head span { display: none; } } /* a small map's legend wraps to many lines: in its title's tooltip instead */
+.view-host:has(> .cartview) { container: ctlhost / inline-size; }
+@container ctlhost (max-width: 640px) { .cartview .map-head span { display: none; } } /* a small map's legend wraps to many lines: in its title's tooltip instead */
 .bj-map figcaption { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; margin-bottom: 2px; }
 .bj-map svg { display: block; width: 100%; height: auto; }
 .bj-map .tick { font: 10px var(--font); fill: var(--ink-3); }
@@ -9733,40 +9753,74 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
 </script>
 <script>
+/* The numbers around a control world's drawing (CartPole, Acrobot, Pendulum), in HTML so that they keep their size
+   however narrow the pane: a caption over the drawing (the step and the state), rows of bars under it (a value or a
+   probability per action, or a torque drawn from the middle), and a message that pops over the drawing when an
+   episode ends. In a narrow pane each bar takes a line of its own, under its name and number (app/css/lab.css). */
+(function (RL) {
+  "use strict";
+  const pct = (v) => `${(100 * Math.max(0, Math.min(1, v))).toFixed(2)}%`;
+  RL.readouts = {
+    // The caption line, and the box the drawing goes in (which the pops are placed over).
+    frame(pane) {
+      const caption = pane.appendChild(RL.h('<div class="ctl-cap"></div>'));
+      return { caption, draw: pane.appendChild(RL.h('<div class="track-draw"></div>')) };
+    },
+    // One row of bars per name, in a grid under the drawing (the network strip joins it). A row's bar runs from the
+    // left (set(share)) or, centered, from the middle (span(from, to), and a band, in shares of the bar's width).
+    bars(pane, names, { centered = false } = {}) {
+      const grid = pane.appendChild(RL.h(`<div class="ctl-grid${centered ? " centered" : ""}"></div>`));
+      const rows = names.map((name) => {
+        const row = grid.appendChild(RL.h(`<div class="ctl-row"><span class="bar-name"></span><span class="hbar">${centered ? '<i class="band"></i>' : ""}<i class="fill"></i>${centered ? '<i class="zero"></i>' : ""}</span><span class="bar-num"></span></div>`));
+        row.querySelector(".bar-name").textContent = name;
+        const fill = row.querySelector(".fill"), band = row.querySelector(".band"), num = row.querySelector(".bar-num");
+        const place = (e, a, b) => { e.style.left = pct(Math.min(a, b)); e.style.width = pct(Math.abs(b - a)); };
+        return {
+          row,
+          set(share) { fill.style.width = pct(share); },
+          span(a, b) { place(fill, a, b); },
+          band(a, b) { place(band, a, b); },
+          num(text) { num.textContent = text; },
+          chosen(on) { row.classList.toggle("chosen", on); },
+        };
+      });
+      return { grid, rows };
+    },
+    // A message over the drawing at height y (a share of the drawing, from its top), rising as it fades.
+    pop(draw, text, y = 0.2) {
+      const t = draw.appendChild(RL.h('<div class="ctl-pop"></div>'));
+      t.textContent = text;
+      t.style.top = pct(y);
+      t.animate([{ opacity: 0, transform: "translate(-50%, 0)" }, { opacity: 1, offset: 0.15, transform: "translate(-50%, 0)" }, { opacity: 0, transform: "translate(-50%, -12px)" }], { duration: 1400, easing: "ease-out" }).onfinish = () => t.remove();
+    },
+  };
+})(globalThis.RL = globalThis.RL || {});
+
+</script>
+<script>
 /* The network, as a strip under a deep run's drawing: one row per hidden layer, one cell per unit, shaded by how often
    the unit fires over the map's states (lab/deep/ counts it for every snapshot). With ReLU, an empty cell is a dead
    unit: it never fires, so it never learns again. With tanh, the shading shows saturation instead (|h| > 0.97, where
-   the unit's slope, and so its gradient, is nearly zero). The depth and width knobs reshape the strip. */
+   the unit's slope, and so its gradient, is nearly zero). The depth and width knobs reshape the strip. It is HTML, in
+   the grid of the drawing's bars (lab/views/readouts.js), so that its words keep their size in a narrow pane. */
 (function (RL) {
   "use strict";
-  const NS = "http://www.w3.org/2000/svg", ROW = 12;
-  function el(tag, attrs, parent) {
-    const e = document.createElementNS(NS, tag);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
-    if (parent) parent.appendChild(e);
-    return e;
-  }
   RL.netStrip = {
-    // The height the strip needs for this network (0 without one).
-    height: (net) => (net ? 16 + (net.sizes.length - 2) * ROW + 2 : 0),
-    // Draw net (sizes, act, of) and units (per hidden layer, a share per unit) at y in svg, between x0 and x1.
-    draw(svg, net, units, { y, x0 = 88, x1 = 278 }) {
-      svg.querySelector(".netstrip")?.remove();
+    // Draw net (sizes, act, of) and units (per hidden layer, a share per unit) at the end of grid, replacing the last.
+    draw(grid, net, units) {
+      grid.querySelectorAll(".net").forEach((e) => e.remove());
       if (!net || !units) return;
-      const g = el("g", { class: "netstrip" }, svg), relu = net.act === "relu", w = x1 - x0;
-      el("text", { class: "net-title", x: 8, y: y + 9 }, g).textContent = `${net.of}: ${net.sizes.join(" → ")} · ${relu ? "ReLU" : "tanh"}`;
+      const relu = net.act === "relu";
+      grid.appendChild(RL.h('<div class="net net-title"></div>')).textContent = `${net.of}: ${net.sizes.join(" → ")} · ${relu ? "ReLU" : "tanh"}`;
       units.forEach((f, i) => {
-        const yy = y + 14 + i * ROW, n = f.length, c = w / n, row = el("g", { class: `net-row${relu ? "" : " tanh"}` }, g);
-        el("text", { class: "bar-name", x: 8, y: yy + 8 }, row).textContent = `layer ${i + 1}`;
-        let marked = 0;
-        for (let j = 0; j < n; j++) {
-          const share = f[j], off = relu ? share < 0.005 : false;
+        let marked = 0, cells = "";
+        for (const share of f) {
+          const off = relu && share < 0.005;
           if (relu ? off : share > 0.5) marked++;
-          el("rect", { class: off ? "unit dead" : "unit", x: (x0 + j * c).toFixed(2), y: yy, width: Math.max(0.6, c - (c > 3 ? 0.6 : 0.15)).toFixed(2), height: 9,
-            style: off ? "" : `fill: color-mix(in oklab, var(${relu ? "--v-pos" : "--v-neg"}) ${Math.round(100 * share)}%, var(--v-mid))` }, row);
+          cells += off ? '<i class="dead"></i>' : `<i style="--s: ${Math.round(100 * share)}%"></i>`;
         }
-        el("text", { class: "bar-num", x: x1 + 6, y: yy + 8 }, row).textContent = relu ? `${marked} dead` : `${marked} saturated`;
-        el("title", {}, row).textContent = relu
+        const n = f.length, row = grid.appendChild(RL.h(`<div class="net ctl-row net-row${relu ? "" : " tanh"}"><span class="bar-name">layer ${i + 1}</span><span class="cells">${cells}</span><span class="bar-num">${marked} ${relu ? "dead" : "saturated"}</span></div>`));
+        row.title = relu
           ? `Layer ${i + 1}: ${n} units, each shaded by how often it fires over the map's states. ${marked} never fire${marked === 1 ? "s" : ""} (dead: no gradient reaches ${marked === 1 ? "it" : "them"}, so ${marked === 1 ? "it stays" : "they stay"} dead).`
           : `Layer ${i + 1}: ${n} units, each shaded by how often it is saturated (|h| > 0.97) over the map's states. ${marked} ${marked === 1 ? "is" : "are"} saturated on most states, where ${marked === 1 ? "its" : "their"} gradient nearly vanishes.`;
       });
@@ -9784,7 +9838,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 (function (RL) {
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
-  const W = 330, H = 230, TY = 150, SCALE = 60; // the track's height on the drawing, and pixels per meter
+  const W = 330, H = 176, TY = 150, SCALE = 60; // the track's height on the drawing, and pixels per meter
   function el(tag, attrs, parent) {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -9815,7 +9869,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.o = { path: true, map: "value", ...options };
       this.box = RL.h('<div class="cartview"><div class="track-pane"></div><div class="map-pane"><div class="map-head"><b>What the network thinks</b><span></span></div><div class="map-host"></div></div></div>');
       host.appendChild(this.box);
-      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The cart and the pole" }, this.box.querySelector(".track-pane")));
+      const pane = this.box.querySelector(".track-pane"), { caption, draw } = RL.readouts.frame(pane);
+      this.readout = caption;
+      this.draw = draw;
+      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The cart and the pole" }, draw));
       // the track, with the limits that end an episode
       const x0 = this.tx(-env.xMax), x1 = this.tx(env.xMax);
       el("line", { class: "rail", x1: x0 - 8, x2: x1 + 8, y1: TY, y2: TY }, svg);
@@ -9831,17 +9888,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.pole = el("line", { class: "pole-rod", x1: 0, y1: -16, x2: 0, y2: -16 - SCALE * env.poleLength }, this.cart);
       el("circle", { class: "pivot", cx: 0, cy: -16, r: 3 }, this.cart);
       this.push = el("path", { class: "push" }, this.cart);
-      this.readout = el("text", { class: "readout", x: W - 6, y: 16, "text-anchor": "end" }, svg);
-      // the network's numbers for each push, as two bars under the track
-      this.bars = [0, 1].map((a) => {
-        const g = el("g", { class: "bar-row" }, svg), y = TY + 34 + a * 18;
-        el("text", { class: "bar-name", x: 8, y: y + 9 }, g).textContent = env.actionNames[a];
-        el("rect", { class: "bar-bg", x: 88, y, width: 190, height: 11, rx: 3 }, g);
-        const fill = el("rect", { class: "bar-fill", x: 88, y, width: 0, height: 11, rx: 3 }, g);
-        const num = el("text", { class: "bar-num", x: 284, y: y + 9 }, g);
-        return { g, fill, num };
-      });
-      this.gFx = el("g", { class: "fx" }, svg);
+      // the network's numbers for each push, as two bars under the track (and the network strip under them)
+      ({ grid: this.grid, rows: this.bars } = RL.readouts.bars(pane, env.actionNames.slice(0, 2)));
       this.mapHost = this.box.querySelector(".map-host");
       this._map();
       this.points = [];
@@ -9884,12 +9932,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     // What a snapshot knows: values over the grid (DQN: the larger action value; a policy method: its critic), and the
     // push it prefers (DQN: the larger value; a policy: its probabilities, drawn fainter where it is unsure).
-    // The network strip under the bars (deep runs): the drawing grows to hold it.
-    _net(d) {
-      const h = RL.netStrip.height(d.units && d.net);
-      this.svg.setAttribute("viewBox", `0 0 ${W} ${H + h}`);
-      RL.netStrip.draw(this.svg, d.net, d.units, { y: TY + 72 });
-    }
+    // The network strip under the bars (deep runs).
+    _net(d) { RL.netStrip.draw(this.grid, d.net, d.units); }
 
     show(d) {
       if (!d) return;
@@ -9939,9 +9983,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const top = probs ? 1 : Math.max(1e-9, Math.abs(vals[0]), Math.abs(vals[1]));
       this.bars.forEach((b, i) => {
         const v = vals[i];
-        b.fill.setAttribute("width", (190 * Math.max(0, Math.min(1, Math.abs(v) / top))).toFixed(1));
-        b.g.classList.toggle("chosen", i === a);
-        b.num.textContent = probs ? `${Math.round(100 * v)}%` : v.toFixed(1);
+        b.set(Math.abs(v) / top);
+        b.chosen(i === a);
+        b.num(probs ? `${Math.round(100 * v)}%` : v.toFixed(1));
       });
     }
 
@@ -9997,7 +10041,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     // The numbers for the state of a choice: a recording's (in the event), or a live learner's, from its snapshot.
     _numbersAt(ev) {
-      if (Array.isArray(ev.x)) return this.numbers(ev.x, ev.a, this.kind);
+      if (ev.x?.length) return this.numbers(ev.x, ev.a, this.kind); // an array, or a Float64Array (lab.unpack)
       const live = this.d?.live;
       if (ev.pr !== undefined) return this.numbers([ev.pr], ev.a, "pg");
       if (!live) return;
@@ -10005,11 +10049,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.numbers(kind === "pg" ? [vals[1]] : vals, ev.a, kind);
     }
 
-    pop(text) {
-      const t = el("text", { class: "pop", x: W / 2, y: 40, "text-anchor": "middle" }, this.gFx);
-      t.textContent = text;
-      t.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0, transform: "translateY(-12px)" }], { duration: 1400, easing: "ease-out" }).onfinish = () => t.remove();
-    }
+    pop(text) { RL.readouts.pop(this.draw, text, 0.1); }
 
     // At rest after a unit: the last state of its test episode, and its whole path on the map.
     rest(events) {
@@ -10062,7 +10102,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 (function (RL) {
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
-  const W = 330, H = 252, PX = W / 2, PY = 104, L = 48; // the pivot, and pixels per link
+  const W = 330, H = 210, PX = W / 2, PY = 104, L = 48; // the pivot, and pixels per link
   function el(tag, attrs, parent) {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -10085,7 +10125,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.o = { path: true, map: "value", ...options };
       this.box = RL.h('<div class="cartview acroview"><div class="track-pane"></div><div class="map-pane"><div class="map-head"><b>What the learner thinks</b><span></span></div><div class="map-host"></div></div></div>');
       host.appendChild(this.box);
-      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The acrobot's two links" }, this.box.querySelector(".track-pane")));
+      const pane = this.box.querySelector(".track-pane"), { caption, draw } = RL.readouts.frame(pane);
+      this.readout = caption;
+      this.draw = draw;
+      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The acrobot's two links" }, draw));
       // the line the tip must rise above: one link length above the pivot
       el("line", { class: "goal-line", x1: 24, x2: W - 24, y1: PY - L, y2: PY - L }, svg);
       el("text", { class: "track-note", x: W - 24, y: PY - L - 6, "text-anchor": "end" }, svg).textContent = "goal: the tip above this line";
@@ -10096,17 +10139,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.joint = el("circle", { class: "joint", r: 6 }, svg);
       this.torque = el("text", { class: "torque", "text-anchor": "middle" }, svg);
       this.tip = el("circle", { class: "tip", r: 4.5 }, svg);
-      this.readout = el("text", { class: "readout", x: W - 6, y: 16, "text-anchor": "end" }, svg);
       // the learner's numbers for each torque, as three bars under the links
-      this.bars = [0, 1, 2].map((a) => {
-        const g = el("g", { class: "bar-row" }, svg), y = 186 + a * 18;
-        el("text", { class: "bar-name", x: 8, y: y + 9 }, g).textContent = env.actionNames[a];
-        el("rect", { class: "bar-bg", x: 88, y, width: 190, height: 11, rx: 3 }, g);
-        const fill = el("rect", { class: "bar-fill", x: 88, y, width: 0, height: 11, rx: 3 }, g);
-        const num = el("text", { class: "bar-num", x: 284, y: y + 9 }, g);
-        return { g, fill, num };
-      });
-      this.gFx = el("g", { class: "fx" }, svg);
+      ({ rows: this.bars } = RL.readouts.bars(pane, env.actionNames.slice(0, 3)));
       this.mapHost = this.box.querySelector(".map-host");
       this._map();
       this.points = [];
@@ -10185,9 +10219,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const probs = kind === "pg", top = probs ? 1 : Math.max(1e-9, ...vals.map(Math.abs));
       this.bars.forEach((b, i) => {
         const v = vals[i];
-        b.fill.setAttribute("width", (190 * Math.max(0, Math.min(1, Math.abs(v) / top))).toFixed(1));
-        b.g.classList.toggle("chosen", i === a);
-        b.num.textContent = probs ? `${Math.round(100 * v)}%` : num(v);
+        b.set(Math.abs(v) / top);
+        b.chosen(i === a);
+        b.num(probs ? `${Math.round(100 * v)}%` : num(v));
       });
     }
 
@@ -10244,11 +10278,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       }
     }
 
-    pop(text) {
-      const t = el("text", { class: "pop", x: W / 2, y: 40, "text-anchor": "middle" }, this.gFx);
-      t.textContent = text;
-      t.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0, transform: "translateY(-12px)" }], { duration: 1400, easing: "ease-out" }).onfinish = () => t.remove();
-    }
+    pop(text) { RL.readouts.pop(this.draw, text, 0.08); }
 
     // At rest after a unit: the episode's last pose, and its whole path on the map.
     rest(events) {
@@ -10297,7 +10327,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 (function (RL) {
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
-  const W = 330, H = 230, CX = 165, CY = 92, R = 62, BAR = 78; // pivot, rod length, half a torque bar (pixels)
+  const W = 330, H = 168, CX = 165, CY = 92, R = 62; // the drawing, the pivot and the rod's length (pixels)
   function el(tag, attrs, parent) {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -10321,7 +10351,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.o = { path: true, map: "value", ...options };
       this.box = RL.h('<div class="cartview pendview"><div class="track-pane"></div><div class="map-pane"><div class="map-head"><b>What the critic thinks</b><span></span></div><div class="map-host"></div></div></div>');
       host.appendChild(this.box);
-      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The pendulum" }, this.box.querySelector(".track-pane")));
+      const pane = this.box.querySelector(".track-pane"), { caption, draw } = RL.readouts.frame(pane);
+      this.readout = caption;
+      this.draw = draw;
+      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The pendulum" }, draw));
       el("circle", { class: "guide", cx: CX, cy: CY, r: R }, svg);
       el("line", { class: "goal", x1: CX, x2: CX, y1: CY - R - 12, y2: CY - R + 6 }, svg);
       el("text", { class: "track-note", x: CX - 8, y: CY - R - 4, "text-anchor": "end" }, svg).textContent = "upright: 0°";
@@ -10329,20 +10362,11 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.rod = el("line", { class: "pole-rod", x1: CX, y1: CY, x2: CX, y2: CY - R }, svg);
       this.bob = el("circle", { class: "bob", r: 9, cx: CX, cy: CY - R }, svg);
       el("circle", { class: "pivot", cx: CX, cy: CY, r: 3.5 }, svg);
-      this.readout = el("text", { class: "readout", x: W - 6, y: 16, "text-anchor": "end" }, svg);
-      // the torque drawn this step, and the policy's aim with its spread: bars from the middle, −2 to +2
-      const row = (y, name) => {
-        const g = el("g", { class: "bar-row chosen" }, svg);
-        el("text", { class: "bar-name", x: 8, y: y + 9 }, g).textContent = name;
-        el("rect", { class: "bar-bg", x: 88, y, width: 2 * BAR, height: 11, rx: 3 }, g);
-        const band = el("rect", { class: "band", x: 88 + BAR, y, width: 0, height: 11 }, g);
-        const fill = el("rect", { class: "bar-fill", x: 88 + BAR, y, width: 0, height: 11 }, g);
-        el("line", { class: "zero", x1: 88 + BAR, x2: 88 + BAR, y1: y - 2, y2: y + 13 }, g);
-        return { band, fill, num: el("text", { class: "bar-num", x: 88 + 2 * BAR + 6, y: y + 9 }, g) };
-      };
-      this.drawn = row(CY + R + 30, "torque");
-      this.aim = row(CY + R + 50, "aim μ ± σ");
-      this.gFx = el("g", { class: "fx" }, svg);
+      // the torque drawn this step, and the policy's aim with its spread: bars from the middle, −2 to +2 (and the
+      // network strip under them)
+      ({ grid: this.grid, rows: [this.drawn, this.aim] } = RL.readouts.bars(pane, ["torque", "aim μ ± σ"], { centered: true }));
+      this.drawn.chosen(true);
+      this.aim.chosen(true);
       this._map();
       this.points = [];
       this.place([Math.PI, 0]);
@@ -10384,9 +10408,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     show(d) {
       if (!d || !d.v) return;
       this.d = d;
-      // the network strip under the bars (runs of lab/deep/): the drawing grows to hold it
-      this.svg.setAttribute("viewBox", `0 0 ${W} ${H + RL.netStrip.height(d.units && d.net)}`);
-      RL.netStrip.draw(this.svg, d.net, d.units, { y: CY + R + 70 });
+      RL.netStrip.draw(this.grid, d.net, d.units); // the network strip under the bars (runs of lab/deep/)
       const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action";
       for (let k = 0; k < this.cellEls.length; k++) {
         const mu = d.mean ? d.mean[k] : 0;
@@ -10424,13 +10446,13 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     // The policy's numbers for this state: the torque it drew, and its mean and spread.
     numbers(x, u) {
-      const at = (v) => (Math.max(-2, Math.min(2, v)) / 2) * BAR, bar = (b, from, to) => { b.setAttribute("x", (88 + BAR + Math.min(from, to)).toFixed(1)); b.setAttribute("width", Math.abs(to - from).toFixed(1)); };
-      bar(this.drawn.fill, 0, at(u));
-      this.drawn.num.textContent = sgn(u, 2);
+      const at = (v) => 0.5 + Math.max(-2, Math.min(2, v)) / 4; // a torque, as a share of the bar's width
+      this.drawn.span(0.5, at(u));
+      this.drawn.num(sgn(u, 2));
       const [mu, sd] = x;
-      bar(this.aim.band, at(mu - sd), at(mu + sd));
-      bar(this.aim.fill, 0, at(mu));
-      this.aim.num.textContent = `${sgn(mu, 2)} ± ${sd.toFixed(2)}`;
+      this.aim.band(at(mu - sd), at(mu + sd));
+      this.aim.span(0.5, at(mu));
+      this.aim.num(`${sgn(mu, 2)} ± ${sd.toFixed(2)}`);
     }
 
     _drawPath() {
@@ -10469,11 +10491,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       }
     }
 
-    pop(text) {
-      const t = el("text", { class: "pop", x: CX, y: CY + R + 21, "text-anchor": "middle" }, this.gFx); // under the swing, clear of the labels
-      t.textContent = text;
-      t.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0, transform: "translateY(-12px)" }], { duration: 1400, easing: "ease-out" }).onfinish = () => t.remove();
-    }
+    pop(text) { RL.readouts.pop(this.draw, text, 0.62); } // in the lower half of the swing, clear of the labels
 
     // At rest after a unit: the last state of its test episode, and its whole path on the map.
     rest(events) {

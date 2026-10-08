@@ -6,7 +6,7 @@
 (function (RL) {
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
-  const W = 330, H = 230, TY = 150, SCALE = 60; // the track's height on the drawing, and pixels per meter
+  const W = 330, H = 176, TY = 150, SCALE = 60; // the track's height on the drawing, and pixels per meter
   function el(tag, attrs, parent) {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -37,7 +37,10 @@
       this.o = { path: true, map: "value", ...options };
       this.box = RL.h('<div class="cartview"><div class="track-pane"></div><div class="map-pane"><div class="map-head"><b>What the network thinks</b><span></span></div><div class="map-host"></div></div></div>');
       host.appendChild(this.box);
-      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The cart and the pole" }, this.box.querySelector(".track-pane")));
+      const pane = this.box.querySelector(".track-pane"), { caption, draw } = RL.readouts.frame(pane);
+      this.readout = caption;
+      this.draw = draw;
+      const svg = (this.svg = el("svg", { class: "track", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The cart and the pole" }, draw));
       // the track, with the limits that end an episode
       const x0 = this.tx(-env.xMax), x1 = this.tx(env.xMax);
       el("line", { class: "rail", x1: x0 - 8, x2: x1 + 8, y1: TY, y2: TY }, svg);
@@ -53,17 +56,8 @@
       this.pole = el("line", { class: "pole-rod", x1: 0, y1: -16, x2: 0, y2: -16 - SCALE * env.poleLength }, this.cart);
       el("circle", { class: "pivot", cx: 0, cy: -16, r: 3 }, this.cart);
       this.push = el("path", { class: "push" }, this.cart);
-      this.readout = el("text", { class: "readout", x: W - 6, y: 16, "text-anchor": "end" }, svg);
-      // the network's numbers for each push, as two bars under the track
-      this.bars = [0, 1].map((a) => {
-        const g = el("g", { class: "bar-row" }, svg), y = TY + 34 + a * 18;
-        el("text", { class: "bar-name", x: 8, y: y + 9 }, g).textContent = env.actionNames[a];
-        el("rect", { class: "bar-bg", x: 88, y, width: 190, height: 11, rx: 3 }, g);
-        const fill = el("rect", { class: "bar-fill", x: 88, y, width: 0, height: 11, rx: 3 }, g);
-        const num = el("text", { class: "bar-num", x: 284, y: y + 9 }, g);
-        return { g, fill, num };
-      });
-      this.gFx = el("g", { class: "fx" }, svg);
+      // the network's numbers for each push, as two bars under the track (and the network strip under them)
+      ({ grid: this.grid, rows: this.bars } = RL.readouts.bars(pane, env.actionNames.slice(0, 2)));
       this.mapHost = this.box.querySelector(".map-host");
       this._map();
       this.points = [];
@@ -106,12 +100,8 @@
 
     // What a snapshot knows: values over the grid (DQN: the larger action value; a policy method: its critic), and the
     // push it prefers (DQN: the larger value; a policy: its probabilities, drawn fainter where it is unsure).
-    // The network strip under the bars (deep runs): the drawing grows to hold it.
-    _net(d) {
-      const h = RL.netStrip.height(d.units && d.net);
-      this.svg.setAttribute("viewBox", `0 0 ${W} ${H + h}`);
-      RL.netStrip.draw(this.svg, d.net, d.units, { y: TY + 72 });
-    }
+    // The network strip under the bars (deep runs).
+    _net(d) { RL.netStrip.draw(this.grid, d.net, d.units); }
 
     show(d) {
       if (!d) return;
@@ -161,9 +151,9 @@
       const top = probs ? 1 : Math.max(1e-9, Math.abs(vals[0]), Math.abs(vals[1]));
       this.bars.forEach((b, i) => {
         const v = vals[i];
-        b.fill.setAttribute("width", (190 * Math.max(0, Math.min(1, Math.abs(v) / top))).toFixed(1));
-        b.g.classList.toggle("chosen", i === a);
-        b.num.textContent = probs ? `${Math.round(100 * v)}%` : v.toFixed(1);
+        b.set(Math.abs(v) / top);
+        b.chosen(i === a);
+        b.num(probs ? `${Math.round(100 * v)}%` : v.toFixed(1));
       });
     }
 
@@ -219,7 +209,7 @@
 
     // The numbers for the state of a choice: a recording's (in the event), or a live learner's, from its snapshot.
     _numbersAt(ev) {
-      if (Array.isArray(ev.x)) return this.numbers(ev.x, ev.a, this.kind);
+      if (ev.x?.length) return this.numbers(ev.x, ev.a, this.kind); // an array, or a Float64Array (lab.unpack)
       const live = this.d?.live;
       if (ev.pr !== undefined) return this.numbers([ev.pr], ev.a, "pg");
       if (!live) return;
@@ -227,11 +217,7 @@
       this.numbers(kind === "pg" ? [vals[1]] : vals, ev.a, kind);
     }
 
-    pop(text) {
-      const t = el("text", { class: "pop", x: W / 2, y: 40, "text-anchor": "middle" }, this.gFx);
-      t.textContent = text;
-      t.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0, transform: "translateY(-12px)" }], { duration: 1400, easing: "ease-out" }).onfinish = () => t.remove();
-    }
+    pop(text) { RL.readouts.pop(this.draw, text, 0.1); }
 
     // At rest after a unit: the last state of its test episode, and its whole path on the map.
     rest(events) {

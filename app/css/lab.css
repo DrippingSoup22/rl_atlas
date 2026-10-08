@@ -196,15 +196,37 @@
 .cartview .pole-rod { stroke: var(--pol); stroke-width: 5; stroke-linecap: round; }
 .cartview .pivot { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.5; }
 .cartview .push { fill: var(--val); }
-.cartview .readout, .cartview .bar-num { font-size: 12px; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
-.cartview .bar-name { font-size: 12px; fill: var(--ink-3); }
-.cartview .bar-bg { fill: var(--surface-3); }
-.cartview .bar-fill { fill: var(--val); opacity: 0.45; }
-.cartview .chosen .bar-fill { opacity: 1; }
-.cartview .chosen .bar-name, .cartview .chosen .bar-num { fill: var(--ink); font-weight: 600; }
-.cartview .net-title { font-size: 11.5px; fill: var(--ink-2); font-weight: 600; }
-.cartview .netstrip .unit.dead { fill: none; stroke: var(--ink-3); stroke-width: 0.4; stroke-dasharray: 1 1; }
-.cartview .netstrip .bar-num { font-size: 11px; }
+/* the numbers around the drawing (lab/views/readouts.js, netstrip.js): HTML, so they keep their size in a narrow pane */
+.cartview .track-pane, .cartview .map-pane { min-width: 0; container: ctlpane / inline-size; }
+.track-draw { position: relative; }
+.ctl-cap { min-height: 17px; padding: 0 6px; font-size: 12px; color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctl-grid { display: grid; gap: 4px; margin-top: 6px; padding: 0 6px; font-size: 12px; }
+.ctl-row { display: grid; grid-template-columns: 74px minmax(0, 1fr) 84px; align-items: center; column-gap: 8px; }
+.ctl-row .bar-name { color: var(--ink-3); white-space: nowrap; }
+.ctl-row .bar-num { color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctl-row.chosen .bar-name, .ctl-row.chosen .bar-num { color: var(--ink); font-weight: 600; }
+.hbar { position: relative; height: 11px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.hbar i { position: absolute; top: 0; bottom: 0; left: 0; width: 0; }
+.hbar .fill { background: var(--val); opacity: 0.45; }
+.ctl-row.chosen .hbar .fill { opacity: 1; }
+.hbar .band { background: var(--pol); opacity: 0.25; }
+.hbar .zero { left: 50%; width: 1px; background: var(--ink-3); }
+.ctl-grid .net-title { margin-top: 4px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); overflow-wrap: anywhere; }
+.net-row .cells { display: flex; height: 9px; }
+.net-row .cells i { flex: 1 1 0; min-width: 0; background: color-mix(in oklab, var(--v-pos) var(--s), var(--v-mid)); }
+.net-row.tanh .cells i { background: color-mix(in oklab, var(--v-neg) var(--s), var(--v-mid)); }
+.net-row .cells i.dead { background: none; box-shadow: inset 0 0 0 0.5px var(--ink-3); }
+.net-row .bar-num { font-size: 11px; }
+.ctl-pop { position: absolute; left: 50%; transform: translate(-50%, 0); font: 800 13px var(--font); color: var(--rew-ink); white-space: nowrap; pointer-events: none; text-shadow: 0 0 3px var(--surface), 0 0 3px var(--surface), 0 0 3px var(--surface); }
+/* a narrow pane: each bar on a line of its own, under its name and number; the drawing's and the map's words larger,
+   since the drawings shrink with the pane */
+@container ctlpane (max-width: 300px) {
+  .ctl-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }
+  .ctl-row .hbar, .ctl-row .cells { grid-column: 1 / -1; grid-row: 2; }
+  .cartview .track-note { font-size: 17px; }
+  .cartview .phase .tick { font-size: 15px; }
+  .cartview .phase .axis-name { font-size: 14px; }
+}
 .cartview .map-head { display: flex; flex-direction: column; gap: 2px; font-size: 13px; margin-bottom: 6px; }
 .cartview .map-head b { white-space: nowrap; }
 .cartview .map-head span { color: var(--ink-3); font-size: 12px; line-height: 1.35; }
@@ -227,8 +249,6 @@
 .pendview .goal { stroke: var(--rew); stroke-width: 2.5; stroke-linecap: round; }
 .pendview .bob { fill: var(--pol); stroke: var(--surface); stroke-width: 2; }
 .pendview .torque { fill: none; stroke: var(--val); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.pendview .band { fill: var(--pol); opacity: 0.25; }
-.pendview .bar-row .zero { stroke: var(--ink-3); stroke-width: 1; }
 .knobs .rec-note { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 52ch; }
 .knobs .rec-note.wide { flex-basis: 100%; max-width: 110ch; font-size: 12.5px; }
 
@@ -490,8 +510,8 @@
 .view-host:has(> .cardsview) { container-type: inline-size; }
 @container (max-width: 560px) { .cardsview { grid-template-columns: minmax(0, 1fr); } .cardsview .table { min-height: 0; } }
 .bj-map { margin: 0; min-width: 0; }
-.view-host:has(> .cartview) { container-type: inline-size; }
-@container (max-width: 640px) { .cartview .map-head span { display: none; } } /* a small map's legend wraps to many lines: in its title's tooltip instead */
+.view-host:has(> .cartview) { container: ctlhost / inline-size; }
+@container ctlhost (max-width: 640px) { .cartview .map-head span { display: none; } } /* a small map's legend wraps to many lines: in its title's tooltip instead */
 .bj-map figcaption { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; margin-bottom: 2px; }
 .bj-map svg { display: block; width: 100%; height: auto; }
 .bj-map .tick { font: 10px var(--font); fill: var(--ink-3); }
