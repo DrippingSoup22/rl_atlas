@@ -278,7 +278,9 @@ animations and hover effects this guide relies on would not be smooth.
      and sweep made with it (`recorder/deep.js`): the DQN family on CartPole, network depth, width and activation among
      its knobs, A2C, PPO and TRPO on CartPole, and PPO, DDPG, TD3 and SAC on Pendulum; the Lab training other seeds and
      settings of those recordings in a Web Worker, with the odds from the recording, its sweep, or a bench trained in
-     the page on request; and a strip under each recorded world showing how often each hidden unit fires. Next: the
-     encoder tier.
+     the page on request; and a strip under each recorded world showing how often each hidden unit fires. A test keeps
+     the trainer from drifting off the recordings (`tests/recordings.test.js`), and every lab offers only knobs that
+     change its runs (`lab/knobs.js`). What the long runs cost, and the rules for the next: `recorder/DEEP-LAB.md`.
+     Next: the encoder tier.
   5. The map keeps its order, which follows Sutton & Barto. A new station goes only where a topic needs its own, and
      then between the two stations where it naturally fits (learning from pixels, say, after DQN).
