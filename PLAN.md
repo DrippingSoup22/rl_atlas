@@ -309,4 +309,5 @@ animations and hover effects this guide relies on would not be smooth.
   into a tab at the edge; playback holds its rate at every speed without forced layouts; stories follow the scroll
   position frame by frame, prepare their runs and the moments their steps draw in slices that stop between two events
   of a unit, and show their charts at once (averaged offline, `tools/story-curves.js`). The README got pictures; a
-  workflow (`.github/workflows/release.yml`) publishes `rl_atlas.html` as the download of each version tag.
+  workflow (`.github/workflows/release.yml`) publishes `rl_atlas.html` as the download of each version tag. 1.0.1 fixes
+  formulas that stopped a few pixels short of fitting their column (they now shrink until they fit).

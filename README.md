@@ -60,8 +60,8 @@ typical they are.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/textbook.png" alt="The TD(0) textbook chapter: its contents and first section"></td>
-    <td width="50%"><img src="docs/images/card.png" alt="The Q-learning card: the idea, an analogy and the update"></td>
+    <td width="50%"><img src="docs/images/textbook.png" alt="The TD(0) textbook chapter: its contents and its first section"></td>
+    <td width="50%"><img src="docs/images/card.png" alt="The Q-learning card: the idea, an analogy, the update and the one change from SARSA"></td>
   </tr>
 </table>
 
@@ -71,7 +71,7 @@ the knobs, and quiz questions.
 
 ### The Lab
 
-<img src="docs/images/lab-odds.png" alt="Under the race: a filmstrip, the reward per episode with the spread of 20 seeds, and the odds of each algorithm">
+<img src="docs/images/lab-odds.png" alt="Under the race: the reward per episode with the spread of 20 seeds, how often each algorithm ends well over 20 seeds, and how those odds move with the step size">
 
 Race algorithms on the same world with the same luck and watch them learn: one pseudocode line at a time, with every
 number of the update, or fast enough to see 500 episodes go by. Under the race come a filmstrip, the curves with the
