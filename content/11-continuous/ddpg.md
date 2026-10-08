@@ -30,7 +30,7 @@ learn = { recording = "ddpg-pendulum", name = "DDPG" }
 :::
 
 ::: step {run = "learn", at = 4, map = "action", formula = 2}
-**The actor follows the critic's slope** (formula 2): in each state it nudges its torque the way the critic says the value rises. After 6,000 steps the test changes completely: one swing back, upright by step 30, held to the end. The map shows the plan: below the horizontal, push with the spin to pump the swing; near the top, push against the lean.
+**The actor follows the critic's slope** (formula 2): in each state it nudges its torque the way the critic says the value rises. After 6,000 steps the test changes completely: one swing back, up by step 30, then held to the end, leaning 12° against a steady push. The map shows the plan: below the horizontal, push with the spin to pump the swing; near the top, push against the lean.
 :::
 
 ::: step {run = "learn", at = 40, map = "value"}

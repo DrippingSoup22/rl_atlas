@@ -14,7 +14,7 @@
     return e;
   }
   const deg = (r) => (r * 180) / Math.PI;
-  const sgn = (v, d = 1) => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(d)}`;
+  const sgn = (v, d = 1) => { const t = Math.abs(v).toFixed(d); return `${v < 0 && +t ? "−" : "+"}${t}`; }; // no "−0.0"
 
   // The colors of a map, over the range its values span, so that small differences show even when every state is worth
   // about the same: the lowest gray (orange below zero), the highest blue (gray below zero).

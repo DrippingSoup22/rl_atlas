@@ -13,7 +13,7 @@
     return e;
   }
   const deg = (r) => Math.round((r * 180) / Math.PI);
-  const sgn = (v, d = 2) => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(d)}`;
+  const sgn = (v, d = 2) => { const t = Math.abs(v).toFixed(d); return `${v < 0 && +t ? "−" : "+"}${t}`; }; // no "−0.00"
   const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
   function rangeColor(box, lo, hi) {
     const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;

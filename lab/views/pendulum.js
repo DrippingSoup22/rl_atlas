@@ -13,7 +13,7 @@
     return e;
   }
   const deg = (r) => (r * 180) / Math.PI;
-  const sgn = (v, d = 1) => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(d)}`;
+  const sgn = (v, d = 1) => { const t = Math.abs(v).toFixed(d); return `${v < 0 && +t ? "−" : "+"}${t}`; }; // no "−0.0"
   const num = (v) => (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)).replace("-", "−");
   const ends = (lo, hi) => [lo < 0 ? "orange" : "gray", hi > 0 ? "blue" : "gray"]; // the colors rangeColor gives them
   const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
