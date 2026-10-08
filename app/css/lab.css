@@ -260,6 +260,9 @@
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .chart-grid { display: grid; gap: 10px 22px; margin-top: 10px; }
 .chart-grid.n2 { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
+.sweep-grid.n3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); } /* the odds, the score, the speed */
+.sweep-grid .chart-box { display: flex; flex-direction: column; }
+.sweep-grid .chart-box .chart-host { margin-top: auto; } /* side by side, the plots line up under titles of any length */
 .chart-box { min-width: 0; }
 .chart-box h3 { margin: 0 0 2px; }
 .chart-note { margin: 6px 0 0; font-size: 12.5px; }
@@ -749,7 +752,7 @@
 @media (max-width: 700px) { .lab-side { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) {
   .cardsview { grid-template-columns: 1fr; }
-  .chart-grid.n2 { grid-template-columns: 1fr; }
+  .chart-grid.n2, .sweep-grid.n3 { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   .lab { padding: 14px 12px 40px; }

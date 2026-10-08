@@ -240,10 +240,11 @@
   RL.LineChart = LineChart;
 
   // The odds against one knob: a dot per value the knob was swept over (evenly spaced, the value the Lab is set to
-  // shaded), joined by lines, one series per racer: the share of runs that succeeded, or their average score.
+  // shaded), joined by lines, one series per racer: the share of runs that succeeded, their average score, or how
+  // soon they learned (zero: the axis starts at 0).
   class SweepChart {
-    constructor(host, { height = 170, label = "", percent = false, log = false, values = [], fmtX = String, current = null } = {}) {
-      Object.assign(this, { host, height, percent, log, values, fmtX, current });
+    constructor(host, { height = 170, label = "", percent = false, log = false, zero = false, values = [], fmtX = String, current = null } = {}) {
+      Object.assign(this, { host, height, percent, log, zero, values, fmtX, current });
       this.series = [];
       this.svg = el("svg", { class: "linechart sweep", role: "img", "aria-label": label }, host);
       this.ro = new ResizeObserver(() => this.render());
@@ -259,7 +260,7 @@
     fmt(v) { return this.percent ? `${Math.round(v * 100)}%` : num(v); }
 
     render() {
-      const W = Math.max(280, this.host.clientWidth), H = this.height, svg = this.svg, k = this.values.length;
+      const W = Math.max(240, this.host.clientWidth), H = this.height, svg = this.svg, k = this.values.length;
       svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
       svg.setAttribute("width", W);
       svg.setAttribute("height", H);
@@ -270,6 +271,7 @@
       else if (!Number.isFinite(lo)) [lo, hi] = this.log ? [1, 10] : [0, 1]; // no dots yet (a log axis cannot start at 0)
       else if (this.log) [lo, hi] = [10 ** Math.floor(Math.log10(lo)), 10 ** Math.ceil(Math.log10(Math.max(hi, lo * 1.01)))];
       else {
+        if (this.zero) lo = Math.min(lo, 0); // amounts (steps, say): from 0, so that the dots' heights compare
         if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
         const t = ticks(lo, hi, 4);
         [lo, hi] = [Math.min(t[0], lo), Math.max(t[t.length - 1], hi)];

@@ -768,7 +768,7 @@
       return k === "alpha" && racers.every((r) => AVERAGING.has(r.algorithm.id)) ? [0, ...list] : list;
     }
     const sweepable = () => ((recorded ? [...new Set(sweepsOf.flatMap((d) => (d ? Object.keys(d.knobs) : [])))] : null) || Object.keys(KNOBS).filter((k) => (k in preset.params || racers.some((r) => k in r.params)) && sweepValues(k).length > 1 && readsOf().some((set) => set.has(k)))).filter((k) => !fixedKnobs().includes(k));
-    const fmtSweep = (k, v) => (k === "alpha" && v === 0 ? "1/n" : v > 0 && v < 0.001 ? v.toExponential(0) : String(v));
+    const fmtSweep = (k, v) => (k === "alpha" && v === 0 ? "1/n" : v > 0 && v < 0.001 ? v.toExponential(1).replace(".0e", "e") : String(v)); // 2.5e-4, 1e-4
     // The odds give up on a run whose episodes keep running to the step limit: it is stuck, and judged as it stands.
     const GIVE_UP = 20;
     const stuckNote = (k) => `${plural(k, ["run", "runs"])} got stuck: ${GIVE_UP} episodes in a row ran to the limit of ${(preset.params.maxSteps ?? 5000).toLocaleString("en")} steps, so ${k === 1 ? "it was" : "they were"} stopped there and judged as if ${k === 1 ? "it" : "they"} stayed stuck.`;
@@ -883,13 +883,15 @@
         if (same) same.name = r.algorithm.title;
         else groups.push({ key, r, i, base, name: k in r.params ? r.algorithm.title : r.name }); // its own value is overridden
       });
-      const kinds = preset.success ? ["ok", "score"] : ["score"], current = recorded ? sweepsOf[sweepFor(k)].knobs[k].current ?? recs[sweepFor(k)].config[k] ?? null : k in preset.params ? knobs[k] : null;
-      const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env, racers[0].algorithm) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}` };
+      // recorded runs also say how soon they learned: their curves are block averages, steady enough for a first pass
+      const kinds = preset.success ? ["ok", "score", ...(recorded ? ["speed"] : [])] : ["score"], current = recorded ? sweepsOf[sweepFor(k)].knobs[k].current ?? recs[sweepFor(k)].config[k] ?? null : k in preset.params ? knobs[k] : null;
+      const bar = rule.min ?? rule.max, barText = String(bar).replace("-", "−");
+      const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env, racers[0].algorithm) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}`, speed: `Steps until half the seeds train at ${barText} or better` }; // a median, as the texts quote it
       const grid = q(".sweep-grid");
       grid.className = `chart-grid sweep-grid n${kinds.length}`;
       grid.innerHTML = kinds.map((c) => `<div class="chart-box"><h3>${esc(titles[c])}</h3><div class="chart-host"></div></div>`).join("");
       sweepCharts = kinds.map((c, j) => new RL.SweepChart(grid.querySelectorAll(".chart-host")[j], {
-        label: titles[c], percent: c === "ok" || m.percent, log: c === "score" && m.log, values, fmtX: (v) => fmtSweep(k, v), current,
+        label: titles[c], percent: c === "ok" || m.percent, log: c === "score" && m.log, zero: c === "speed", values, fmtX: (v) => fmtSweep(k, v), current,
       }));
       const res = groups.map(() => values.map(() => ({ runs: 0, wins: 0, sum: 0, scored: 0, stuck: 0 })));
       const total = values.length * groups.length * n;
@@ -902,7 +904,8 @@
       if (recorded) { // trained offline: every value's seeds are in the sweep files, one series per racer whose sweep turns k
         const owners = sweepsOf.map((d, i) => (d?.knobs[k] ? i : -1)).filter((i) => i >= 0);
         const series = owners.map((i) => {
-          const d = sweepsOf[i].knobs[k], judged = rule.metric === "test" ? d.test : d.train, acc = values.map(() => ({ runs: 0, wins: 0, sum: 0, scored: 0 })); // the curves the rule judges
+          const d = sweepsOf[i].knobs[k], judged = rule.metric === "test" ? d.test : d.train, acc = values.map(() => ({ runs: 0, wins: 0, sum: 0, scored: 0, firsts: [] })); // the curves the rule judges
+          const passes = (v) => v !== null && (rule.min !== undefined ? v >= bar : v <= bar);
           judged.forEach((curves, vi) => {
             const x = acc[values.indexOf(d.values[vi])];
             if (x) for (const c of curves) {
@@ -912,15 +915,19 @@
               if (!Number.isNaN(score)) { x.sum += score; x.scored++; }
             }
           });
+          // how soon: the first block whose training episodes average the rule's bar, in steps (never: Infinity)
+          d.train.forEach((curves, vi) => {
+            const x = acc[values.indexOf(d.values[vi])];
+            if (x) for (const c of curves) { const b = c.findIndex(passes); x.firsts.push(b < 0 ? Infinity : (b + 1) * sweepsOf[i].block); }
+          });
+          for (const x of acc) { const f = x.firsts.sort((a, b) => a - b), n = f.length, mid = (f[(n - 1) >> 1] + f[n >> 1]) / 2; x.half = Number.isFinite(mid) ? mid : NaN; }
           return { name: racers[i].name, color: `--s${i + 1}`, acc };
         });
-        kinds.forEach((c, j) => sweepCharts[j].set(series.map(({ name, color, acc }) => ({
-          name, color,
-          points: acc.map((x) => (c === "ok" ? (x.runs ? x.wins / x.runs : NaN) : x.scored ? x.sum / x.scored : NaN)),
-          notes: acc.map((x) => (c === "ok" ? `${x.wins} of ${x.runs} runs` : x.scored ? `average ${sweepCharts[j].fmt(x.sum / x.scored)} over ${x.scored} runs` : "")),
-        }))));
+        const point = (c, x) => (c === "ok" ? (x.runs ? x.wins / x.runs : NaN) : c === "speed" ? x.half : x.scored ? x.sum / x.scored : NaN);
+        const note = (c, x, j) => (c === "ok" ? `${x.wins} of ${x.runs} runs` : c === "speed" ? `median ${x.half.toLocaleString("en")} steps` : x.scored ? `average ${sweepCharts[j].fmt(x.sum / x.scored)} over ${x.scored} runs` : "");
+        kinds.forEach((c, j) => sweepCharts[j].set(series.map(({ name, color, acc }) => ({ name, color, points: acc.map((x) => point(c, x)), notes: acc.map((x) => note(c, x, j)) }))));
         const d0 = sweepsOf[owners[0]];
-        q(".sweep-note").textContent = `${plural(d0.knobs[k].train[0].length, ["seed", "seeds"])} per value, ${d0.steps.toLocaleString("en")} steps each, trained offline with the recording's other settings${Object.keys(turned).some((t) => t !== k) ? " (not the knobs as turned above)" : ""}. The shaded value is the recording's. Hover a dot for its numbers.`;
+        q(".sweep-note").textContent = `${plural(d0.knobs[k].train[0].length, ["seed", "seeds"])} per value, ${d0.steps.toLocaleString("en")} steps each, trained offline with the recording's other settings${Object.keys(turned).some((t) => t !== k) ? " (not the knobs as turned above)" : ""}. The shaded value is the recording's. Hover a dot for its numbers. In the speed chart, a value has no dot when too few of its runs got there for a median.`;
         return;
       }
       let one = null; // the run under way, spread over chunks when it is long
