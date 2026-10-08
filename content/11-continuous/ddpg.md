@@ -84,11 +84,11 @@ The actor is deterministic, so the agent explores by adding noise to its action:
 
 Networks of 64 + 64 units, Adam with a step size of $10^{-3}$ for both, a memory of 100,000 steps, batches of 128, one update per step after the first 1,000 random ones, $\gam = 0.99$, $\tau = 0.005$, and rewards scaled by 0.1 for learning, so that the critic's targets stay in a comfortable range ([[normalization]]). Twenty seeds, 60,000 steps each: all twenty swing the pendulum up and hold it in their final tests. On this problem DDPG is fast and reliable.
 
-How much do the knobs matter? A sweep trained each of three knobs at several values, 10 seeds per value (the Lab's sweep panel shows every run). On Pendulum DDPG is forgiving: 109 of the 110 runs end holding the pendulum up, and the knobs change the speed more than the odds.
+How much do the knobs matter? A sweep trained each of three knobs at several values, 10 seeds per value (the Lab's sweep panel shows every run). On Pendulum DDPG is forgiving: all 110 runs end holding the pendulum up, and the knobs change the speed, not the odds.
 
-- **Target speed $\tau$** matters most. Half the seeds train at −250 or better within 15,000 steps with $\tau = 0.001$, within 6,750 with the recording's 0.005, and within 4,500 with 0.02. At $\tau = 0.1$ the copies follow the networks too closely: one seed of the ten swung the pendulum up by block 4, then at block 7 its test fell to −1,672 and stayed exactly there to the end, the same score every test, with no recovery.
-- **Exploration noise** barely changes the end. With no noise at all, every seed still learns: the first 1,000 random steps explore enough here. With a spread of 0.6 the training episodes stay poor (−452 in the median at the end), while the tests, played without noise, still hold the pendulum up.
-- **Reward scale**: rewards multiplied by 1 do as well as by 0.1; by 0.01, half the seeds need 15,750 steps instead of 6,750 ([[normalization]]).
+- **Target speed $\tau$** matters most. Half the seeds train at −250 or better within 16,500 steps with $\tau = 0.001$, within 6,000 with the recording's 0.005, and within 5,250 with 0.02 or 0.1. Copies that follow slowly hold learning back; on this problem, fast ones did no harm.
+- **Exploration noise** barely changes the end. With no noise at all, every seed still learns: the first 1,000 random steps explore enough here. With a spread of 0.6 the training episodes stay poor (−539 in the median at the end), while the tests, played without noise, still hold the pendulum up.
+- **Reward scale**: rewards multiplied by 1 do about as well as by 0.1 (half the seeds within 6,750 steps, against 6,000); by 0.01, half the seeds need 11,250 ([[normalization]]).
 
 ### Overestimation {#overestimation}
 
