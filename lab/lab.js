@@ -243,9 +243,9 @@
     // ---- building the page around the current world and racers ----
     function knobPanel() {
       const box = q(".knobs");
-      const recNote = `${rec0?.steps.toLocaleString("en")} steps in ${plural(knobs.units, noun())} of ${rec0?.block.toLocaleString("en")}, ${plural(rec0?.seeds.length, ["seed", "seeds"])}. After each block the network played one test episode, from the same start every time: that is what plays here.`;
+      const recNote = () => `${rec0.steps.toLocaleString("en")} steps in ${plural(knobs.units, noun())} of ${rec0.block.toLocaleString("en")}, ${plural(rec0.seeds.length, ["seed", "seeds"])}. After each block the network played one test episode, from the same start every time: that is what plays here.`;
       if (recorded && !trainable) { // nothing to turn: the runs were trained offline
-        box.innerHTML = `<p class="rec-note">Trained offline on Gymnasium's ${esc(env.title)}: ${recNote}</p>`;
+        box.innerHTML = `<p class="rec-note">Trained offline on Gymnasium's ${esc(env.title)}: ${recNote()}</p>`;
         return;
       }
       if (trainable) { // the recording's knobs, and any seed: what is not recorded trains here
@@ -254,7 +254,7 @@
           return `<label class="knob"><span class="sym">${d.sym}</span><span class="name">${d.name}</span>
             <select data-deep="${k}">${values.map((c, j) => `<option value="${j}"${c === v ? " selected" : ""}>${fmtSweep(k, c)}${c === own ? " · recorded" : ""}</option>`).join("")}</select></label>`;
         }).join("") + seedControl() +
-          `<p class="rec-note wide" title="${esc(recNote)}">Recorded offline by the trainer this page runs (${rec0.steps.toLocaleString("en")} steps, ${plural(rec0.seeds.length, ["seed", "seeds"])}). Turn a knob or pick another seed: that run trains here, in your browser.</p>`;
+          `<p class="rec-note wide" title="${esc(recNote())}">Recorded offline by the trainer this page runs (${rec0.steps.toLocaleString("en")} steps, ${plural(rec0.seeds.length, ["seed", "seeds"])}). Turn a knob or pick another seed: that run trains here, in your browser.</p>`;
         seedBox();
         return;
       }
