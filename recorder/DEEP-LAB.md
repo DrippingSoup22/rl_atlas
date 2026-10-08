@@ -33,6 +33,30 @@ Done: every recording and sweep, remade with this trainer: the DQN family on Car
 PPO, DDPG, TD3 and SAC on Pendulum. Under each recorded world, a strip shows the network: how often each hidden unit
 fires. The NumPy recorder (`recorder/record.py`) stays only as a cross-check.
 
+## What the long runs cost, and how to run less
+
+The remake took about 14.5 hours on 4 cores: 2.5 for the recordings, 12 for the sweeps. One seed, on one core of four
+busy ones:
+
+| A2C | PPO, TRPO (CartPole) | DQN | PPO (Pendulum) | DDPG, TD3 | SAC |
+|---|---|---|---|---|---|
+| 15 s | 1 min | 2 min | 2 min | 5 min | 8 min |
+
+What the sweeps bought: of the 72 settings they tried besides the recorded ones, 13 changed the odds clearly (Fisher's
+test, p < 0.05), 15 only the speed, 44 nothing. PPO on Pendulum found the most per hour (4 in 52 minutes). The sweeps
+of DDPG, TD3 and SAC took 6 h 54 min and found no difference in the odds: all 280 runs ended well, and only the speed
+moved. Pendulum is easy for them, and 60,000 steps is long: half their seeds pass by 6,000 to 9,000.
+
+Before the next long run:
+- **Estimate it:** runs × the time per seed above ÷ cores. Ask before anything over an hour.
+- **Try the ends first:** 3 seeds at each knob's two ends, at a short length. Sweep only the knobs whose ends differ.
+- **Stop where learning stops:** 30,000 steps would do for the actor–critics on Pendulum (the slowest settings pass by
+  21,000).
+- **Mind the ceiling:** when the recorded setting already ends well on every seed, the odds cannot show a knob. Measure
+  the speed instead (steps until half the seeds pass), or use a harder world.
+- **The trainer is frozen.** `tests/recordings.test.js` fails on any change to `lab/deep/` that would change the
+  recordings. A deliberate change means recording everything again, so gather such changes and make them at once.
+
 ## What we have, and what it costs
 
 - **The recorder** (`recorder/`) trains its own NumPy networks on Gymnasium's CartPole and Pendulum. Every network is
