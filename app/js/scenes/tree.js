@@ -25,10 +25,12 @@
 
       // A fresh search run to k simulations (searches are cheap: rebuilding one is simpler than rewinding it).
       const searchTo = (k) => { search = lab.mcts(board, { c, seed }); search.run(k); return search; };
+      // Flat Monte Carlo's averages, worked out once for each number of games (thousands of games take a moment)
+      const flats = {}, flatOf = (n) => (flats[n] ||= lab.flatMC(board, n, { seed }));
       const colorOf = (n) => (n && n.N ? `color-mix(in oklab, var(${n.X / n.N >= 0.5 ? "--v-pos" : "--v-neg"}) ${Math.round(Math.min(1, Math.abs(n.X / n.N - 0.5) * 2.4) * 100)}%, var(--v-mid))` : "var(--surface-2)");
 
       function boardSvg(st, sim) {
-        const share = {}, flat = st.flat ? lab.flatMC(board, st.flat, { seed }) : null;
+        const share = {}, flat = st.flat ? flatOf(st.flat) : null;
         if (!flat && search.sims) for (const k of search.root.kids) share[k.move] = k.N / search.sims;
         let g = `<text class="t-title" x="${BX}" y="22">${mover} to move</text>`;
         // the moves of the current simulation, in order: inside the tree, then the rollout
@@ -110,7 +112,7 @@
       // Flat Monte Carlo keeps no tree: instead, each first move's average over the random games (a bar), against what
       // the move is worth when both sides play their best (a line: a win, a draw or a loss).
       function flatSvg(st) {
-        const flat = lab.flatMC(board, st.flat, { seed }), Y0 = 300, HB = 150, y = (v) => Y0 - v * HB;
+        const flat = flatOf(st.flat), Y0 = 300, HB = 150, y = (v) => Y0 - v * HB;
         let g = `<text class="t-title" x="${TX}" y="22">each move: random games against best play</text>`;
         for (const v of [0, 0.5, 1]) g += `<line class="t-grid" x1="${TX}" x2="${TX + TW}" y1="${y(v)}" y2="${y(v)}"/><text class="t-level" x="${W - 6}" y="${y(v) + 4}">${v === 1 ? "X wins" : v === 0.5 ? "draw" : "X loses"}</text>`;
         first.forEach((m, i) => {

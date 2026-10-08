@@ -17,10 +17,10 @@
   const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
   const rgb = (c) => `rgb(${c.map((v) => Math.round(Math.max(0, Math.min(255, v)))).join(" ")})`;
 
-  // The colors the theme gives the low and high ends of the surface, read from the page each time it is drawn.
-  function palette(from = document.documentElement, high = "--v-neg") {
-    const cs = getComputedStyle(from), get = (k) => hex(cs.getPropertyValue(k) || "#888");
-    return { lo: get("--v-mid"), hi: get(high), ink: cs.getPropertyValue("--ink").trim(), ink3: cs.getPropertyValue("--ink-3").trim(), line: cs.getPropertyValue("--line-2").trim(), surface: cs.getPropertyValue("--surface").trim() };
+  // The colors the theme gives the low and high ends of the surface, and its lines (the theme's, as it is now).
+  function palette(high = "--v-neg") {
+    const get = (k) => hex(RL.token(k) || "#888");
+    return { lo: get("--v-mid"), hi: get(high), ink: RL.token("--ink"), ink3: RL.token("--ink-3"), line: RL.token("--line-2"), surface: RL.token("--surface") };
   }
 
   // The camera: azimuth turns the floor, elevation tilts it toward the viewer. Points are in the unit box
@@ -90,10 +90,12 @@
     }
 
     // The heights: Z[j·nx + i] at x = x-range at i/(nx−1), y at j/(ny−1). zMax: the top of the scale.
-    set(Z, nx, ny, zMax) { this.Z = Z; this.nx = nx; this.ny = ny; this.zMax = zMax; this.draw(); }
+    set(Z, nx, ny, zMax) { this.Z = Z; this.nx = nx; this.ny = ny; this.zMax = zMax; this.redraw(); }
     // A path of points [x, y] in the data's units; its heights are read off the surface.
-    path(pts) { this.pathPts = pts || []; this.draw(); }
-    dot(p) { this.dotAt = p; this.draw(); }
+    path(pts) { this.pathPts = pts || []; this.redraw(); }
+    dot(p) { this.dotAt = p; this.redraw(); }
+    // New heights, the path and the dot often change together: the surface is drawn once for them, at the next frame
+    redraw() { this.frame ||= requestAnimationFrame(() => { this.frame = 0; this.draw(); }); }
 
     // Height of the surface at a point in data units, by bilinear interpolation.
     heightAt(x, y) {
@@ -106,18 +108,17 @@
 
     draw() {
       const { canvas, ctx, o } = this;
-      const w = this.box.clientWidth, h = Math.round(w * 0.78);
+      const w = this.box.clientWidth, h = Math.round(w * 0.78); // the canvas's shape, set in the CSS: it reflows at once
       if (!w) return;
       const dpr = window.devicePixelRatio || 1;
       if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
         canvas.width = Math.round(w * dpr);
         canvas.height = Math.round(h * dpr);
-        canvas.style.height = `${h}px`;
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       if (!this.Z) return;
-      const pal = palette(this.box, o.high), project = camera(this.az, this.elev), { S, cx, cy } = fit(w, h, this.elev, o.zs);
+      const pal = palette(o.high), project = camera(this.az, this.elev), { S, cx, cy } = fit(w, h, this.elev, o.zs);
       const scr = (p) => [cx + p[0] * S, cy - p[1] * S];
       const items = tiles(this.Z, this.nx, this.ny, this.zMax, project, pal, o.zs).map((t) => ({ ...t, kind: "tile" }));
       // the path, lifted a hair above the surface, sorted in with the tiles so hills can hide it
@@ -221,11 +222,11 @@
       ctx.fillText(o.zLabel || "", top[0] + 6, top[1] - 6);
     }
 
-    destroy() { this.ro.disconnect(); this.box.remove(); }
+    destroy() { cancelAnimationFrame(this.frame); this.ro.disconnect(); this.box.remove(); }
 
     // A still drawing of a surface as SVG, from the default angle: for filmstrip frames and figures.
     static svg(Z, nx, ny, zMax, { w = 200, h = 130, az = -0.62, elev = 0.5, zs = 0.62, high = "--v-neg", cls = "thumb-surface" } = {}) {
-      const pal = palette(document.documentElement, high), project = camera(az, elev), { S, cx, cy } = fit(w, h, elev, zs, 3, 0);
+      const pal = palette(high), project = camera(az, elev), { S, cx, cy } = fit(w, h, elev, zs, 3, 0);
       const list = tiles(Z, nx, ny, zMax, project, pal, zs).sort((p, q) => q.depth - p.depth);
       const pt = (p) => `${(cx + p[0] * S).toFixed(1)},${(cy - p[1] * S).toFixed(1)}`;
       return `<svg class="${cls}" viewBox="0 0 ${w} ${h}">${list.map((t) => `<polygon points="${t.pts.map(pt).join(" ")}" fill="${t.color}" stroke="${t.color}" stroke-width="0.4"/>`).join("")}</svg>`;

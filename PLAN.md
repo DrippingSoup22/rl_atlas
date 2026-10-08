@@ -44,6 +44,10 @@ The full curriculum, 95 stations in 14 parts, lives in [content/map.toml](conten
   trainable in the page on request.
 - Worlds are picked so that values and policies stay pictures: grids, random walks, Blackjack, Mountain Car,
   Pendulum, the short corridor, the throw, CartPole with value and probability bars.
+- Every racer is on screen at once, at the largest size that fits: each arrangement (how many across) is laid out and
+  measured. The panes stay under the header, in sight with the knobs, when they are wide enough to read (400 px) or
+  not much narrower than they could be; otherwise they take the whole window and playing scrolls them into view. The
+  algorithm column (pseudocode and "This step") folds into a tab at the edge, and the panes grow into its room.
 
 ## Technology (decided)
 

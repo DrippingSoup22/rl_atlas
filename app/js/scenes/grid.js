@@ -16,7 +16,7 @@
       // Without an ε of its own, a story draws the greedy arrows of Q.
       const view = new RL.GridView(card.querySelector(".scene-grid"), env, { tiles: "q", epsilon: cfg.epsilon ?? 0, digits: cfg.digits ?? 2 });
       const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
-      const { later, stop } = timers(), runOf = runs(cfg), play = player(later);
+      const { later, stop } = timers(), runOf = runs(cfg, card), play = player(later);
       const chart = cfg.runs ? curves(card.querySelector(".scene-chart"), cfg, runOf) : () => {};
       const tile = (v) => (v === "start" ? env.start : v[0] * env.cols + v[1]);
 

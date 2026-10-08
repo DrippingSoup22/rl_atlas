@@ -105,9 +105,13 @@
 
     // Per racer, from the seeds done so far: scores, wins, stuck runs, and per kept measure its band (quartiles,
     // median) and its mean.
+    // Kept until another seed is done (the charts and the odds both ask). Thousands of seeds make a band of hundreds
+    // of points slow to sort, so each column is sorted as numbers, in a typed array.
     stats() {
       const n = this.seedsDone;
-      return this.racers.map((_, ri) => {
+      if (this.lastStats?.n === n) return this.lastStats.stats;
+      const col = new Float64Array(n);
+      const stats = this.racers.map((_, ri) => {
         const done = this.results[ri].slice(0, n), scores = done.map((d) => d.score);
         const band = {};
         for (const k of this.keys) {
@@ -115,15 +119,21 @@
           if (!lines.length) continue;
           const len = lines[0].length, lo = new Float32Array(len), mid = new Float32Array(len), hi = new Float32Array(len), mean = new Float32Array(len);
           for (let b = 0; b < len; b++) {
-            const col = lines.map((l) => l[b]).filter(Number.isFinite).sort((x, y) => x - y);
-            lo[b] = quantile(col, 0.25); mid[b] = quantile(col, 0.5); hi[b] = quantile(col, 0.75);
-            mean[b] = col.length ? col.reduce((x, y) => x + y, 0) / col.length : NaN;
+            let m = 0;
+            for (const l of lines) if (Number.isFinite(l[b])) col[m++] = l[b];
+            const sorted = col.subarray(0, m).sort();
+            lo[b] = quantile(sorted, 0.25); mid[b] = quantile(sorted, 0.5); hi[b] = quantile(sorted, 0.75);
+            let sum = 0;
+            for (let j = 0; j < m; j++) sum += sorted[j];
+            mean[b] = m ? sum / m : NaN;
           }
           band[k] = { lo, mid, hi, mean, units: this.units };
         }
         const sorted = scores.filter(Number.isFinite).sort((x, y) => x - y);
         return { n, scores, wins: done.filter((d) => d.ok).length, stuck: done.filter((d) => d.stopped).length, median: quantile(sorted, 0.5), band };
       });
+      this.lastStats = { n, stats };
+      return stats;
     }
 
     // The typical seed: the median ending. For a race, the seed whose ranks are closest, summed over the racers, to

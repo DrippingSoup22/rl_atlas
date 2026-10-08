@@ -11,11 +11,13 @@
   // ---- the 1000-state random walk ----
   // States 1 … 1000 between two exits (0 pays −1, 1001 pays +1); the walk starts at 500. Each step goes left or right
   // at random, by 1 to 100 states, all equally likely; a jump past the end leaves by that exit.
+  const solved = new Map(); // each walk's fixed points, worked out once: every run of a bench makes its own walk
   lab.longWalk = function ({ n = 1000, reach = 100 } = {}) {
     const nS = n + 2, both = [0, 1], none = [], start = n / 2;
     // The value of walking at random and the share of time spent in each state, both worked out from the rules.
     // Each is a fixed point of "average over the 2·reach states a jump can reach", computed with running sums.
-    let truth = null, mu = null;
+    if (!solved.has(`${n} ${reach}`)) solved.set(`${n} ${reach}`, {});
+    const known = solved.get(`${n} ${reach}`);
     const window = (V, s, ends) => {
       // the sum of V over the states within reach of s (s itself left out), with the exits' worth beyond each end
       const lo = s - reach, hi = s + reach;
@@ -55,17 +57,17 @@
       },
       coords: (s) => [(s - 0.5) / n],
       // The true values (undiscounted): the expected exit payment from each state.
-      truth: () => (truth ||= fixedPoint(() => 0, [-1, 1])),
+      truth: () => (known.truth ||= fixedPoint(() => 0, [-1, 1])),
       // μ(s): the share of all steps spent in s. Visits to s are the starts there plus the arrivals from each state within
       // reach, each with chance 1 / (2·reach); dividing by their total (the average length of an episode) gives shares.
       mu() {
-        if (mu) return mu;
+        if (known.mu) return known.mu;
         const eta = fixedPoint((s) => (s === start ? 1 : 0), null);
         let total = 0;
         for (let s = 1; s <= n; s++) total += eta[s];
-        mu = eta.map((v) => v / total);
+        const mu = eta.map((v) => v / total);
         mu.steps = total; // the average number of steps in an episode
-        return mu;
+        return (known.mu = mu);
       },
     };
     return env;

@@ -19,8 +19,8 @@
   // The colors of a map, over the range its values span, so that small differences show even when every state is worth
   // about the same: the lowest gray (orange below zero), the highest blue (gray below zero).
   const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
-  function rangeColor(box, lo, hi) {
-    const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
+  function rangeColor(lo, hi) {
+    const mid = RL.token("--v-mid"), low = lo < 0 ? RL.token("--v-neg") : mid, high = hi > 0 ? RL.token("--v-pos") : mid;
     return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
   }
   // A live snapshot (weights) as a recording's map: v, and act (0/1, action values) or mean (P(right), a policy).
@@ -110,8 +110,9 @@
       this.d = d;
       this._net(d);
       this.kind = d.kind;
-      this.box.querySelector(".map-head b").textContent = d.live ? "What the learner thinks" : "What the network thinks";
-      const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action" && !d.noValue;
+      const head = this.box.querySelector(".map-head b"), title = d.live ? "What the learner thinks" : "What the network thinks";
+      if (head.textContent !== title) head.textContent = title; // unchanged, it is left alone: nothing to lay out again
+      const [lo, hi] = span(d.v), color = rangeColor(lo, hi), valueMode = this.o.map !== "action" && !d.noValue;
       for (let k = 0; k < this.cellEls.length; k++) {
         const pr = d.act ? d.act[k] : d.mean ? d.mean[k] : 0.5; // 1 or 0: right or left (DQN); P(right) (a policy)
         this.cellEls[k].setAttribute("fill", valueMode ? color(d.v[k]) : `color-mix(in oklab, var(--pol) ${Math.round(Math.abs(pr - 0.5) * 140)}%, var(--v-mid))`);
@@ -134,8 +135,6 @@
       this.cart.setAttribute("transform", `translate(${this.tx(s[0]).toFixed(1)} ${TY - 6})`);
       this.pole.setAttribute("x2", (L * Math.sin(s[2])).toFixed(1));
       this.pole.setAttribute("y2", (-16 - L * Math.cos(s[2])).toFixed(1));
-      const lean = Math.abs(s[2]) / this.env.thetaMax;
-      this.box.style.setProperty("--lean", Math.min(1, lean).toFixed(2));
       this.fan.setAttribute("d", this._fan(s[0]));
       this.at = s;
     }

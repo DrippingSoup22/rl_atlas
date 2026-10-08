@@ -203,6 +203,7 @@
       let done = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (done < runs && performance.now() - t0 < 30) {
           STUDY.forEach((s, j) => s.xs.forEach((v, i) => { sums[j][i] += lab.mean(simulate("testbed", s.algorithm, s.params(v), 1000, 1000 + done).return); }));

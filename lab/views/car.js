@@ -114,7 +114,7 @@
       this.zMax = zMax;
       if (this.surface) this.surface.set(Z, N, N, zMax);
       else if (this.cellEls) {
-        const lo = getComputedStyle(this.box).getPropertyValue("--v-mid"), hi = getComputedStyle(this.box).getPropertyValue("--v-neg");
+        const lo = RL.token("--v-mid"), hi = RL.token("--v-neg");
         for (let k = 0; k < Z.length; k++) this.cellEls[k].setAttribute("fill", `color-mix(in oklab, ${hi} ${Math.round(100 * Math.min(1, Z[k] / zMax) ** 0.85)}%, ${lo})`);
       }
       const critic = !d.theta || d.w.some((x) => x !== 0); // a policy with no critic (REINFORCE) expects nothing

@@ -21,6 +21,7 @@
       let done = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (done < RUNS && performance.now() - t0 < 30) {
           const seed = 1 + done, search = lab.mcts(BOARD, { c: 1.4, seed });

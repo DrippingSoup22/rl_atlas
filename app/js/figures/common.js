@@ -171,6 +171,7 @@
       let sums = null, done = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (done < runs && performance.now() - t0 < 30) {
           const out = sample(1000 + done);

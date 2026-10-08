@@ -60,19 +60,34 @@
   // Named runs a story shows and replays, from its config: [story.runs] name = { algorithm, units, seed, <knobs> }, or
   // name = { recording } for a run trained offline (recorder/record.py). The world, the shared knobs and the seed come
   // from the story config unless a run says otherwise.
-  function runs(cfg) {
-    const made = {};
-    return (name) => {
+  // With host, the runs are also worked out in the background, a few milliseconds at a time, while the reader is on
+  // the first steps (and the host on the page): a step then finds its run ready instead of making the page wait.
+  function runs(cfg, host = null) {
+    const made = {}, jobs = {};
+    const job = (name) => (jobs[name] ||= (() => {
+      const { algorithm, units, seed, world, measures, name: _label, ...params } = cfg.runs[name];
+      return RL.lab.simulateJob({
+        world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params },
+        units: units || cfg.units || 100, seed: seed ?? cfg.seed ?? 1, measures,
+      });
+    })());
+    const runOf = (name) => {
       if (made[name]) return made[name];
       const spec = cfg.runs?.[name];
       if (!spec) throw new Error(`story: no run named '${name}'`);
       if (spec.recording) return (made[name] = RL.lab.recordedRun(RL.recordings[spec.recording]));
-      const { algorithm, units, seed, world, measures, name: _label, ...params } = spec;
-      return (made[name] = RL.lab.simulate({
-        world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params },
-        units: units || cfg.units || 100, seed: seed ?? cfg.seed ?? 1, measures,
-      }));
+      job(name).step(Infinity); // the same run, finished now (sliced or not, a run comes out the same)
+      return (made[name] = job(name).result);
     };
+    const todo = Object.keys(cfg.runs || {}).filter((n) => !cfg.runs[n].recording);
+    const warm = () => {
+      const name = host?.isConnected && todo.find((n) => !made[n]);
+      if (!name) return;
+      if (!RL.scrolling() && job(name).step(6)) made[name] = job(name).result;
+      setTimeout(warm, RL.scrolling() ? 120 : 10);
+    };
+    setTimeout(warm, 300);
+    return runOf;
   }
 
   // Replay units of a run on a view, event by event, the way the Lab walks: the agent moves, values update.
@@ -171,20 +186,25 @@
         status.textContent = all ? ` · average of ${seeds[0].seeds.length} seeds` : " · the seed played back";
         return;
       }
+      // Slices of a few milliseconds, so the page scrolls smoothly meanwhile: a run is cut where it stands and goes on
+      // in the next slice (acc keeps it, with the averages, for a reader who scrolls away and back).
+      let drawn = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) { timer = setTimeout(more, 120); return; } // the reader is scrolling: later
         const t0 = performance.now();
-        while (acc.done < total && performance.now() - t0 < 25) {
-          names.forEach((n, i) => {
-            const spec = cfg.runs[n], { algorithm, units, seed, world, measures, name: _label, ...params } = spec;
-            const { metrics } = RL.lab.simulate({ world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params }, units: units || cfg.units, seed: 1000 + acc.done, snapshots: false, measures });
-            const s = acc.sums[i], v = metrics[metric];
-            for (let t = 0; t < s.length; t++) s[t] += v[t];
-          });
-          acc.done++;
+        while (acc.done < total && performance.now() - t0 < 8) {
+          const c = (acc.cur ||= { i: 0, job: null }), spec = cfg.runs[names[c.i]], { algorithm, units, seed, world, measures, name: _label, ...params } = spec;
+          c.job ||= RL.lab.simulateJob({ world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params }, units: units || cfg.units, seed: 1000 + acc.done, snapshots: false, measures });
+          if (!c.job.step(Math.max(2, 8 - (performance.now() - t0)))) break;
+          const s = acc.sums[c.i], v = c.job.result.metrics[metric];
+          for (let t = 0; t < s.length; t++) s[t] += v[t];
+          c.job = null;
+          if (++c.i === names.length) { acc.cur = null; acc.done++; }
         }
-        draw();
-        if (acc.done < total) timer = setTimeout(more, 16);
+        // drawn once a run is in (an average of none would be a flat line at zero), then at most five times a second
+        if (acc.done >= total || (acc.done && performance.now() - drawn > 200)) { draw(); drawn = performance.now(); }
+        if (acc.done < total) timer = setTimeout(more, 8);
       };
       more();
     };
@@ -223,7 +243,7 @@
     return {
       create(card, cfg) {
         card.innerHTML = `<div class="scene-view"></div>${RL.sceneKit.FORMULA}<div class="scene-chart" hidden></div><div class="scene-foot"><span class="scene-note"></span></div>`;
-        const runOf = runs(cfg), names = Object.keys(cfg.runs || {});
+        const runOf = runs(cfg, card), names = Object.keys(cfg.runs || {});
         const view = new View(card.querySelector(".scene-view"), runOf(names[0]).env, options({}));
         const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
         const { later, stop } = timers(), play = player(later), chart = curves(card.querySelector(".scene-chart"), cfg, runOf);

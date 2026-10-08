@@ -196,6 +196,7 @@
     RL.fig.whenVisible(host, () => {
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (done < runs && performance.now() - t0 < 30) {
           const rng = lab.rng(500 + done);

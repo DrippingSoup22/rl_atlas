@@ -15,8 +15,8 @@
   const deg = (r) => Math.round((r * 180) / Math.PI);
   const sgn = (v, d = 2) => { const t = Math.abs(v).toFixed(d); return `${v < 0 && +t ? "−" : "+"}${t}`; }; // no "−0.00"
   const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
-  function rangeColor(box, lo, hi) {
-    const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
+  function rangeColor(lo, hi) {
+    const mid = RL.token("--v-mid"), low = lo < 0 ? RL.token("--v-neg") : mid, high = hi > 0 ? RL.token("--v-pos") : mid;
     return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
   }
   const num = (v) => (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)).replace("-", "−");
@@ -85,8 +85,8 @@
       if (!d || !(d.w || d.theta)) return;
       const m = RL.lab.controlMap(this.env, d);
       this.d = { ...m, live: d };
-      const valueMode = this.o.map !== "action" && !m.noValue, [lo, hi] = span(m.v), color = rangeColor(this.box, lo, hi);
-      const css = getComputedStyle(this.box), tint = [css.getPropertyValue("--v-neg"), css.getPropertyValue("--v-mid"), css.getPropertyValue("--v-pos")];
+      const valueMode = this.o.map !== "action" && !m.noValue, [lo, hi] = span(m.v), color = rangeColor(lo, hi);
+      const tint = [RL.token("--v-neg"), RL.token("--v-mid"), RL.token("--v-pos")];
       for (let k = 0; k < this.cellEls.length; k++) {
         const a = m.act[k], sure = m.kind === "pg" ? Math.max(0, (m.pr[k] - 1 / 3) * 1.5) : 0.75;
         this.cellEls[k].setAttribute("fill", valueMode ? color(m.v[k]) : `color-mix(in oklab, ${tint[a]} ${Math.round(100 * Math.min(1, sure))}%, ${tint[1]})`);
@@ -112,7 +112,7 @@
         for (const k in a) e.setAttribute(k, a[k].toFixed(1));
       this.torque.setAttribute("x", ex.toFixed(1));
       this.torque.setAttribute("y", (ey - 10).toFixed(1));
-      this.box.style.setProperty("--lift", Math.max(0, Math.min(1, (this.env.tipHeight(s) + 2) / 3)).toFixed(2));
+      this.tip.style.setProperty("--lift", Math.max(0, Math.min(1, (this.env.tipHeight(s) + 2) / 3)).toFixed(2));
       this.at = s;
     }
 

@@ -41,13 +41,23 @@
       stage.apply(steps[i].state, forward);
     }
 
-    // A step becomes active when it crosses a thin band of the screen (lower on phones, below the picture).
-    const band = matchMedia("(max-width: 900px)").matches ? "-72% 0px -24% 0px" : "-45% 0px -50% 0px";
-    const io = new IntersectionObserver((items) => {
-      for (const it of items) if (it.isIntersecting) activate(+it.target.dataset.i);
-    }, { rootMargin: band });
-    els.forEach((el, i) => { io.observe(el); el.addEventListener("click", () => activate(i)); });
+    // The active step is the one whose top has passed a line across the screen, a little above the middle (lower on
+    // phones, below the picture). It is worked out again as the page scrolls, once a frame, so a fast scroll that
+    // jumps over a step lands on the right one, the last included.
+    const phone = matchMedia("(max-width: 900px)").matches;
+    let frame = 0;
+    function follow() {
+      frame = 0;
+      const line = innerHeight * (phone ? 0.74 : 0.475);
+      let k = 0;
+      for (let i = 0; i < els.length && els[i].getBoundingClientRect().top <= line; i++) k = i;
+      activate(k);
+    }
+    const onScroll = () => { frame ||= requestAnimationFrame(follow); };
+    addEventListener("scroll", onScroll, { passive: true });
+    els.forEach((el, i) => el.addEventListener("click", () => activate(i)));
     activate(0);
-    return { destroy() { io.disconnect(); stage.destroy(); } };
+    frame = requestAnimationFrame(follow); // a page that opens scrolled down (going back to it) starts at its step
+    return { destroy() { removeEventListener("scroll", onScroll); cancelAnimationFrame(frame); stage.destroy(); } };
   };
 })(globalThis.RL = globalThis.RL || {});

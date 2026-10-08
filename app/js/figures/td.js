@@ -186,6 +186,7 @@
       let j = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (j < jobs.length && performance.now() - t0 < 30) {
           const [id, alpha, i, r] = jobs[j++], units = r < late ? 500 : 100;

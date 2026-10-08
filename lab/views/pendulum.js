@@ -18,8 +18,8 @@
   const ends = (lo, hi) => [lo < 0 ? "orange" : "gray", hi > 0 ? "blue" : "gray"]; // the colors rangeColor gives them
   const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
   // The colors of a map over the range its values span: the costliest states orange, the best gray (all are below 0).
-  function rangeColor(box, lo, hi) {
-    const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
+  function rangeColor(lo, hi) {
+    const mid = RL.token("--v-mid"), low = lo < 0 ? RL.token("--v-neg") : mid, high = hi > 0 ? RL.token("--v-pos") : mid;
     return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
   }
 
@@ -87,7 +87,7 @@
       if (!d || !d.v) return;
       this.d = d;
       RL.netStrip.draw(this.grid, d.net, d.units); // the network strip under the bars (runs of lab/deep/)
-      const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action";
+      const [lo, hi] = span(d.v), color = rangeColor(lo, hi), valueMode = this.o.map !== "action";
       for (let k = 0; k < this.cellEls.length; k++) {
         const mu = d.mean ? d.mean[k] : 0;
         this.cellEls[k].setAttribute("fill", valueMode ? color(d.v[k]) : `color-mix(in oklab, var(--pol) ${Math.round(Math.min(1, Math.abs(mu) / 2) * 70)}%, var(--v-mid))`);

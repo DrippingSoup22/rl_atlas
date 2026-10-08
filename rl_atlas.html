@@ -400,7 +400,8 @@ html.vt-side::view-transition-new(root) { animation: vt-fade-in 0.3s ease both; 
 .metro .st text { transition: transform 0.9s var(--ease); }
 .metro .st.dim { opacity: 0.13; }
 .metro .st.out { opacity: 0; pointer-events: none; }
-.metro .st .dot { fill: var(--surface); stroke: var(--c); stroke-width: 3; transition: r 0.2s var(--spring), fill 0.2s, stroke-width 0.2s; }
+.metro .st .dot { fill: var(--surface); stroke: var(--c); stroke-width: 3; transform-box: fill-box; transform-origin: center;
+  transition: r 0.2s var(--spring), fill 0.2s, stroke-width 0.2s, transform 0.22s var(--spring); }
 .metro .st.algorithm .dot { stroke-width: 3.5; }
 .metro .st text { font: 500 12.5px var(--font); fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
 .metro .st.algorithm text { font-weight: 700; }
@@ -408,8 +409,9 @@ html.vt-side::view-transition-new(root) { animation: vt-fade-in 0.3s ease both; 
 .metro .st.planned text { fill: var(--ink-3); font-weight: 500; }
 .metro .st.visited .dot { fill: var(--c); }
 .metro .st .halo { fill: var(--c); opacity: 0; transition: opacity 0.2s; transform-box: fill-box; transform-origin: center; }
-/* Pointing at a station lights it, and its lineage, in the tree only: on the metro and unified views, sweeping the
-   cursor across many stations would make the whole map flicker. */
+/* Pointing at a station grows its dot, so that it is easier to hit; nothing else on the map changes, so sweeping the
+   cursor across many stations does not make the map flicker. (Touch screens have no pointing: no growing there.) */
+@media (hover: hover) { .metro .st:hover .dot { transform: scale(1.45); } }
 .metro .st:focus-visible .halo { opacity: 0.18; }
 .metro .st.next .halo { animation: station-pulse 1.8s ease-out infinite; }
 .metro .st.arrived .halo { animation: station-pulse 0.9s ease-out 2; }
@@ -1011,9 +1013,14 @@ a.ref:hover { text-decoration-color: var(--ink); }
 /* The Lab, and the views it shares with the stories: grid, arms (bandits), chain (random walk), cards (Blackjack),
    graph (maximization bias), the charts, the filmstrip and the sandbox. */
 
-.lab { max-width: 1400px; margin: 0 auto; padding: 22px 24px 60px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.lab { max-width: 1880px; margin: 0 auto; padding: 22px 24px 60px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .lab-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; animation: rise-in 0.6s var(--ease) both; }
-.lab-title h1 { font-size: clamp(24px, 3vw, 34px); letter-spacing: -0.02em; margin: 6px 0 4px; }
+/* the knobs sit beside the title and wrap inside their card, rather than taking a row of their own above the stages */
+.lab-title { flex: 1 1 340px; min-width: 0; }
+.lab-title h1 .nobr { white-space: nowrap; }
+.lab-head > .knobs { flex: 0 1 auto; max-width: 62%; }
+@media (max-width: 900px) { .lab-head > .knobs { max-width: 100%; } }
+.lab-title h1 { font-size: clamp(22px, 2.3vw, 32px); letter-spacing: -0.02em; margin: 6px 0 4px; text-wrap: balance; }
 .lab-title .intro { margin: 0; max-width: 64ch; color: var(--ink-2); }
 .lab-title .intro.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .intro-more { margin: 2px 0 0; padding: 0; border: 0; background: none; cursor: pointer; font: 600 13px var(--font); color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
@@ -1071,6 +1078,26 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .lab-side > .pseudo-panel .pseudo-host { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; position: relative; border-radius: 10px; }
 .lab-side > .live { flex: 0 1 auto; min-height: 96px; overflow-y: auto; overscroll-behavior: contain; }
 .lab-side > * { min-width: 0; }
+/* The column folds away for a bigger simulation: the arrow in the pseudocode's corner folds it, a slim tab at the edge
+   brings it back. (Narrow screens put the column under the stages instead: nothing to fold there.) */
+.lab-side > .pseudo-panel { position: relative; }
+.lab-side > .pseudo-panel > h3 { padding-right: 26px; }
+.side-fold { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ink-3); cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.side-fold:hover, .side-fold:focus-visible { background: var(--surface-2); color: var(--ink); }
+.side-fold svg, .side-open svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.side-open { display: none; }
+@media (min-width: 1101px) {
+  .lab[data-side="folded"] .lab-main { grid-template-columns: minmax(0, 1fr) 40px; }
+  .lab[data-side="folded"] .lab-side > .panel { display: none; }
+  .lab[data-side="folded"] .side-open { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 40px; padding: 12px 0 14px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); color: var(--ink-3);
+    font: 800 11px var(--font); letter-spacing: 0.08em; text-transform: uppercase; animation: fade-in 0.3s ease both; transition: color 0.2s; }
+  .lab[data-side="folded"] .side-open:hover, .lab[data-side="folded"] .side-open:focus-visible { color: var(--ink); }
+  .side-open span { writing-mode: vertical-rl; transform: rotate(180deg); }
+  .lab[data-side="open"] .lab-side > .panel { animation: fade-in 0.3s ease both; }
+}
+@media (max-width: 1100px) { .side-fold { display: none; } }
 .panel { padding: 14px 16px; }
 .panel h3, .chart-head h3, .chart-box h3, .film h3 { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 8px; }
 .as-is { text-transform: none; letter-spacing: 0.02em; } /* names like "ε = 0.1": uppercase would turn ε into Ε */
@@ -1087,8 +1114,10 @@ a.ref:hover { text-decoration-color: var(--ink); }
 /* the line the simulation is on: lit in the racer's color, with a flash each time the simulation reaches it */
 .panel .pseudo li.on { background: color-mix(in oklab, var(--k-focus, var(--ink)) 15%, transparent); box-shadow: inset 4px 0 0 var(--k-focus, var(--ink)); }
 .panel .pseudo li.on.flash { animation: line-flash 0.7s var(--ease) both; }
+.panel .pseudo li.on.flash2 { animation: line-flash2 0.7s var(--ease) both; } /* the same, under another name: a restart */
 @keyframes line-flash { from { background: color-mix(in oklab, var(--k-focus, var(--ink)) 34%, transparent); } }
-@media (prefers-reduced-motion: reduce) { .panel .pseudo li.on.flash { animation: none; } }
+@keyframes line-flash2 { from { background: color-mix(in oklab, var(--k-focus, var(--ink)) 34%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .panel .pseudo li.on.flash, .panel .pseudo li.on.flash2 { animation: none; } }
 .pseudo-diff { margin: 6px 0 0; font-size: 12px; }
 .live-sym, .live-num { min-height: 30px; font-size: 0.86em; overflow-x: auto; overflow-y: hidden; }
 .live-num:empty { display: none; }
@@ -1386,6 +1415,8 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .gridview[data-pace] .bot { transition-duration: 0.07s; }
 .gridview[data-pace=""] .bot { transition-duration: 0.2s; }
 .gridview .trail.draw, .gridview .greedy.draw { stroke-dasharray: 1; animation: line-in 1.1s var(--ease) both; }
+.gridview .trail.draw2, .gridview .greedy.draw2 { stroke-dasharray: 1; animation: line-in2 1.1s var(--ease) both; } /* a restart */
+@keyframes line-in2 { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 .gridview .bot { transition: transform 0.2s var(--ease), opacity 0.3s; }
 .gridview .bot.gone, .gridview .bot.sunk { opacity: 0; }
 .gridview .bot.instant { transition: none; }
@@ -1411,13 +1442,17 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .gridview .tri.glow { stroke: var(--ink); stroke-width: 3; animation: tri-glow 1.3s ease-in-out infinite; }
 @keyframes tri-glow { 50% { stroke-width: 5; } }
 .gridview .tri.hinted { animation: tri-hint 0.5s ease-out; }
+.gridview .tri.hinted2 { animation: tri-hint2 0.5s ease-out; } /* the same, under another name: a restart */
 @keyframes tri-hint { from { stroke: var(--ink); stroke-width: 4; } }
+@keyframes tri-hint2 { from { stroke: var(--ink); stroke-width: 4; } }
 .gridview .jumps { pointer-events: none; }
 .gridview .wind text { font-size: 15px; fill: var(--ink-3); letter-spacing: -2px; }
 .gridview .jump { fill: none; stroke: var(--rew); stroke-width: 2.5; stroke-linecap: round; }
 .gridview .jump-tip { fill: var(--rew); }
 .gridview .jump-r { font: 800 13px var(--font); fill: var(--rew-ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; }
 .gridview .tile .bg { transition: fill 0.45s var(--ease), stroke-width 0.25s; }
+/* replayed at ten units a second or more, each frame has new values: nothing fades from one to the next */
+.gridview[data-pace="rate"] .tri, .gridview[data-pace="rate"] .bg, .gridview[data-pace="rate"] .arrow, .gridview[data-pace="rate"] .fog, .gridview[data-pace="rate"] .trace > * { transition: none; }
 .gridview .tile.focus .bg { stroke: var(--ink); stroke-width: 3.5; }
 .gridview .tile.next .bg { stroke: var(--ink-2); stroke-width: 2.5; stroke-dasharray: 5 4; }
 .gridview .paint { opacity: 0.85; }
@@ -1616,7 +1651,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .carview .phase-path { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; }
 .carview .phase-dot { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
 .surface3d { position: relative; width: 100%; }
-.surface3d canvas { display: block; width: 100%; cursor: grab; touch-action: none; }
+.surface3d canvas { display: block; width: 100%; height: auto; aspect-ratio: 1 / 0.78; cursor: grab; touch-action: none; }
 .surface3d canvas:active { cursor: grabbing; }
 .surface3d .surface-hint { position: absolute; right: 6px; top: 2px; font-size: 11px; color: var(--ink-3); pointer-events: none; transition: opacity 0.4s; }
 .surface3d.turned .surface-hint { opacity: 0; }
@@ -1764,9 +1799,13 @@ a.ref:hover { text-decoration-color: var(--ink); }
 }
 @media (max-width: 640px) {
   .lab { padding: 14px 12px 40px; }
-  .pos { min-width: 0; margin-left: auto; font-size: 12px; }
-  .transport { gap: 6px; padding: 8px 10px; flex-wrap: wrap; }
-  .transport .scrub { order: 9; flex-basis: 100%; min-width: 0; } /* the slider takes its own row under the buttons */
+  /* Two rows: the buttons and the settings, then the slider with the count beside it */
+  .transport { gap: 6px 8px; padding: 8px 10px; flex-wrap: wrap; }
+  .transport .speed { flex: 1 1 90px; min-width: 0; max-width: 220px; }
+  .transport .settings-btn { order: 5; margin-left: auto; }
+  .transport::before { content: ""; order: 8; flex-basis: 100%; height: 0; margin-bottom: -6px; }
+  .transport .scrub { order: 9; flex: 1 1 100px; min-width: 0; }
+  .pos { order: 10; min-width: 0; font-size: 12px; }
 }
 
 /* ---- Taxi ---- */
@@ -1847,6 +1886,19 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   const asIs = (s) => esc(s).replace(/\S*[\u0370-\u03ff‖√∇|]\S*/g, (w) => `<span class="as-is">${w}</span>`);
   const warn = (...args) => console.warn("[RL Atlas]", ...args);
   const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // When the page last scrolled. Work done in the background (many runs averaged for a chart, a story's runs) waits
+  // while the reader scrolls, so that the page keeps up with the finger, and goes on when the reading does.
+  let scrolledAt = -1e9;
+  addEventListener("scroll", () => { scrolledAt = performance.now(); }, { passive: true, capture: true });
+  const scrolling = () => performance.now() - scrolledAt < 250;
+  // A design token (a custom property of the page), read once per theme: reading a computed style brings every style
+  // up to date first, which a view drawing many frames a second cannot afford each time.
+  let tokenTheme = null, tokens = {};
+  const token = (name) => {
+    const root = document.documentElement, theme = `${root.dataset.theme || ""} ${matchMedia("(prefers-color-scheme: dark)").matches}`;
+    if (theme !== tokenTheme) { tokenTheme = theme; tokens = {}; }
+    return (tokens[name] ??= getComputedStyle(root).getPropertyValue(name).trim());
+  };
   function h(html) {
     const t = document.createElement("template");
     t.innerHTML = html.trim();
@@ -1938,7 +1990,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     hide() { tipEl?.remove(); tipEl = null; },
   };
 
-  Object.assign(RL, { $, $$, h, esc, asIs, warn, reducedMotion, station, entry, stations, order, lineColor, store, hideCard, tip });
+  Object.assign(RL, { $, $$, h, esc, asIs, warn, reducedMotion, token, scrolling, station, entry, stations, order, lineColor, store, hideCard, tip });
   RL.views = RL.views || {};
   RL.demos = RL.demos || {};
 })(globalThis.RL = globalThis.RL || {});
@@ -2826,11 +2878,13 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   // ---- the 1000-state random walk ----
   // States 1 … 1000 between two exits (0 pays −1, 1001 pays +1); the walk starts at 500. Each step goes left or right
   // at random, by 1 to 100 states, all equally likely; a jump past the end leaves by that exit.
+  const solved = new Map(); // each walk's fixed points, worked out once: every run of a bench makes its own walk
   lab.longWalk = function ({ n = 1000, reach = 100 } = {}) {
     const nS = n + 2, both = [0, 1], none = [], start = n / 2;
     // The value of walking at random and the share of time spent in each state, both worked out from the rules.
     // Each is a fixed point of "average over the 2·reach states a jump can reach", computed with running sums.
-    let truth = null, mu = null;
+    if (!solved.has(`${n} ${reach}`)) solved.set(`${n} ${reach}`, {});
+    const known = solved.get(`${n} ${reach}`);
     const window = (V, s, ends) => {
       // the sum of V over the states within reach of s (s itself left out), with the exits' worth beyond each end
       const lo = s - reach, hi = s + reach;
@@ -2870,17 +2924,17 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       },
       coords: (s) => [(s - 0.5) / n],
       // The true values (undiscounted): the expected exit payment from each state.
-      truth: () => (truth ||= fixedPoint(() => 0, [-1, 1])),
+      truth: () => (known.truth ||= fixedPoint(() => 0, [-1, 1])),
       // μ(s): the share of all steps spent in s. Visits to s are the starts there plus the arrivals from each state within
       // reach, each with chance 1 / (2·reach); dividing by their total (the average length of an episode) gives shares.
       mu() {
-        if (mu) return mu;
+        if (known.mu) return known.mu;
         const eta = fixedPoint((s) => (s === start ? 1 : 0), null);
         let total = 0;
         for (let s = 1; s <= n; s++) total += eta[s];
-        mu = eta.map((v) => v / total);
+        const mu = eta.map((v) => v / total);
         mu.steps = total; // the average number of steps in an episode
-        return mu;
+        return (known.mu = mu);
       },
     };
     return env;
@@ -3637,9 +3691,13 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     // Per racer, from the seeds done so far: scores, wins, stuck runs, and per kept measure its band (quartiles,
     // median) and its mean.
+    // Kept until another seed is done (the charts and the odds both ask). Thousands of seeds make a band of hundreds
+    // of points slow to sort, so each column is sorted as numbers, in a typed array.
     stats() {
       const n = this.seedsDone;
-      return this.racers.map((_, ri) => {
+      if (this.lastStats?.n === n) return this.lastStats.stats;
+      const col = new Float64Array(n);
+      const stats = this.racers.map((_, ri) => {
         const done = this.results[ri].slice(0, n), scores = done.map((d) => d.score);
         const band = {};
         for (const k of this.keys) {
@@ -3647,15 +3705,21 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
           if (!lines.length) continue;
           const len = lines[0].length, lo = new Float32Array(len), mid = new Float32Array(len), hi = new Float32Array(len), mean = new Float32Array(len);
           for (let b = 0; b < len; b++) {
-            const col = lines.map((l) => l[b]).filter(Number.isFinite).sort((x, y) => x - y);
-            lo[b] = quantile(col, 0.25); mid[b] = quantile(col, 0.5); hi[b] = quantile(col, 0.75);
-            mean[b] = col.length ? col.reduce((x, y) => x + y, 0) / col.length : NaN;
+            let m = 0;
+            for (const l of lines) if (Number.isFinite(l[b])) col[m++] = l[b];
+            const sorted = col.subarray(0, m).sort();
+            lo[b] = quantile(sorted, 0.25); mid[b] = quantile(sorted, 0.5); hi[b] = quantile(sorted, 0.75);
+            let sum = 0;
+            for (let j = 0; j < m; j++) sum += sorted[j];
+            mean[b] = m ? sum / m : NaN;
           }
           band[k] = { lo, mid, hi, mean, units: this.units };
         }
         const sorted = scores.filter(Number.isFinite).sort((x, y) => x - y);
         return { n, scores, wins: done.filter((d) => d.ok).length, stuck: done.filter((d) => d.stopped).length, median: quantile(sorted, 0.5), band };
       });
+      this.lastStats = { n, stats };
+      return stats;
     }
 
     // The typical seed: the median ending. For a race, the seed whose ranks are closest, summed over the racers, to
@@ -6827,7 +6891,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
           this.spark(ev.s, ev.a ?? -1, "trc");
           return 0;
         case "plan": { // planning: remembered moves replayed and learned from, in the order they were replayed
-          const list = ev.list.slice(0, 60), gap = ev.ordered ? 110 : 600 / Math.max(10, list.length);
+          // at the quick paces a plan comes every few frames: a handful of its updates each, or the sparks pile up
+          const list = ev.list.slice(0, this.pace ? (this.pace === "faster" ? 4 : 10) : 60), gap = ev.ordered ? 110 : 600 / Math.max(10, list.length);
           list.forEach((u, k) => this.spark(u.s, u.a, "dream", k * gap));
           if (line && ev.list.length) this.pop(ev.s, `${ev.list.length} planning ${ev.list.length === 1 ? "update" : "updates"}`, "plan");
           return ev.ordered ? Math.min(2200, list.length * gap) : 0;
@@ -6913,7 +6978,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (w) return w;
       w = this.workers[k] = { path: [] };
       this.svg.classList.add("multi"); // several workers: each trail in its own color, the first one's too
-      w.trailEl = el("path", { class: "trail worker", style: `--wc: var(--w${(k % 8) + 1})` }, this.gTrail);
+      w.trailEl = el("path", { class: "trail worker", pathLength: 1, style: `--wc: var(--w${(k % 8) + 1})` }, this.gTrail);
       w.bot = el("g", { class: "bot worker", style: `--wc: var(--w${(k % 8) + 1})` }, this.gAgent);
       w.body = el("g", { class: "bot-body" }, w.bot);
       el("circle", { class: "bot-head", r: 11 }, w.body);
@@ -6926,9 +6991,22 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
     _workerPut(w, s, instant) {
       const [x, y] = this.center(s);
-      if (instant) w.bot.classList.add("instant");
+      if (instant) this._instant(w.bot);
       w.bot.style.transform = `translate(${x}px, ${y}px)`;
-      if (instant) { w.bot.getBoundingClientRect(); w.bot.classList.remove("instant"); }
+    }
+    // A jump with no glide: the bot's transition is off until the frame after next, when its new place has been drawn.
+    // (Turning it back on at once would need the page laid out first, for every bot at every jump: a fast replay jumps
+    // all of them many times a second.)
+    _instant(bot) {
+      bot.classList.add("instant");
+      (this.jumped ||= new Set()).add(bot);
+      this.jumpFrame ||= requestAnimationFrame(() => {
+        this.jumpFrame = requestAnimationFrame(() => {
+          this.jumpFrame = 0;
+          for (const b of this.jumped) b.classList.remove("instant");
+          this.jumped.clear();
+        });
+      });
     }
     _workerEvent(ev) {
       const w = this._worker(ev.w);
@@ -7000,9 +7078,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     _put(s, instant) {
       const [x, y] = this.center(s);
-      if (instant) this.bot.classList.add("instant");
+      if (instant) this._instant(this.bot);
       this.bot.style.transform = `translate(${x}px, ${y}px)`;
-      if (instant) { this.bot.getBoundingClientRect(); this.bot.classList.remove("instant"); }
       this.at = s;
     }
 
@@ -7089,11 +7166,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     hint(s, a) {
       const t = this.tris[s]?.[a];
       if (!t) return;
-      t.classList.remove("hinted");
-      t.getBoundingClientRect();
-      t.classList.add("hinted");
+      // chosen again while it still glows: its twin animation, under another name, starts it over without a layout
+      const again = t.classList.contains("hinted");
+      t.classList.toggle("hinted", !again);
+      t.classList.toggle("hinted2", again);
       clearTimeout(t.hintTimer);
-      t.hintTimer = setTimeout(() => t.classList.remove("hinted"), 500);
+      t.hintTimer = setTimeout(() => t.classList.remove("hinted", "hinted2"), 500);
     }
 
     // Keep these (state, action) triangles glowing until the next call.
@@ -7109,8 +7187,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     _draw(pathEl, states, animate) {
       pathEl.setAttribute("d", states ? this._line(states) : "");
       pathEl.classList.toggle("long", !!states && states.length > 150); // a long wander is drawn fainter, to keep the tiles readable
-      pathEl.classList.remove("draw");
-      if (states && animate && !RL.reducedMotion()) { pathEl.getBoundingClientRect(); pathEl.classList.add("draw"); }
+      // drawn in again: the twin of its animation, under another name, starts it over (without a layout first)
+      const again = pathEl.classList.contains("draw");
+      pathEl.classList.remove("draw", "draw2");
+      if (states && animate && !RL.reducedMotion()) pathEl.classList.add(again ? "draw2" : "draw");
     }
 
     _line(states) {
@@ -8304,10 +8384,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
   const rgb = (c) => `rgb(${c.map((v) => Math.round(Math.max(0, Math.min(255, v)))).join(" ")})`;
 
-  // The colors the theme gives the low and high ends of the surface, read from the page each time it is drawn.
-  function palette(from = document.documentElement, high = "--v-neg") {
-    const cs = getComputedStyle(from), get = (k) => hex(cs.getPropertyValue(k) || "#888");
-    return { lo: get("--v-mid"), hi: get(high), ink: cs.getPropertyValue("--ink").trim(), ink3: cs.getPropertyValue("--ink-3").trim(), line: cs.getPropertyValue("--line-2").trim(), surface: cs.getPropertyValue("--surface").trim() };
+  // The colors the theme gives the low and high ends of the surface, and its lines (the theme's, as it is now).
+  function palette(high = "--v-neg") {
+    const get = (k) => hex(RL.token(k) || "#888");
+    return { lo: get("--v-mid"), hi: get(high), ink: RL.token("--ink"), ink3: RL.token("--ink-3"), line: RL.token("--line-2"), surface: RL.token("--surface") };
   }
 
   // The camera: azimuth turns the floor, elevation tilts it toward the viewer. Points are in the unit box
@@ -8377,10 +8457,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     // The heights: Z[j·nx + i] at x = x-range at i/(nx−1), y at j/(ny−1). zMax: the top of the scale.
-    set(Z, nx, ny, zMax) { this.Z = Z; this.nx = nx; this.ny = ny; this.zMax = zMax; this.draw(); }
+    set(Z, nx, ny, zMax) { this.Z = Z; this.nx = nx; this.ny = ny; this.zMax = zMax; this.redraw(); }
     // A path of points [x, y] in the data's units; its heights are read off the surface.
-    path(pts) { this.pathPts = pts || []; this.draw(); }
-    dot(p) { this.dotAt = p; this.draw(); }
+    path(pts) { this.pathPts = pts || []; this.redraw(); }
+    dot(p) { this.dotAt = p; this.redraw(); }
+    // New heights, the path and the dot often change together: the surface is drawn once for them, at the next frame
+    redraw() { this.frame ||= requestAnimationFrame(() => { this.frame = 0; this.draw(); }); }
 
     // Height of the surface at a point in data units, by bilinear interpolation.
     heightAt(x, y) {
@@ -8393,18 +8475,17 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
     draw() {
       const { canvas, ctx, o } = this;
-      const w = this.box.clientWidth, h = Math.round(w * 0.78);
+      const w = this.box.clientWidth, h = Math.round(w * 0.78); // the canvas's shape, set in the CSS: it reflows at once
       if (!w) return;
       const dpr = window.devicePixelRatio || 1;
       if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
         canvas.width = Math.round(w * dpr);
         canvas.height = Math.round(h * dpr);
-        canvas.style.height = `${h}px`;
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       if (!this.Z) return;
-      const pal = palette(this.box, o.high), project = camera(this.az, this.elev), { S, cx, cy } = fit(w, h, this.elev, o.zs);
+      const pal = palette(o.high), project = camera(this.az, this.elev), { S, cx, cy } = fit(w, h, this.elev, o.zs);
       const scr = (p) => [cx + p[0] * S, cy - p[1] * S];
       const items = tiles(this.Z, this.nx, this.ny, this.zMax, project, pal, o.zs).map((t) => ({ ...t, kind: "tile" }));
       // the path, lifted a hair above the surface, sorted in with the tiles so hills can hide it
@@ -8508,11 +8589,11 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       ctx.fillText(o.zLabel || "", top[0] + 6, top[1] - 6);
     }
 
-    destroy() { this.ro.disconnect(); this.box.remove(); }
+    destroy() { cancelAnimationFrame(this.frame); this.ro.disconnect(); this.box.remove(); }
 
     // A still drawing of a surface as SVG, from the default angle: for filmstrip frames and figures.
     static svg(Z, nx, ny, zMax, { w = 200, h = 130, az = -0.62, elev = 0.5, zs = 0.62, high = "--v-neg", cls = "thumb-surface" } = {}) {
-      const pal = palette(document.documentElement, high), project = camera(az, elev), { S, cx, cy } = fit(w, h, elev, zs, 3, 0);
+      const pal = palette(high), project = camera(az, elev), { S, cx, cy } = fit(w, h, elev, zs, 3, 0);
       const list = tiles(Z, nx, ny, zMax, project, pal, zs).sort((p, q) => q.depth - p.depth);
       const pt = (p) => `${(cx + p[0] * S).toFixed(1)},${(cy - p[1] * S).toFixed(1)}`;
       return `<svg class="${cls}" viewBox="0 0 ${w} ${h}">${list.map((t) => `<polygon points="${t.pts.map(pt).join(" ")}" fill="${t.color}" stroke="${t.color}" stroke-width="0.4"/>`).join("")}</svg>`;
@@ -8640,7 +8721,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.zMax = zMax;
       if (this.surface) this.surface.set(Z, N, N, zMax);
       else if (this.cellEls) {
-        const lo = getComputedStyle(this.box).getPropertyValue("--v-mid"), hi = getComputedStyle(this.box).getPropertyValue("--v-neg");
+        const lo = RL.token("--v-mid"), hi = RL.token("--v-neg");
         for (let k = 0; k < Z.length; k++) this.cellEls[k].setAttribute("fill", `color-mix(in oklab, ${hi} ${Math.round(100 * Math.min(1, Z[k] / zMax) ** 0.85)}%, ${lo})`);
       }
       const critic = !d.theta || d.w.some((x) => x !== 0); // a policy with no critic (REINFORCE) expects nothing
@@ -9865,24 +9946,39 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
    the grid of the drawing's bars (lab/views/readouts.js), so that its words keep their size in a narrow pane. */
 (function (RL) {
   "use strict";
+  const off = (relu, share) => relu && share < 0.005;
+  const marks = (relu, f) => f.reduce((k, share) => k + (relu ? off(relu, share) : share > 0.5), 0);
+  const tip = (relu, i, n, marked) => (relu
+    ? `Layer ${i + 1}: ${n} units, each shaded by how often it fires over the map's states. ${marked} never fire${marked === 1 ? "s" : ""} (dead: no gradient reaches ${marked === 1 ? "it" : "them"}, so ${marked === 1 ? "it stays" : "they stay"} dead).`
+    : `Layer ${i + 1}: ${n} units, each shaded by how often it is saturated (|h| > 0.97) over the map's states. ${marked} ${marked === 1 ? "is" : "are"} saturated on most states, where ${marked === 1 ? "its" : "their"} gradient nearly vanishes.`);
   RL.netStrip = {
     // Draw net (sizes, act, of) and units (per hidden layer, a share per unit) at the end of grid, replacing the last.
+    // The same network at another snapshot only reshades its cells and counts: a run played fast does it every frame.
     draw(grid, net, units) {
+      const key = net && units ? `${net.of} ${net.sizes} ${net.act} ${units.map((f) => f.length)}` : "";
+      const rows = grid.querySelectorAll(".net-row");
+      if (key && key === grid.dataset.net && rows.length === units.length) return this.reshade(rows, net, units);
+      grid.dataset.net = key;
       grid.querySelectorAll(".net").forEach((e) => e.remove());
       if (!net || !units) return;
       const relu = net.act === "relu";
       grid.appendChild(RL.h('<div class="net net-title"></div>')).textContent = `${net.of}: ${net.sizes.join(" → ")} · ${relu ? "ReLU" : "tanh"}`;
       units.forEach((f, i) => {
-        let marked = 0, cells = "";
-        for (const share of f) {
-          const off = relu && share < 0.005;
-          if (relu ? off : share > 0.5) marked++;
-          cells += off ? '<i class="dead"></i>' : `<i style="--s: ${Math.round(100 * share)}%"></i>`;
-        }
-        const n = f.length, row = grid.appendChild(RL.h(`<div class="net ctl-row net-row${relu ? "" : " tanh"}"><span class="bar-name">layer ${i + 1}</span><span class="cells">${cells}</span><span class="bar-num">${marked} ${relu ? "dead" : "saturated"}</span></div>`));
-        row.title = relu
-          ? `Layer ${i + 1}: ${n} units, each shaded by how often it fires over the map's states. ${marked} never fire${marked === 1 ? "s" : ""} (dead: no gradient reaches ${marked === 1 ? "it" : "them"}, so ${marked === 1 ? "it stays" : "they stay"} dead).`
-          : `Layer ${i + 1}: ${n} units, each shaded by how often it is saturated (|h| > 0.97) over the map's states. ${marked} ${marked === 1 ? "is" : "are"} saturated on most states, where ${marked === 1 ? "its" : "their"} gradient nearly vanishes.`;
+        const cells = Array.from(f, (share) => (off(relu, share) ? '<i class="dead"></i>' : `<i style="--s: ${Math.round(100 * share)}%"></i>`)).join(""), marked = marks(relu, f);
+        const row = grid.appendChild(RL.h(`<div class="net ctl-row net-row${relu ? "" : " tanh"}"><span class="bar-name">layer ${i + 1}</span><span class="cells">${cells}</span><span class="bar-num">${marked} ${relu ? "dead" : "saturated"}</span></div>`));
+        row.title = tip(relu, i, f.length, marked);
+      });
+    },
+    reshade(rows, net, units) {
+      const relu = net.act === "relu";
+      units.forEach((f, i) => {
+        const cells = rows[i].querySelector(".cells").children, marked = marks(relu, f), num = rows[i].querySelector(".bar-num"), text = `${marked} ${relu ? "dead" : "saturated"}`;
+        f.forEach((share, j) => {
+          const dead = off(relu, share), s = dead ? "" : `${Math.round(100 * share)}%`, c = cells[j];
+          c.classList.toggle("dead", dead);
+          if (c.style.getPropertyValue("--s") !== s) c.style.setProperty("--s", s);
+        });
+        if (num.textContent !== text) { num.textContent = text; rows[i].title = tip(relu, i, f.length, marked); }
       });
     },
   };
@@ -9911,8 +10007,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   // The colors of a map, over the range its values span, so that small differences show even when every state is worth
   // about the same: the lowest gray (orange below zero), the highest blue (gray below zero).
   const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
-  function rangeColor(box, lo, hi) {
-    const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
+  function rangeColor(lo, hi) {
+    const mid = RL.token("--v-mid"), low = lo < 0 ? RL.token("--v-neg") : mid, high = hi > 0 ? RL.token("--v-pos") : mid;
     return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
   }
   // A live snapshot (weights) as a recording's map: v, and act (0/1, action values) or mean (P(right), a policy).
@@ -10002,8 +10098,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.d = d;
       this._net(d);
       this.kind = d.kind;
-      this.box.querySelector(".map-head b").textContent = d.live ? "What the learner thinks" : "What the network thinks";
-      const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action" && !d.noValue;
+      const head = this.box.querySelector(".map-head b"), title = d.live ? "What the learner thinks" : "What the network thinks";
+      if (head.textContent !== title) head.textContent = title; // unchanged, it is left alone: nothing to lay out again
+      const [lo, hi] = span(d.v), color = rangeColor(lo, hi), valueMode = this.o.map !== "action" && !d.noValue;
       for (let k = 0; k < this.cellEls.length; k++) {
         const pr = d.act ? d.act[k] : d.mean ? d.mean[k] : 0.5; // 1 or 0: right or left (DQN); P(right) (a policy)
         this.cellEls[k].setAttribute("fill", valueMode ? color(d.v[k]) : `color-mix(in oklab, var(--pol) ${Math.round(Math.abs(pr - 0.5) * 140)}%, var(--v-mid))`);
@@ -10026,8 +10123,6 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       this.cart.setAttribute("transform", `translate(${this.tx(s[0]).toFixed(1)} ${TY - 6})`);
       this.pole.setAttribute("x2", (L * Math.sin(s[2])).toFixed(1));
       this.pole.setAttribute("y2", (-16 - L * Math.cos(s[2])).toFixed(1));
-      const lean = Math.abs(s[2]) / this.env.thetaMax;
-      this.box.style.setProperty("--lean", Math.min(1, lean).toFixed(2));
       this.fan.setAttribute("d", this._fan(s[0]));
       this.at = s;
     }
@@ -10172,8 +10267,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   const deg = (r) => Math.round((r * 180) / Math.PI);
   const sgn = (v, d = 2) => { const t = Math.abs(v).toFixed(d); return `${v < 0 && +t ? "−" : "+"}${t}`; }; // no "−0.00"
   const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
-  function rangeColor(box, lo, hi) {
-    const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
+  function rangeColor(lo, hi) {
+    const mid = RL.token("--v-mid"), low = lo < 0 ? RL.token("--v-neg") : mid, high = hi > 0 ? RL.token("--v-pos") : mid;
     return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
   }
   const num = (v) => (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)).replace("-", "−");
@@ -10242,8 +10337,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (!d || !(d.w || d.theta)) return;
       const m = RL.lab.controlMap(this.env, d);
       this.d = { ...m, live: d };
-      const valueMode = this.o.map !== "action" && !m.noValue, [lo, hi] = span(m.v), color = rangeColor(this.box, lo, hi);
-      const css = getComputedStyle(this.box), tint = [css.getPropertyValue("--v-neg"), css.getPropertyValue("--v-mid"), css.getPropertyValue("--v-pos")];
+      const valueMode = this.o.map !== "action" && !m.noValue, [lo, hi] = span(m.v), color = rangeColor(lo, hi);
+      const tint = [RL.token("--v-neg"), RL.token("--v-mid"), RL.token("--v-pos")];
       for (let k = 0; k < this.cellEls.length; k++) {
         const a = m.act[k], sure = m.kind === "pg" ? Math.max(0, (m.pr[k] - 1 / 3) * 1.5) : 0.75;
         this.cellEls[k].setAttribute("fill", valueMode ? color(m.v[k]) : `color-mix(in oklab, ${tint[a]} ${Math.round(100 * Math.min(1, sure))}%, ${tint[1]})`);
@@ -10269,7 +10364,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         for (const k in a) e.setAttribute(k, a[k].toFixed(1));
       this.torque.setAttribute("x", ex.toFixed(1));
       this.torque.setAttribute("y", (ey - 10).toFixed(1));
-      this.box.style.setProperty("--lift", Math.max(0, Math.min(1, (this.env.tipHeight(s) + 2) / 3)).toFixed(2));
+      this.tip.style.setProperty("--lift", Math.max(0, Math.min(1, (this.env.tipHeight(s) + 2) / 3)).toFixed(2));
       this.at = s;
     }
 
@@ -10400,8 +10495,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   const ends = (lo, hi) => [lo < 0 ? "orange" : "gray", hi > 0 ? "blue" : "gray"]; // the colors rangeColor gives them
   const span = (v) => { let lo = Infinity, hi = -Infinity; for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return [lo, hi]; };
   // The colors of a map over the range its values span: the costliest states orange, the best gray (all are below 0).
-  function rangeColor(box, lo, hi) {
-    const css = getComputedStyle(box), mid = css.getPropertyValue("--v-mid"), low = lo < 0 ? css.getPropertyValue("--v-neg") : mid, high = hi > 0 ? css.getPropertyValue("--v-pos") : mid;
+  function rangeColor(lo, hi) {
+    const mid = RL.token("--v-mid"), low = lo < 0 ? RL.token("--v-neg") : mid, high = hi > 0 ? RL.token("--v-pos") : mid;
     return (v) => `color-mix(in oklab, ${high} ${Math.round(100 * Math.max(0, Math.min(1, (v - lo) / Math.max(1e-9, hi - lo))))}%, ${low})`;
   }
 
@@ -10469,7 +10564,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (!d || !d.v) return;
       this.d = d;
       RL.netStrip.draw(this.grid, d.net, d.units); // the network strip under the bars (runs of lab/deep/)
-      const [lo, hi] = span(d.v), color = rangeColor(this.box, lo, hi), valueMode = this.o.map !== "action";
+      const [lo, hi] = span(d.v), color = rangeColor(lo, hi), valueMode = this.o.map !== "action";
       for (let k = 0; k < this.cellEls.length; k++) {
         const mu = d.mean ? d.mean[k] : 0;
         this.cellEls[k].setAttribute("fill", valueMode ? color(d.v[k]) : `color-mix(in oklab, var(--pol) ${Math.round(Math.min(1, Math.abs(mu) / 2) * 70)}%, var(--v-mid))`);
@@ -10765,8 +10860,18 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         if (s.band) continue;
         const L = s.line, len = L.length;
         let d = "";
-        if (len <= buckets * 2 || this.logX) {
+        if (len <= buckets * 2) {
           for (let i = 0; i < len; i++) d += `${d ? "L" : "M"}${x(ux(s, i)).toFixed(1)} ${y(L[i]).toFixed(1)}`;
+        } else if (this.logX) {
+          // on a log scale the first units have pixels of their own, and the last share them by the thousand
+          let col = -1, sum = 0, xs = 0, k = 0;
+          const flush = () => { if (k) d += `${d ? "L" : "M"}${(xs / k).toFixed(1)} ${y(sum / k).toFixed(1)}`; };
+          for (let i = 0; i < len; i++) {
+            const px = x(ux(s, i)), c = Math.floor(px / 1.5);
+            if (c !== col) { flush(); col = c; sum = 0; xs = 0; k = 0; }
+            sum += L[i]; xs += px; k++;
+          }
+          flush();
         } else {
           for (let b = 0; b < buckets; b++) {
             const i0 = Math.floor((b * len) / buckets), i1 = Math.max(i0 + 1, Math.floor(((b + 1) * len) / buckets));
@@ -11355,6 +11460,15 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   const fmtBig = (v) => (!Number.isFinite(v) ? "beyond any number" : v >= 1e5 ? v.toExponential(1).replace("e+", " × 10^") : v.toFixed(v >= 100 ? 0 : 1));
   const plural = (n, [one, many]) => `${n.toLocaleString("en")} ${n === 1 ? one : many}`;
 
+  // a title's hyphenated word stays on one line ("Q-learning", not "Q-" and "learning")
+  const titleHTML = (s) => esc(s).replace(/\S*\w-\w\S*/g, (w) => `<span class="nobr">${w}</span>`);
+
+  // The algorithm column (the pseudocode and this step) folds away for a bigger simulation: the reader's choice, kept
+  // in this browser between visits.
+  const SIDE_KEY = "rl-atlas-lab-side";
+  const sideFolded = () => { try { return localStorage.getItem(SIDE_KEY) === "folded"; } catch { return false; } };
+  const keepSide = (folded) => { try { localStorage.setItem(SIDE_KEY, folded ? "folded" : "open"); } catch { /* private window */ } };
+
   RL.views.lab = function (host, presetId) {
     const base = RL.content.presets[presetId];
     // the working copy: switching to another world (the world panel) changes its world, units, charts and odds rule
@@ -11428,10 +11542,10 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     const P = { e: 0, playing: false, speed: "step", acc: 0, wait: 0, walkers: null, focus: Math.max(0, from >= 0 ? from : racers.length - 1) };
     let runs = [], stages = [], views = [], job = null, film = null, charts = [], avg = null, sweepJob = null, sweepCharts = [], perRun = 0, runsChosen = false;
     // the bench: the same settings on seeds 1 to 20 (or as many as the charts average), run in the background
-    let bench = null, benchTimer = 0, benchDrawn = 0, strip = null, played = 1, pendingTypical = false;
+    let bench = null, benchTimer = 0, benchDrawn = 0, benchCost = 0, strip = null, played = 1, pendingTypical = false;
 
     host.innerHTML = `
-      <section class="lab" data-kind="${env.kind}" data-drawer="closed">
+      <section class="lab" data-kind="${env.kind}" data-drawer="closed" data-side="${sideFolded() ? "folded" : "open"}">
         <header class="lab-head">
           <div class="lab-title">
             <div class="lab-where"><span class="eyebrow">Lab · <span class="world-name">${esc(env.title)}</span></span>
@@ -11440,7 +11554,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
                 Change world <b class="ws-count"></b>
               </button>
             </div>
-            <h1>${esc(preset.title)}</h1>
+            <h1>${titleHTML(preset.title)}</h1>
             <p class="intro clamped">${esc(preset.intro || "")}</p><button class="intro-more" type="button" hidden>More</button>
           </div>
           <div class="knobs card"></div>
@@ -11485,8 +11599,11 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
               <p class="faint sweep-note"></p>
             </section>
           </div>
-          <aside class="lab-side">
-            <section class="panel card pseudo-panel"><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-tabs" hidden></div><div class="pseudo-host"></div><p class="pseudo-diff faint" hidden></p></section>
+          <aside class="lab-side" id="lab-side">
+            <button class="side-open" type="button" aria-controls="lab-side" aria-expanded="false" title="Show the pseudocode and this step">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 5l-5 5 5 5"/></svg><span>Pseudocode</span>
+            </button>
+            <section class="panel card pseudo-panel"><button class="side-fold" type="button" aria-controls="lab-side" aria-expanded="true" title="Hide the pseudocode: more room for the simulation"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 5l5 5-5 5"/></svg></button><h3>Pseudocode · <span class="algo-name as-is"></span></h3><div class="pseudo-tabs" hidden></div><div class="pseudo-host"></div><p class="pseudo-diff faint" hidden></p></section>
             <section class="panel card live">
               <h3>This step</h3>
               <div class="live-sym"></div>
@@ -11506,6 +11623,16 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       </section>`;
 
     const q = (sel) => host.querySelector(sel);
+    // ---- the algorithm column folds to a tab at the edge, and the stages take its room ----
+    function setSide(folded, e) {
+      q(".lab").dataset.side = folded ? "folded" : "open";
+      keepSide(folded);
+      fitStages();
+      // the button pressed is gone: from the keyboard (a click of detail 0), its twin takes the focus
+      if (e?.detail === 0) q(folded ? ".side-open" : ".side-fold").focus({ preventScroll: true });
+    }
+    q(".side-fold").addEventListener("click", (e) => setSide(true, e));
+    q(".side-open").addEventListener("click", (e) => setSide(false, e));
     const playBtn = q(".play"), scrub = q(".scrub"), pos = q(".pos"), pseudo = q(".pseudo-host");
     const liveSym = q(".live-sym"), liveNum = q(".live-num"), liveNote = q(".live-note");
 
@@ -11585,7 +11712,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       stages = Array.from(box.querySelectorAll(".stage"));
       view.show.agent = unitOf() !== "sweep"; // dynamic programming has no agent walking about
       views = stages.map((st) => new View(st.querySelector(".view-host"), env, view.show));
-      views.forEach((v) => v.setPace?.(speed()?.quick ? P.speed : ""));
+      views.forEach((v) => v.setPace?.(paceOf()));
       stages.forEach((st, i) => st.addEventListener("click", () => focus(i)));
       const displays = racers.map((r, i) => {
         if (recRuns[i]) return { ...recRuns[i].at(0) };
@@ -11664,7 +11791,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       P.e = 0;
       // a racer named by its step size is renamed by the one it has here (its home world's numbers would be wrong)
       racers.forEach((r) => { r.baseName ??= r.name; r.name = id === base.env ? r.baseName : stepNamed(r.baseName, paramsOf(r)); });
-      q(".lab-title h1").textContent = id === base.env ? base.title : `${racers.map((r) => r.name).join(" vs ")} · ${lab.make(id).title}`;
+      q(".lab-title h1").innerHTML = titleHTML(id === base.env ? base.title : `${racers.map((r) => r.name).join(" vs ")} · ${lab.make(id).title}`);
       q(".intro").textContent = id === base.env ? base.intro || "" : `${lab.worldBlurb(id)}. The settings start from this world's defaults; the knobs are yours.`;
       introFold();
       build();
@@ -11679,14 +11806,19 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (!box || !stages.length) return;
       box.style.gridTemplateColumns = "minmax(0, 1fr)";
       box.classList.remove("odd-last");
-      if (innerWidth < 900) return; // narrow screens: one under the other, full width
+      if (innerWidth < 900) { box.classList.remove("narrow"); fitted = box.offsetHeight; return; } // narrow screens: one under the other, full width
       const st = stages[0], host = st.querySelector(".view-host"), content = host.firstElementChild;
       const w0 = Math.min(host.clientWidth, content ? content.getBoundingClientRect().width || host.clientWidth : host.clientWidth);
       const padX = st.offsetWidth - host.clientWidth;
       const W = box.clientWidth, n = stages.length, gap = 16, bar = q(".transport").offsetHeight;
       // Some views reflow when narrowed (a recorded run's two panels stack), so nothing is predicted: each arrangement
       // is laid out and measured, its panes narrowed until everything fits, and the one with the widest panes wins.
-      const apply = (cols, w) => { box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`; box.style.setProperty("--pane", `${Math.floor(w + padX)}px`); return box.offsetHeight; };
+      const apply = (cols, w) => {
+        box.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(w + padX)}px)`;
+        box.style.setProperty("--pane", `${Math.floor(w + padX)}px`);
+        box.classList.toggle("narrow", w < 430); // narrow panes keep their headers short
+        return box.offsetHeight;
+      };
       const MIN = RL.labViews[env.kind]?.minWidth || 260; // a view may stay legible narrower (a deep run's, stacked)
       const widest = (cols, H) => {
         let hi = Math.min(w0, (W - gap * (cols - 1)) / cols - padX), lo = MIN;
@@ -11703,25 +11835,34 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         for (let k = 0; k < 7; k++) { const mid = (lo + hi) / 2; if (apply(cols, mid) > H) hi = mid; else lo = mid; }
         return lo;
       };
-      const pick = (H) => {
-        let best = { cols: 0, w: 0 };
-        for (let cols = 1; cols <= n; cols++) { const w = widest(cols, H); if (w > best.w + 1) best = { cols, w }; }
-        return best.cols ? best : null;
+      // the arrangements that fit a height, each with its widest panes
+      const fits = (H) => { const out = []; for (let cols = 1; cols <= n; cols++) { const w = widest(cols, H); if (w) out.push({ cols, w }); } return out; };
+      const most = (list) => Math.max(0, ...list.map((f) => f.w));
+      // the widest panes; but more across when that costs them little: a race reads best side by side, and the
+      // shorter rows leave room for what follows
+      const choose = (list) => list.filter((f) => f.w >= most(list) * 0.85).at(-1);
+      // When no arrangement fits the window, the one whose panes would be widest if it were shrunk to fit: big panes
+      // and a short scroll, rather than many slivers
+      const closest = (H) => {
+        let best = { cols: 1, w: MIN, score: 0 };
+        for (let cols = 1; cols <= n; cols++) {
+          const w = Math.max(MIN, Math.min(w0, (W - gap * (cols - 1)) / cols - padX)), score = w * Math.min(1, H / apply(cols, w));
+          if (score > best.score) best = { cols, w, score };
+        }
+        return best;
       };
       const top = box.getBoundingClientRect().top + scrollY;
-      // Below the header if they fit there at a good size; the whole window (a scroll down to them) when that makes
-      // them clearly bigger, as a wide world like the cliff, squeezed under the header, would be hard to see; else as
-      // many across as fit.
-      const under = pick(innerHeight - top - bar - 28), whole = pick(innerHeight - 64 - bar - 28);
-      const best = (under && (!whole || whole.w < under.w * 1.2) ? under : whole) ||
-        { cols: Math.max(1, Math.min(n, Math.floor((W + gap) / (MIN + padX + gap)))), w: MIN };
-      const w = best.w;
-      apply(best.cols, w);
-      box.classList.toggle("narrow", w < 430); // narrow panes keep their headers short
+      // Below the header, in sight with the knobs, if they fit there at a good size: wide enough to read easily, or
+      // not much narrower than they could be. Else the whole window (a scroll down to them), as a wide world like the
+      // cliff, squeezed under the header, would be hard to see; else the closest to fitting.
+      const BIG = 400, under = fits(innerHeight - top - bar - 28), whole = fits(innerHeight - 64 - bar - 28), u = most(under);
+      const best = under.length && (u >= BIG || most(whole) < u * 1.2) ? choose(u >= BIG ? under.filter((f) => f.w >= BIG) : under)
+        : whole.length ? choose(whole) : closest(innerHeight - 64 - bar - 28);
+      fitted = apply(best.cols, best.w);
       box.classList.toggle("odd-last", best.cols > 1 && n % best.cols === 1); // a last pane alone on its row: centered
       fitSide();
     }
-    let lastWidth = 0;
+    let lastWidth = 0, fitted = 0;
     // The side column is never taller than the window below where it starts (under the header at first, at the top
     // once it sticks), so "This step" under the pseudocode is always in sight; the pseudocode scrolls instead.
     let sideFrame = 0;
@@ -11729,9 +11870,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       sideFrame = 0;
       const side = q(".lab-side");
       if (!side) return;
-      if (getComputedStyle(side).position !== "sticky") { side.style.maxHeight = ""; return; }
-      const top = Math.max(72, side.parentElement.getBoundingClientRect().top);
-      side.style.maxHeight = `${Math.max(320, innerHeight - top - 12)}px`;
+      if (getComputedStyle(side).position !== "sticky") { side.style.maxHeight = ""; pseudoScrolls = null; return; }
+      const top = Math.max(72, side.parentElement.getBoundingClientRect().top), max = `${Math.max(320, innerHeight - top - 12)}px`;
+      if (side.style.maxHeight !== max) { side.style.maxHeight = max; pseudoScrolls = null; }
     }
     const onScroll = () => { if (!sideFrame) sideFrame = requestAnimationFrame(fitSide); };
     addEventListener("scroll", onScroll, { passive: true });
@@ -11895,6 +12036,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       seek(Math.min(P.e, knobs.units));
       seedBox();
       odds();
+      // a view may have grown with what it now shows (a longer caption, a run's numbers): arranged again to fit
+      if (Math.abs(q(".stages").offsetHeight - fitted) > 2) fitStages();
     }
 
     // The rule a run is judged by: the preset's success rule, or its main measure over the last tenth.
@@ -11912,7 +12055,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       });
       benchDrawn = 0;
       const chunk = () => {
-        const done = bench.step(14);
+        const done = bench.step(P.playing ? 6 : 14); // short slices while playing: a frame is drawn between them
         benched(done);
         if (!done) benchTimer = setTimeout(chunk, 0);
       };
@@ -11924,7 +12067,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     // play the typical run if that is what is asked and the reader is not in the middle of watching another.
     function benched(done) {
       const now = performance.now();
-      if (!done && now - benchDrawn < 200) return;
+      if (!done && now - benchDrawn < Math.max(200, 5 * benchCost)) return; // drawing the bands takes a fifth of the time at most
       benchDrawn = now;
       if (done && knobs.seed === "typical" && bench.typical() !== played) {
         if (!P.playing && !P.walkers && P.e === 0) { played = bench.typical(); playRuns(); return; }
@@ -11933,6 +12076,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       drawCharts();
       odds();
       seedBox();
+      benchCost = performance.now() - now;
     }
 
     // A recording keeps the training curve of every seed: the average, the thin lines and the odds come at once.
@@ -12335,6 +12479,17 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       film.set(frames.map((t) => ({ t, label: t === 0 ? "at the start" : `after ${plural(t, noun())}`, html: View.thumb(env, a.show(r.at(t), env, p, t), p) })));
     }
 
+    // A unit's events, replayed from the snapshot before it. Playing at a rate asks twice for the unit just passed (the
+    // map of where the agent goes, then the view at rest): the last one of each racer is kept.
+    const replays = [];
+    function eventsOf(i, u) {
+      const kept = replays[i];
+      if (kept?.run === runs[i] && kept.u === u) return kept.events;
+      const events = [...runs[i].replay(u).events];
+      replays[i] = { run: runs[i], u, events };
+      return events;
+    }
+
     // ---- moving the playhead: t is the start of unit t; t = units is the end of the run ----
     // heat: "keep" when the units since the last position were already added to the views' maps of where the agent
     // goes; otherwise the maps are rebuilt from the 20 units before the new position.
@@ -12347,7 +12502,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       let shown = [];
       const fast = rate() >= 10;
       runs.forEach((r, i) => {
-        const p = paramsOf(racers[i]), events = P.e > 0 ? [...r.replay(P.e - 1).events] : [];
+        const p = paramsOf(racers[i]), events = P.e > 0 ? eventsOf(i, P.e - 1) : [];
         const d = racers[i].algorithm.show(r.at(P.e), r.env, p, P.e);
         views[i].show(d, p);
         if (views[i].heatEpisode && heat === "rebuild") {
@@ -12363,8 +12518,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       });
       // The panel follows the jump: a recorded run's last step, whose numbers the view shows; otherwise its prompt.
       const a = racers[P.focus].algorithm, last = a.recorded && shown.findLast((ev) => ev.type === "choose");
-      if (last) { texInto(liveNum, a.numbers(last)); liveNote.innerHTML = a.note(last); liveNote.classList.remove("faint"); }
-      else idleNote();
+      if (last) toPanel(() => { texInto(liveNum, a.numbers(last)); say(a.note(last)); });
+      else { panelLate = null; idleNote(); }
       mark(null);
       position();
       if (P.e >= knobs.units) pause();
@@ -12456,7 +12611,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         if (ev.type === "update") explain(ev, w.p);
         else if (ev.type === "plan") planned(ev);
         else if (ev.type === "advantage") batchAdvantages(ev);
-        else if (ev.type === "choose" && a.recorded) { texInto(liveNum, a.numbers(ev)); liveNote.innerHTML = a.note(ev); liveNote.classList.remove("faint"); }
+        else if (ev.type === "choose" && a.recorded) toPanel(() => { texInto(liveNum, a.numbers(ev)); say(a.note(ev)); });
       }
       caption(i, w);
       return pauseFor;
@@ -12467,9 +12622,8 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       const n = ev.list.length;
       let big = 0;
       for (const u of ev.list) if (Math.abs(u.delta) > Math.abs(big)) big = u.delta;
-      liveNote.innerHTML = !n ? "Nothing in the queue is worth an update: no planning this step"
-        : `<b>${plural(n, ["planning update", "planning updates"])}</b> on remembered moves${ev.ordered ? `, the most urgent first${ev.left !== undefined ? `; ${plural(ev.left, ["pair waits", "pairs wait"])} in the queue` : ""}` : ", picked at random"} · the largest surprise was <b class="q-err">${signed(big, 3)}</b>${ev.list.some((u) => u.bonus > 1e-9) ? " · bonuses for moves not tried in a while included" : ""}`;
-      liveNote.classList.remove("faint");
+      say(!n ? "Nothing in the queue is worth an update: no planning this step"
+        : `<b>${plural(n, ["planning update", "planning updates"])}</b> on remembered moves${ev.ordered ? `, the most urgent first${ev.left !== undefined ? `; ${plural(ev.left, ["pair waits", "pairs wait"])} in the queue` : ""}` : ", picked at random"} · the largest surprise was <b class="q-err">${signed(big, 3)}</b>${ev.list.some((u) => u.bonus > 1e-9) ? " · bonuses for moves not tried in a while included" : ""}`);
     }
 
     // A batch of experience, before the update: how many steps, and how its advantages came out.
@@ -12477,25 +12631,41 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       let up = 0;
       for (const u of ev.list) if (u.adv > 0) up++;
       liveNum.innerHTML = "";
-      liveNote.innerHTML = `The round is over: <b>${ev.samples.toLocaleString("en")}</b> steps, each with its advantage, the GAE estimate of how much better its action did than expected · <b>${Math.round((100 * up) / Math.max(1, ev.samples))}%</b> better (blue sparks), the rest worse (orange)`;
-      liveNote.classList.remove("faint");
+      say(`The round is over: <b>${ev.samples.toLocaleString("en")}</b> steps, each with its advantage, the GAE estimate of how much better its action did than expected · <b>${Math.round((100 * up) / Math.max(1, ev.samples))}%</b> better (blue sparks), the rest worse (orange)`);
     }
 
     // ---- the live formula ----
     // At rest, the panel says how to fill it. The note is rewritten whole: stepping replaces its contents.
     function idleNote() {
-      liveNum.innerHTML = "";
-      liveNote.innerHTML = recorded ? "Play <b>step by step</b> to see, at every step of a test episode, what the network makes of each move."
+      const text = recorded ? "Play <b>step by step</b> to see, at every step of a test episode, what the network makes of each move."
         : `Play <b>line by line</b>, or <b>slowly</b> (an update every 2 s), to see every update with its numbers.`;
+      if (liveNote.dataset.idle === text) return; // already said: a replay at a rate comes here every frame
+      liveNum.innerHTML = "";
+      liveNote.innerHTML = text;
       liveNote.classList.add("faint");
+      liveNote.dataset.idle = text;
+    }
+    // The panel's note, other than the prompt above
+    function say(html) {
+      liveNote.innerHTML = html;
+      liveNote.classList.remove("faint");
+      delete liveNote.dataset.idle;
     }
 
-    let explained = 0;
+    // Played quickly, the panel's numbers would change every frame, too fast to read and costly to typeset: they follow
+    // a few times a second, and the last ones come when the playing stops.
+    let panelAt = 0, panelLate = null;
+    function toPanel(draw) {
+      if (P.playing && (rate() || speed().every < 300) && performance.now() - panelAt < 250) { panelLate = draw; return; }
+      panelAt = performance.now();
+      panelLate = null;
+      draw();
+    }
     function explain(ev, p) {
       const a = racers[P.focus].algorithm;
-      if (!a.numbers) return;
-      // at the quick paces the numbers change too fast to read: refresh them a few times a second
-      if (speed().quick) { const now = performance.now(); if (now - explained < 250) return; explained = now; }
+      if (a.numbers) toPanel(() => explainNow(a, ev, p));
+    }
+    function explainNow(a, ev, p) {
       texInto(liveNum, a.numbers(ev, p));
       // an update over a whole batch (A2C, PPO) has no single state to name
       const where = env.describe && ev.s !== undefined ? env.describe(ev.s, ev.a ?? -1) : "";
@@ -12506,33 +12676,48 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       else if (ev.target !== undefined && ev.n !== undefined) note = `${a.unit === "step" ? "Reward" : "Return"} <b>${signed(ev.target)}</b> · surprise <b class="q-err">${signed(ev.delta)}</b> · visit ${ev.n} · ${where}`;
       else if (ev.W !== undefined) note = `Return <b>${signed(ev.target)}</b> · weight W = <b>${+ev.W.toFixed(3)}</b> · ${where}`;
       else note = `Target <b>${signed(ev.target)}</b> · surprise <b class="q-err">δ = ${signed(ev.delta)}</b> · ${where}`;
-      liveNote.innerHTML = note;
-      liveNote.classList.remove("faint");
+      say(note);
     }
 
     // A display formula in the side panel, fitted to its width: it shrinks a little, then stacks the parts written
     // side by side (\\qquad), as Textbook formulas do.
+    const toFit = new Set();
+    let fitFrame = 0;
     function texInto(box, src) {
       box.innerHTML = '<div class="tex tex-display"></div>';
       const div = box.firstChild;
       div.dataset.src = src;
       div.dataset.done = "1";
       div.innerHTML = RL.math.tex(src, true);
-      RL.math.fit(box);
+      if (!(P.playing && (rate() || speed().every < 300))) return RL.math.fit(box);
+      // played quickly, a new formula comes every few frames: fitted at the next one, with the layout the browser
+      // makes for it anyway (measured now, the page would be laid out once more each time)
+      toFit.add(box);
+      fitFrame ||= requestAnimationFrame(() => { fitFrame = 0; for (const b of toFit) RL.math.fit(b); toFit.clear(); });
     }
 
+    let marked = null, markFrame = 0, pseudoScrolls = null;
     function mark(line) {
       const li = line ? pseudo.querySelector(`li[data-line="${line}"]`) : null;
-      for (const x of pseudo.querySelectorAll("li.on")) if (x !== li) x.classList.remove("on", "flash");
+      for (const x of pseudo.querySelectorAll("li.on")) if (x !== li) x.classList.remove("on", "flash", "flash2");
       if (!li) return;
+      // the simulation came to this line again while it still flashes: its twin animation starts the flash over
+      // (under another name, so without a layout)
+      const again = li.classList.contains("flash");
       li.classList.add("on");
-      li.classList.remove("flash");
-      void li.offsetWidth; // restart the flash: the simulation came to this line again
-      li.classList.add("flash");
-      // long pseudocode scrolls inside its panel: keep the lit line in view, a third of the way down
-      const box = pseudo;
-      if (box.scrollHeight > box.clientHeight + 4 && (li.offsetTop < box.scrollTop || li.offsetTop + li.offsetHeight > box.scrollTop + box.clientHeight))
-        box.scrollTo({ top: Math.max(0, li.offsetTop - box.clientHeight / 3), behavior: RL.reducedMotion?.() ? "auto" : "smooth" });
+      li.classList.toggle("flash", !again);
+      li.classList.toggle("flash2", again);
+      // long pseudocode scrolls inside its panel: the lit line kept in view, a third of the way down (looked at once
+      // a frame, the layout then being done anyway)
+      marked = li;
+      markFrame ||= requestAnimationFrame(() => {
+        markFrame = 0;
+        const box = pseudo, li = marked;
+        pseudoScrolls ??= box.scrollHeight > box.clientHeight + 4; // known until the column or its code changes
+        if (!li?.isConnected || !pseudoScrolls) return;
+        if (li.offsetTop < box.scrollTop || li.offsetTop + li.offsetHeight > box.scrollTop + box.clientHeight)
+          box.scrollTo({ top: Math.max(0, li.offsetTop - box.clientHeight / 3), behavior: RL.reducedMotion?.() ? "auto" : "smooth" });
+      });
     }
 
     function focus(i) {
@@ -12542,6 +12727,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       q(".algo-name").textContent = racers[i].name;
       const code = (r) => RL.entry(r.algorithm.station || r.algorithm.id)?.pseudocode || "";
       pseudo.innerHTML = code(racers[i]) || '<p class="faint">The pseudocode of this algorithm is not written yet.</p>';
+      pseudoScrolls = null;
       // the lines of this algorithm that none of the other racers' algorithms has
       const others = racers.filter((r) => (r.algorithm.station || r.algorithm.id) !== (a.station || a.id));
       const known = new Set(others.flatMap((r) => lineText(code(r))));
@@ -12553,13 +12739,23 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       pseudo.closest(".panel").style.setProperty("--k-focus", `var(--s${i + 1})`);
       texInto(liveSym, typeof a.rule === "function" ? a.rule(p) : a.rule);
       liveNum.innerHTML = "";
+      panelLate = null; // numbers held back for the racer looked at before
       RL.math.render(pseudo);
       if (runs.length) { filmstrip(); if (racers.length > 2 && view.mode === "bench" && bench?.seedsDone) drawCharts(); }
     }
 
     // ---- playing ----
+    // Playing shows the whole simulation: when the stages run on under the play bar, the page scrolls them into view
+    // (never past their top, so nothing of them is hidden under the site's header).
+    function showStages() {
+      const box = q(".stages")?.getBoundingClientRect(), bar = q(".transport").getBoundingClientRect();
+      if (!box || innerWidth < 900) return;
+      const under = box.bottom - (bar.top - 10), room = box.top - 68;
+      if (under > 0 && room > 0) scrollBy({ top: Math.min(under, room), behavior: "smooth" });
+    }
     function play() {
       if (P.e >= knobs.units) seek(0);
+      showStages();
       P.playing = true;
       playBtn.innerHTML = ICON.pause;
       playBtn.setAttribute("aria-label", "Pause");
@@ -12568,9 +12764,13 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       P.playing = false;
       playBtn.innerHTML = ICON.play;
       playBtn.setAttribute("aria-label", "Play");
+      if (panelLate) toPanel(panelLate); // the numbers of where it stopped
     }
     const speed = () => speedList().find((s) => s.id === P.speed);
     const rate = () => speed().rate || 0;
+    // what a view is told of the pace: a quick walk's name, "rate" when units fly by (new values every few frames, no
+    // time to fade from one to the next), else nothing
+    const paceOf = () => { const s = speed(); return s?.quick ? P.speed : (s?.rate || 0) >= 10 ? "rate" : ""; };
     function stepOnce() {
       pause();
       if (rate()) seek(P.e + 1, true);
@@ -12588,12 +12788,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       if (rate()) {
         P.acc += (dt / 1000) * rate();
         if (P.acc >= 1) {
-          const k = Math.min(Math.floor(P.acc), knobs.units - P.e);
+          const whole = Math.floor(P.acc), k = Math.min(whole, knobs.units - P.e), rest = P.acc - whole;
           // every unit passed adds to the views' maps of where the agent goes, the last one through seek
           runs.forEach((r, i) => { if (views[i].heatEpisode) for (let u = P.e; u < P.e + k - 1; u++) views[i].heatEpisode([...r.replay(u).events], { draw: false }); });
-          runs.forEach((r, i) => views[i].heatEpisode?.(P.e + k - 1 >= 0 && k > 0 ? [...r.replay(P.e + k - 1).events] : []));
+          runs.forEach((r, i) => views[i].heatEpisode?.(P.e + k - 1 >= 0 && k > 0 ? eventsOf(i, P.e + k - 1) : []));
           seek(P.e + k, rate() <= 1, "keep");
-          P.acc -= Math.floor(P.acc);
+          P.acc = rest; // seek starts the count again: the part of a unit already waited stays, so the rate holds
         }
         return;
       }
@@ -12688,7 +12888,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     q(".speed").addEventListener("change", (e) => {
       const wasWalking = !rate();
       P.speed = e.target.value;
-      views.forEach((v) => v.setPace?.(speed().quick ? P.speed : ""));
+      views.forEach((v) => v.setPace?.(paceOf()));
       if (!wasWalking || rate()) seek(P.e, false, "keep"); // the trail and the greedy path follow the new pace
       if (wasWalking && rate() && P.walkers) seek(P.e);
     });
@@ -13205,6 +13405,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       let sums = null, done = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (done < runs && performance.now() - t0 < 30) {
           const out = sample(1000 + done);
@@ -13492,6 +13693,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       let done = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (done < runs && performance.now() - t0 < 30) {
           STUDY.forEach((s, j) => s.xs.forEach((v, i) => { sums[j][i] += lab.mean(simulate("testbed", s.algorithm, s.params(v), 1000, 1000 + done).return); }));
@@ -13853,6 +14055,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     RL.fig.whenVisible(host, () => {
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (done < runs && performance.now() - t0 < 30) {
           const rng = lab.rng(500 + done);
@@ -14113,6 +14316,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       let j = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (j < jobs.length && performance.now() - t0 < 30) {
           const [id, alpha, i, r] = jobs[j++], units = r < late ? 500 : 100;
@@ -14201,6 +14405,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       let done = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (done < runs && performance.now() - t0 < 30) {
           curves.forEach((c, j) => xs.forEach((alpha, i) => {
@@ -15262,6 +15467,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       let done = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) return void setTimeout(more, 120); // the reader is scrolling: later
         const t0 = performance.now();
         while (done < RUNS && performance.now() - t0 < 30) {
           const seed = 1 + done, search = lab.mcts(BOARD, { c: 1.4, seed });
@@ -15517,14 +15723,24 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       stage.apply(steps[i].state, forward);
     }
 
-    // A step becomes active when it crosses a thin band of the screen (lower on phones, below the picture).
-    const band = matchMedia("(max-width: 900px)").matches ? "-72% 0px -24% 0px" : "-45% 0px -50% 0px";
-    const io = new IntersectionObserver((items) => {
-      for (const it of items) if (it.isIntersecting) activate(+it.target.dataset.i);
-    }, { rootMargin: band });
-    els.forEach((el, i) => { io.observe(el); el.addEventListener("click", () => activate(i)); });
+    // The active step is the one whose top has passed a line across the screen, a little above the middle (lower on
+    // phones, below the picture). It is worked out again as the page scrolls, once a frame, so a fast scroll that
+    // jumps over a step lands on the right one, the last included.
+    const phone = matchMedia("(max-width: 900px)").matches;
+    let frame = 0;
+    function follow() {
+      frame = 0;
+      const line = innerHeight * (phone ? 0.74 : 0.475);
+      let k = 0;
+      for (let i = 0; i < els.length && els[i].getBoundingClientRect().top <= line; i++) k = i;
+      activate(k);
+    }
+    const onScroll = () => { frame ||= requestAnimationFrame(follow); };
+    addEventListener("scroll", onScroll, { passive: true });
+    els.forEach((el, i) => el.addEventListener("click", () => activate(i)));
     activate(0);
-    return { destroy() { io.disconnect(); stage.destroy(); } };
+    frame = requestAnimationFrame(follow); // a page that opens scrolled down (going back to it) starts at its step
+    return { destroy() { removeEventListener("scroll", onScroll); cancelAnimationFrame(frame); stage.destroy(); } };
   };
 })(globalThis.RL = globalThis.RL || {});
 
@@ -15592,19 +15808,34 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
   // Named runs a story shows and replays, from its config: [story.runs] name = { algorithm, units, seed, <knobs> }, or
   // name = { recording } for a run trained offline (recorder/record.py). The world, the shared knobs and the seed come
   // from the story config unless a run says otherwise.
-  function runs(cfg) {
-    const made = {};
-    return (name) => {
+  // With host, the runs are also worked out in the background, a few milliseconds at a time, while the reader is on
+  // the first steps (and the host on the page): a step then finds its run ready instead of making the page wait.
+  function runs(cfg, host = null) {
+    const made = {}, jobs = {};
+    const job = (name) => (jobs[name] ||= (() => {
+      const { algorithm, units, seed, world, measures, name: _label, ...params } = cfg.runs[name];
+      return RL.lab.simulateJob({
+        world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params },
+        units: units || cfg.units || 100, seed: seed ?? cfg.seed ?? 1, measures,
+      });
+    })());
+    const runOf = (name) => {
       if (made[name]) return made[name];
       const spec = cfg.runs?.[name];
       if (!spec) throw new Error(`story: no run named '${name}'`);
       if (spec.recording) return (made[name] = RL.lab.recordedRun(RL.recordings[spec.recording]));
-      const { algorithm, units, seed, world, measures, name: _label, ...params } = spec;
-      return (made[name] = RL.lab.simulate({
-        world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params },
-        units: units || cfg.units || 100, seed: seed ?? cfg.seed ?? 1, measures,
-      }));
+      job(name).step(Infinity); // the same run, finished now (sliced or not, a run comes out the same)
+      return (made[name] = job(name).result);
     };
+    const todo = Object.keys(cfg.runs || {}).filter((n) => !cfg.runs[n].recording);
+    const warm = () => {
+      const name = host?.isConnected && todo.find((n) => !made[n]);
+      if (!name) return;
+      if (!RL.scrolling() && job(name).step(6)) made[name] = job(name).result;
+      setTimeout(warm, RL.scrolling() ? 120 : 10);
+    };
+    setTimeout(warm, 300);
+    return runOf;
   }
 
   // Replay units of a run on a view, event by event, the way the Lab walks: the agent moves, values update.
@@ -15703,20 +15934,25 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         status.textContent = all ? ` · average of ${seeds[0].seeds.length} seeds` : " · the seed played back";
         return;
       }
+      // Slices of a few milliseconds, so the page scrolls smoothly meanwhile: a run is cut where it stands and goes on
+      // in the next slice (acc keeps it, with the averages, for a reader who scrolls away and back).
+      let drawn = 0;
       const more = () => {
         if (!host.isConnected) return;
+        if (RL.scrolling()) { timer = setTimeout(more, 120); return; } // the reader is scrolling: later
         const t0 = performance.now();
-        while (acc.done < total && performance.now() - t0 < 25) {
-          names.forEach((n, i) => {
-            const spec = cfg.runs[n], { algorithm, units, seed, world, measures, name: _label, ...params } = spec;
-            const { metrics } = RL.lab.simulate({ world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params }, units: units || cfg.units, seed: 1000 + acc.done, snapshots: false, measures });
-            const s = acc.sums[i], v = metrics[metric];
-            for (let t = 0; t < s.length; t++) s[t] += v[t];
-          });
-          acc.done++;
+        while (acc.done < total && performance.now() - t0 < 8) {
+          const c = (acc.cur ||= { i: 0, job: null }), spec = cfg.runs[names[c.i]], { algorithm, units, seed, world, measures, name: _label, ...params } = spec;
+          c.job ||= RL.lab.simulateJob({ world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params }, units: units || cfg.units, seed: 1000 + acc.done, snapshots: false, measures });
+          if (!c.job.step(Math.max(2, 8 - (performance.now() - t0)))) break;
+          const s = acc.sums[c.i], v = c.job.result.metrics[metric];
+          for (let t = 0; t < s.length; t++) s[t] += v[t];
+          c.job = null;
+          if (++c.i === names.length) { acc.cur = null; acc.done++; }
         }
-        draw();
-        if (acc.done < total) timer = setTimeout(more, 16);
+        // drawn once a run is in (an average of none would be a flat line at zero), then at most five times a second
+        if (acc.done >= total || (acc.done && performance.now() - drawn > 200)) { draw(); drawn = performance.now(); }
+        if (acc.done < total) timer = setTimeout(more, 8);
       };
       more();
     };
@@ -15755,7 +15991,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     return {
       create(card, cfg) {
         card.innerHTML = `<div class="scene-view"></div>${RL.sceneKit.FORMULA}<div class="scene-chart" hidden></div><div class="scene-foot"><span class="scene-note"></span></div>`;
-        const runOf = runs(cfg), names = Object.keys(cfg.runs || {});
+        const runOf = runs(cfg, card), names = Object.keys(cfg.runs || {});
         const view = new View(card.querySelector(".scene-view"), runOf(names[0]).env, options({}));
         const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
         const { later, stop } = timers(), play = player(later), chart = curves(card.querySelector(".scene-chart"), cfg, runOf);
@@ -15830,7 +16066,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       // Without an ε of its own, a story draws the greedy arrows of Q.
       const view = new RL.GridView(card.querySelector(".scene-grid"), env, { tiles: "q", epsilon: cfg.epsilon ?? 0, digits: cfg.digits ?? 2 });
       const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
-      const { later, stop } = timers(), runOf = runs(cfg), play = player(later);
+      const { later, stop } = timers(), runOf = runs(cfg, card), play = player(later);
       const chart = cfg.runs ? curves(card.querySelector(".scene-chart"), cfg, runOf) : () => {};
       const tile = (v) => (v === "start" ? env.start : v[0] * env.cols + v[1]);
 
@@ -16858,10 +17094,12 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
 
       // A fresh search run to k simulations (searches are cheap: rebuilding one is simpler than rewinding it).
       const searchTo = (k) => { search = lab.mcts(board, { c, seed }); search.run(k); return search; };
+      // Flat Monte Carlo's averages, worked out once for each number of games (thousands of games take a moment)
+      const flats = {}, flatOf = (n) => (flats[n] ||= lab.flatMC(board, n, { seed }));
       const colorOf = (n) => (n && n.N ? `color-mix(in oklab, var(${n.X / n.N >= 0.5 ? "--v-pos" : "--v-neg"}) ${Math.round(Math.min(1, Math.abs(n.X / n.N - 0.5) * 2.4) * 100)}%, var(--v-mid))` : "var(--surface-2)");
 
       function boardSvg(st, sim) {
-        const share = {}, flat = st.flat ? lab.flatMC(board, st.flat, { seed }) : null;
+        const share = {}, flat = st.flat ? flatOf(st.flat) : null;
         if (!flat && search.sims) for (const k of search.root.kids) share[k.move] = k.N / search.sims;
         let g = `<text class="t-title" x="${BX}" y="22">${mover} to move</text>`;
         // the moves of the current simulation, in order: inside the tree, then the rollout
@@ -16943,7 +17181,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       // Flat Monte Carlo keeps no tree: instead, each first move's average over the random games (a bar), against what
       // the move is worth when both sides play their best (a line: a win, a draw or a loss).
       function flatSvg(st) {
-        const flat = lab.flatMC(board, st.flat, { seed }), Y0 = 300, HB = 150, y = (v) => Y0 - v * HB;
+        const flat = flatOf(st.flat), Y0 = 300, HB = 150, y = (v) => Y0 - v * HB;
         let g = `<text class="t-title" x="${TX}" y="22">each move: random games against best play</text>`;
         for (const v of [0, 0.5, 1]) g += `<line class="t-grid" x1="${TX}" x2="${TX + TW}" y1="${y(v)}" y2="${y(v)}"/><text class="t-level" x="${W - 6}" y="${y(v) + 4}">${v === 1 ? "X wins" : v === 0.5 ? "draw" : "X loses"}</text>`;
         first.forEach((m, i) => {

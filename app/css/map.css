@@ -85,7 +85,8 @@
 .metro .st text { transition: transform 0.9s var(--ease); }
 .metro .st.dim { opacity: 0.13; }
 .metro .st.out { opacity: 0; pointer-events: none; }
-.metro .st .dot { fill: var(--surface); stroke: var(--c); stroke-width: 3; transition: r 0.2s var(--spring), fill 0.2s, stroke-width 0.2s; }
+.metro .st .dot { fill: var(--surface); stroke: var(--c); stroke-width: 3; transform-box: fill-box; transform-origin: center;
+  transition: r 0.2s var(--spring), fill 0.2s, stroke-width 0.2s, transform 0.22s var(--spring); }
 .metro .st.algorithm .dot { stroke-width: 3.5; }
 .metro .st text { font: 500 12.5px var(--font); fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
 .metro .st.algorithm text { font-weight: 700; }
@@ -93,8 +94,9 @@
 .metro .st.planned text { fill: var(--ink-3); font-weight: 500; }
 .metro .st.visited .dot { fill: var(--c); }
 .metro .st .halo { fill: var(--c); opacity: 0; transition: opacity 0.2s; transform-box: fill-box; transform-origin: center; }
-/* Pointing at a station lights it, and its lineage, in the tree only: on the metro and unified views, sweeping the
-   cursor across many stations would make the whole map flicker. */
+/* Pointing at a station grows its dot, so that it is easier to hit; nothing else on the map changes, so sweeping the
+   cursor across many stations does not make the map flicker. (Touch screens have no pointing: no growing there.) */
+@media (hover: hover) { .metro .st:hover .dot { transform: scale(1.45); } }
 .metro .st:focus-visible .halo { opacity: 0.18; }
 .metro .st.next .halo { animation: station-pulse 1.8s ease-out infinite; }
 .metro .st.arrived .halo { animation: station-pulse 0.9s ease-out 2; }

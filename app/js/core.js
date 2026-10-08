@@ -10,6 +10,19 @@
   const asIs = (s) => esc(s).replace(/\S*[\u0370-\u03ff‖√∇|]\S*/g, (w) => `<span class="as-is">${w}</span>`);
   const warn = (...args) => console.warn("[RL Atlas]", ...args);
   const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // When the page last scrolled. Work done in the background (many runs averaged for a chart, a story's runs) waits
+  // while the reader scrolls, so that the page keeps up with the finger, and goes on when the reading does.
+  let scrolledAt = -1e9;
+  addEventListener("scroll", () => { scrolledAt = performance.now(); }, { passive: true, capture: true });
+  const scrolling = () => performance.now() - scrolledAt < 250;
+  // A design token (a custom property of the page), read once per theme: reading a computed style brings every style
+  // up to date first, which a view drawing many frames a second cannot afford each time.
+  let tokenTheme = null, tokens = {};
+  const token = (name) => {
+    const root = document.documentElement, theme = `${root.dataset.theme || ""} ${matchMedia("(prefers-color-scheme: dark)").matches}`;
+    if (theme !== tokenTheme) { tokenTheme = theme; tokens = {}; }
+    return (tokens[name] ??= getComputedStyle(root).getPropertyValue(name).trim());
+  };
   function h(html) {
     const t = document.createElement("template");
     t.innerHTML = html.trim();
@@ -101,7 +114,7 @@
     hide() { tipEl?.remove(); tipEl = null; },
   };
 
-  Object.assign(RL, { $, $$, h, esc, asIs, warn, reducedMotion, station, entry, stations, order, lineColor, store, hideCard, tip });
+  Object.assign(RL, { $, $$, h, esc, asIs, warn, reducedMotion, token, scrolling, station, entry, stations, order, lineColor, store, hideCard, tip });
   RL.views = RL.views || {};
   RL.demos = RL.demos || {};
 })(globalThis.RL = globalThis.RL || {});

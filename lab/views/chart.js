@@ -169,8 +169,18 @@
         if (s.band) continue;
         const L = s.line, len = L.length;
         let d = "";
-        if (len <= buckets * 2 || this.logX) {
+        if (len <= buckets * 2) {
           for (let i = 0; i < len; i++) d += `${d ? "L" : "M"}${x(ux(s, i)).toFixed(1)} ${y(L[i]).toFixed(1)}`;
+        } else if (this.logX) {
+          // on a log scale the first units have pixels of their own, and the last share them by the thousand
+          let col = -1, sum = 0, xs = 0, k = 0;
+          const flush = () => { if (k) d += `${d ? "L" : "M"}${(xs / k).toFixed(1)} ${y(sum / k).toFixed(1)}`; };
+          for (let i = 0; i < len; i++) {
+            const px = x(ux(s, i)), c = Math.floor(px / 1.5);
+            if (c !== col) { flush(); col = c; sum = 0; xs = 0; k = 0; }
+            sum += L[i]; xs += px; k++;
+          }
+          flush();
         } else {
           for (let b = 0; b < buckets; b++) {
             const i0 = Math.floor((b * len) / buckets), i1 = Math.max(i0 + 1, Math.floor(((b + 1) * len) / buckets));

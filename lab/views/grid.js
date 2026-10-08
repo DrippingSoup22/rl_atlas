@@ -403,7 +403,8 @@
           this.spark(ev.s, ev.a ?? -1, "trc");
           return 0;
         case "plan": { // planning: remembered moves replayed and learned from, in the order they were replayed
-          const list = ev.list.slice(0, 60), gap = ev.ordered ? 110 : 600 / Math.max(10, list.length);
+          // at the quick paces a plan comes every few frames: a handful of its updates each, or the sparks pile up
+          const list = ev.list.slice(0, this.pace ? (this.pace === "faster" ? 4 : 10) : 60), gap = ev.ordered ? 110 : 600 / Math.max(10, list.length);
           list.forEach((u, k) => this.spark(u.s, u.a, "dream", k * gap));
           if (line && ev.list.length) this.pop(ev.s, `${ev.list.length} planning ${ev.list.length === 1 ? "update" : "updates"}`, "plan");
           return ev.ordered ? Math.min(2200, list.length * gap) : 0;
@@ -489,7 +490,7 @@
       if (w) return w;
       w = this.workers[k] = { path: [] };
       this.svg.classList.add("multi"); // several workers: each trail in its own color, the first one's too
-      w.trailEl = el("path", { class: "trail worker", style: `--wc: var(--w${(k % 8) + 1})` }, this.gTrail);
+      w.trailEl = el("path", { class: "trail worker", pathLength: 1, style: `--wc: var(--w${(k % 8) + 1})` }, this.gTrail);
       w.bot = el("g", { class: "bot worker", style: `--wc: var(--w${(k % 8) + 1})` }, this.gAgent);
       w.body = el("g", { class: "bot-body" }, w.bot);
       el("circle", { class: "bot-head", r: 11 }, w.body);
@@ -502,9 +503,22 @@
     }
     _workerPut(w, s, instant) {
       const [x, y] = this.center(s);
-      if (instant) w.bot.classList.add("instant");
+      if (instant) this._instant(w.bot);
       w.bot.style.transform = `translate(${x}px, ${y}px)`;
-      if (instant) { w.bot.getBoundingClientRect(); w.bot.classList.remove("instant"); }
+    }
+    // A jump with no glide: the bot's transition is off until the frame after next, when its new place has been drawn.
+    // (Turning it back on at once would need the page laid out first, for every bot at every jump: a fast replay jumps
+    // all of them many times a second.)
+    _instant(bot) {
+      bot.classList.add("instant");
+      (this.jumped ||= new Set()).add(bot);
+      this.jumpFrame ||= requestAnimationFrame(() => {
+        this.jumpFrame = requestAnimationFrame(() => {
+          this.jumpFrame = 0;
+          for (const b of this.jumped) b.classList.remove("instant");
+          this.jumped.clear();
+        });
+      });
     }
     _workerEvent(ev) {
       const w = this._worker(ev.w);
@@ -576,9 +590,8 @@
 
     _put(s, instant) {
       const [x, y] = this.center(s);
-      if (instant) this.bot.classList.add("instant");
+      if (instant) this._instant(this.bot);
       this.bot.style.transform = `translate(${x}px, ${y}px)`;
-      if (instant) { this.bot.getBoundingClientRect(); this.bot.classList.remove("instant"); }
       this.at = s;
     }
 
@@ -665,11 +678,12 @@
     hint(s, a) {
       const t = this.tris[s]?.[a];
       if (!t) return;
-      t.classList.remove("hinted");
-      t.getBoundingClientRect();
-      t.classList.add("hinted");
+      // chosen again while it still glows: its twin animation, under another name, starts it over without a layout
+      const again = t.classList.contains("hinted");
+      t.classList.toggle("hinted", !again);
+      t.classList.toggle("hinted2", again);
       clearTimeout(t.hintTimer);
-      t.hintTimer = setTimeout(() => t.classList.remove("hinted"), 500);
+      t.hintTimer = setTimeout(() => t.classList.remove("hinted", "hinted2"), 500);
     }
 
     // Keep these (state, action) triangles glowing until the next call.
@@ -685,8 +699,10 @@
     _draw(pathEl, states, animate) {
       pathEl.setAttribute("d", states ? this._line(states) : "");
       pathEl.classList.toggle("long", !!states && states.length > 150); // a long wander is drawn fainter, to keep the tiles readable
-      pathEl.classList.remove("draw");
-      if (states && animate && !RL.reducedMotion()) { pathEl.getBoundingClientRect(); pathEl.classList.add("draw"); }
+      // drawn in again: the twin of its animation, under another name, starts it over (without a layout first)
+      const again = pathEl.classList.contains("draw");
+      pathEl.classList.remove("draw", "draw2");
+      if (states && animate && !RL.reducedMotion()) pathEl.classList.add(again ? "draw2" : "draw");
     }
 
     _line(states) {
