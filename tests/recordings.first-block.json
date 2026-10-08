@@ -1,0 +1,15 @@
+{
+  "a2c-cartpole": "4ca6f097f0dc8edd31fa12e41973754a8b846520",
+  "ddpg-pendulum": "0edeeada156a264aee99650ddd3b0af34c3810b8",
+  "double-dqn-cartpole": "875d7c3be3a0d30b85ba115e265797831b289998",
+  "dqn-cartpole-no-replay": "342be3a73cc4f5e6ed72d88b1d9a1d928bd247e2",
+  "dqn-cartpole-no-target": "13243f1be23a701c784d2ef4158ac2cf4026ff81",
+  "dqn-cartpole": "0ec1aff9cba132625753d2bb442bf2c9760e6141",
+  "dueling-dqn-cartpole": "778a4b32484d889f647925efdfb04cb1553c42d3",
+  "ppo-cartpole": "9a4beb6ffa530a93d50735565d1da8f0e5b28d80",
+  "ppo-pendulum": "a1bf12485b349fe873a084ef93543c43d80e8536",
+  "prioritized-dqn-cartpole": "04c7fc2d955199d76bed7fc1385c3f9da8a28fdc",
+  "sac-pendulum": "bc2627dc5790118d3dca452f723c50b8435f725a",
+  "td3-pendulum": "17ca3be1c5062ad67ad577d9675335251f00eab7",
+  "trpo-cartpole": "1622d0bdc95757c02b2ab4979178327baab6b140"
+}
