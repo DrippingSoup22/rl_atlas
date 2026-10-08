@@ -196,21 +196,21 @@ function report(env) {
   const lines = [`# Browser check: ${env.browser} ${env.version}`, "",
     `${env.os} · ${env.cpu} · screen ${env.screen} at ${env.dpr}× · the display refreshes about ${hz} times a second · ${env.when}`,
     `File: ${FILE}${QUICK ? " · quick run" : ""}`, ""];
-  for (const s of R.stories) if (s.long > 2 || s.worst > 250 || !s.end || s.busy > 2) look.push(`story ${s.id} (${s.mode}): ${s.long} long tasks (longest ${s.longest} ms), worst frame ${s.worst} ms${s.end ? "" : ", the last step was not reached"}${s.busy > 2 ? `, "Working out this run…" for ${s.busy} s` : ""}`);
-  for (const l of R.labs) if (l.fps < 0.85 * hz || l.long > 1) look.push(`lab ${l.lab} at "${l.speed}": ${l.fps} frames/s, ${l.long} long tasks (longest ${l.longest} ms)`);
+  for (const s of R.stories) if (s.long > 2 || s.longest > 200 || s.worst > 250 || !s.end || s.busy > 2) look.push(`story ${s.id} (${s.mode}): ${s.long} long tasks (longest ${s.longest} ms), worst frame ${s.worst} ms${s.end ? "" : ", the last step was not reached"}${s.busy > 2 ? `, "Working out this run…" for ${s.busy} s` : ""}`);
+  for (const l of R.labs) if (l.fps < 0.85 * hz || l.long > 1 || l.longest > 200) look.push(`lab ${l.lab} at "${l.speed}": ${l.fps} frames/s, ${l.long} long tasks (longest ${l.longest} ms)`);
   for (const l of R.lab) if (!l.ok) look.push(`lab ${l.lab}: drawer and pseudocode went ${l.steps}`);
   const t = R.training;
-  if (t && (!t.done || t.long > 2)) look.push(`deep training: ${t.began ? (t.done ? `done in ${t.took} s` : "did not finish in 5 minutes") : "did not start"}, ${t.long} long tasks (longest ${t.longest} ms)`);
+  if (t && (!t.done || t.long > 2 || t.longest > 200)) look.push(`deep training: ${t.began ? (t.done ? `done in ${t.took} s` : "did not finish in 5 minutes") : "did not start"}, ${t.long} long tasks (longest ${t.longest} ms)`);
   if (R.kept === false) look.push("progress: a station read before a reload was no longer marked read");
   if (R.theme && R.theme !== "dark") look.push(`theme: the switch left data-theme="${R.theme}"`);
   look.push(...R.formulas.map((f) => `formula too wide: ${f}`), ...R.layout.map((l) => `layout: ${l}`));
   lines.push("## To look at", "", ...(look.length ? look.map((l) => `- ${l}`) : ["Nothing: every measure is within its bounds."]), "");
   lines.push(`## Console errors (${R.errors.length})`, "", ...([...new Set(R.errors)].map((e) => `- ${e}`)), "");
   lines.push(`## Requests to the network (${R.external.length}; there should be none)`, "", ...([...new Set(R.external)].slice(0, 20).map((e) => `- ${e}`)), "");
-  lines.push("## Stories, scrolled with the mouse wheel", "", "Bounds: at most 2 long tasks, no frame over 250 ms, the last step reached, \"Working out this run…\" at most 2 s.", "",
+  lines.push("## Stories, scrolled with the mouse wheel", "", "Bounds: at most 2 long tasks and none over 200 ms, no frame over 250 ms, the last step reached, \"Working out this run…\" at most 2 s.", "",
     row(["story", "scroll", "seconds", "frames/s", "worst frame (ms)", "long tasks", "longest (ms)", "working out (s)", "last step"]), row(Array(9).fill("---")),
     ...R.stories.map((s) => row([s.id, s.mode, s.secs, s.fps, s.worst, s.long, s.longest, s.busy, s.end ? "yes" : "**no**"])), "");
-  lines.push("## Labs, played at each speed", "", `Bounds: at least ${Math.round(0.85 * hz)} frames/s (85% of the display's rate), at most 1 long task.`, "",
+  lines.push("## Labs, played at each speed", "", `Bounds: at least ${Math.round(0.85 * hz)} frames/s (85% of the display's rate), at most 1 long task and none over 200 ms.`, "",
     row(["lab", "speed", "seconds", "frames/s", "worst frame (ms)", "long tasks", "longest (ms)"]), row(Array(7).fill("---")),
     ...R.labs.map((l) => row([l.lab, l.speed, l.secs, l.fps, l.worst, l.long, l.longest])), "",
     ...R.lab.map((l) => `- ${l.lab}: drawer/pseudocode ${l.steps}${l.ok ? "" : " (expected closed/open → open/open → closed/open → closed/folded → closed/open)"}`), "");
