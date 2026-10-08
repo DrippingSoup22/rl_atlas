@@ -14,7 +14,7 @@
   const pct = (v) => `${Math.round(100 * v)}%`;
 
   RL.scenes.tree = {
-    create(card, cfg) {
+    create(card, cfg, states = []) {
       const board = cfg.board || "O....X...", c = cfg.c ?? 1.4, seed = cfg.seed ?? 1, mover = lab.ttt.toMove(board);
       const first = lab.ttt.moves(board), xs = first.map((_, i) => TX + TW * ((i + 0.5) / first.length)), span = TW / first.length;
       card.innerHTML = `<svg class="tree-scene" viewBox="0 0 ${W} ${H}" role="img" aria-label="A search tree growing over a tic-tac-toe position"></svg>
@@ -25,8 +25,16 @@
 
       // A fresh search run to k simulations (searches are cheap: rebuilding one is simpler than rewinding it).
       const searchTo = (k) => { search = lab.mcts(board, { c, seed }); search.run(k); return search; };
-      // Flat Monte Carlo's averages, worked out once for each number of games (thousands of games take a moment)
+      // Flat Monte Carlo's averages, worked out once for each number of games (thousands of games take a moment): those
+      // the steps will show are played ahead, while the reader is not scrolling
       const flats = {}, flatOf = (n) => (flats[n] ||= lab.flatMC(board, n, { seed }));
+      const ahead = [...new Set(states.map((st) => st.flat).filter(Boolean))];
+      const warm = () => {
+        if (!card.isConnected || !ahead.length) return;
+        if (!RL.scrolling()) flatOf(ahead.shift());
+        setTimeout(warm, RL.scrolling() ? 120 : 50);
+      };
+      setTimeout(warm, 300);
       const colorOf = (n) => (n && n.N ? `color-mix(in oklab, var(${n.X / n.N >= 0.5 ? "--v-pos" : "--v-neg"}) ${Math.round(Math.min(1, Math.abs(n.X / n.N - 0.5) * 2.4) * 100)}%, var(--v-mid))` : "var(--surface-2)");
 
       function boardSvg(st, sim) {

@@ -30,7 +30,7 @@
     const scene = RL.scenes[config.scene];
     if (!scene) { RL.warn(`unknown story scene '${config.scene}'`); return {}; }
     const els = Array.from(host.querySelectorAll(".story-step"));
-    const stage = scene.create(host.querySelector(".stage-card"), config);
+    const stage = scene.create(host.querySelector(".stage-card"), config, steps.map((s) => s.state)); // the states: a scene may prepare ahead
     let current = -1;
 
     function activate(i) {

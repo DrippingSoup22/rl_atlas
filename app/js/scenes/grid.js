@@ -161,11 +161,18 @@
         else if (st.play) play(view, r, t, st.play, { pace: st.pace, fine: !!st.fine, updates: st.updates, instant: !!st.instant, lead: st.lead, after: (u) => { if (!st.note) note.textContent = `${u} ${unit}${u === 1 ? "" : "s"} done`; } });
       }
 
+      let wanted = null;
       return {
         apply(st, forward) {
           stop();
+          wanted = st;
           note.textContent = "";
           chart(st);
+          if (st.run && !runOf.ready(st.run)) { // still being worked out: the step comes as soon as its run does
+            note.textContent = "Working out this run…";
+            showFormula(st);
+            return runOf.when(st.run, () => { if (wanted === st) fromRun(st); });
+          }
           if (st.run) return fromRun(st);
           const q = Float64Array.from(st.q ? Q[st.q]() : zeros);
           for (const [r, c, a, v] of st.set || []) q[(r * env.cols + c) * nA + ACTION[a]] = v;
@@ -198,7 +205,7 @@
           else if (st.q === "trained" && algorithm) note.textContent = `After ${cfg.episodes} episodes of ${algorithm.title}`;
           else if (st.note) note.textContent = st.note;
         },
-        destroy() { stop(); view.destroy(); },
+        destroy() { wanted = null; stop(); view.destroy(); },
       };
     },
   };

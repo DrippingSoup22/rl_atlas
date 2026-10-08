@@ -61,32 +61,59 @@
   // name = { recording } for a run trained offline (recorder/record.py). The world, the shared knobs and the seed come
   // from the story config unless a run says otherwise.
   // With host, the runs are also worked out in the background, a few milliseconds at a time, while the reader is on
-  // the first steps (and the host on the page): a step then finds its run ready instead of making the page wait.
+  // the first steps (and the host on the page): a step then finds its run ready instead of making the page wait. A
+  // step that comes to a run not finished yet asks for it (runOf.when): that run goes first, still in slices, and the
+  // page keeps scrolling meanwhile.
   function runs(cfg, host = null) {
     const made = {}, jobs = {};
-    const job = (name) => (jobs[name] ||= (() => {
-      const { algorithm, units, seed, world, measures, name: _label, ...params } = cfg.runs[name];
-      return RL.lab.simulateJob({
-        world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params },
-        units: units || cfg.units || 100, seed: seed ?? cfg.seed ?? 1, measures,
-      });
-    })());
+    const spec = (name) => {
+      const s = cfg.runs?.[name];
+      if (!s) throw new Error(`story: no run named '${name}'`);
+      return s;
+    };
+    const setup = (name) => {
+      const { algorithm, units, seed, world, measures, name: _label, ...params } = spec(name);
+      return { world: world || cfg.world || cfg.env, algorithm: RL.lab.algorithms[algorithm], params: { ...cfg.params, ...params }, units: units || cfg.units || 100, seed: seed ?? cfg.seed ?? 1, measures };
+    };
+    const job = (name) => (jobs[name] ||= RL.lab.simulateJob(setup(name)));
     const runOf = (name) => {
       if (made[name]) return made[name];
-      const spec = cfg.runs?.[name];
-      if (!spec) throw new Error(`story: no run named '${name}'`);
-      if (spec.recording) return (made[name] = RL.lab.recordedRun(RL.recordings[spec.recording]));
+      const s = spec(name);
+      if (s.recording) return (made[name] = RL.lab.recordedRun(RL.recordings[s.recording]));
       job(name).step(Infinity); // the same run, finished now (sliced or not, a run comes out the same)
       return (made[name] = job(name).result);
     };
+    runOf.ready = (name) => !!(made[name] || spec(name).recording || jobs[name]?.result);
+    // what a run is (its world, its algorithm, how many units), known without running it
+    runOf.about = (name) => {
+      if (runOf.ready(name)) return runOf(name);
+      const { world, algorithm, units } = setup(name);
+      return { env: RL.lab.make(world), algorithm, units };
+    };
+    let urgent = null, timer = 0;
+    runOf.when = (name, then) => {
+      if (runOf.ready(name)) return then(runOf(name));
+      urgent = { name, then }; // the step asking last is the one shown: an earlier request is dropped
+      clearTimeout(timer);
+      timer = setTimeout(work, 0);
+    };
     const todo = Object.keys(cfg.runs || {}).filter((n) => !cfg.runs[n].recording);
-    const warm = () => {
-      const name = host?.isConnected && todo.find((n) => !made[n]);
+    function work() {
+      timer = 0;
+      if (host && !host.isConnected) return;
+      if (urgent) { // a step waits for it: slices of 10 ms, scrolling or not
+        const u = urgent;
+        if (job(u.name).step(10)) { urgent = null; made[u.name] = job(u.name).result; }
+        timer = setTimeout(work, urgent ? 0 : 10);
+        if (!urgent) u.then(made[u.name]);
+        return;
+      }
+      const name = host && todo.find((n) => !made[n]);
       if (!name) return;
       if (!RL.scrolling() && job(name).step(6)) made[name] = job(name).result;
-      setTimeout(warm, RL.scrolling() ? 120 : 10);
-    };
-    setTimeout(warm, 300);
+      timer = setTimeout(work, RL.scrolling() ? 120 : 10);
+    }
+    if (host) timer = setTimeout(work, 300);
     return runOf;
   }
 
@@ -159,7 +186,7 @@
       shown = key;
       clearTimeout(timer);
       chart?.destroy();
-      const first = runOf(names[0]), unit = first.env.unitName || first.algorithm.unit;
+      const first = runOf.about(names[0]), unit = first.env.unitName || first.algorithm.unit;
       const noun = unit === "pull" || unit === "step" ? ["step", "steps"] : unit === "hand" ? ["hand", "hands"] : unit === "round" ? ["round", "rounds"] : unit === "throw" ? ["throw", "throws"] : unit === "block" ? ["block", "blocks"] : unit === "pass" ? ["pass", "passes"] : ["episode", "episodes"];
       const learner = RL.recordings?.[cfg.runs[names[0]].recording]?.learner;
       const label = st.title || (typeof METRIC[metric].label === "function" ? METRIC[metric].label(noun, learner) : METRIC[metric].label);
@@ -244,12 +271,20 @@
       create(card, cfg) {
         card.innerHTML = `<div class="scene-view"></div>${RL.sceneKit.FORMULA}<div class="scene-chart" hidden></div><div class="scene-foot"><span class="scene-note"></span></div>`;
         const runOf = runs(cfg, card), names = Object.keys(cfg.runs || {});
-        const view = new View(card.querySelector(".scene-view"), runOf(names[0]).env, options({}));
+        const view = new View(card.querySelector(".scene-view"), runOf.about(names[0]).env, options({}));
         const note = card.querySelector(".scene-note"), showFormula = formula(card, cfg);
         const { later, stop } = timers(), play = player(later), chart = curves(card.querySelector(".scene-chart"), cfg, runOf);
-        return {
+        let wanted = null;
+        const stage = {
           apply(st) {
             stop();
+            wanted = st;
+            if (!runOf.ready(st.run || names[0])) { // still being worked out: the step comes as soon as its run does
+              note.textContent = "Working out this run…";
+              chart(st);
+              showFormula(st);
+              return runOf.when(st.run || names[0], () => { if (wanted === st) stage.apply(st); });
+            }
             const r = runOf(st.run || names[0]), t = Math.min(st.at ?? 0, r.units);
             view.setOptions(options(st));
             showRun(view, r, t);
@@ -283,8 +318,9 @@
             chart(st);
             showFormula(st);
           },
-          destroy() { stop(); view.destroy(); },
+          destroy() { wanted = null; stop(); view.destroy(); },
         };
+        return stage;
       },
     };
   }
