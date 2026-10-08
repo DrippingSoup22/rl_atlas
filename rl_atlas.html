@@ -11327,12 +11327,14 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     const sandbox = preset.env === "sandbox" ? RL.sandbox(sandboxHost()) : null;
     const make = () => (sandbox ? lab.grid(sandbox.spec()) : lab.make(preset.env));
     let env = make();
-    // Racers that name a recording play back runs trained offline (recorder/record.py) instead of computing them.
+    // Racers that name a recording play back runs trained offline (recorder/deep.js) instead of computing them.
     const recRuns = preset.racers.map((r) => (r.recording ? lab.recordedRun(RL.recordings[r.recording]) : null));
     const recorded = recRuns.some(Boolean), rec0 = recorded ? RL.recordings[preset.racers[0].recording] : null, sweepData = rec0 ? RL.sweeps?.[rec0.name] : null;
     // Recordings of the JavaScript trainer (lab/deep/) are a starting point, not a limit: another seed, or a knob turned
     // away from the recording's value, trains here in a Web Worker, and a seed of the recording comes out as recorded.
     const recs = preset.racers.map((r) => (r.recording ? RL.recordings[r.recording] : null));
+    // every recorded racer's own sweep, if it has one (the first racer's also gives the knobs that can be turned)
+    const sweepsOf = recs.map((r) => (r && RL.sweeps?.[r.name]) || null), sweepFor = (k) => sweepsOf.findIndex((d) => d?.knobs[k]);
     const trainable = recorded && recs.every(lab.trainable), homeRuns = recRuns.slice();
     const turned = {}; // the knobs turned away from the recordings' settings
     // a racer's settings: its recording's, with the knobs turned (SAC's α is either tuned, "auto", or fixed)
@@ -11966,7 +11968,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     }
 
     // ---- the odds: how often runs end well, and how that moves with a knob ----
-    // The knobs of recorded runs (recorder/record.py), as their sweeps name them.
+    // The knobs of recorded runs (recorder/deep.js), as their sweeps name them.
     const DEEP_KNOBS = { lr: { sym: "α", name: "learning rate" }, target_every: { sym: "C", name: "steps between target updates (0: none)" },
       buffer: { sym: "N", name: "replay memory (128: none)" }, tau: { sym: "τ", name: "how fast the target copies follow" },
       noise: { sym: "σ", name: "exploration noise" }, delay: { sym: "d", name: "critic updates per actor update" },
@@ -11978,14 +11980,14 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     // The values a sweep tries: a knob's choices or its sweep list. Tiny step sizes (linear methods, policy gradients)
     // try the ladder around the ones in use; averaging methods also try 1/n.
     function sweepValues(k) {
-      if (recorded) return sweepData?.knobs[k]?.values || [];
+      if (recorded) return sweepsOf[sweepFor(k)]?.knobs[k].values || [];
       if (preset.sweep?.[k]) return preset.sweep[k]; // a preset can pick the values that matter in its world
       const now = [...(k in preset.params ? [knobs[k]] : []), ...racers.filter((r) => k in r.params).map((r) => r.params[k])];
       if ((k === "alpha" || k === "alphaW") && Math.max(...now) < 0.01) return ALPHA_LADDER.filter((a) => a >= Math.min(...now) / 30 && a <= Math.max(...now) * 30);
       const list = knobOf(k).choices || knobOf(k).sweep || [];
       return k === "alpha" && racers.every((r) => AVERAGING.has(r.algorithm.id)) ? [0, ...list] : list;
     }
-    const sweepable = () => (recorded ? Object.keys(sweepData?.knobs || {}) : null) || Object.keys(KNOBS).filter((k) => (k in preset.params || racers.some((r) => k in r.params)) && sweepValues(k).length > 1);
+    const sweepable = () => (recorded ? [...new Set(sweepsOf.flatMap((d) => (d ? Object.keys(d.knobs) : [])))] : null) || Object.keys(KNOBS).filter((k) => (k in preset.params || racers.some((r) => k in r.params)) && sweepValues(k).length > 1);
     const fmtSweep = (k, v) => (k === "alpha" && v === 0 ? "1/n" : v > 0 && v < 0.001 ? v.toExponential(0) : String(v));
     // The odds give up on a run whose episodes keep running to the step limit: it is stuck, and judged as it stands.
     const GIVE_UP = 20;
@@ -12001,7 +12003,9 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       strip = recorded ? null : new RL.SeedStrip(q(".strip-host"), { label: "How each seed of the bench ends", onPick: (seed) => chooseSeed(seed) });
       q(".sweep-bar").hidden = !ks.length;
       q(".sweep-runs").parentElement.hidden = recorded; // a recording's seeds are fixed
-      q(".sweep-knob").innerHTML = ks.map((k) => `<option value="${k}">${esc(knobOf(k).sym)} · ${esc(knobOf(k).name)}</option>`).join("");
+      // racers with sweeps of their own: each knob says whose it is
+      const whose = (k) => (sweepsOf.filter(Boolean).length > 1 ? ` — ${racers.filter((_, i) => sweepsOf[i]?.knobs[k]).map((r) => r.name).join(", ")}` : "");
+      q(".sweep-knob").innerHTML = ks.map((k) => `<option value="${k}">${esc(knobOf(k).sym)} · ${esc(knobOf(k).name)}${esc(whose(k))}</option>`).join("");
       clearSweep(ks.length ? sweepIdle() : "");
     }
 
@@ -12092,7 +12096,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         if (same) same.name = r.algorithm.title;
         else groups.push({ key, r, i, base, name: k in r.params ? r.algorithm.title : r.name }); // its own value is overridden
       });
-      const kinds = preset.success ? ["ok", "score"] : ["score"], current = recorded ? sweepData.knobs[k].current ?? rec0.config[k] ?? null : k in preset.params ? knobs[k] : null;
+      const kinds = preset.success ? ["ok", "score"] : ["score"], current = recorded ? sweepsOf[sweepFor(k)].knobs[k].current ?? recs[sweepFor(k)].config[k] ?? null : k in preset.params ? knobs[k] : null;
       const titles = { ok: `Runs that ${rule.text}`, score: `${m.title ? m.title(noun()[0], env, racers[0].algorithm) : rule.metric}, averaged over ${rule.window ? `${noun()[1]} ${rule.window[0]} to ${rule.window[1]}` : "the last tenth"}` };
       const grid = q(".sweep-grid");
       grid.className = `chart-grid sweep-grid n${kinds.length}`;
@@ -12108,16 +12112,28 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
         points: res[gi].map((x) => (c === "ok" ? (x.runs ? x.wins / x.runs : NaN) : x.scored ? x.sum / x.scored : NaN)),
         notes: res[gi].map((x) => (c === "ok" ? `${x.wins} of ${x.runs} runs${x.stuck ? ` (${x.stuck} stuck)` : ""}` : x.scored ? `average ${sweepCharts[j].fmt(x.sum / x.scored)} over ${x.scored} runs` : "")),
       }))));
-      if (recorded) { // trained offline: every value's seeds are in the sweep file
-        const d = sweepData.knobs[k], judged = rule.metric === "test" ? d.test : d.train; // the curves the rule judges
-        judged.forEach((curves, vi) => curves.forEach((c) => {
-          const { ok, score } = lab.success(rule, { [rule.metric]: Float64Array.from(c, (x) => x ?? NaN) }), x = res[0][vi];
-          x.runs++;
-          if (ok) x.wins++;
-          if (!Number.isNaN(score)) { x.sum += score; x.scored++; }
-        }));
-        draw();
-        q(".sweep-note").textContent = `${plural(d.train[0].length, ["seed", "seeds"])} per value, ${sweepData.steps.toLocaleString("en")} steps each, trained offline with the recording's other settings${Object.keys(turned).some((t) => t !== k) ? " (not the knobs as turned above)" : ""}. The shaded value is the recording's. Hover a dot for its numbers.`;
+      if (recorded) { // trained offline: every value's seeds are in the sweep files, one series per racer whose sweep turns k
+        const owners = sweepsOf.map((d, i) => (d?.knobs[k] ? i : -1)).filter((i) => i >= 0);
+        const series = owners.map((i) => {
+          const d = sweepsOf[i].knobs[k], judged = rule.metric === "test" ? d.test : d.train, acc = values.map(() => ({ runs: 0, wins: 0, sum: 0, scored: 0 })); // the curves the rule judges
+          judged.forEach((curves, vi) => {
+            const x = acc[values.indexOf(d.values[vi])];
+            if (x) for (const c of curves) {
+              const { ok, score } = lab.success(rule, { [rule.metric]: Float64Array.from(c, (v) => v ?? NaN) });
+              x.runs++;
+              if (ok) x.wins++;
+              if (!Number.isNaN(score)) { x.sum += score; x.scored++; }
+            }
+          });
+          return { name: racers[i].name, color: `--s${i + 1}`, acc };
+        });
+        kinds.forEach((c, j) => sweepCharts[j].set(series.map(({ name, color, acc }) => ({
+          name, color,
+          points: acc.map((x) => (c === "ok" ? (x.runs ? x.wins / x.runs : NaN) : x.scored ? x.sum / x.scored : NaN)),
+          notes: acc.map((x) => (c === "ok" ? `${x.wins} of ${x.runs} runs` : x.scored ? `average ${sweepCharts[j].fmt(x.sum / x.scored)} over ${x.scored} runs` : "")),
+        }))));
+        const d0 = sweepsOf[owners[0]];
+        q(".sweep-note").textContent = `${plural(d0.knobs[k].train[0].length, ["seed", "seeds"])} per value, ${d0.steps.toLocaleString("en")} steps each, trained offline with the recording's other settings${Object.keys(turned).some((t) => t !== k) ? " (not the knobs as turned above)" : ""}. The shaded value is the recording's. Hover a dot for its numbers.`;
         return;
       }
       let one = null; // the run under way, spread over chunks when it is long
