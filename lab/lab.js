@@ -35,31 +35,8 @@
     pass: [...walking("Step by step", [520, 300]), ...quick(90, 30), ...rates(1, 4, 10)], // the log being made, then passes over it
     block: [{ id: "line", label: "Step by step", every: 80 }, { id: "step", label: "Quickly", every: 12 }, ...rates(1, 4, 10)], // a recorded test episode
   };
-  // The knobs a preset can show as sliders. alpha = 0 means sample averages (1/n), where an algorithm allows it.
-  // sweep: the values a sweep of the odds tries for a slider (a knob with choices tries its choices).
-  const KNOBS = {
-    alpha: { sym: "α", name: "step size", min: 0.01, max: 1, step: 0.01, sweep: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1] },
-    epsilon: { sym: "ε", name: "exploration", min: 0, max: 0.5, step: 0.01, sweep: [0, 0.01, 0.05, 0.1, 0.2, 0.3, 0.5] },
-    gamma: { sym: "γ", name: "discount", min: 0.5, max: 1, step: 0.01, sweep: [0.5, 0.7, 0.9, 0.95, 0.99, 1] },
-    c: { sym: "c", name: "confidence", min: 0, max: 5, step: 0.1, sweep: [0, 0.5, 1, 2, 3, 5] },
-    q0: { sym: "Q₁", name: "first estimate", min: -2, max: 10, step: 0.5, sweep: [-2, 0, 1, 2, 5, 10] },
-    theta: { sym: "θ", name: "tolerance", choices: [0.1, 0.01, 0.001, 0.0001] },
-    n: { sym: "n", name: "steps ahead", choices: [1, 2, 3, 4, 8, 16, 32, 64] },
-    lambda: { sym: "λ", name: "trace decay", min: 0, max: 1, step: 0.01, sweep: [0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1] },
-    planning: { sym: "n", name: "planning steps", choices: [0, 1, 5, 10, 20, 50, 100] },
-    kappa: { sym: "κ", name: "exploration bonus", choices: [0, 0.0001, 0.001, 0.01] },
-    alphaW: { sym: "αw", name: "critic step size", min: 0.01, max: 1, step: 0.01, sweep: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1] },
-    beta: { sym: "β", name: "entropy bonus", choices: [0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1] },
-    workers: { sym: "N", name: "workers", choices: [1, 2, 4, 8, 16] },
-    epochs: { sym: "K", name: "passes over each batch", choices: [1, 2, 4, 10, 20] },
-    clip: { sym: "ε", name: "clip range (0: no clip)", choices: [0, 0.1, 0.2, 0.3, 0.5] },
-    delta: { sym: "δ", name: "trust region (KL)", choices: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2] },
-    noise: { sym: "σ", name: "exploration noise (degrees)", min: 0, max: 30, step: 1, sweep: [0, 1, 2, 5, 10, 20, 30] },
-    logEpisodes: { sym: "E", name: "episodes in the log", choices: [1, 2, 5, 10, 20, 50, 100, 200] },
-    rewardScale: { sym: "c", name: "rewards × c (other units)", choices: [0.01, 0.1, 1, 10, 100] },
-    normalize: { sym: "Â", name: "normalize advantages (1: yes)", choices: [0, 1] },
-    doubt: { sym: "d", name: "doubt: extra cost of an unseen tile", min: 0, max: 3, step: 0.1, sweep: [0, 0.2, 0.4, 0.6, 0.8, 1, 2] },
-  };
+  const KNOBS = lab.KNOBS; // the knobs a preset can show (lab/knobs.js)
+
   const ALPHA_LADDER = [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05];
   const AVERAGING = new Set(["epsilon-greedy", "optimistic-init", "ucb", "mc-prediction", "exploring-starts", "mc-control"]);
   // What a chart can plot.
@@ -125,10 +102,14 @@
       return c;
     };
     const atHome = (i) => !Object.keys(turned).length && played === recs[i].shown;
+    // the knobs that turn nothing here: the lab's own list (lab.toml) at home; in another world, those the world fixes
+    // for a racer's kind of algorithm (lab/worlds.js)
+    const fixedKnobs = () => preset.fixed || [];
+    const fixedFor = (r) => [...fixedKnobs(), ...lab.fixedIn(preset.worldFixed, r.algorithm)];
     // a knob's value in a recording: its setting, or the trainer's default (which the sweep names); switches as 0 and 1
     const recValue = (rec, k) => { const v = rec.config[k] ?? sweepData?.knobs[k]?.current; return typeof v === "boolean" ? +v : v; };
     // the knobs that can be turned: the sweep's, where every racer has the same value (a racer's own difference stays)
-    const deepKnobs = () => (trainable ? Object.keys(sweepData?.knobs || {}).filter((k) => recs.every((r) => recValue(r, k) === recValue(recs[0], k))) : []);
+    const deepKnobs = () => (trainable ? Object.keys(sweepData?.knobs || {}).filter((k) => !fixedKnobs().includes(k) && recs.every((r) => recValue(r, k) === recValue(recs[0], k))) : []);
     const deepValue = (k) => (k in turned ? (typeof turned[k] === "boolean" ? +turned[k] : turned[k]) : recValue(recs[0], k));
     let deepBench = null; // the bench trained here, for settings off the precomputed ones
     let racers = preset.racers.map((r, i) => ({ ...r, algorithm: recRuns[i] ? recRuns[i].algorithm : lab.algorithms[r.algorithm] }));
@@ -137,9 +118,8 @@
     // Shared knobs: the preset's, minus those every racer sets for itself.
     // seed: "typical" (the bench's median run for these settings) or a number the reader chose
     const knobs = { units: recorded ? recRuns[0].units : preset.units, seed: recorded ? recRuns[0].seed : "typical", runs: preset.runs, ...preset.params };
-    // The knobs on the bar: the lab's settings that not every racer sets for itself. In another world, step sizes
-    // the racers all set are shown too: the knob is the reference their ratios apply to (lab.carryRacer).
-    const shown = () => Object.keys(KNOBS).filter((k) => k in preset.params && (racers.some((r) => !(k in r.params)) || (preset.env !== base.env && (k === "alpha" || k === "alphaW"))));
+    // The knobs on the bar (lab/knobs.js); those that turn nothing in this world stay as they are, off the bar.
+    const shown = () => lab.knobsShown(preset.params, racers, { fixed: fixedKnobs(), away: preset.env !== base.env, reads: readsOf() });
     // A racer's settings: the lab's, the knobs', then its own (adapted when it runs in another world than the lab's).
     // "α = 2⁻¹³" or "αw = 0.1" in a racer's name, written again for the step sizes p it runs with
     const SUP = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
@@ -153,6 +133,14 @@
     const paramsOf = (r) => {
       const own = preset.env === base.env ? r.params : lab.carryRacer(r.params, { env, base: base.params, racers: racers.map((x) => x.params), knobs });
       return { ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...own };
+    };
+    // what each racer reads in this world (lab.reads), less what is fixed for it: a knob no racer reads is not offered
+    let readsAt = null; // for one world and set of racers (the sandbox can change them)
+    const readsOf = () => {
+      if (recorded) return null;
+      const key = `${preset.env} ${racers.map((r) => r.algorithm.id)}`;
+      if (readsAt?.key !== key) readsAt = { key, sets: racers.map((r) => { const set = lab.reads(make, r.algorithm, paramsOf(r)); for (const k of fixedFor(r)) set.delete(k); return set; }) };
+      return readsAt.sets;
     };
     const view = { seeds: !!preset.seeds, mode: "bench", show: {} }; // seeds: a recording's thin lines; mode: "bench" or "run"
     const from = RL.app?.from?.name === "entry" ? racers.findLastIndex((r) => r.algorithm.id === RL.app.from.id) : -1;
@@ -379,7 +367,7 @@
         knobs.units = base.units;
       } else {
         const prof = lab.worldProfile(id, racers.map((r) => r.algorithm));
-        Object.assign(preset, { env: id, units: prof.units, charts: prof.charts, measures: prof.measures, success: prof.success, film: prof.film, runs: prof.runs, sweep: null });
+        Object.assign(preset, { env: id, units: prof.units, charts: prof.charts, measures: prof.measures, success: prof.success, film: prof.film, runs: prof.runs, sweep: null, fixed: null, worldFixed: prof.fixed });
         preset.params = { ...base.params, ...prof.params };
         // racers that all bring their own step sizes get a reference one here, for their ratios to apply to
         for (const k of ["alpha", "alphaW"]) if (!(k in preset.params) && racers.some((r) => k in r.params)) preset.params[k] = 0.1;
@@ -779,7 +767,7 @@
       const list = knobOf(k).choices || knobOf(k).sweep || [];
       return k === "alpha" && racers.every((r) => AVERAGING.has(r.algorithm.id)) ? [0, ...list] : list;
     }
-    const sweepable = () => (recorded ? [...new Set(sweepsOf.flatMap((d) => (d ? Object.keys(d.knobs) : [])))] : null) || Object.keys(KNOBS).filter((k) => (k in preset.params || racers.some((r) => k in r.params)) && sweepValues(k).length > 1);
+    const sweepable = () => ((recorded ? [...new Set(sweepsOf.flatMap((d) => (d ? Object.keys(d.knobs) : [])))] : null) || Object.keys(KNOBS).filter((k) => (k in preset.params || racers.some((r) => k in r.params)) && sweepValues(k).length > 1 && readsOf().some((set) => set.has(k)))).filter((k) => !fixedKnobs().includes(k));
     const fmtSweep = (k, v) => (k === "alpha" && v === 0 ? "1/n" : v > 0 && v < 0.001 ? v.toExponential(0) : String(v));
     // The odds give up on a run whose episodes keep running to the step limit: it is stuck, and judged as it stands.
     const GIVE_UP = 20;

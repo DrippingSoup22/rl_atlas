@@ -309,6 +309,42 @@ test("every Lab preset runs: its world, algorithms and measures exist", () => {
   }
 });
 
+test("every knob a lab shows changes its runs, at least with another knob turned too (else lab.toml fixes it)", () => {
+  require("../app/content.js");
+  const sig = (r) => JSON.stringify(Object.values(r.metrics).map((v) => Array.from(v)));
+  for (const [id, p] of Object.entries(globalThis.RL.content.presets)) {
+    if (p.racers.some((r) => r.recording)) continue; // recorded labs show their sweeps' knobs
+    const racers = p.racers.map((r) => ({ ...r, algorithm: A[r.algorithm] }));
+    const shown = lab.knobsShown(p.params, racers, { fixed: p.fixed, reads: racers.map((r) => lab.reads(p.env, r.algorithm, { ...p.params, ...r.params })) });
+    // a knob's two ends, away from the lab's setting
+    const ends = (k) => {
+      const own = racers.find((r) => r.algorithm.knobs?.[k])?.algorithm.knobs[k], d = { ...lab.KNOBS[k], ...own };
+      const others = (p.sweep?.[k] || d.choices || d.sweep).filter((v) => v !== p.params[k]);
+      return [...new Set([others[0], others.at(-1)])];
+    };
+    for (const k of shown) {
+      // as the lab is set, then with each other knob at one of its ends (Dyna's γ only matters with a large α)
+      const contexts = [{}, ...shown.filter((j) => j !== k).flatMap((j) => ends(j).map((v) => ({ [j]: v })))];
+      const turns = contexts.some((ctx) => racers.filter((r) => !(k in r.params)).some((r) => {
+        const go = (v) => sig(lab.simulate({ world: p.env, algorithm: r.algorithm, params: { ...p.params, ...ctx, ...r.params, [k]: v }, units: Math.min(p.units, 100), seed: 1, snapshots: false, measures: p.measures }));
+        const as = go(p.params[k]);
+        return ends(k).some((v) => go(v) !== as);
+      }));
+      assert.ok(turns, `${id}: turning ${k} changes nothing in its runs`);
+    }
+  }
+});
+
+test("Catch fixes γ for value methods: the ball falls for the same number of steps, so γ never changes their choices", () => {
+  const prof = lab.worldProfile("catch", [A["q-learning"]]), sig = (r) => Array.from(r.metrics.return).join();
+  for (const id of ["q-learning", "sarsa-lambda"]) {
+    const runs = [0.5, 0.9, 1].map((gamma) => sig(run("catch", id, { ...prof.params, lambda: 0.8, gamma }, 300)));
+    assert.equal(new Set(runs).size, 1, id);
+    assert.ok(lab.fixedIn(prof.fixed, A[id]).includes("gamma"), id);
+  }
+  assert.deepEqual(lab.fixedIn(prof.fixed, A.reinforce), []); // a policy gradient's steps scale with γ
+});
+
 test("success rules: the average over a window, the last tenth by default, against a min or a max", () => {
   const metrics = { steps: Float64Array.from([900, 500, 100, 40, 20, 20, 20, 20, 20, 30]) };
   assert.deepEqual(lab.success({ metric: "steps", max: 25 }, metrics), { score: 30, ok: false }); // the last tenth: 1 unit

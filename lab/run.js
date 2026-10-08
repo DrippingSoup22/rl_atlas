@@ -46,7 +46,8 @@
   // The same run as a job the page can spread over many short slices, so that a long one never freezes it:
   // job.step(ms) runs units for about that long and says whether the run is done; then job.result is what
   // lab.simulate returns. job.done is the share of units run so far (0 to 1).
-  lab.simulateJob = function ({ world, algorithm, params, units, seed, snapshots = true, measures = null, giveUp = 0 }) {
+  // reads: a Set that collects the name of every setting the run looks at (lab.reads).
+  lab.simulateJob = function ({ world, algorithm, params, units, seed, snapshots = true, measures = null, giveUp = 0, reads = null }) {
     // params.anyStart: episodes start from any state (prediction on a world whose policy would visit only its own
     // path; the values of a policy do not depend on where its episodes start)
     const fresh = typeof world === "function" ? world : () => lab.make(world);
@@ -56,7 +57,8 @@
       return e;
     };
     const env = make(), rng = lab.rng(seed);
-    const p = { maxSteps: env.maxSteps || 5000, ...params }; // a world may cap its own episodes (Taxi: 200 steps)
+    const settings = { maxSteps: env.maxSteps || 5000, ...params }; // a world may cap its own episodes (Taxi: 200 steps)
+    const p = reads ? new Proxy(settings, { get: (o, k) => (reads.add(k), o[k]) }) : settings;
     env.init?.(rng);
     const layout = algorithm.memory(env, p);
     const { buf, m } = lab.memory(layout);

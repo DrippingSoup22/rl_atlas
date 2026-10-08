@@ -38,7 +38,11 @@
       profile: { episode: 2000, round: 300, sweep: 100, gamma: 0.99, maxSteps: 200, charts: ["return"], success: lose(5, "trip"), film: [1, 100, 500, 2000] } },
     { id: "catch", group: "tables", blurb: "Move a paddle under a falling ball: +1 caught, −1 missed",
       profile: { episode: 1000, round: 200, sweep: 40, gamma: 1, charts: ["return"], domain: [-1, 1], film: [1, 10, 100, 1000],
-        success: { metric: "return", min: 0.6, text: "end up catching the ball at least four times in five on average, while still exploring" } } },
+        success: { metric: "return", min: 0.6, text: "end up catching the ball at least four times in five on average, while still exploring" },
+        // the ball always falls for the same number of steps and pays only at the end: γ shrinks the values of a
+        // state's actions alike, so a method that compares them chooses the same; and the returns are a sure ±1, so
+        // exploring starts' averages keep their signs whatever α
+        fixed: { gamma: ["tabular", "linear"], alpha: ["exploring-starts"] } } },
     { id: "blackjack", group: "tables", blurb: "Hit or stick against the dealer",
       profile: { episode: 100000, round: 5000, gamma: 1, charts: ["return"], film: [1, 1000, 10000, 100000], params: { policy: "stick-20" } } },
     { id: "mountain-car", group: "approx", blurb: "Rock an underpowered car out of a valley",
@@ -138,8 +142,9 @@
     return Object.entries(GROUPS).map(([group, title]) => ({ group, title, worlds: ok.filter((w) => w.group === group).map((w) => ({ id: w.id, title: lab.make(w.id).title, blurb: w.blurb, hard: hard(w) })) })).filter((g) => g.worlds.length);
   };
   // The settings a run of these algorithms on world id starts from: { units, runs (how many runs the charts average;
-  // none: the 20-seed bench), gamma, maxSteps, charts, measures, success,
-  // film, domain, params }. Dynamic programming charts its sweeps' largest change; prediction charts its error.
+  // none: the 20-seed bench), gamma, maxSteps, charts, measures, success, film, domain, params, fixed (knobs that
+  // change nothing in this world for some kinds of algorithm: lab.fixedIn) }. Dynamic programming charts its sweeps'
+  // largest change; prediction charts its error.
   lab.worldProfile = function (id, algorithms) {
     const w = WORLDS.find((x) => x.id === id);
     if (!w) return null;
@@ -152,7 +157,7 @@
     // values, which a world of zero rewards does not give)
     const explore = fam === "linear" && w.group === "tables" ? { epsilon: 0.1 } : {};
     const { gamma: tg, units: tu, maxSteps: tm, ...tuned } = { ...explore, ...famT, ...t[lead.id] };
-    const out = { units: p[unit], runs: p.runs, gamma: p.gamma, maxSteps: p.maxSteps, charts: p.charts, measures: p.measures || null, success: p.success || null, film: p.film, domain: p.domain || null, params: p.params || {} };
+    const out = { units: p[unit], runs: p.runs, gamma: p.gamma, maxSteps: p.maxSteps, charts: p.charts, measures: p.measures || null, success: p.success || null, film: p.film, domain: p.domain || null, params: p.params || {}, fixed: p.fixed || null };
     if (kinds.has("dp")) Object.assign(out, { charts: ["delta"], measures: null, success: null, film: [1, 10, out.units] });
     // policy evaluation evaluates the same policy prediction does (iteration starts from random play, as in the book)
     if (algorithms.some((a) => a.id === "policy-evaluation")) out.params = { ...out.params, policy: "mostly-best" };
@@ -194,6 +199,8 @@
     }
     return out;
   };
+  // The knobs a world fixes for an algorithm (a profile's fixed: { knob: [families or algorithm ids] }).
+  lab.fixedIn = (fixed, algorithm) => Object.keys(fixed || {}).filter((k) => fixed[k].includes(algorithm.id) || fixed[k].includes(FAMILY[algorithm.id]));
   lab.worldBlurb = (id) => WORLDS.find((w) => w.id === id)?.blurb || "";
   lab.WORLD_GROUPS = GROUPS;
 })(globalThis.RL = globalThis.RL || {});

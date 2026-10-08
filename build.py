@@ -38,7 +38,7 @@ FRONT_MATTER = {"summary", "change", "prereqs", "lab", "sources", "story", "stor
 # imitation on the ice bridge, planning in a learned model among hidden cliffs. Their pseudocode is the station's.
 RUNNABLE_CONCEPTS = {"dpg": "dpg", "offline-q": "offline-rl", "offline-bcq": "offline-rl", "bc": "imitation", "dagger": "imitation",
                      "model-planner": "model-based-deep"}
-PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds", "home"}
+PRESET_KEYS = {"title", "env", "algorithms", "racers", "units", "runs", "charts", "measures", "film", "intro", "success", "sweep", "seeds", "home", "fixed"}
 CHARTS = {"return", "steps", "optimal", "left", "delta", "error", "optimal-error", "match", "greedy", "ve", "weights",
           "policy-value", "right", "aim", "kl", "clipped", "deployed", "labels"}
 # What a preset of recorded runs (racers that name a recording) can chart: from the recordings, nothing is recomputed.
@@ -487,6 +487,11 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
     sweep = raw.get("sweep")
     if sweep is not None and not (isinstance(sweep, dict) and all(isinstance(v, list) and len(v) > 1 and all(isinstance(x, (int, float)) for x in v) for v in sweep.values())):
         problems.error(where, "sweep must map knobs to lists of at least two numbers, as in sweep = { q0 = [-100.0, 0.0] }")
+    fixed = raw.get("fixed", [])
+    if not (isinstance(fixed, list) and all(isinstance(k, str) for k in fixed)):
+        problems.error(where, 'fixed must list knobs, as in fixed = ["gamma"]: those that change nothing in this lab, kept off its bar')
+    elif not any(r.get("recording") for r in raw.get("racers", [])) and (stray := [k for k in fixed if k not in raw]):
+        problems.error(where, f"fixed names knobs the lab does not set: {', '.join(stray)}")
     if not isinstance(raw.get("seeds", False), bool):
         problems.error(where, "seeds must be true or false (true, for recorded runs: the charts open on the thin lines of every seed)")
     return {
@@ -497,6 +502,7 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
         **({"success": success} if success is not None else {}),
         **({"sweep": sweep} if sweep is not None else {}),
         **({"seeds": True} if raw.get("seeds") is True else {}),
+        **({"fixed": fixed} if fixed else {}),
         **({"home": raw["home"]} if raw.get("home") else {}),
     }
 

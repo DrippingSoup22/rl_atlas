@@ -15,6 +15,8 @@
 #              max, window = [first, last] units (the last tenth by default), text }; text finishes "how many …"
 #   sweep      the values the Lab's sweep tries for a knob, where the defaults do not suit the world: { q0 = [...] }
 #   seeds      true, for recorded runs: the charts open on the thin lines of every seed instead of the one run played
+#   fixed      knobs kept at their setting and off the bar, because turning them changes nothing in this lab:
+#              fixed = ["gamma"]
 # Any other key is a knob every algorithm gets: alpha, epsilon, gamma, q0, c, theta, policy, baseline, v0, sync, judge,
 # n (n-step methods), lambda and trace ("accumulating" or "replacing"), planning and kappa (Dyna),
 # features ("groups", "tiles", "poly", "fourier", "table" or "own") with cells, tilings and order, and behavior (the
@@ -215,6 +217,7 @@ runs = 1000
 alpha = 0.1
 epsilon = 0.1
 gamma = 1.0
+fixed = ["gamma"] # A's right is worth 0 and its left γ times B's best: any γ above 0 makes the same choices
 charts = ["left"]
 intro = "Going left from A leads to B, whose many actions all lose a little on average, but some will look like winners by luck. Q-learning trusts the luckiest one; Double Q-learning does not."
 success = { metric = "left", max = 0.1, window = [41, 60], text = "go left from A at most 10% of the time by episodes 41 to 60" }
@@ -551,6 +554,7 @@ racers = [
 ]
 units = 1000
 gamma = 1.0
+fixed = ["gamma"] # one throw is the whole episode: there is nothing later to discount
 features = "own"
 charts = ["return", "aim"]
 measures = ["aim"]
@@ -569,6 +573,7 @@ units = 300
 alpha = 1.0
 alphaW = 0.2
 gamma = 1.0
+fixed = ["gamma"] # one throw is the whole episode: there is nothing later to discount
 charts = ["aim", "return"]
 measures = ["aim"]
 film = [0, 10, 50, 300]
@@ -800,6 +805,7 @@ racers = [{ recording = "ddpg-pendulum" }, { recording = "td3-pendulum" }]
 charts = ["test", "q"]
 film = [0, 3, 6, 40]
 intro = "The same pendulum, the same memory and networks. TD3 changes three things: two critics, and the target uses the smaller of their estimates; the actor and the target copies move only every second critic step; and the target action is blurred with clipped noise. Watch the critics' targets: every reward here is 0 or less, so no value can be above 0."
+fixed = ["policy_noise"] # its sweep: from 0 to 1, every seed succeeds at the same speed
 success = { metric = "test", min = -250, text = "end up swinging it up and holding it in the test episodes, −250 or better" }
 
 [sac-pendulum]
@@ -901,6 +907,7 @@ racers = [
 ]
 units = 20
 gamma = 1.0
+fixed = ["gamma"] # with any γ its runs end the same here: alike without exploration, within luck with it
 epsilon = 0.0
 maxSteps = 500
 charts = ["return"]
