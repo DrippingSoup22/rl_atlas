@@ -850,11 +850,14 @@
           return;
         }
         const need = racers.filter((_, i) => !benchOf(i)).length, cores = Math.max(1, (navigator.hardwareConcurrency || 2) - 1);
+        // one seed's time on a core: as timed here, or else as the recorder took (seconds per 1,000 steps, a core each)
+        const PER_K = { dqn: 0.4, a2c: 0.1, ppo: 0.5, trpo: 0.5, ddpg: 4.8, td3: 4.8, sac: 8.6 };
+        const secs = perRun || Math.max(...recs.filter((_, i) => !benchOf(i)).map((r) => ((PER_K[r.config.algo] ?? PER_K[r.learner] ?? 1) * r.steps) / 1000));
         const ks = Object.keys(turned), missing = racers.filter((_, i) => !benchOf(i)).map((r) => esc(r.name)), names = missing.length > 1 ? `${missing.slice(0, -1).join(", ")} and ${missing.at(-1)}` : missing[0];
         const why = ks.length === 1 && need < racers.length // one knob, swept for some racers only
           ? `${names} ${need > 1 ? "have" : "has"} no sweep over ${esc(DEEP_KNOBS[ks[0]]?.sym || ks[0])}, so nobody has run ${need > 1 ? "their" : "its"} ${n} seeds with these settings yet.`
           : `Nobody has run these settings' ${n} seeds yet: the recordings and their sweeps turn one knob at a time.`;
-        q(".odds-tally").innerHTML = `${why} <button type="button" class="bench-here">Train the ${plural(n * need, ["seed", "seeds"])} here</button> (about ${duration((Math.ceil((n * need) / cores) * (perRun || 90)))} on this computer, using ${plural(cores, ["core", "cores"])}).`;
+        q(".odds-tally").innerHTML = `${why} <button type="button" class="bench-here">Train the ${plural(n * need, ["seed", "seeds"])} here</button> (about ${duration(Math.ceil((n * need) / cores) * secs)} on this computer, using ${plural(cores, ["core", "cores"])}).`;
         return;
       }
       if (!preset.success || !avg) return;
