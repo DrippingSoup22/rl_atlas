@@ -55,24 +55,33 @@
     return out.map((t) => t.trim()).filter(Boolean);
   }
 
+  // Shrink a formula wider than its box, down to a floor (a share of its size). Its width does not quite follow the
+  // font (KaTeX keeps some lengths fixed), so it is measured again after each step. True when it fits.
+  function shrink(el, floor) {
+    const room = el.clientWidth, size = parseFloat(getComputedStyle(el).fontSize);
+    for (let scale = 1, i = 0; i < 4; i++) {
+      const need = el.scrollWidth;
+      if (need <= room + 1) return true;
+      if (scale <= floor) return false;
+      scale = Math.max(floor, (scale * (room - 2)) / need);
+      el.style.fontSize = `${(size * scale).toFixed(2)}px`;
+    }
+    return el.scrollWidth <= room + 1;
+  }
+
   // A display formula a little wider than its column shrinks to fit, down to 80% of its size (65% on a phone). One
   // written as parts side by side stacks them instead when even that is too wide; anything still too wide scrolls.
   function fit(root) {
     for (const el of root.querySelectorAll(".tex-display[data-done]")) {
       el.style.fontSize = "";
       if (el.dataset.stacked) { el.innerHTML = tex(el.dataset.src, true); delete el.dataset.stacked; }
-      const room = el.clientWidth;
-      let need = el.scrollWidth;
-      if (!room || need <= room + 1) continue; // hidden, or it fits
+      if (!el.clientWidth || el.scrollWidth <= el.clientWidth + 1) continue; // hidden, or it fits
       const split = parts(el.dataset.src || ""), floor = innerWidth < 640 ? 0.65 : 0.8;
-      if (need * floor > room && split.length > 1) {
-        el.innerHTML = tex(`\\begin{gathered} ${split.join(" \\\\[3pt] ")} \\end{gathered}`, true);
-        el.dataset.stacked = "1";
-        need = el.scrollWidth;
-        if (need <= room + 1) continue;
-      }
-      const size = parseFloat(getComputedStyle(el).fontSize);
-      el.style.fontSize = `${(size * Math.max(floor, (room - 2) / need)).toFixed(2)}px`;
+      if (shrink(el, floor) || split.length < 2) continue;
+      el.style.fontSize = "";
+      el.innerHTML = tex(`\\begin{gathered} ${split.join(" \\\\[3pt] ")} \\end{gathered}`, true);
+      el.dataset.stacked = "1";
+      shrink(el, floor);
     }
   }
   // Fit again when the column changes width, and when a KaTeX font arrives (they load as first used).
@@ -81,5 +90,5 @@
   addEventListener("resize", refit);
   document.fonts?.addEventListener?.("loadingdone", refit);
 
-  RL.math = { tex, render, fit };
+  RL.math = { tex, render, fit, shrink };
 })(globalThis.RL = globalThis.RL || {});

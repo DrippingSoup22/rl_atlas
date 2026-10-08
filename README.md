@@ -34,13 +34,13 @@ your browser.
 
 ### The map
 
-<img src="docs/images/map.png" alt="The metro map: 14 lines of stations, from Start here to Where next">
+<img src="docs/images/map.png" alt="The whole metro map: 14 lines of stations from Start here to Where next, the first four parts read and filled with color">
 
 Every station is one idea, in reading order: the agent–environment loop, bandits, dynamic programming, Monte Carlo,
 temporal difference, n-step methods and traces, planning, function approximation, deep value methods, policy
 gradients, continuous control, the toolbox, and where next (MCTS and AlphaZero, offline RL, imitation, RLHF). The
-stations you have read fill with color. Two more views draw a family tree for each line, and every algorithm on Sutton
-& Barto's unified map.
+stations you have read fill with color, and the next one pulses. Two more views draw a family tree for each line, and
+every algorithm on Sutton & Barto's unified map.
 
 ### Stories
 
@@ -50,7 +50,11 @@ Scroll the text and the picture follows, one step at a time: an agent takes its 
 settles. There are 79 stories. Their runs are picked because they make their point clearly, and the Lab shows how
 typical they are.
 
-<img src="docs/images/story-mcts.png" alt="The MCTS story: a tic-tac-toe position and the search tree after 1,000 simulations">
+<p align="center">
+  <img src="docs/images/story-mcts.png" alt="The MCTS story: a tic-tac-toe position, where 1,000 simulations began, and the search tree they grew">
+  <br>
+  <sub>Monte Carlo tree search on a tic-tac-toe position: where 1,000 simulations began, and the tree they grew.</sub>
+</p>
 
 ### Textbook and card
 
@@ -83,28 +87,28 @@ DQN and its extensions, A2C, TRPO and PPO on CartPole, and PPO, DDPG, TD3 and SA
 seeds by the guide's own JavaScript trainer. Play back any seed, see what the network thinks of every state, or turn a
 knob and train a new run in the page.
 
-## Use it
+## Getting around
 
-[Download `rl_atlas.html`](https://github.com/DrippingSoup22/rl_atlas/releases/latest/download/rl_atlas.html) and
-open it in a browser (it is developed and tested with Chromium, the engine of Chrome, Edge and Brave). The home screen
-is the map. It has three views (the metro map in reading order, a tree per line of what builds on what, and Sutton &
-Barto's unified view with every algorithm placed) and filters by label, in a side panel opened by **Views & filters**
-at the top left (or `V`). Drag to move and Ctrl + scroll to zoom; the map always stays in view.
-Each algorithm can be read three ways, in this order, and then watched:
+[Download `rl_atlas.html`](https://github.com/DrippingSoup22/rl_atlas/releases/latest/download/rl_atlas.html) and open
+it in your browser. It needs no server and no connection. It is developed and tested with Chromium, the engine of
+Chrome, Edge and Brave.
 
-- **Story**: the idea. Scroll the text, and the picture follows it step by step.
-- **Textbook**: the theory, like a book chapter: definitions, derivations, theorems, figures and references.
-- **Card**: the summary: the formula, pseudocode, perks, flaws, knobs and questions on one sheet.
-- **Lab**: watch it learn, one pseudocode line at a time or 50 episodes per second, and see how often its
-  settings end well over many runs, and how those odds move with each knob. The world and the display options sit
-  in a drawer opened by **World & display** in the play bar (Esc closes it); the arrow at the top of the pseudocode
-  folds that column into a tab at the edge.
+- **The map** is the home screen. Drag to move and Ctrl + scroll to zoom. **Views & filters** (or `V`) switches between
+  the metro map, the family trees and the unified view, and filters the stations by label.
+- **A station** reads three ways, **Story**, **Textbook** and **Card**, best in that order; **Open the Lab** then shows
+  it at work.
+- **In the Lab**, the play bar sets the pace, from one pseudocode line at a time to 50 episodes a second. **Change
+  world**, by the title, or **World & display**, in the play bar, opens a drawer with the worlds the experiment can move
+  to and what the views show (Esc closes it). The arrow at the top of the pseudocode folds that column away.
+- **Everywhere**, `Ctrl K` searches the whole atlas. Hover a colored symbol to light up every symbol of its kind, or an
+  underlined term for a short explanation. **Symbols** lists every symbol the guide uses, and the button at the top
+  right switches to the dark theme.
 
-Hover any colored symbol to light up every symbol of its kind; hover any underlined term for a short
-explanation. `Ctrl K` searches the whole atlas, **Symbols** lists every symbol the guide uses, and the button at the
-top right switches to the dark theme.
+## Working on the atlas
 
-## Build and check
+The page is plain HTML, CSS and JavaScript, with KaTeX as its only library, and the build is one Python script.
+
+### Build and check
 
 ```
 python build.py
@@ -121,6 +125,8 @@ as it stands, and every commit on it builds with no warnings and passes the test
 `main` in such steps. A branch, when one is needed, is short-lived: it ends merged into `main` and deleted, or just
 deleted.
 
+### Releases
+
 A release is a tag on `main`. Write its notes in `docs/releases/<tag>.md`, then tag and push:
 
 ```
@@ -132,7 +138,7 @@ The release workflow (`.github/workflows/release.yml`) builds the page from the 
 the committed `rl_atlas.html`, runs the tests, and publishes the release with `rl_atlas.html` as its download. It also
 runs by hand (Actions → Release → Run workflow, on `main`) with the version to publish, and then makes the tag itself.
 
-## Folders
+### Folders
 
 | Folder | What is in it |
 | --- | --- |
@@ -146,7 +152,7 @@ runs by hand (Actions → Release → Run workflow, on `main`) with the version 
 | `docs/` | the README's pictures (`images/`) and each release's notes (`releases/`) |
 | `.github/` | the release workflow |
 
-## Writing an entry
+### Writing an entry
 
 An entry is `content/<part folder>/<id>.md`, where `<id>` is a station in `map.toml`. It starts with TOML
 front matter between `+++` lines: `summary`, `change` (what changed from the parent), `prereqs`, `lab`, `sources`,

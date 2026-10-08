@@ -26,14 +26,13 @@
     // too wide for the card: shrink it, down to 70% (the pieces stay side by side, as the steps reveal them)
     const fit = () => {
       sym.style.fontSize = "";
-      const room = sym.clientWidth, need = sym.scrollWidth;
-      if (room && need > room + 1) sym.style.fontSize = `${Math.max(0.7, (room - 4) / need).toFixed(3)}em`;
+      if (sym.clientWidth) RL.math.shrink(sym, 0.7);
     };
     return (st) => {
       const n = st.formula || 0;
       pieces.forEach((p) => p.classList.toggle("shown", +p.dataset.step <= n));
       sym.classList.toggle("on", n > 0);
-      if (n > 0) fit();
+      fit(); // its faint preview too
       const line = st.numbers === true ? lines.main : st.numbers ? lines[st.numbers] : null;
       if (line) num.innerHTML = RL.math.tex(line, true);
       num.classList.toggle("on", !!line);
