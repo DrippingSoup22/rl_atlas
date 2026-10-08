@@ -36,10 +36,12 @@ The full curriculum, 95 stations in 14 parts, lives in [content/map.toml](conten
 
 - Tabular and linear methods, and policy gradients (softmax and Gaussian policies, from REINFORCE to PPO), run live in the browser:
   a whole run is computed at once (milliseconds), then played like a video and replayable line by line.
-- Neural-network methods (DQN, A2C, PPO, TRPO, DDPG, TD3, SAC) are **recorded runs** made by a standalone Python
-  recorder (NumPy and Gymnasium; none of RL_lib or Centipede) and played back with the same player, each over 20 seeds,
-  with a sweep of its main knobs that shows how the odds of success move with each. The networks are small (two hidden layers of 64 units), so they are
-  written in NumPy, gradients by hand: no PyTorch to install, and every recording reproducible bit for bit from its seed.
+- Neural-network methods (DQN, A2C, PPO, TRPO, DDPG, TD3, SAC) are **recorded runs** made offline by the page's own
+  trainer (`lab/deep/`, run in Node by `recorder/deep.js`; none of RL_lib or Centipede) and played back with the same
+  player, each over 20 seeds, with a sweep of its main knobs that shows how the odds of success move with each. The
+  networks are small (two hidden layers of 64 units by default), with gradients by hand and math every engine rounds
+  alike: no library to install, every recording reproducible bit for bit from its seed, and any other seed or setting
+  trainable in the page on request.
 - Worlds are picked so that values and policies stay pictures: grids, random walks, Blackjack, Mountain Car,
   Pendulum, the short corridor, the throw, CartPole with value and probability bars.
 
@@ -271,11 +273,12 @@ animations and hover effects this guide relies on would not be smooth.
      views handle every kind of learner (action values, a policy with or without a critic, a fixed policy); playback
      never runs more than one move per tick, so Monte Carlo and REINFORCE walk their episodes with the pseudocode in step;
      long runs train in slices with their progress shown, the page staying responsive.
-  4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds; then the encoder tier. *Under way*: the trainer in
-     JavaScript (`lab/deep/`: deterministic math, so a seed is the same run in Node and in any browser), recordings and
-     sweeps made with it (`recorder/deep.js`), and the Lab training other seeds and settings of those recordings in a
-     Web Worker, with the odds from the recording, its sweep, or a bench trained in the page on request. The DQN family
-     on CartPole first, network depth, width and activation among its knobs; then the policy gradients and the
-     actor–critics, and the network view.
+  4. The deep Lab (`recorder/DEEP-LAB.md`), on the same worlds; then the encoder tier. *Deep Lab done*: the trainer in
+     JavaScript (`lab/deep/`: deterministic math, so a seed is the same run in Node and in any browser); every recording
+     and sweep made with it (`recorder/deep.js`): the DQN family on CartPole, network depth, width and activation among
+     its knobs, A2C, PPO and TRPO on CartPole, and PPO, DDPG, TD3 and SAC on Pendulum; the Lab training other seeds and
+     settings of those recordings in a Web Worker, with the odds from the recording, its sweep, or a bench trained in
+     the page on request; and a strip under each recorded world showing how often each hidden unit fires. Next: the
+     encoder tier.
   5. The map keeps its order, which follows Sutton & Barto. A new station goes only where a topic needs its own, and
      then between the two stations where it naturally fits (learning from pixels, say, after DQN).

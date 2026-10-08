@@ -1,17 +1,19 @@
 # The deep Lab: knobs you can turn on runs nobody can train live
 
-A plan to decide on, not yet built. The live Lab can now separate the settings from luck: a bench of 20 seeds, the
-typical run, any seed on demand. The deep presets (CartPole and Pendulum) can't do any of that yet. Each one plays one
-recorded seed, and only a few knobs were swept, one at a time. This note weighs the options at each decision point and
-recommends one.
+Decided and built (see the status below). When this note was written, the live Lab could already separate the settings
+from luck: a bench of 20 seeds, the typical run, any seed on demand. The deep presets (CartPole and Pendulum) could not:
+each played one recorded seed, and only a few knobs were swept, one at a time. The note weighs the options at each
+decision point and recommends one.
 
-## Status: option D, being built
+## Status: option D, built
 
-The spike settled the open questions, and the build follows option D below.
+The spike settled the open questions, and the build followed option D below.
 
 - **It learns.** The JavaScript trainer (`lab/deep/`) learns CartPole like the NumPy recorder. On 20 seeds of
   `dqn-cartpole`, 15 end with a 500-step test (NumPy 16) and 13 end well by the Lab's rule (NumPy 16). On 20 more
-  seeds NumPy itself scored 13: the gap is luck.
+  seeds NumPy itself scored 13: the gap is luck. The policy gradients and actor–critics match too: PPO and TRPO end
+  well on all 20 CartPole seeds, as with NumPy, and A2C on 19 (NumPy 20); DDPG, TD3 and SAC hold the pendulum up on
+  every seed; PPO on Pendulum ends well on 17 (NumPy 19).
 - **It is exact.** The same seed gives the same run, bit for bit, in Node and in a browser's Worker: seed 2 trained in
   Chromium ended where the offline recording did. The trainer's math (`lab/deep/dmath.js`) uses only + − × ÷ and the
   square root, which every engine rounds alike.
@@ -27,8 +29,9 @@ What runs where:
   - the odds come from the recording (its settings), the sweep (one knob turned), or a bench trained here on request.
 - Network shape: depth (1–3), width (16–128) and activation are knobs of the DQN sweep.
 
-Done so far: the DQN family on CartPole. Still to port: A2C, PPO, TRPO, DDPG, TD3, SAC and Pendulum's recordings;
-the network view.
+Done: every recording and sweep, remade with this trainer: the DQN family on CartPole; A2C, PPO and TRPO on CartPole;
+PPO, DDPG, TD3 and SAC on Pendulum. Under each recorded world, a strip shows the network: how often each hidden unit
+fires. The NumPy recorder (`recorder/record.py`) stays only as a cross-check.
 
 ## What we have, and what it costs
 
