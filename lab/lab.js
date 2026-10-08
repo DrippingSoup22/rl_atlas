@@ -585,10 +585,20 @@
       const b = deepBench?.racers[i];
       return b && b.done === 1 ? [...b.curves.values()].sort((x, y) => x.seed - y.seed) : null;
     }
-    // The typical seed of the bench as it stands (null while unknown).
-    function typicalDeep() {
+    // Every racer's bench on the seeds they all have, in one order (a 10-seed sweep and a 20-seed bench share the
+    // sweep's seeds, the recording's first ten); null while a racer's bench is unknown.
+    function commonBenches() {
       const all = racers.map((_, i) => benchOf(i));
       if (all.some((c) => !c)) return null;
+      const seeds = recs[0].seeds.filter((s) => all.every((c) => c.some((x) => x.seed === s)));
+      return all.map((c) => seeds.map((s) => c.find((x) => x.seed === s)));
+    }
+    // The seeds a bench trained here gets: those the racers' known benches share, or else the recording's.
+    const benchSeeds = () => { const known = racers.map((_, i) => benchOf(i)).filter(Boolean); return recs[0].seeds.filter((s) => known.every((c) => c.some((x) => x.seed === s))); };
+    // The typical seed of the bench as it stands (null while unknown).
+    function typicalDeep() {
+      const all = commonBenches();
+      if (!all) return null;
       const R = rule(), key = R.metric === "return" ? "train" : R.metric;
       const scores = all.map((curves) => curves.map((c) => lab.success(R, { [R.metric]: Float64Array.from(c[key] || [], (x) => x ?? NaN) }).score));
       return lab.typicalSeed(scores, all[0].map((c) => c.seed), lab.lowerIsBetter(R));
@@ -597,7 +607,8 @@
     function trainDeepBench() {
       deepBench?.racers.forEach((b) => b?.cancel());
       const key = JSON.stringify(turned);
-      deepBench = { key, racers: racers.map((_, i) => (benchOf(i) ? null : lab.trainBench(recs[i], configOf(i), recs[i].seeds, () => {
+      const seeds = benchSeeds();
+      deepBench = { key, racers: racers.map((_, i) => (benchOf(i) ? null : lab.trainBench(recs[i], configOf(i), seeds, () => {
         if (deepBench?.key !== key) return;
         if (deepBench.racers.every((b) => !b || b.done === 1)) { averageRecorded(); if (knobs.seed === "typical") { const t = typicalDeep(); if (t !== null && t !== played && !P.playing && P.e === 0) { played = t; playRuns(); } } }
         else tally();
@@ -658,7 +669,7 @@
     // A recording keeps the training curve of every seed: the average, the thin lines and the odds come at once.
     function averageRecorded() {
       // the seeds' curves: the recording's, or for a trainable one, the bench of the settings as they are (if known)
-      const benches = racers.map((_, i) => ({ ...recs[i], curves: trainable ? benchOf(i) : recs[i].curves }));
+      const common = trainable ? commonBenches() : null, benches = racers.map((_, i) => ({ ...recs[i], curves: trainable ? common?.[i] : recs[i].curves }));
       if (benches.some((b) => !b.curves)) { avg = null; if (view.seeds) drawCharts(); tally(); return; }
       // the training returns of every seed, and any other curve every seed kept (DQN's Q-values)
       const keyOf = (k) => (k === "return" ? "train" : k), kept = [...new Set([...preset.charts, preset.success?.metric].filter(Boolean))].filter((k) => benches.every((b) => b.curves.every((c) => c[keyOf(k)])));
@@ -830,7 +841,7 @@
     // How many of the runs so far ended as the success rule asks, for each racer (recorded runs).
     function tally() {
       if (trainable && !avg && preset.success) { // settings nobody has run the seeds of yet
-        const n = recs[0].seeds.length, b = deepBench?.key === JSON.stringify(turned) ? deepBench : null;
+        const n = benchSeeds().length, b = deepBench?.key === JSON.stringify(turned) ? deepBench : null;
         if (b) {
           const failed = b.racers.find((x) => x?.error);
           if (failed) { q(".odds-tally").textContent = `The bench could not train here: ${failed.error}.`; return; }
@@ -839,7 +850,11 @@
           return;
         }
         const need = racers.filter((_, i) => !benchOf(i)).length, cores = Math.max(1, (navigator.hardwareConcurrency || 2) - 1);
-        q(".odds-tally").innerHTML = `Nobody has run these settings' ${n} seeds yet: the recordings and their sweeps turn one knob at a time. <button type="button" class="bench-here">Train the ${plural(n * need, ["seed", "seeds"])} here</button> (about ${duration((Math.ceil((n * need) / cores) * (perRun || 90)))} on this computer, using ${plural(cores, ["core", "cores"])}).`;
+        const ks = Object.keys(turned), missing = racers.filter((_, i) => !benchOf(i)).map((r) => esc(r.name)), names = missing.length > 1 ? `${missing.slice(0, -1).join(", ")} and ${missing.at(-1)}` : missing[0];
+        const why = ks.length === 1 && need < racers.length // one knob, swept for some racers only
+          ? `${names} ${need > 1 ? "have" : "has"} no sweep over ${esc(DEEP_KNOBS[ks[0]]?.sym || ks[0])}, so nobody has run ${need > 1 ? "their" : "its"} ${n} seeds with these settings yet.`
+          : `Nobody has run these settings' ${n} seeds yet: the recordings and their sweeps turn one knob at a time.`;
+        q(".odds-tally").innerHTML = `${why} <button type="button" class="bench-here">Train the ${plural(n * need, ["seed", "seeds"])} here</button> (about ${duration((Math.ceil((n * need) / cores) * (perRun || 90)))} on this computer, using ${plural(cores, ["core", "cores"])}).`;
         return;
       }
       if (!preset.success || !avg) return;
