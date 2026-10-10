@@ -33,6 +33,18 @@
     }
 
     destroy() { this.el.remove(); }
+
+    // A frame's map of N × N cells, c units wide, the cell at row j and column i filled with fill(j * N + i), row 0 at
+    // the bottom. The cells of one fill make one path: 961 cells of their own, five frames over, would hold the page up.
+    // Edge to edge and without smoothing, no seam shows between neighbours.
+    static cells(N, c, fill) {
+      const paths = new Map();
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+        const f = fill(j * N + i);
+        paths.set(f, `${paths.get(f) ?? ""}M${i * c} ${(N - 1 - j) * c}h${c}v${c}h-${c}z`);
+      }
+      return `<g shape-rendering="crispEdges">${[...paths].map(([f, d]) => `<path d="${d}" fill="${f}"/>`).join("")}</g>`;
+    }
   }
 
   RL.Film = Film;

@@ -533,13 +533,15 @@
     // Compute the played runs (seed `played`) with their snapshots, and show them. A run that takes long (a policy
     // gradient on CartPole, planning on the large lake) is computed in short slices, the page staying responsive,
     // with its progress under each racer's name; until then nothing plays.
-    function playRuns() {
-      P.walkers = null;
-      pendingTypical = false;
+    // quiet: the typical seed the bench just found, worked out in short slices while the run shown stays (worked out at
+    // once, it could freeze the page just as the reader presses Play). It takes over when done, unless the reader has
+    // started watching meanwhile (Play stops it at once): then the seed button offers it.
+    function playRuns(quiet = false) {
+      if (!quiet) { P.walkers = null; pendingTypical = false; runs = []; }
       job?.cancel();
-      runs = [];
       if (trainable) return playDeep();
-      const jobs = racers.map((r, i) => (recRuns[i] ? null : lab.simulateJob({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed: played, measures: preset.measures })));
+      const seed = quiet ? bench.typical() : played;
+      const jobs = racers.map((r, i) => (recRuns[i] ? null : lab.simulateJob({ world: make, algorithm: r.algorithm, params: paramsOf(r), units: knobs.units, seed, measures: preset.measures })));
       let spent = 0, timer = 0;
       const slice = (ms) => {
         const t0 = performance.now(), next = jobs.find((j) => j && !j.result);
@@ -549,11 +551,19 @@
       };
       const ready = () => {
         job = null;
+        if (quiet && (P.walkers || P.e)) { pendingTypical = true; seedBox(); return; } // a step taken, or a jump
+        played = seed;
         stages.forEach((st) => st.classList.remove("training"));
         runs = racers.map((_, i) => recRuns[i] || jobs[i].result);
         perRun = spent / racers.length; // how long one run takes here, for the sweep's default
         showRuns();
       };
+      if (quiet) {
+        const tick = () => { if (slice(8)) ready(); else timer = setTimeout(tick, 0); };
+        job = { quiet: true, cancel() { clearTimeout(timer); job = null; } };
+        timer = setTimeout(tick, 0);
+        return;
+      }
       if (slice(120)) return ready(); // most runs take a few milliseconds: no waiting at all
       pause();
       const progress = () => stages.forEach((st, i) => {
@@ -684,8 +694,9 @@
       if (!done && now - benchDrawn < Math.max(200, 5 * benchCost)) return; // drawing the bands takes a fifth of the time at most
       benchDrawn = now;
       if (done && knobs.seed === "typical" && bench.typical() !== played) {
-        if (!P.playing && !P.walkers && P.e === 0) { played = bench.typical(); playRuns(); return; }
-        pendingTypical = true;
+        if (P.playing || P.walkers || P.e) pendingTypical = true;
+        else if (runs.length) playRuns(true); // the run shown stays while the typical one is worked out
+        else { played = bench.typical(); playRuns(); return; } // the first run is still training: the typical one instead
       }
       drawCharts();
       odds();
@@ -1106,12 +1117,13 @@
       replays[i] = { run: runs[i], u, events };
       return events;
     }
-    // Playing at a rate, the unit the next tick passes is worked out ahead, a few milliseconds a frame: one unit can
-    // take longer than a frame (a PPO round updates its network over ten passes), and the tick then finds it ready. Not
-    // in worlds that keep a state of their own, which a replay in pieces would share (as the stories do).
+    // Playing at a rate, or paused at one, the unit the next tick passes is worked out ahead, a few milliseconds a frame:
+    // one unit can take longer than a frame (a PPO round updates its network over ten passes, and the first rounds are
+    // the longest), and the tick then finds it ready. Not in worlds that keep a state of their own, which a replay in
+    // pieces would share (as the stories do).
     function prepare(ms) {
-      const u = P.e;
-      if (!rate() || !runs.length || u >= knobs.units) return;
+      const u = P.e < knobs.units ? P.e : 0; // at the end, Play starts again from the first unit
+      if (!rate() || !runs.length) return;
       if (ahead?.runs !== runs || ahead.u !== u) ahead = { runs, u, done: [], its: [] };
       const until = performance.now() + ms;
       for (let i = 0; i < runs.length; i++) {
@@ -1390,6 +1402,7 @@
       if (under > 0 && room > 0) scrollBy({ top: Math.min(under, room), behavior: "smooth" });
     }
     function play() {
+      if (job?.quiet) { job.cancel(); pendingTypical = true; seedBox(); }
       if (P.e >= knobs.units) seek(0);
       showStages();
       P.playing = true;
@@ -1417,7 +1430,8 @@
     function frame(t) {
       const dt = last ? Math.min(100, t - last) : 0;
       last = t;
-      if (P.playing && !tick(dt)) prepare(rate() >= 10 ? 8 : 4); // not in the frame that draws a unit
+      // playing, not in the frame that draws a unit; paused, so that Play finds its first unit ready
+      if (!P.playing || !tick(dt)) prepare(P.playing && rate() >= 10 ? 8 : 4);
       raf = requestAnimationFrame(frame);
     }
     function tick(dt) {

@@ -198,11 +198,10 @@
     static thumb(env, d) {
       if (!d?.v) return "";
       const N = 31, c = 4, [lo, hi] = span(d.v);
-      let cells = "";
-      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-        const t = Math.max(0, Math.min(1, (d.v[j * N + i] - lo) / Math.max(1e-9, hi - lo)));
-        cells += `<rect x="${i * c}" y="${(N - 1 - j) * c}" width="${c + 0.3}" height="${c + 0.3}" fill="color-mix(in oklab, var(${hi > 0 ? "--v-pos" : "--v-mid"}) ${Math.round(100 * t)}%, var(${lo < 0 ? "--v-neg" : "--v-mid"}))"/>`;
-      }
+      const cells = RL.Film.cells(N, c, (k) => {
+        const t = Math.max(0, Math.min(1, (d.v[k] - lo) / Math.max(1e-9, hi - lo)));
+        return `color-mix(in oklab, var(${hi > 0 ? "--v-pos" : "--v-mid"}) ${Math.round(100 * t)}%, var(${lo < 0 ? "--v-neg" : "--v-mid"}))`;
+      });
       return `<svg viewBox="0 0 ${N * c} ${N * c}" class="cart-thumb" role="img" aria-label="Values over angle and spin">${cells}</svg><span class="thumb-note">test: ${num(d.ret)}</span>`;
     }
   }

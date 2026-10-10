@@ -301,22 +301,20 @@ animations and hover effects this guide relies on would not be smooth.
     another world shows the idea better.
   - A check on real browsers and devices, which the headless checks here cannot replace (`docs/browser-check.md`, with
     `tools/browser-check.js` for what can be measured). *First round done* on a Windows laptop in Chrome, Brave and
-    Edge; release 1.0.2 fixes what it found. Still to do: Firefox, Safari and a real phone.
-  - Small stutters still known after 1.0.2, to fix once the second round of the browser check (Chrome and Brave) shows
-    which of them happen on the laptop. Each is a guess until measured there:
-    - Cliff walking lab: one freeze of 115 to 182 ms the first time it plays after opening, seen here (in 1.0.1 too),
-      not on the laptop. A guess: its 20 seeds finish and the odds draw during playback.
-    - A2C maze at 20 rounds a second: two freezes of 50 to 66 ms in 5 s, seen here after the 1.0.2 fix.
-    - Dyna maze at "Faster": 32 to 34 frames/s in a 1440×900 window, 54 to 60 in the laptop's own smaller window. A
-      guess: more of the maze is drawn.
-    - The A2C and Dyna-Q stories in a fast flick: 37 to 48 frames/s, worst frames of 117 to 250 ms. Within the bounds,
-      but the slowest stories.
-    - Training a deep lab seed (PPO on CartPole, seed 77): one long task of 105 to 129 ms, in all three browsers. A
-      guess: when the trained run arrives.
-    - Single frames of 400 to 620 ms with no long task behind them: Chrome at A2C maze "Step by step" and Dyna maze
-      "50 episodes / s", Edge once in the DQN story. Likely drawing or the GPU, not a script; it needs a performance
-      recording from the laptop.
-    - The first story opened can show one long task of 50 to 60 ms, once.
+    Edge; release 1.0.2 fixes what it found, and a *second round* (Chrome and Brave) confirmed those fixes. Still to
+    do: Firefox, Safari and a real phone.
+  - Small stutters: the second round (1.0.2, Chrome and Brave, `--quick`, the window kept uncovered) saw none of the
+    400 to 620 ms frames nor the first story's long task, and the A2C story within its bounds. 1.0.3 fixes what it and
+    the checks here still found: the freeze when a deep run trained in the page arrives (its film strip's maps drawn as
+    one path per color), the first round of a lab played again from its start at a fast rate (worked out while
+    paused), and the switch to the typical seed some seconds after a lab opens (worked out in slices). Still open:
+    - A2C maze at 4 rounds a second in Chrome: three freezes of up to 79 ms in 10 s, seen once, not in Brave nor here.
+      Cause unknown; garbage collection is a guess.
+    - Cliff walking's first play here: one long task of about 60 ms, a third of it garbage collection after the
+      bench. Not seen on the laptop.
+    - Not measured by a quick run: the Dyna maze at "Faster" in a large window (32 to 34 frames/s at 1440×900 in the
+      first round) and the Dyna-Q story in a fast flick.
+    - On a phone, the header's cut part name can end in a space before the "…": the browser's own cut, after a word.
 
 - [x] **M10 · Release 1.0.0**: a design pass over the stories, the animations and the Lab's layout, then the release.
   The Lab's panes take the largest size that fits for any number and shape of racers, and the algorithm column folds
@@ -327,4 +325,5 @@ animations and hover effects this guide relies on would not be smooth.
   formulas that stopped a few pixels short of fitting their column (they now shrink until they fit). 1.0.2 fixes what
   the first check in real browsers found: hover cards kept inside the window, story formulas stacked in narrow
   windows, story runs prepared while the reader scrolls, labs at a few rounds a second without freezes, and the phone's
-  header and symbols page.
+  header and symbols page. 1.0.3 fixes the freezes the second check and the checks here still found (a deep run arriving,
+  a lab played again from its start, the switch to the typical seed).

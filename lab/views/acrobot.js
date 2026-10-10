@@ -208,11 +208,10 @@
     static thumb(env, d) {
       if (!d || !(d.w || d.theta)) return "";
       const m = RL.lab.controlMap(env, d), N = m.N, c = 4, vals = m.noValue ? Array.from(m.act, (a) => a - 1) : m.v, [lo, hi] = span(vals);
-      let cells = "";
-      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-        const t = Math.max(0, Math.min(1, (vals[j * N + i] - lo) / Math.max(1e-9, hi - lo)));
-        cells += `<rect x="${i * c}" y="${(N - 1 - j) * c}" width="${c + 0.3}" height="${c + 0.3}" fill="color-mix(in oklab, var(--v-mid) ${Math.round(100 * t ** 0.8)}%, var(--v-neg))"/>`;
-      }
+      const cells = RL.Film.cells(N, c, (k) => {
+        const t = Math.max(0, Math.min(1, (vals[k] - lo) / Math.max(1e-9, hi - lo)));
+        return `color-mix(in oklab, var(--v-mid) ${Math.round(100 * t ** 0.8)}%, var(--v-neg))`;
+      });
       return `<svg viewBox="0 0 ${N * c} ${N * c}" class="cart-thumb" role="img" aria-label="Values over the two angles">${cells}</svg>`;
     }
   }
