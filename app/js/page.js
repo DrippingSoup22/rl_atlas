@@ -1,4 +1,5 @@
-/* Pages: an entry (its Story, Textbook and Card), a station that is still planned, and the symbols page. */
+/* Pages: an entry (its Story, Textbook and Card), a station that is still planned, the symbols page, and the appendix
+   (an entry of it, and the list of them all). */
 (function (RL) {
   "use strict";
   const { esc, station, entry, store, lineColor, order } = RL;
@@ -12,7 +13,7 @@
   // Bring rendered content to life: math, planned links, demos and flip-card questions.
   function wire(root) {
     RL.math.render(root);
-    for (const a of root.querySelectorAll("a.term")) if (!entry(a.dataset.term)) a.classList.add("planned");
+    for (const a of root.querySelectorAll("a.term:not(.appx)")) if (!entry(a.dataset.term)) a.classList.add("planned");
     for (const d of root.querySelectorAll(".demo[data-demo]")) {
       const demo = RL.demos[d.dataset.demo];
       if (demo) demo(d, d.dataset.arg);
@@ -34,23 +35,37 @@
 
   const badge = (st) => `<a class="part-badge" href="#/"><i>${st.part}</i>${esc(st.partTitle)}</a>`;
 
-  // Sections that take the whole width of a card; the others pair up two by two.
-  const FULL = new Set(["idea", "knobs", "check"]);
+  // Sections that take the whole width of a card: the idea, the formulas (they need the room), the knobs and the
+  // questions.
+  const FULL = new Set(["idea", "formula", "knobs", "check"]);
 
   function card(e) {
     const sources = e.sources.map((s) => `<li>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.text)}</a>` : esc(s.text)}</li>`).join("");
-    // A half-width section left without a partner (the next one is full-width, or there is none) takes the whole row.
-    const wide = new Set();
-    let open = -1;
+    const section = (s, i) => `<section class="sec sec-${s.id}" style="--i:${i}"><h2>${s.title}</h2>${s.html}</section>`;
+    // The other sections, between two full-width ones, flow into two balanced columns: each keeps its own height,
+    // instead of being stretched to its neighbour's and left half empty. One alone takes the whole row.
+    let html = "", run = [];
+    const flush = () => {
+      if (run.length) html += run.length === 1 ? run[0] : `<div class="card-flow">${run.join("")}</div>`;
+      run = [];
+    };
     e.card.forEach((s, i) => {
-      if (FULL.has(s.id)) { if (open >= 0) wide.add(open); open = -1; }
-      else open = open >= 0 ? -1 : i;
+      if (FULL.has(s.id)) { flush(); html += section(s, i); }
+      else run.push(section(s, i));
     });
-    if (open >= 0) wide.add(open);
-    return `<div class="card-grid">
-      ${e.card.map((s, i) => `<section class="sec sec-${s.id}${wide.has(i) ? " wide" : ""}" style="--i:${i}"><h2>${s.title}</h2>${s.html}</section>`).join("")}
+    flush();
+    return `<div class="card-grid">${html}
       <section class="sec sec-sources" style="--i:${e.card.length}"><h2>Sources</h2><ul>${sources}</ul></section>
     </div>`;
+  }
+
+  // A card's formulas written as pairs, a line of text and then its formula, become a sheet: the words on the left,
+  // each formula on the right of its own words.
+  function sheets(root) {
+    for (const sec of root.querySelectorAll(".sec-formula")) {
+      const kids = [...sec.children].slice(1);
+      if (kids.length >= 2 && kids.length % 2 === 0 && kids.every((k, i) => k.matches(i % 2 ? ".tex-display" : "p"))) sec.classList.add("sheet");
+    }
   }
 
   RL.views.entry = function (host, id, mode) {
@@ -110,9 +125,9 @@
       body.className = `mode-body mode-${m}`;
       if (m === "story") current = RL.story(body, e);
       else if (m === "textbook") { current = RL.textbook(body, e); wire(body); }
-      else { body.innerHTML = card(e); wire(body); }
+      else { body.innerHTML = card(e); wire(body); sheets(body); }
       body.insertAdjacentHTML("beforeend", onward(m));
-      if (location.hash.startsWith(`#/e/${id}`)) history.replaceState(null, "", `#/e/${id}/${m}`);
+      if (location.hash.startsWith(`#/e/${id}`)) history.replaceState(history.state, "", `#/e/${id}/${m}`); // the state keeps the scroll
       store.set("mode", m);
     }
     // The host outlives this page (the next view mounts into it), so the listener goes when the page does.
@@ -159,8 +174,79 @@
           <table>${N.symbol.map((s) => `<tr><td class="sym"><span class="tex">${esc(s.tex)}</span></td><td>${esc(s.text)}</td>
             <td>${s.station ? `<a class="term" data-term="${s.station}" href="#/e/${s.station}">${esc(station(s.station).title)}</a>` : ""}</td></tr>`).join("")}</table>
         </section>
+        ${appendixInvite()}
       </article>`;
     wire(host);
     return {};
   };
+
+  // ---- the appendix: the mathematics the atlas uses, explained apart from reinforcement learning ----
+  const APPX = () => RL.content.appendix || {};
+  const appxLink = (id) => `<a class="term appx" data-appendix="${id}" href="#/a/${id}">${esc(APPX()[id].title)}</a>`;
+  const appendixInvite = () => Object.keys(APPX()).length ? `<a class="appx-invite card" href="#/appendix">
+      <span class="eyebrow">Appendix</span><b>The mathematics behind the formulas</b>
+      <span>Sums, expectations, norms, fixed points and the other tools the atlas uses, each explained on its own page.</span></a>` : "";
+  // Where "back" goes: the page this one was opened from, if it was opened from inside the atlas.
+  function backLink() {
+    const from = RL.app?.from;
+    if (!from || from.name === "map") return "";
+    const name = from.name === "entry" ? station(from.id)?.title : from.name === "appendix" && from.id ? APPX()[from.id]?.title
+      : from.name === "appendix" ? "the appendix" : from.name === "symbols" ? "Symbols and colors" : from.name === "lab" ? "the Lab" : "";
+    return name ? `<button class="btn ghost back" type="button">← Back to ${esc(name)}</button>` : "";
+  }
+
+  RL.views.appendix = function (host, id) {
+    if (id) return appendixEntry(host, id);
+    const all = APPX();
+    const groups = RL.content.appendixGroups.map((g) => [g, Object.keys(all).filter((k) => all[k].group === g)
+      .sort((a, b) => all[a].title.localeCompare(all[b].title))]).filter(([, ids]) => ids.length);
+    host.innerHTML = `
+      <article class="entry appendix-index" style="--c:var(--ink-3)">
+        <header class="hero">
+          <div class="eyebrow">Appendix</div>
+          <h1>The mathematics behind the formulas</h1>
+          <p class="summary">Short explanations of the mathematics the atlas leans on, none of it about reinforcement learning. Each one is linked from the pages that use it, and you can read them in any order.</p>
+          ${backLink()}
+        </header>
+        <div class="appx-groups">
+          ${groups.map(([g, ids], i) => `<section class="appx-group card" style="--i:${i}"><h2>${esc(g)}</h2><ul>
+            ${ids.map((k) => `<li><a href="#/a/${k}" data-appendix="${k}"><b>${esc(all[k].title)}</b><span>${esc(all[k].summary)}</span></a></li>`).join("")}
+          </ul></section>`).join("")}
+        </div>
+      </article>`;
+    host.querySelector(".back")?.addEventListener("click", () => history.back());
+    return {};
+  };
+
+  function appendixEntry(host, id) {
+    const a = APPX()[id];
+    if (!a) { location.replace("#/appendix"); return {}; }
+    const sources = a.sources.map((s) => `<li>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.text)}</a>` : esc(s.text)}</li>`).join("");
+    const used = a.usedIn.filter(station).map((s) => `<li><a class="term" data-term="${s}" href="#/e/${s}">${esc(station(s).title)}</a></li>`).join("");
+    const related = a.related.filter((r) => APPX()[r]).map((r) => `<li>${appxLink(r)}</li>`).join("");
+    host.innerHTML = `
+      <article class="entry appendix-page" style="--c:var(--ink-3)">
+        <header class="hero">
+          <div class="eyebrow"><a href="#/appendix">Appendix</a> · ${esc(a.group)}</div>
+          <h1>${esc(a.title)}</h1>
+          <p class="summary">${esc(a.summary)}</p>
+          ${backLink()}
+        </header>
+        <div class="appx-layout">
+          <article class="tb-paper appx-paper">
+            ${a.sections.map((s) => `<section class="tb-sec" data-anchor="${s.id}">${s.title ? `<h2>${s.title}</h2>` : ""}${s.html}</section>`).join("")}
+            ${sources ? `<section class="tb-sec tb-refs"><h2>Further reading</h2><ol>${sources}</ol></section>` : ""}
+          </article>
+          <aside class="appx-side">
+            ${used ? `<div><div class="eyebrow">Used in</div><ul>${used}</ul></div>` : ""}
+            ${related ? `<div><div class="eyebrow">See also</div><ul>${related}</ul></div>` : ""}
+            <div><a class="all" href="#/appendix">All the appendix ›</a></div>
+          </aside>
+        </div>
+      </article>`;
+    wire(host);
+    host.querySelector(".back")?.addEventListener("click", () => history.back());
+    const refs = RL.refs(host.querySelector(".appx-paper"));
+    return { destroy: refs.destroy };
+  }
 })(globalThis.RL = globalThis.RL || {});

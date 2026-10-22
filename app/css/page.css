@@ -433,17 +433,32 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .fig-status { margin: 2px 0 0; font: 12.5px var(--font); color: var(--ink-3); text-align: right; }
 
 /* ---- card ---- */
-.card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 18px; margin-top: 14px; }
+.card-grid { display: flex; flex-direction: column; gap: 18px; margin-top: 14px; }
+/* Sections between two full-width ones, in two balanced columns (app/js/page.js); the negative margin takes back the
+   last section's own. */
+.card-flow { columns: 2; column-gap: 18px; margin-bottom: -18px; }
+.card-flow > .sec { break-inside: avoid; margin-bottom: 18px; }
 .sec { min-width: 0; padding: 20px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); animation: rise-in 0.5s var(--ease) calc(var(--i) * 60ms) both; }
 .sec h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
 .sec h2 .term { text-transform: none; letter-spacing: 0.02em; } /* a station's name as written: uppercase would turn ε into Ε */
 .sec p { margin: 0 0 0.75em; }
-.sec-idea, .sec-knobs, .sec-check, .sec-sources, .sec.wide { grid-column: span 2; }
 .sec-sources ul { columns: 2 320px; column-gap: 32px; }
 .sec-sources li { break-inside: avoid; }
 .sec-idea > p:first-of-type { font-size: 18px; }
 .tex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
-.sec-update .tex-display { font-size: 1.1em; }
+/* A formula and the punctuation around it stay on one line (build.py wraps them together). */
+.nobr { white-space: nowrap; }
+/* A numbered formula too wide to keep clear of its number: the number goes under it, at the right (app/js/math.js). */
+.tex-display.tag-below .katex-display > .katex > .katex-html { display: block; }
+.tex-display.tag-below .katex-display > .katex > .katex-html > .tag { position: static; display: block; text-align: right; margin-top: 4px; }
+.sec-update .tex-display, .sec-formula .tex-display { font-size: 1.1em; }
+/* A formula sheet (app/js/page.js): each line of words on the left, its formula on the right. */
+.sec-formula.sheet { display: grid; grid-template-columns: minmax(180px, 32%) minmax(0, 1fr); column-gap: 28px; row-gap: 6px; align-items: center; }
+.sec-formula.sheet h2 { grid-column: 1 / -1; }
+.sec-formula.sheet > p { margin: 0; color: var(--ink-2); }
+.sec-formula.sheet > .tex-display { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.sec-formula.sheet > .tex-display:last-child { border-bottom: 0; }
+.sec-formula.sheet .katex-display > .katex { text-align: left; }
 .analogy { margin: 12px 0 0; padding: 12px 16px; background: var(--surface-2); border-radius: 14px; color: var(--ink-2); }
 .analogy::before { content: "Analogy"; display: block; margin-bottom: 2px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .analogy p { margin: 0; }
@@ -517,9 +532,32 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .notation td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
 .notation tr:last-child td { border-bottom: 0; }
 .notation td.sym { width: 150px; }
+.appx-invite { display: flex; flex-direction: column; gap: 4px; margin-top: 22px; padding: 18px 22px; text-decoration: none; color: var(--ink-2); transition: transform 0.2s var(--ease); }
+.appx-invite:hover { transform: translateY(-2px); }
+.appx-invite b { font-size: 18px; color: var(--ink); }
+
+/* ---- appendix: an entry, and the list of them all ---- */
+.appendix-page .hero .eyebrow a, .appendix-index .hero .eyebrow a { color: inherit; }
+.hero .back { margin-top: 4px; }
+.appx-layout { display: grid; grid-template-columns: minmax(0, 780px) 220px; justify-content: center; gap: 40px; margin-top: 8px; }
+.appx-paper > .tb-sec:first-child > :first-child { margin-top: 0; }
+.appx-side { position: sticky; top: 84px; align-self: start; display: flex; flex-direction: column; gap: 22px; font-size: 14.5px; animation: rise-in 0.5s var(--ease) both; }
+.appx-side ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.appx-side .all { font-weight: 600; text-decoration: none; color: var(--ink-2); }
+.appx-side .all:hover { color: var(--ink); }
+.appx-groups { columns: 2; column-gap: 18px; margin-top: 10px; }
+.appx-group { break-inside: avoid; margin-bottom: 18px; padding: 16px 20px 10px; animation: rise-in 0.5s var(--ease) both; animation-delay: calc(var(--i) * 40ms); }
+.appx-group h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 6px; }
+.appx-group ul { list-style: none; margin: 0; padding: 0; }
+.appx-group li a { display: flex; flex-direction: column; gap: 2px; padding: 9px 0; border-top: 1px solid var(--line); text-decoration: none; }
+.appx-group li:first-child a { border-top: 0; }
+.appx-group li a b { color: var(--ink); }
+.appx-group li a span { font-size: 14px; color: var(--ink-2); }
+.appx-group li a:hover b { text-decoration: underline; text-underline-offset: 3px; }
 
 @media (max-width: 1100px) {
-  .tb { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .tb, .appx-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .appx-side { position: static; order: 1; flex-direction: row; flex-wrap: wrap; gap: 18px 40px; padding: 4px 4px 0; }
   .tb-toc { position: static; }
   .tb-toc ol { display: flex; flex-wrap: wrap; gap: 2px 6px; border: 0; }
   .tb-toc a { padding: 3px 8px; border: 0; border-radius: 8px; }
@@ -536,8 +574,9 @@ a.ref:hover { text-decoration-color: var(--ink); }
 }
 @media (max-width: 760px) {
   .entry { padding: 12px 16px 60px; }
-  .card-grid { grid-template-columns: 1fr; }
-  .card-grid .sec { grid-column: auto; }
+  .card-flow, .appx-groups { columns: 1; }
+  .sec-formula.sheet { grid-template-columns: minmax(0, 1fr); }
+  .sec-formula.sheet > p { margin-top: 8px; }
   .tb-paper { padding: 22px 18px 30px; font-size: 17.5px; }
   .tb-sec h2 { gap: 12px; font-size: 21px; }
   .tb-definition, .tb-theorem, .tb-lemma, .tb-example { padding: 12px 14px; }

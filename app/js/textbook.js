@@ -1,9 +1,61 @@
 /* Textbook: the theory of an entry, written like a book chapter. Numbered sections, equations and figures,
-   a contents list that follows your reading, and references that jump to what they name (hover one to peek at it). */
+   a contents list that follows your reading, and references that jump to what they name (hover one to peek at it).
+   The appendix pages use the same references. */
 (function (RL) {
   "use strict";
   const { esc, h, station } = RL;
   const PEEK = new Set(["equation", "definition", "theorem", "lemma", "example"]);
+
+  // References inside a text (a Textbook, an appendix entry): a click jumps to the equation, figure, statement or
+  // section a reference names and lights it up, and hovering a reference to an equation or a statement shows it in
+  // place. Returns what the page needs to stop listening and to hide the peek.
+  RL.refs = function (host) {
+    const target = (label) => host.querySelector(`[data-anchor="${label}"]`);
+    function jump(label) {
+      const t = target(label);
+      if (!t) return;
+      const smooth = RL.reducedMotion() ? "auto" : "smooth";
+      t.scrollIntoView({ behavior: smooth, block: t.classList.contains("tb-sec") ? "start" : "center" });
+      t.classList.remove("flash");
+      void t.offsetWidth; // restart the animation
+      t.classList.add("flash");
+    }
+    function onClick(ev) {
+      const a = ev.target.closest("a[data-go], a.ref");
+      if (!a) return;
+      ev.preventDefault();
+      hidePeek();
+      jump(a.dataset.go || a.dataset.ref);
+    }
+    let peek = null;
+    function hidePeek() { peek?.remove(); peek = null; }
+    function onOver(ev) {
+      const a = ev.target.closest("a.ref");
+      if (!a || !PEEK.has(a.dataset.kind)) return;
+      const t = target(a.dataset.ref);
+      if (!t) return;
+      hidePeek();
+      peek = h(`<div class="hovercard peek" style="--c:var(--ink-3)"></div>`);
+      peek.append(t.cloneNode(true));
+      document.body.appendChild(peek);
+      RL.place(peek, a);
+    }
+    const onOut = (ev) => { if (ev.target.closest("a.ref")) hidePeek(); };
+    host.addEventListener("click", onClick);
+    host.addEventListener("pointerover", onOver);
+    host.addEventListener("pointerout", onOut);
+    addEventListener("scroll", hidePeek, { passive: true });
+    return {
+      hidePeek,
+      destroy() {
+        host.removeEventListener("click", onClick);
+        host.removeEventListener("pointerover", onOver);
+        host.removeEventListener("pointerout", onOut);
+        removeEventListener("scroll", hidePeek);
+        hidePeek();
+      },
+    };
+  };
 
   RL.textbook = function (host, e) {
     const tb = e.textbook;
@@ -28,45 +80,8 @@
       </div>`;
     const links = Array.from(host.querySelectorAll(".tb-toc a")), sections = Array.from(host.querySelectorAll(".tb-sec"));
     const bar = host.querySelector(".tb-progress"), paper = host.querySelector(".tb-paper");
-    const target = (label) => host.querySelector(`[data-anchor="${label}"]`);
-
-    // Jump to a section, equation, figure or statement, and light it up so the eye finds it.
-    function jump(label) {
-      const t = target(label);
-      if (!t) return;
-      const smooth = RL.reducedMotion() ? "auto" : "smooth";
-      t.scrollIntoView({ behavior: smooth, block: t.classList.contains("tb-sec") ? "start" : "center" });
-      t.classList.remove("flash");
-      void t.offsetWidth; // restart the animation
-      t.classList.add("flash");
-    }
     // The host is the entry's mode body, which the Story and the Card reuse: every listener goes in destroy().
-    function onClick(ev) {
-      const a = ev.target.closest("a[data-go], a.ref");
-      if (!a) return;
-      ev.preventDefault();
-      hidePeek();
-      jump(a.dataset.go || a.dataset.ref);
-    }
-    host.addEventListener("click", onClick);
-
-    // Peek: hover a reference to an equation or a statement to read it without leaving your place.
-    let peek = null;
-    function hidePeek() { peek?.remove(); peek = null; }
-    function onOver(ev) {
-      const a = ev.target.closest("a.ref");
-      if (!a || !PEEK.has(a.dataset.kind)) return;
-      const t = target(a.dataset.ref);
-      if (!t) return;
-      hidePeek();
-      peek = h(`<div class="hovercard peek" style="--c:var(--ink-3)"></div>`);
-      peek.append(t.cloneNode(true));
-      document.body.appendChild(peek);
-      RL.place(peek, a);
-    }
-    const onOut = (ev) => { if (ev.target.closest("a.ref")) hidePeek(); };
-    host.addEventListener("pointerover", onOver);
-    host.addEventListener("pointerout", onOut);
+    const refs = RL.refs(host);
 
     // The contents list follows the reading: the section under the top of the screen is lit, and a bar fills up.
     let raf = 0;
@@ -78,18 +93,15 @@
       const r = paper.getBoundingClientRect();
       bar.style.setProperty("--p", Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight))).toFixed(3));
     }
-    const onScroll = () => { hidePeek(); if (!raf) raf = requestAnimationFrame(follow); };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(follow); };
     addEventListener("scroll", onScroll, { passive: true });
     follow();
 
     return {
       destroy() {
         removeEventListener("scroll", onScroll);
-        host.removeEventListener("click", onClick);
-        host.removeEventListener("pointerover", onOver);
-        host.removeEventListener("pointerout", onOut);
         cancelAnimationFrame(raf);
-        hidePeek();
+        refs.destroy();
       },
     };
   };

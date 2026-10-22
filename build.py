@@ -59,10 +59,18 @@ STATEMENTS = {
     "remark": "Remark", "proof": "Proof",
 }
 
+# The appendix: short explanations of the mathematics the atlas uses, off the map, reached by [[a:id]] links. Its
+# groups, in the order its index lists them.
+APPENDIX = CONTENT / "appendix"
+APPENDIX_FRONT = {"title", "summary", "group", "sources"}
+APPENDIX_GROUPS = ("Notation", "Probability", "Sums and series", "Linear algebra", "Analysis", "Calculus and optimization")
+
 FRONT = re.compile(r"\+\+\+\n(.*?)\n\+\+\+\n", re.S)
 BLOCK = re.compile(r"^::: *([\w-]+) *(.*?)\n(.*?)^:::[ \t]*$", re.M | re.S)
-MATH = re.compile(r"\$\$(.+?)\$\$|\$([^\n$]+?)\$", re.S)
-TERM = re.compile(r"\[\[([\w-]+)(?:\|([^\]]+))?\]\]")
+# Inline math takes along an opening bracket just before it and the punctuation just after it ("$x$," "($x$)" and
+# "$n$-step"), so that a line never ends or begins between a formula and its punctuation.
+MATH = re.compile(r"\$\$(.+?)\$\$|([(“‘]?)\$([^\n$]+?)\$((?:[.,;:!?)’”…]|-\w+)*)", re.S)
+TERM = re.compile(r"\[\[((?:a:)?[\w-]+)(?:\|([^\]]+))?\]\]")  # [[station]], [[station|label]], [[a:appendix-entry|label]]
 LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 DEMO = re.compile(r"\{\{([\w-]+)(?: +([\w-]+))?\}\}")
 SLOT = re.compile("\x00(\\d+)\x00")
@@ -87,6 +95,9 @@ class Markdown:
     """The Markdown subset the content uses, plus [[term]] links, (lab:preset) links, $math$ and {{demo}} lines.
     In a Textbook it also numbers sections, equations (\\label{..}), figures, algorithms and statements,
     and turns \\ref{label} into links to them."""
+
+    appendix: dict = {}  # the appendix entries' front matter, by id, for [[a:id]] links
+    used: dict = {}  # appendix id -> the files that link to it
 
     def __init__(self, stations: dict, presets: dict, where: str, problems: Problems, textbook: bool = False) -> None:
         self.stations, self.presets, self.where, self.problems = stations, presets, where, problems
@@ -138,6 +149,14 @@ class Markdown:
 
     def _term(self, m: re.Match) -> str:
         sid, label = m.group(1), m.group(2)
+        if sid.startswith("a:"):
+            aid = sid[2:]
+            if aid not in self.appendix:
+                self.problems.error(self.where, f"[[{sid}]]: no such appendix entry (content/appendix/{aid}.md)")
+                return label or aid
+            self.used.setdefault(aid, set()).add(self.where)
+            label = label or html.escape(self.appendix[aid]["title"])
+            return f'<a class="term appx" data-appendix="{aid}" href="#/a/{aid}">{label}</a>'
         if sid not in self.stations:
             self.problems.error(self.where, f"[[{sid}]] is not a station on the map")
             return label or sid
@@ -172,7 +191,9 @@ class Markdown:
                     anchor = f' data-anchor="{label.group(1)}"'
                 slots.append(f'<div class="tex tex-display"{anchor}>{html.escape(tex)}</div>')
             else:
-                slots.append(f'<span class="tex">{html.escape(m.group(2))}</span>')
+                before, tex, after = m.group(2), m.group(3), m.group(4)
+                span = f'<span class="tex">{html.escape(tex)}</span>'
+                slots.append(f'<span class="nobr">{html.escape(before)}{span}{html.escape(after)}</span>' if before or after else span)
             return f"\x00{len(slots) - 1}\x00"
 
         return MATH.sub(keep, text), slots
@@ -421,6 +442,51 @@ def compile_entry(path: Path, site: dict, problems: Problems) -> dict | None:
     }
 
 
+def read_appendix(problems: Problems) -> dict:
+    """The front matter of every appendix entry, read before anything is compiled, so that links can be checked."""
+    metas = {}
+    for path in sorted(APPENDIX.glob("*.md")):
+        where = str(path.relative_to(ROOT))
+        front = FRONT.match(path.read_text(encoding="utf-8"))
+        if not front:
+            problems.error(where, "missing the +++ front matter")
+            continue
+        try:
+            meta = tomllib.loads(front.group(1))
+        except tomllib.TOMLDecodeError as exc:
+            problems.error(where, f"front matter: {exc}")
+            continue
+        for field in ("title", "summary", "group"):
+            if not meta.get(field):
+                problems.error(where, f"no '{field}'")
+        for field in meta.keys() - APPENDIX_FRONT:
+            problems.warn(where, f"unknown front matter field '{field}'")
+        if meta.get("group") and meta["group"] not in APPENDIX_GROUPS:
+            problems.error(where, f"group '{meta['group']}' is not one of: {', '.join(APPENDIX_GROUPS)}")
+        metas[path.stem] = meta
+    return metas
+
+
+def compile_appendix(aid: str, meta: dict, site: dict, problems: Problems) -> dict:
+    """An appendix entry: its text, written like a Textbook (numbered equations, definitions, theorems, examples), with
+    an introduction before its first ### section."""
+    path = APPENDIX / f"{aid}.md"
+    where = str(path.relative_to(ROOT))
+    raw = path.read_text(encoding="utf-8")
+    body = raw[FRONT.match(raw).end():]
+    tb = Markdown(site["stations"], site["presets"], where, problems, textbook=True)
+    first = re.search(r"^### ", body, flags=re.M)
+    intro = body[: first.start()] if first else body
+    sections = [{"id": "intro", "title": "", "html": tb.rich(intro)}] if intro.strip() else []
+    for title, text in split_headings(body, "###"):
+        title, sid = heading_id(title)
+        sections.append({"id": sid, "title": tb.inline(title), "html": tb.rich(text)})
+    for section in sections:
+        section["title"], section["html"] = tb.resolve(section["title"]), tb.resolve(section["html"])
+    return {"title": meta["title"], "summary": meta["summary"], "group": meta["group"],
+            "sources": meta.get("sources", []), "sections": sections}
+
+
 def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, problems: Problems) -> dict:
     """A Lab preset in one shape: its racers (each an algorithm, a name and knobs of its own, or a recorded run) and the
     shared knobs."""
@@ -555,11 +621,27 @@ def compile_content(problems: Problems) -> dict:
             problems.error("content/notation.toml", f"symbol {sym['tex']} points to unknown station '{sym['station']}'")
 
     site = {"stations": stations, "presets": presets, "labels": atlas["labels"]}
+    Markdown.appendix, Markdown.used = read_appendix(problems), {}
     entries = {}
     for path in sorted(CONTENT.glob("*/*.md")):
+        if path.parent == APPENDIX:
+            continue
         entry = compile_entry(path, site, problems)
         if entry:
             entries[path.stem] = entry
+    appendix = {aid: compile_appendix(aid, meta, site, problems) for aid, meta in Markdown.appendix.items()
+                if all(meta.get(f) for f in ("title", "summary", "group"))}
+    # Where each entry is used: the stations that link to it, in reading order, and the appendix entries linked to or
+    # from it.
+    order = {sid: i for i, sid in enumerate(stations)}
+    for aid, item in appendix.items():
+        users = [ROOT / w for w in Markdown.used.get(aid, ())]
+        mine = str((APPENDIX / f"{aid}.md").relative_to(ROOT))
+        item["usedIn"] = sorted({u.stem for u in users if u.parent != APPENDIX and u.stem in stations}, key=order.get)
+        item["related"] = sorted({u.stem for u in users if u.parent == APPENDIX and u.stem != aid}
+                                 | {other for other, ws in Markdown.used.items() if mine in ws and other != aid})
+        if not item["usedIn"] and not item["related"]:
+            problems.warn(f"content/appendix/{aid}.md", "nothing links to this entry")
     for eid, entry in entries.items():
         for ref in entry["storyIn"]:
             if not entries.get(ref, {}).get("story"):
@@ -591,6 +673,8 @@ def compile_content(problems: Problems) -> dict:
         "parts": parts,
         "unified": atlas.get("unified", {}),
         "entries": entries,
+        "appendix": appendix,
+        "appendixGroups": list(APPENDIX_GROUPS),
         "presets": presets,
         "notation": notation,
     }, recordings

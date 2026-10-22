@@ -55,7 +55,7 @@
     visit: (id) => { (saved.visited ||= {})[id] = 1; persist(); },
   };
 
-  // ---- hover cards: anything with data-term="<station>" explains itself on hover ----
+  // ---- hover cards: anything with data-term="<station>" or data-appendix="<entry>" explains itself on hover ----
   let card = null, cardTimer = 0, cardFor = null;
   function hideCard() {
     clearTimeout(cardTimer);
@@ -64,6 +64,14 @@
     cardFor = null;
   }
   function showCard(target) {
+    const appx = target.dataset.appendix && RL.content.appendix?.[target.dataset.appendix];
+    if (appx) {
+      card = h(`<div class="hovercard appx" style="--c:var(--ink-3)">
+        <div class="meta">Appendix · ${esc(appx.group)}</div><h4>${esc(appx.title)}</h4><p>${esc(appx.summary)}</p></div>`);
+      document.body.appendChild(card);
+      place(card, target);
+      return;
+    }
     const st = station(target.dataset.term);
     if (!st) return;
     const e = entry(st.id);
@@ -90,7 +98,7 @@
     card.style.top = `${Math.max(top, y)}px`;
   }
   document.addEventListener("pointerover", (ev) => {
-    const t = ev.target.closest?.("[data-term]") || null;
+    const t = ev.target.closest?.("[data-term], [data-appendix]") || null;
     if (t === cardFor) return;
     hideCard();
     cardFor = t;

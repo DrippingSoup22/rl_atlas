@@ -1,5 +1,6 @@
 /* The shell: header, routing, zoom transitions between views, search and theme.
-   Routes: #/ map · #/e/<id>[/story|/textbook|/card] entry · #/lab/<preset> lab · #/symbols symbols. */
+   Routes: #/ map · #/e/<id>[/story|/textbook|/card] entry · #/lab/<preset> lab · #/symbols symbols ·
+   #/appendix the appendix · #/a/<id> an entry of it. */
 (function (RL) {
   "use strict";
   const { $, h, esc, station, entry, store, lineColor } = RL;
@@ -26,6 +27,8 @@
     if ((m = path.match(/^\/e\/([\w-]+)(?:\/(story|textbook|card))?$/))) return { name: "entry", id: m[1], mode: m[2], depth: 1 };
     if ((m = path.match(/^\/lab\/([\w-]+)$/))) return { name: "lab", id: m[1], depth: 2 };
     if (path === "/symbols") return { name: "symbols", depth: 1 };
+    if (path === "/appendix") return { name: "appendix", depth: 1 };
+    if ((m = path.match(/^\/a\/([\w-]+)$/))) return { name: "appendix", id: m[1], depth: 2 };
     return { name: "map", depth: 0 };
   }
 
@@ -40,6 +43,10 @@
       const last = preset?.racers.at(-1).algorithm, via = app.from?.name === "entry" ? app.from.id : RL.lab?.algorithms?.[last]?.station || last;
       html = `${home}${sep}${via && station(via) ? `<a href="#/e/${via}">${esc(station(via).title)}</a>${sep}` : ""}<span class="here">Lab${preset ? ` · ${esc(preset.title)}` : ""}</span>`;
     } else if (route.name === "symbols") html = `${home}${sep}<span class="here">Symbols and colors</span>`;
+    else if (route.name === "appendix") {
+      const a = route.id && RL.content.appendix[route.id];
+      html = a ? `${home}${sep}<a href="#/appendix">Appendix</a>${sep}<span class="here">${esc(a.title)}</span>` : `${home}${sep}<span class="here">Appendix</span>`;
+    }
     $(".crumbs", top).innerHTML = html;
   }
 
@@ -58,9 +65,22 @@
     scrollTo(0, 0);
     crumbs(next);
     current = RL.views[next.name](view, next.id, next.mode) || {};
-    const st = next.id && station(next.id);
-    document.title = next.name === "entry" && st ? `${st.title} · RL Atlas` : next.name === "lab" ? "Lab · RL Atlas" : "RL Atlas";
+    // Going back to a page opens it where it was left (its place is kept in its history entry); a new page opens at
+    // the top.
+    const back = history.state?.scroll;
+    if (back) scrollTo(0, back);
+    const st = next.id && station(next.id), appx = next.name === "appendix" && next.id && RL.content.appendix[next.id];
+    document.title = next.name === "entry" && st ? `${st.title} · RL Atlas` : next.name === "lab" ? "Lab · RL Atlas"
+      : appx ? `${appx.title} · Appendix · RL Atlas` : next.name === "appendix" ? "Appendix · RL Atlas" : "RL Atlas";
   }
+  // Keep each page's place in its history entry, written once the scrolling stops (browsers limit how often a page
+  // may rewrite its history).
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  let keep = 0;
+  addEventListener("scroll", () => {
+    clearTimeout(keep);
+    keep = setTimeout(() => { try { history.replaceState({ ...history.state, scroll: scrollY }, ""); } catch { /* too many rewrites: skip this one */ } }, 200);
+  }, { passive: true });
 
   // Remember where the pointer was, so the next view grows out of what was clicked.
   let pointer = null;
@@ -91,15 +111,20 @@
     const input = $("input", box), list = $("ul", box);
     let hits = [], on = 0;
     const close = () => box.remove();
-    const go = (s) => { close(); location.hash = `#/e/${s.id}`; };
+    const go = (s) => { close(); location.hash = s.appendix ? `#/a/${s.id}` : `#/e/${s.id}`; };
+    // The stations, and after them the appendix entries (found only by a search, never listed before one).
+    const appendix = Object.entries(RL.content.appendix || {}).map(([id, a]) => ({ id, title: a.title, short: a.summary, partTitle: a.group, appendix: true }));
     function render() {
       const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
-      hits = RL.order.filter((s) => {
+      hits = [...RL.order, ...(words.length ? appendix : [])].filter((s) => {
         const text = `${s.title} ${s.short || ""} ${s.id} ${s.partTitle}`.toLowerCase();
         return words.every((w) => text.includes(w));
       }).slice(0, 40);
       on = Math.min(on, Math.max(0, hits.length - 1));
-      list.innerHTML = hits.map((s, i) => `<li class="${entry(s.id) ? "written" : "planned"}${i === on ? " on" : ""}" data-i="${i}" role="option" style="--c:${lineColor(s.line)}">
+      list.innerHTML = hits.map((s, i) => s.appendix
+        ? `<li class="written appx${i === on ? " on" : ""}" data-i="${i}" role="option" style="--c:var(--ink-3)">
+          <span class="dot"></span><span class="title">${esc(s.title)}</span><span class="part">Appendix · ${esc(s.partTitle)}</span></li>`
+        : `<li class="${entry(s.id) ? "written" : "planned"}${i === on ? " on" : ""}" data-i="${i}" role="option" style="--c:${lineColor(s.line)}">
         <span class="dot"></span><span class="title">${esc(s.title)}</span><span class="part">${entry(s.id) ? "" : "planned · "}Part ${s.part}</span></li>`).join("")
         || '<li class="planned">Nothing matches</li>';
       list.querySelector(".on")?.scrollIntoView({ block: "nearest" });
