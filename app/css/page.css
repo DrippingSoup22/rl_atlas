@@ -583,6 +583,7 @@ a.ref:hover { text-decoration-color: var(--ink); }
   .card-flow, .appx-groups { columns: 1; }
   .sec-formula.sheet { grid-template-columns: minmax(0, 1fr); }
   .sec-formula.sheet > p { margin-top: 8px; }
+  .sec-formula.sheet > .tex-display { font-size: 1.05em; }
   .tb-paper { padding: 22px 18px 30px; font-size: 17.5px; }
   .tb-sec h2 { gap: 12px; font-size: 21px; }
   .tb-definition, .tb-theorem, .tb-lemma, .tb-example { padding: 12px 14px; }

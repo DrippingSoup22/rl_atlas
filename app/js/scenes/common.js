@@ -54,18 +54,19 @@
     const lines = typeof cfg.numbers === "string" ? { main: cfg.numbers } : cfg.numbers || {};
     // a story without lines of numbers keeps room for the formula alone
     card.querySelector(".scene-formula")?.classList.toggle("bare", !Object.keys(lines).length);
-    // too wide for the card: shrink it, down to 70%, the pieces side by side as the steps reveal them; still too wide,
-    // put them in a column, shrunk the same way. Fitted again when the card's width or the fonts change.
+    // too wide for the card: shrink it, down to 70% (55% on a phone), the pieces side by side as the steps reveal them;
+    // still too wide, put them in a column, shrunk the same way. Fitted again when the card's width or the fonts change.
     const fit = () => {
       const room = sym.clientWidth, key = `${room} ${fonts}`;
       if (!room || key === fitted) return;
       fitted = key;
       draw("row");
       sym.style.fontSize = "";
-      if (RL.math.shrink(sym, 0.7) || !shapes.column) return;
+      const floor = innerWidth < 640 ? 0.55 : 0.7; // a phone's card is narrow: it may shrink further
+      if (RL.math.shrink(sym, floor) || !shapes.column) return;
       draw("column");
       sym.style.fontSize = "";
-      RL.math.shrink(sym, 0.7);
+      RL.math.shrink(sym, floor);
     };
     return (st) => {
       n = st.formula || 0;
@@ -73,8 +74,12 @@
       sym.classList.toggle("on", n > 0);
       fit(); // its faint preview too
       const line = st.numbers === true ? lines.main : st.numbers ? lines[st.numbers] : null;
-      if (line) num.innerHTML = RL.math.tex(line, true);
-      num.classList.toggle("on", !!line);
+      num.classList.toggle("on", !!line); // shown first (a phone hides it otherwise), so that it can be measured
+      if (line) {
+        num.innerHTML = RL.math.tex(line, true);
+        num.style.fontSize = "";
+        RL.math.shrink(num, innerWidth < 640 ? 0.55 : 0.7); // a line of numbers too wide for the card shrinks like the formula
+      }
     };
   }
 

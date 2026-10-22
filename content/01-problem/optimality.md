@@ -18,7 +18,7 @@ formula = '\begin{aligned} \step{1}{\val{v_*(s)}} &\step{1}{= \max_\pi \val{v_\p
 
 [story.numbers]
 cycle = '\val{v_*(A)} = \rew{10} + \gam^5\,\rew{10} + \gam^{10}\,\rew{10} + \cdots = \frac{\rew{10}}{1 - 0.9^5} \approx \val{24.4}'
-center = '\val{v_*(\text{center})} = \max\{\,0.9 \cdot \val{19.8},\ 0.9 \cdot \val{16.0},\ 0.9 \cdot \val{16.0},\ 0.9 \cdot \val{19.8}\,\} \approx \val{17.8}'
+center = '\val{v_*(\text{center})} = 0.9 \times \max\{\val{19.8}, \val{16.0}, \val{16.0}, \val{19.8}\} \approx \val{17.8}'
 +++
 
 ## Story

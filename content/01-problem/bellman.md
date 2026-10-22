@@ -132,13 +132,11 @@ $$\val{v_\pi(s)} = \sum_a \pol{\pi(a \mid s)} \sum_{s',\,r} p(s', \rew{r} \mid s
 
 Equation \ref{bellman-v} is the Bellman equation as it is usually written. Read it from the inside out:
 
-| Piece | Meaning |
-| --- | --- |
-| $\rew{r} + \gam\,\val{v_\pi(s')}$ | what one particular outcome is worth: its reward, plus the discounted value of where it leads |
-| $\sum_{s', r} p(s', \rew{r} \mid s, a)\,[\ldots]$ | what the action $a$ is worth: the average over its outcomes |
-| $\sum_a \pol{\pi(a \mid s)}\,[\ldots]$ | what the state is worth: the average over the actions the policy picks |
+- $\rew{r} + \gam\,\val{v_\pi(s')}$ is what one particular outcome is worth: its reward, plus the discounted value of where it leads;
+- $\sum_{s', r} p(s', \rew{r} \mid s, a)\,[\ldots]$ is what the action $a$ is worth: the average over its outcomes;
+- $\sum_a \pol{\pi(a \mid s)}\,[\ldots]$ is what the state is worth: the average over the actions the policy picks.
 
-The first two lines together are the action value $\val{q_\pi(s,a)}$, so \ref{bellman-v} also says that a state's value is the policy's average of its action values ([[value-functions]]). Many texts call \ref{bellman-v} the Bellman *expectation* equation, to set it apart from the optimality equation of [[optimality]], which has a maximum where this one has an average. A terminal state, if there is one, has value 0 by definition, and that 0 is used wherever $\val{v_\pi(s')}$ refers to it.
+The first two pieces together are the action value $\val{q_\pi(s,a)}$, so \ref{bellman-v} also says that a state's value is the policy's average of its action values ([[value-functions]]). Many texts call \ref{bellman-v} the Bellman *expectation* equation, to set it apart from the optimality equation of [[optimality]], which has a maximum where this one has an average. A terminal state, if there is one, has value 0 by definition, and that 0 is used wherever $\val{v_\pi(s')}$ refers to it.
 
 ### Checking it on the gridworld {#example}
 

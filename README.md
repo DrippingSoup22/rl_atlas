@@ -179,7 +179,7 @@ a story on Lab runs.
 The body has up to three parts: a `## Story` made of `::: step {…}` blocks (the braces say what the picture
 shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of plain Markdown you can use:
 
-- `[[station]]` or `[[station|text]]` for links that explain themselves on hover, and `[text](lab:preset)` for Lab links;
+- `[[station]]` or `[[station|text]]` for links that explain themselves on hover, `[[a:entry|text]]` for links to the appendix, and `[text](lab:preset)` for Lab links;
 - `$…$` and `$$…$$` math with the color macros `\val \rew \pol \err` and `\alp \gam \eps \lam \del`;
 - `{{demo arg}}` for a diagram, figure or demo: `backup` (bandit, mc, mc-q, td0, sarsa, q-learning, expected-sarsa,
   double-q, ddpg, td3, sac, n-step-td, n-step-sarsa, lambda, lambda-q, v-pi, q-pi, v-star, q-star, reinforce, baseline, actor-critic, a2c, gae), `gridworld` (random, optimal), `cliff-paths`, `cliff-curves`, `cliff-alpha`,
@@ -192,13 +192,23 @@ shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of 
   `coarse-widths`, `walk-fit` (mc), `walk-alpha`, `walk-n-study`, `basis-study`, `tiling-study`, `car-surfaces`, `car-curves` (n),
   `baird-weights`, `corridor-values`, `softmax-play`, `gaussian-play`, `pg-estimates`, `reinforce-alpha`, `baseline-curves`,
   `critic-speed`, `entropy-study`, `gae-weights`, `gae-study`, `trust-region` (clip), `ppo-clip`. A backup label breaks into lines at `\n`, and
-  a display formula too wide for its column shrinks a little, then stacks the parts written side by side with `\qquad`;
+  a display formula too wide for its column shrinks a little, then stacks the parts written side by side with `\qquad`,
+  then breaks a chain of relations at its signs, and an equation number that would touch its formula moves under it;
 - `::: pseudocode` (end a line with `{#id}` to link it to the Lab's step-by-step mode), `::: question` (answer after `---`) and `::: analogy`.
+
+A card's formula section (`{#formula}`) written as pairs, a line of words and then its formula, is laid out as a sheet:
+the words on the left, each formula beside its own words.
 
 The Textbook numbers its sections, figures and statements, and any display equation with a `\label{name}`;
 `\ref{name}` links to them (§2, (3), Figure 1, Theorem 1). Its blocks are `::: definition`, `theorem`, `lemma`,
 `example` (all written `::: kind {#name} Title`), `remark`, `proof` (`::: proof Proof idea` renames it),
 `::: figure {#name}` (a `{{demo}}` line, then the caption) and `::: algorithm {#name} Title` (pseudocode lines).
+
+The appendix explains the mathematics the atlas uses, apart from reinforcement learning, and is not on the map: its
+pages are reached through `[[a:entry]]` links, the Symbols page and the search. Each entry is a file in
+`content/appendix/` with `title`, `summary`, `group` (one of the groups listed in `build.py`) and optional `sources` in
+its front matter, then text written like a Textbook: an introduction, `###` sections, numbered equations and the same
+blocks. The build checks every `[[a:…]]` link and lists, on each entry, the stations that use it.
 
 ## Credits
 
