@@ -14,7 +14,7 @@ sources = [
 
 In many problems the interaction breaks naturally into separate pieces: a game is played to the end, a maze is solved, a robot arm completes a grasp. Each piece is an **episode**. It ends in a special **terminal state**, after which the environment is reset to a starting state, drawn from some fixed distribution, and a new episode begins independently of how the last one ended.
 
-Tasks of this kind are **episodic**. The set of all states including the terminal one is written $\mathcal{S}^+$, and the nonterminal states $\mathcal{S}$. The time at which an episode ends, $T$, is a random variable that normally differs from episode to episode: a game can be won quickly or slowly. Within an episode the trajectory is
+Tasks of this kind are **episodic**. The set of all states including the terminal one is written $\mathcal{S}^+$, and the nonterminal states $\mathcal{S}$. The time at which an episode ends, $T$, is a random variable ([[a:random-variable|random variables]]): it depends on what happens along the way, and normally differs from episode to episode, as a game can be won quickly or slowly. Within an episode the trajectory is
 
 $$S_0,\ A_0,\ \rew{R_1},\ S_1,\ \ldots,\ S_{T-1},\ A_{T-1},\ \rew{R_T},\ S_T, \label{episode}$$
 
@@ -26,11 +26,11 @@ Other problems never end: a thermostat keeps regulating, a process-control syste
 
 ### One notation for both {#unified}
 
-The two cases can be written with one formula by treating the end of an episode as entry into an **absorbing state** that transitions only to itself and gives zero reward forever. After the end, the trajectory continues as $S_T, 0, S_T, 0, \ldots$, and summing to infinity gives the same total as summing to $T$. The return can then be written
+The two cases can be written with one formula by treating the end of an episode as entry into an **absorbing state**, a state that leads only to itself ([[a:markov-chain|Markov chains]]) and gives zero reward forever. After the end, the trajectory continues as $S_T, 0, S_T, 0, \ldots$, and summing to infinity gives the same total as summing to $T$. The return can then be written
 
 $$\rew{G_t} = \sum_{k=t+1}^{T} \gam^{\,k-t-1}\, \rew{R_k}, \label{unified-return}$$
 
-where either $T = \infty$ or $\gam = 1$ is allowed, but not both ([[return]]). This is the convention of Sutton and Barto, and of the atlas.
+where either $T = \infty$ or $\gam = 1$ is allowed, but not both ([[return]]). The exponent $k - t - 1$ counts how many steps after the next one the reward $\rew{R_k}$ arrives: 0 for $\rew{R_{t+1}}$, 1 for $\rew{R_{t+2}}$, and so on. Allowing both $T = \infty$ and $\gam = 1$ would bring back an endless undiscounted sum, which can be infinite. This is the convention of Sutton and Barto, and of the atlas.
 
 ### Time limits are not terminal states {#time-limits}
 
@@ -38,7 +38,7 @@ In practice, episodes are often cut off after a fixed number of steps: a simulat
 
 The distinction matters for every method that bootstraps. At a true terminal state, the target is just the last reward. At a truncation, the target should still include the estimated value of the last state,
 
-$$\text{terminal: } \rew{R_{t+1}} \qquad\qquad \text{truncated: } \rew{R_{t+1}} + \gam\,\val{V(S_{t+1})},$$
+$$\begin{aligned} \text{terminal:} &\quad \rew{R_{t+1}}, \\ \text{truncated:} &\quad \rew{R_{t+1}} + \gam\,\val{V(S_{t+1})}, \end{aligned}$$
 
 or else the agent learns that the world ends at the time limit, which it does not. Treating time-outs as terminal is a common source of subtle errors (Pardo et al., 2018). Modern environment interfaces such as Gymnasium report the two cases separately, as `terminated` and `truncated`, for this reason.
 
@@ -64,7 +64,13 @@ An **episodic** task breaks into episodes that end in a terminal state and start
 
 ### In symbols {#formula}
 
-$$\rew{G_t} = \sum_{k=t+1}^{T} \gam^{\,k-t-1}\, \rew{R_k}, \qquad T = \infty \text{ or } \gam = 1, \text{ not both}$$
+The return from time $t$, for an episode that ends at time $T$, with everything after the end worth 0.
+
+$$\rew{G_t} = \sum_{k=t+1}^{T} \gam^{\,k-t-1}\, \rew{R_k}$$
+
+One formula for both kinds of task: a continuing task has $T = \infty$ and needs $\gam < 1$.
+
+$$T = \infty \quad \text{or} \quad \gam = 1, \quad \text{never both}$$
 
 ### Terminal or truncated? {#truncation}
 

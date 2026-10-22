@@ -101,7 +101,7 @@
   // The room between a numbered formula and its number: KaTeX centers the formula and pins the number to the right
   // edge, so a long formula runs into it.
   function tagGap(el) {
-    const tag = el.querySelector(".katex-html > .tag");
+    const tag = el.querySelector(".katex-html > .katex-tag");
     if (!tag) return Infinity;
     let right = -Infinity;
     for (const part of tag.parentElement.children) if (part !== tag) right = Math.max(right, part.getBoundingClientRect().right);

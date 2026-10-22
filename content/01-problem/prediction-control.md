@@ -27,7 +27,11 @@ The bridge between the two is **policy improvement**. Given the action values of
 Let $\pol{\pi}$ and $\pol{\pi'}$ be deterministic policies such that $\val{q_\pi(s, \pi'(s))} \ge \val{v_\pi(s)}$ for every state $s$. Then $\val{v_{\pi'}(s)} \ge \val{v_\pi(s)}$ for every state: $\pol{\pi'}$ is at least as good as $\pol{\pi}$.
 :::
 
-The greedy policy with respect to $\val{q_\pi}$ satisfies the condition, because $\max_a \val{q_\pi(s,a)} \ge \sum_a \pol{\pi(a \mid s)}\,\val{q_\pi(s,a)} = \val{v_\pi(s)}$. So evaluation followed by greedy improvement never makes a policy worse, and if it does not make it better, the policy already satisfies the Bellman optimality equation and is optimal ([[optimality]]).
+The greedy policy with respect to $\val{q_\pi}$ satisfies the condition. In each state it takes an action with the largest action value, and the largest of several numbers is at least their average, whatever the weights ([[a:max-argmax|max and argmax]]):
+
+$$\max_a \val{q_\pi(s,a)} \ge \sum_a \pol{\pi(a \mid s)}\,\val{q_\pi(s,a)} = \val{v_\pi(s)}.$$
+
+The equality on the right is the relation between state and action values of [[value-functions]]. So evaluation followed by greedy improvement never makes a policy worse, and if it does not make it better, the policy already satisfies the Bellman optimality equation and is optimal ([[optimality]]).
 
 Alternating the two steps is **policy iteration** ([[policy-iteration]]). Most control methods do a looser version of it: they improve the policy before the evaluation is finished, sometimes after a single step. Sutton and Barto call this whole family **generalized policy iteration** ([[gpi]]): two processes, one making the values consistent with the policy and one making the policy greedy with respect to the values, which pull against each other in the short run and meet at the optimum.
 
@@ -49,7 +53,7 @@ Both problems come in two variants, depending on where the experience comes from
 | Function approximation | [[gradient-mc]], [[semi-gradient-td]] | [[semi-gradient-sarsa]], [[dqn]] |
 | Policy gradients | the critic of an actor–critic | [[reinforce]], [[actor-critic]], [[ppo]] |
 
-Reading across a row shows the pattern of the atlas: each family first learns to predict, then wraps its prediction method in a loop of improvement. Policy-gradient methods are the exception in form, since they adjust the policy directly by gradient ascent, but those with a critic still contain a prediction method.
+Reading across a row shows the pattern of the atlas: each family first learns to predict, then wraps its prediction method in a loop of improvement. Policy-gradient methods are the exception in form, since they adjust the policy directly by gradient ascent ([[a:derivative-gradient|gradients]]), but those with a critic still contain a prediction method.
 
 ### Prediction for its own sake {#why-prediction}
 
@@ -69,9 +73,17 @@ Prediction is a coach rating the current game plan. Control is the coach changin
 
 ### In symbols {#formula}
 
-$$\text{prediction: } \pol{\pi} \mapsto \val{v_\pi},\ \val{q_\pi} \qquad\qquad \text{control: find } \pol{\pi_*}$$
+Prediction: given a policy, compute its values.
 
-$$\text{improvement: } \pol{\pi'(s)} = \operatorname*{arg\,max}_a \val{q_\pi(s,a)}$$
+$$\pol{\pi} \;\longmapsto\; \val{v_\pi},\ \val{q_\pi}$$
+
+Improvement: act greedily with respect to those values.
+
+$$\pol{\pi'(s)} = \operatorname*{arg\,max}_a \val{q_\pi(s,a)}$$
+
+Control: alternate the two. When the policy stops changing, it is optimal.
+
+$$\pol{\pi_0} \to \val{q_{\pi_0}} \to \pol{\pi_1} \to \val{q_{\pi_1}} \to \cdots \to \pol{\pi_*}$$
 
 ### Pairs to know {#pairs}
 

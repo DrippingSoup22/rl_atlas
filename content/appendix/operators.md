@@ -31,4 +31,8 @@ Writing the many Bellman equations as one operator does three things.
 - **Algorithms become repetition.** Applying the operator again and again, $v_{k+1} = \mathcal{T}_\pi v_k$, is iterative policy evaluation ([[policy-evaluation]]). Writing $\mathcal{T}_\pi^k$ for $k$ applications in a row, the $k$-th estimate is $\mathcal{T}_\pi^k v_0$.
 - **Properties can be proved once.** Whether the repetition converges, and how fast, depends on one property of the operator: whether it brings any two inputs closer together ([[a:contraction|contractions]]).
 
-The optimality equation has its operator too, with a maximum in place of the policy's average, $(\mathcal{T}_* v)(s) = \max_a \sum_{s', r} p(s', \rew{r} \mid s, a)\,[\rew{r} + \gam\,v(s')]$, and value iteration is its repetition ([[optimality]]). $\mathcal{T}_\pi$ is linear, $\mathcal{T}_*$ is not (because of the max), but both bring value functions closer together, which is all the theory needs.
+The optimality equation has its operator too, with a maximum in place of the policy's average,
+
+$$(\mathcal{T}_* v)(s) = \max_a \sum_{s',\,r} p(s', \rew{r} \mid s, a)\,\big[\,\rew{r} + \gam\,v(s')\,\big],$$
+
+and value iteration is its repetition ([[optimality]]). $\mathcal{T}_\pi$ is linear, $\mathcal{T}_*$ is not (because of the max), but both bring value functions closer together, which is all the theory needs.

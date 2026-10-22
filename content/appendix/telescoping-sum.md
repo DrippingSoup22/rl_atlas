@@ -18,7 +18,11 @@ The same cancellation works when each step is weighted by $\gam^k$ and the later
 
 $$\sum_{k=0}^{n-1} \gam^k \big(\gam\,a_{k+1} - a_k\big) = \gam^n a_n - a_0. \label{discounted}$$
 
-To see it, write out the terms: $(\gam a_1 - a_0) + (\gam^2 a_2 - \gam a_1) + (\gam^3 a_3 - \gam^2 a_2) + \cdots$. Each $\gam^k a_k$ appears once with each sign and cancels, leaving the first $-a_0$ and the last $\gam^n a_n$.
+To see it, write out the terms:
+
+$$(\gam a_1 - a_0) + (\gam^2 a_2 - \gam a_1) + (\gam^3 a_3 - \gam^2 a_2) + \cdots$$
+
+Each $\gam^k a_k$ appears once with each sign and cancels, leaving the first $-a_0$ and the last $\gam^n a_n$.
 
 If the values $a_k$ stay bounded and $\gam < 1$, then $\gam^n a_n$ shrinks to 0 as $n$ grows ([[a:limits|limits]]), and the infinite sum is simply $-a_0$.
 

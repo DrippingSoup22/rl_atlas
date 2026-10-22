@@ -36,7 +36,7 @@ An optimal policy heads for $A$ from everywhere. Where a cell shows two arrows, 
 :::
 
 ::: step {v = "optimal", values = true, policy = "optimal", focus = [0, 1], wander = "optimal", range = 25, formula = 1, numbers = "cycle"}
-Why 24.4? From $A$ the agent jumps to $A'$ for $\rew{+10}$, walks four steps back up to $A$, and jumps again: $\rew{+10}$ every five steps, forever. Discounted, that adds up to $10/(1-0.9^5)$. Watch it go round.
+Why 24.4? From $A$ the agent jumps to $A'$ for $\rew{+10}$, walks four steps back up to $A$, and jumps again: $\rew{+10}$ every five steps, forever. Discounted, that adds up to $10/(1-0.9^5)$, a [[a:geometric-series|geometric series]] with ratio $0.9^5$. Watch it go round.
 :::
 
 ::: step {v = "optimal", values = true, focus = [2, 2], next = true, agent = "none", range = 25, formula = 4, numbers = "center"}
@@ -59,9 +59,11 @@ Value functions order policies. A policy $\pol{\pi}$ is **at least as good as** 
 
 $$\pol{\pi} \ge \pol{\pi'} \iff \val{v_\pi(s)} \ge \val{v_{\pi'}(s)} \quad \text{for all } s \in \mathcal{S}. \label{order-eq}$$
 
-This is only a partial order: of two policies, each may be better in some states. It is a remarkable fact that, in a finite MDP, there is always a policy that is at least as good as every other policy in every state at once. Such a policy is **optimal**, written $\pol{\pi_*}$. There may be several, but they all share the same values.
+This is only a partial order ([[a:partial-order|partial orders]]): of two policies, each may be better in some states, and then neither is at least as good as the other. It is a remarkable fact that, in a finite MDP, there is always a policy that is at least as good as every other policy in every state at once. Such a policy is **optimal**, written $\pol{\pi_*}$. There may be several, but they all share the same values.
 
 ### Optimal value functions {#values}
+
+The best that can be done from each state is then a number per state, the largest value any policy achieves there. Here $\max_\pi$ takes the largest value over all policies ([[a:max-argmax|max and argmax]]).
 
 ::: definition {#def-optimal} Optimal value functions
 $$\val{v_*(s)} = \max_{\pi}\, \val{v_\pi(s)}, \qquad \val{q_*(s,a)} = \max_{\pi}\, \val{q_\pi(s,a)}, \qquad \text{for all } s \text{ and } a. \label{optimal}$$
@@ -71,7 +73,7 @@ $\val{q_*(s,a)}$ is the expected return of taking $a$ in $s$ and behaving optima
 
 $$\val{q_*(s,a)} = \mathbb{E}[\,\rew{R_{t+1}} + \gam\,\val{v_*(S_{t+1})} \mid S_t = s,\ A_t = a\,], \qquad \val{v_*(s)} = \max_a \val{q_*(s,a)}. \label{relations}$$
 
-The second relation holds because an optimal policy puts all its probability on actions with the highest value: averaging over such actions gives their maximum.
+The second relation holds because an optimal policy puts all its probability on actions with the highest value: averaging over such actions gives their maximum. If it gave some probability to a worse action, moving that probability to a best action would raise the value of $s$, by the policy improvement theorem ([[prediction-control]]), and the policy would not have been optimal.
 
 ### The Bellman optimality equations {#equations}
 
@@ -90,7 +92,7 @@ These are the **Bellman optimality equations**. They say that the value of a sta
 The backup diagram of $\val{v_*}$: the arc across the actions means that the best one is taken, not an average. After Sutton & Barto, Figure 3.4.
 :::
 
-For a finite MDP with $\gam < 1$, \ref{bellman-v} has a unique solution, $\val{v_*}$: the operator on its right-hand side is a $\gam$-contraction in the max norm, exactly as for action values ([[q-learning]]).
+For a finite MDP with $\gam < 1$, \ref{bellman-v} has a unique solution, $\val{v_*}$. The argument is the one used for a fixed policy ([[bellman]]): the right-hand side, seen as an operator on tables of values, brings any two tables closer together by the factor $\gam$, so it has exactly one fixed point ([[a:contraction|contractions]]). The maximum does not spoil this, because the maxima of two lists of numbers differ by at most the largest difference between the lists ([[a:max-argmax|max and argmax]]).
 
 ### From optimal values to an optimal policy {#greedy}
 
@@ -101,10 +103,10 @@ Let $\pol{\pi}$ be any policy that, in every state, chooses only actions achievi
 :::
 
 ::: proof
-Because $\pol{\pi}$ only takes maximizing actions, the Bellman equation of $\pol{\pi}$, applied to $\val{v_*}$, gives the same result as the right-hand side of \ref{bellman-v}: $\mathcal{T}_\pi \val{v_*} = \val{v_*}$. So $\val{v_*}$ is a fixed point of $\mathcal{T}_\pi$. That operator has only one fixed point, $\val{v_\pi}$ ([[bellman]]). Hence $\val{v_\pi} = \val{v_*}$.
+Apply the Bellman operator of $\pol{\pi}$ ([[bellman]]) to the table $\val{v_*}$. In each state it averages, over the actions $\pol{\pi}$ chooses, the value of each action computed with $\val{v_*}$. All those actions achieve the maximum in \ref{bellman-v}, so their average is that maximum, which is $\val{v_*(s)}$. Hence $\mathcal{T}_\pi \val{v_*} = \val{v_*}$: the table $\val{v_*}$ is a fixed point of $\mathcal{T}_\pi$ ([[a:fixed-points|fixed points]]). That operator has only one fixed point, $\val{v_\pi}$. Hence $\val{v_\pi} = \val{v_*}$.
 :::
 
-A one-step look ahead is enough because $\val{v_*}$ already accounts for all future consequences: an action that looks best for one step, by the value of where it leads, is best in the long run. With $\val{q_*}$ even the look ahead disappears, and no model is needed:
+A one-step look ahead is enough because $\val{v_*}$ already accounts for all future consequences: an action that looks best for one step, by the value of where it leads, is best in the long run. With $\val{q_*}$ even the look ahead disappears, and no model is needed: take an action with the largest optimal action value, the argmax ([[a:max-argmax|argmax]]):
 
 $$\pol{\pi_*(s)} = \operatorname*{arg\,max}_a \val{q_*(s,a)}. \label{argmax}$$
 
@@ -121,7 +123,9 @@ The gridworld (left), its optimal values $\val{v_*}$ (middle) and an optimal pol
 
 \ref{fig-optimal} shows the solution of \ref{bellman-v} for the gridworld of [[value-functions]]. The value of $A$ can be checked by hand. An optimal agent in $A$ jumps to $A'$ for $\rew{+10}$, then walks four cells up, which costs nothing, and jumps again, collecting $\rew{+10}$ every five steps:
 
-$$\val{v_*(A)} = 10 + \gam^5 \cdot 10 + \gam^{10} \cdot 10 + \cdots = \frac{10}{1 - \gam^5} = \frac{10}{1 - 0.59049} \approx 24.4.$$
+$$\val{v_*(A)} = 10 + \gam^5 \cdot 10 + \gam^{10} \cdot 10 + \cdots = \frac{10}{1 - \gam^5} = \frac{10}{1 - 0.59049} \approx 24.4,$$
+
+a geometric series whose ratio is $\gam^5$, one factor $\gam$ for each of the five steps of a lap ([[a:geometric-series|geometric series]]).
 
 Every other value follows from the equation. In the center cell all moves pay 0, and the best neighbors, above and to the left, are worth 19.8, so $\val{v_*(\text{center})} = 0.9 \times 19.8 \approx 17.8$. Both of those moves achieve the maximum, which is why the optimal policy shows two arrows there.
 
@@ -129,15 +133,17 @@ Every other value follows from the equation. In the center cell all moves pay 0,
 
 For the recycling robot ([[mdp]]) with $\gam = 0.9$, the equations \ref{bellman-v} for the two states read
 
-$$\begin{aligned} \val{v_*(\text{h})} &= \max\big\{\, 2 + 0.9\,[\,0.7\,\val{v_*(\text{h})} + 0.3\,\val{v_*(\text{l})}\,],\ \ 1 + 0.9\,\val{v_*(\text{h})} \,\big\}, \\ \val{v_*(\text{l})} &= \max\big\{\, 0.6\,[\,2 + 0.9\,\val{v_*(\text{l})}\,] + 0.4\,[\,{-3} + 0.9\,\val{v_*(\text{h})}\,],\ \ 1 + 0.9\,\val{v_*(\text{l})},\ \ 0.9\,\val{v_*(\text{h})} \,\big\}, \end{aligned}$$
+$$\begin{aligned} \val{v_*(\text{h})} = \max\big\{ & 2 + 0.9\,[\,0.7\,\val{v_*(\text{h})} + 0.3\,\val{v_*(\text{l})}\,], && \text{search} \\ & 1 + 0.9\,\val{v_*(\text{h})} \,\big\}, && \text{wait} \end{aligned}$$
 
-where the terms are search and wait in the high state, and search, wait and recharge in the low one. Their solution, computed by the Lab, is $\val{v_*(\text{high})} \approx 15.75$ and $\val{v_*(\text{low})} \approx 14.17$. With a high battery the robot should search (worth 15.75, against 15.17 for waiting); with a low one it should recharge (14.17, against 13.76 for waiting and 13.32 for searching). With other probabilities or rewards the answer changes; Sutton and Barto keep them symbolic for this reason (Example 3.9).
+$$\begin{aligned} \val{v_*(\text{l})} = \max\big\{ & 0.6\,[\,2 + 0.9\,\val{v_*(\text{l})}\,] + 0.4\,[\,{-3} + 0.9\,\val{v_*(\text{h})}\,], && \text{search} \\ & 1 + 0.9\,\val{v_*(\text{l})}, && \text{wait} \\ & 0.9\,\val{v_*(\text{h})} \,\big\}, && \text{recharge} \end{aligned}$$
+
+one line per action, with “h” and “l” for the high and low battery. Their solution, computed by the Lab, is $\val{v_*(\text{high})} \approx 15.75$ and $\val{v_*(\text{low})} \approx 14.17$. With a high battery the robot should search (worth 15.75, against 15.17 for waiting); with a low one it should recharge (14.17, against 13.76 for waiting and 13.32 for searching). With other probabilities or rewards the answer changes; Sutton and Barto keep them symbolic for this reason (Example 3.9).
 
 ### Solving the optimality equations {#solving}
 
-The optimality equations are nonlinear, because of the maximum, and in general have no closed-form solution. They can be solved by iteration, as in value iteration ([[value-iteration]]), by alternating evaluation and improvement, as in policy iteration ([[policy-iteration]]), or as a linear program.
+The optimality equations are nonlinear, because of the maximum, and in general have no closed-form solution. They can be solved by iteration, as in value iteration ([[value-iteration]]), by alternating evaluation and improvement, as in policy iteration ([[policy-iteration]]), or as a linear program, which replaces each maximum by one inequality per action ([[a:linear-programming|linear programming]]).
 
-Solving them exactly rests on three assumptions that are rarely all true: the dynamics are known; there is enough computation to handle every state; and the states are Markov. A game like backgammon has about $10^{20}$ states, far too many to visit, let alone sweep. Most of reinforcement learning can therefore be read as ways of solving the Bellman optimality equation approximately: from samples instead of the model, for the states that matter most, and with functions that generalize instead of tables ([[dp-limits]]).
+Solving them exactly rests on three assumptions that are rarely all true: the dynamics are known; there is enough computation to handle every state; and the states are Markov. A game like backgammon has about $10^{20}$ states, far too many to visit, let alone sweep ([[a:growth-rates|growth rates]]). Most of reinforcement learning can therefore be read as ways of solving the Bellman optimality equation approximately: from samples instead of the model, for the states that matter most, and with functions that generalize instead of tables ([[dp-limits]]).
 
 ### Historical remarks {#history}
 
@@ -155,9 +161,17 @@ A sat-nav that knows, from every junction, the shortest time to your destination
 
 ### In symbols {#formula}
 
+The optimal value of a state: the value of its best action.
+
 $$\val{v_*(s)} = \max_a \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\rew{r} + \gam\,\val{v_*(s')}\big]$$
 
-$$\val{q_*(s,a)} = \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\rew{r} + \gam \max_{a'} \val{q_*(s',a')}\big], \qquad \pol{\pi_*(s)} = \operatorname*{arg\,max}_a \val{q_*(s,a)}$$
+The optimal value of an action: one step, then the best action from wherever it leads.
+
+$$\val{q_*(s,a)} = \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\rew{r} + \gam \max_{a'} \val{q_*(s',a')}\big]$$
+
+An optimal policy: in every state, an action with the highest optimal value.
+
+$$\pol{\pi_*(s)} = \operatorname*{arg\,max}_a \val{q_*(s,a)}$$
 
 ### Backup diagram {#backup}
 

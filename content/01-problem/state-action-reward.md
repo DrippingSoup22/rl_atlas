@@ -12,7 +12,7 @@ sources = [
 
 ### States {#states}
 
-The state $S_t \in \mathcal{S}$ is the information on which the agent bases its decision at time $t$. It can be almost anything: the position of the pieces on a board, a vector of sensor readings, a summary of what has happened so far, or a symbolic description such as “battery low”. The set $\mathcal{S}$ may be finite (the 25 cells of a small gridworld) or continuous (positions and velocities, a vector in $\mathbb{R}^d$).
+The state $S_t \in \mathcal{S}$ is the information on which the agent bases its decision at time $t$. It can be almost anything: the position of the pieces on a board, a vector of sensor readings, a summary of what has happened so far, or a symbolic description such as “battery low”. The set $\mathcal{S}$ of all states may be finite (the 25 cells of a small gridworld) or continuous (positions and velocities, a list of $d$ real numbers, that is, a vector in $\mathbb{R}^d$; see [[a:sets-functions|sets]] and [[a:vectors-matrices|vectors]]).
 
 A good state contains everything that matters for the decision and for predicting what happens next. When it does, the past adds nothing once the present state is known; this is the Markov property, made precise in [[mdp]]. When it does not, the agent must make up for the missing information, typically by remembering recent history. The classic example is a single video frame, which shows where a ball is but not where it is going; DQN therefore used the last four frames together as its state (Mnih et al., 2015).
 
@@ -20,7 +20,7 @@ It helps to distinguish what the agent senses, its **observation**, from the sta
 
 ### Actions {#actions}
 
-The action $A_t \in \mathcal{A}(S_t)$ is the agent's choice at time $t$. The set of available actions may depend on the state, as legal moves depend on the position in chess. It may be finite (left or right, one of four directions) or continuous (a torque, a steering angle); continuous actions need policies that output distributions over real numbers ([[policy-parameterization]]).
+The action $A_t \in \mathcal{A}(S_t)$ is the agent's choice at time $t$. The set of available actions may depend on the state, as legal moves depend on the position in chess. It may be finite (left or right, one of four directions) or continuous (a torque, a steering angle); continuous actions need policies that output distributions over real numbers, described by a density ([[a:probability-density|densities]], [[policy-parameterization]]).
 
 Actions can be chosen at very different levels of abstraction: the voltages applied to a motor, the direction of the next step, or whether to accept a job offer. The level is a design decision. Low-level actions give fine control but make useful behavior a long sequence of decisions; high-level actions shorten the sequence but presuppose controllers that can carry them out.
 
@@ -36,9 +36,9 @@ The sign and the scale of rewards matter in specific ways.
 
 - A reward of $\rew{-1}$ on every step, as in the cliff world, makes every extra step costly, so the agent learns to finish quickly.
 - Multiplying every reward by the same positive constant does not change which policy is best; it only rescales the values, which matters for step sizes and for learning with neural networks.
-- Adding a constant $c$ to every reward does not change which policy is best in a continuing task: with discount $\gam < 1$ it adds the same amount, $c/(1-\gam)$, to the value of every state. In an episodic task it can change it: a positive bonus on every step makes long episodes attractive, and a maze agent rewarded $+1$ per step would learn to avoid the exit.
+- Adding a constant $c$ to every reward does not change which policy is best in a continuing task: with discount $\gam < 1$ it adds the same amount, $c + \gam c + \gam^2 c + \cdots = c/(1-\gam)$, to the value of every state ([[a:geometric-series|geometric series]]). In an episodic task it can change it: a positive bonus on every step makes long episodes attractive, and a maze agent rewarded $+1$ per step would learn to avoid the exit.
 
-The expected reward of an action, $r(s,a) = \mathbb{E}[\rew{R_{t+1}} \mid S_t = s, A_t = a]$, is often all that matters, so rewards can be random without changing the problem much ([[mdp]]). Texts write the reward function in three forms, $r(s)$, $r(s, a)$ or $r(s, a, s')$, depending on what it is allowed to depend on. They describe the same problems: the richer forms can always be averaged down to $r(s, a)$, which is all the Bellman equations use, and a reward that depends on more can be turned into $r(s)$ by putting the extra information into the state.
+The expected reward of an action, $r(s,a) = \mathbb{E}[\rew{R_{t+1}} \mid S_t = s, A_t = a]$, the average reward over many tries of $a$ in $s$ ([[a:expectation|expected value]]), is often all that matters, so rewards can be random without changing the problem much ([[mdp]]). Texts write the reward function in three forms, $r(s)$, $r(s, a)$ or $r(s, a, s')$, depending on what it is allowed to depend on. They describe the same problems: the richer forms can always be averaged down to $r(s, a)$, which is all the Bellman equations use, and a reward that depends on more can be turned into $r(s)$ by putting the extra information into the state.
 
 ### Timing {#timing}
 
@@ -70,9 +70,17 @@ Three signals pass between agent and environment. The **state** is what the agen
 
 ### In symbols {#formula}
 
-$$S_t \in \mathcal{S}, \qquad A_t \in \mathcal{A}(S_t), \qquad \rew{R_{t+1}} \in \mathbb{R}$$
+The state at time $t$ is one of the possible states.
 
-The reward and the next state that follow $A_t$ carry the index $t+1$.
+$$S_t \in \mathcal{S}$$
+
+The action is one of those available in that state.
+
+$$A_t \in \mathcal{A}(S_t)$$
+
+The reward is a real number. It follows $A_t$, so it carries the index $t+1$, like the next state.
+
+$$\rew{R_{t+1}} \in \mathbb{R}$$
 
 ### Examples {#examples}
 

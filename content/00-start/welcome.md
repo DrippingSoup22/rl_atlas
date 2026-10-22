@@ -38,6 +38,8 @@ Each algorithm is read three ways, in this order:
 
 Then the **Lab** shows it learning: one pseudocode line at a time, or fifty episodes a second. It also counts how often its settings work over many seeds, and sweeps any knob to show where it works and where it fails. The deep methods' Labs play back networks trained offline, 20 seeds each. Concepts use the views that help them.
 
+Links with a dotted underline lead to the [appendix](#/appendix): short pages on the mathematics the atlas uses, such as sums, expectations, norms and fixed points, each explained on its own. The appendix is not on the map; you reach it from those links, from the Symbols page, or by searching.
+
 ### Colors {#colors}
 
 The same quantity always has the same color, in formulas and in pictures:

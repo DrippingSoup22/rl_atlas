@@ -19,6 +19,7 @@ The vertical bar reads “given”. Knowing that $B$ happened shrinks the world 
 
 ::: example {#ex-die}
 Roll a fair die. The probability of a 6 is $\tfrac16$. Given that the roll is even, it is
+
 $$\Pr\{6 \mid \text{even}\} = \frac{\Pr\{6 \text{ and even}\}}{\Pr\{\text{even}\}} = \frac{1/6}{1/2} = \frac13.$$
 :::
 

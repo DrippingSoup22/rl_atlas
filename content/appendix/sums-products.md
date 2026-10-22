@@ -31,7 +31,9 @@ Sums obey the rules of ordinary addition, written in a new way.
 - **A constant comes out.** A factor that does not depend on the index can be taken outside: $\sum_k c\,x_k = c \sum_k x_k$. In $\sum_{s'} p(s' \mid s, a)\,\gam\,v(s')$, the $\gam$ comes out.
 - **A sum splits.** $\sum_k (x_k + y_k) = \sum_k x_k + \sum_k y_k$. This is how the Bellman equation separates the expected reward from the expected next value.
 - **The order of two sums can be swapped** (for finite sums, and for infinite ones whose terms are all positive or that converge absolutely): $\sum_i \sum_j x_{ij} = \sum_j \sum_i x_{ij}$. Both add every $x_{ij}$ once.
-- **The first term can be taken out**, which shifts the index: $\sum_{k=0}^{n} x_k = x_0 + \sum_{k=1}^{n} x_k = x_0 + \sum_{j=0}^{n-1} x_{j+1}$. Taking out the first reward of the return is exactly this move ([[return]]).
+- **The first term can be taken out**, and the rest renumbered to start from 0 again, with $j = k - 1$. Taking out the first reward of the return is exactly this move ([[return]]):
+
+$$\sum_{k=0}^{n} x_k = x_0 + \sum_{k=1}^{n} x_k = x_0 + \sum_{j=0}^{n-1} x_{j+1}.$$
 
 Two sums in which a constant is summed are worth remembering: $\sum_{k=1}^{n} 1 = n$, and a probability distribution always satisfies $\sum_x p(x) = 1$ ([[a:probability|probability]]), so $\sum_x p(x)\,c = c$.
 

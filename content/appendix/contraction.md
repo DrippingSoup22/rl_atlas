@@ -16,6 +16,7 @@ Let $f$ map a set of objects to itself, and let $\lVert x - y \rVert$ measure th
 
 ::: definition {#def-contraction} Contraction
 $f$ is a **contraction** with modulus $\gam$, where $0 \le \gam < 1$, if for every two inputs $x$ and $y$
+
 $$\lVert f(x) - f(y) \rVert \le \gam\,\lVert x - y \rVert. \label{contraction}$$
 :::
 
@@ -40,7 +41,11 @@ Let $f$ be a contraction with modulus $\gam < 1$ on a complete space (for exampl
 ::: proof
 *At most one fixed point.* If $x^*$ and $y^*$ were both fixed points, then $\lVert x^* - y^* \rVert = \lVert f(x^*) - f(y^*) \rVert \le \gam\,\lVert x^* - y^* \rVert$. A non-negative number that is at most $\gam < 1$ times itself must be 0, so $x^* = y^*$.
 
-*The error shrinks.* Suppose a fixed point $x^*$ exists. Since $x^* = f(x^*)$, each step gives $\lVert x_{k+1} - x^* \rVert = \lVert f(x_k) - f(x^*) \rVert \le \gam\,\lVert x_k - x^* \rVert$. Applied $k$ times, this is the bound in 3, and since $\gam^k \to 0$ ([[a:limits|limits]]), the sequence converges to $x^*$.
+*The error shrinks.* Suppose a fixed point $x^*$ exists. Since $x^* = f(x^*)$, each step gives
+
+$$\lVert x_{k+1} - x^* \rVert = \lVert f(x_k) - f(x^*) \rVert \le \gam\,\lVert x_k - x^* \rVert.$$
+
+Applied $k$ times, this is the bound in 3, and since $\gam^k \to 0$ ([[a:limits|limits]]), the sequence converges to $x^*$.
 
 *A fixed point exists.* Successive steps also shrink: $\lVert x_{k+1} - x_k \rVert \le \gam^k\,\lVert x_1 - x_0 \rVert$. So the total distance the sequence can still travel after step $k$ is at most
 

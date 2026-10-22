@@ -22,7 +22,7 @@ Everything outside the agent is the **environment**. Here it is a short corridor
 :::
 
 ::: step {phase = "observe"}
-Time moves in steps, $t = 0, 1, 2, \ldots$ At each step the environment tells the agent its **state** $S_t$: here, which cell it is in.
+Time moves in steps: $t = 0$, then $t = 1$, then $t = 2$, and so on. At each step the environment tells the agent its **state** $S_t$: here, which cell it is in.
 :::
 
 ::: step {phase = "act"}
@@ -34,7 +34,7 @@ One step later the environment answers with two things: a **reward** $\rew{R_{t+
 :::
 
 ::: step {phase = "loop", trajectory = true}
-Then the loop goes round again. Writing down what happens gives a **trajectory**: $S_0, A_0, \rew{R_1}, S_1, A_1, \rew{R_2}, \ldots$ Everything an RL agent learns, it learns from streams like this one.
+Then the loop goes round again. Writing down what happens gives a **trajectory**: state, action, reward, state, action, reward, and so on, $S_0, A_0, \rew{R_1}, S_1, A_1, \rew{R_2}$ and onward. Everything an RL agent learns, it learns from streams like this one.
 :::
 
 ::: step {phase = "loop", trajectory = true, boundary = true}
@@ -49,7 +49,7 @@ The goal is not the next reward but the **total** over time. Every step right co
 
 ### The interface {#interface}
 
-Reinforcement learning studies a learner that interacts with its surroundings over time and tries to influence them to its advantage. The interaction is cut into discrete time steps $t = 0, 1, 2, \ldots$ At each step the **agent** receives a description of the situation, the **state** $S_t \in \mathcal{S}$, and selects an **action** $A_t \in \mathcal{A}(S_t)$ from the actions available in that state. One step later, partly as a consequence of that action, the **environment** produces a numerical **reward** $\rew{R_{t+1}} \in \mathbb{R}$ and a new state $S_{t+1}$, and the cycle repeats (\ref{fig-loop}). The steps need not be equal slices of clock time: they are successive decisions, a motor command every millisecond or a choice of route every day, and the framework is the same.
+Reinforcement learning studies a learner that interacts with its surroundings over time and tries to influence them to its advantage. The interaction is cut into discrete time steps, numbered $t = 0, 1, 2$ and so on. At each step the **agent** receives a description of the situation, the **state** $S_t$, one of the possible states that make up the set $\mathcal{S}$, and selects an **action** $A_t$ from the set $\mathcal{A}(S_t)$ of actions available in that state ([[a:sets-functions|sets]]). One step later, partly as a consequence of that action, the **environment** produces a numerical **reward** $\rew{R_{t+1}} \in \mathbb{R}$ and a new state $S_{t+1}$, and the cycle repeats (\ref{fig-loop}). The steps need not be equal slices of clock time: they are successive decisions, a motor command every millisecond or a choice of route every day, and the framework is the same.
 
 ::: figure {#fig-loop}
 {{loop}}
@@ -60,9 +60,9 @@ The record of an interaction is a **trajectory**,
 
 $$S_0,\ A_0,\ \rew{R_1},\ S_1,\ A_1,\ \rew{R_2},\ S_2,\ A_2,\ \rew{R_3},\ \ldots \label{trajectory}$$
 
-The indices follow one convention throughout the atlas: $\rew{R_{t+1}}$ and $S_{t+1}$ are produced together, by the environment, in response to $A_t$. The subscript $t+1$ says that they belong to the next step, not that the reward comes from the next action. Some texts write $R_t$ for the same reward; nothing else changes.
+The letters are capitals because these quantities are **random variables** ([[a:random-variable|random variables]]): before the interaction takes place, $S_t$ could be any of several states, depending on chance and on the agent's choices. A lower-case letter, such as $s$, names one particular state. The indices follow one convention throughout the atlas: $\rew{R_{t+1}}$ and $S_{t+1}$ are produced together, by the environment, in response to $A_t$. The subscript $t+1$ says that they belong to the next step, not that the reward comes from the next action. Some texts write $R_t$ for the same reward; nothing else changes.
 
-How the agent maps states to actions is its **policy** ([[policy]]), $\pol{\pi(a \mid s)}$, the probability of choosing $a$ in $s$. How the environment produces rewards and next states is described by its dynamics, which the agent usually does not know ([[mdp]]). Learning means changing the policy on the basis of experience so that the rewards collected improve.
+How the agent maps states to actions is its **policy** ([[policy]]), $\pol{\pi(a \mid s)}$, the probability of choosing $a$ in $s$; the bar reads “given” ([[a:conditional-probability|conditional probability]]). How the environment produces rewards and next states is described by its dynamics, which the agent usually does not know ([[mdp]]). Learning means changing the policy on the basis of experience so that the rewards collected improve.
 
 ### Where the agent ends {#boundary}
 
@@ -74,7 +74,7 @@ The boundary is also a choice of the designer. One physical system can contain s
 
 ### The goal {#goal}
 
-The agent's purpose is expressed through the reward alone. At each step the reward is a single number, and the agent's aim is to maximize the reward it receives **in total over time**, not at the next step. Sutton and Barto call the claim that this is enough the *reward hypothesis*: whatever we mean by a goal can be expressed as the maximization of the expected cumulative sum of a scalar signal. The hypothesis is a modeling choice, a strong one, and much of the art of applying reinforcement learning lies in choosing rewards that express the intended goal ([[reward-design]]). The hypothesis also has limits that can be stated exactly. Some goals, written as a set of acceptable behaviors or as a ranking of outcomes, cannot be captured by any reward that depends only on the current state and action (Abel et al., 2021); Bowling et al. (2023) give the precise conditions on an agent's preferences under which a cumulative scalar reward is enough.
+The agent's purpose is expressed through the reward alone. At each step the reward is a single number, and the agent's aim is to maximize the reward it receives **in total over time**, not at the next step. Sutton and Barto call the claim that this is enough the *reward hypothesis*: whatever we mean by a goal can be expressed as the maximization of the expected cumulative sum of a scalar signal: a single number per step, added up over time and averaged over chance ([[a:expectation|expected value]]). The hypothesis is a modeling choice, a strong one, and much of the art of applying reinforcement learning lies in choosing rewards that express the intended goal ([[reward-design]]). The hypothesis also has limits that can be stated exactly. Some goals, written as a set of acceptable behaviors or as a ranking of outcomes, cannot be captured by any reward that depends only on the current state and action (Abel et al., 2021); Bowling et al. (2023) give the precise conditions on an agent's preferences under which a cumulative scalar reward is enough.
 
 “Total over time” is made precise by the return ([[return]], [[discount]]), and “expected” by value functions ([[value-functions]]).
 

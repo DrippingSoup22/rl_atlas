@@ -68,6 +68,27 @@
     }
   }
 
+  // Columns that end far apart leave a hole under the shorter one. Three or more sections between two full-width ones
+  // try three columns too, and keep whichever leaves less empty space (measured, since text wraps differently).
+  function balance(root) {
+    const empty = (flow) => {
+      const cols = new Map();
+      for (const sec of flow.children) {
+        const r = sec.getBoundingClientRect(), key = Math.round(r.left);
+        cols.set(key, Math.max(cols.get(key) || 0, r.bottom));
+      }
+      const top = flow.getBoundingClientRect().top, ends = [...cols.values()].map((b) => b - top), width = flow.clientWidth / Math.max(1, cols.size);
+      return ends.reduce((sum, h) => sum + (Math.max(...ends) - h) * width, 0);
+    };
+    for (const flow of root.querySelectorAll(".card-flow")) {
+      flow.classList.remove("three");
+      if (flow.children.length < 3 || getComputedStyle(flow).columnCount === "1") continue;
+      const two = empty(flow);
+      flow.classList.add("three");
+      if (getComputedStyle(flow).columnCount !== "3" || empty(flow) >= two) flow.classList.remove("three");
+    }
+  }
+
   RL.views.entry = function (host, id, mode) {
     const st = station(id);
     if (!st) { location.replace("#/"); return {}; }
@@ -125,7 +146,7 @@
       body.className = `mode-body mode-${m}`;
       if (m === "story") current = RL.story(body, e);
       else if (m === "textbook") { current = RL.textbook(body, e); wire(body); }
-      else { body.innerHTML = card(e); wire(body); sheets(body); }
+      else { body.innerHTML = card(e); wire(body); sheets(body); balance(body); document.fonts?.ready.then(() => { if (current === null && body.isConnected) balance(body); }); }
       body.insertAdjacentHTML("beforeend", onward(m));
       if (location.hash.startsWith(`#/e/${id}`)) history.replaceState(history.state, "", `#/e/${id}/${m}`); // the state keeps the scroll
       store.set("mode", m);
@@ -138,8 +159,12 @@
       if (body.getBoundingClientRect().top < 0) body.scrollIntoView({ behavior: RL.reducedMotion() ? "auto" : "smooth" });
     }
     host.addEventListener("click", onClick);
+    // the card's columns are balanced again when the window changes width
+    let resized = 0;
+    const onResize = () => { clearTimeout(resized); resized = setTimeout(() => { if (body.classList.contains("mode-card")) balance(body); }, 200); };
+    addEventListener("resize", onResize);
     show(mode || (firstVisit ? "story" : store.get("mode", "story"))); // a first visit starts with the first way of reading
-    return { destroy() { host.removeEventListener("click", onClick); current?.destroy?.(); } };
+    return { destroy() { host.removeEventListener("click", onClick); removeEventListener("resize", onResize); clearTimeout(resized); current?.destroy?.(); } };
   };
 
   function planned(host, st) {

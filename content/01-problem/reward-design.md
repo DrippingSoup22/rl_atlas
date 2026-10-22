@@ -35,11 +35,11 @@ shaped = { algorithm = "q-learning", gamma = 0.95, alpha = 0.5, epsilon = 0.1, m
 :::
 
 ::: step {run = "naive", at = 300, values = true, path = true, formula = 1}
-**It did exactly what it was paid to do.** Stepping off and back on pays $\rew{0.2}$ every second step, forever: discounted, about 2.05, while the gem, ten moves away, is worth $\gam^{9} \approx 0.63$ from the checkpoint. This is not a learning failure: for this reward, circling is the optimal policy, and a perfect planner would circle too. The reward said "be on the checkpoint", not "get to the gem".
+**It did exactly what it was paid to do.** Stepping off and back on pays $\rew{0.2}$ every second step, forever: discounted, a [[a:geometric-series|geometric series]] worth about 2.05, while the gem, ten moves away, is worth $\gam^{9} \approx 0.63$ from the checkpoint. This is not a learning failure: for this reward, circling is the optimal policy, and a perfect planner would circle too. The reward said "be on the checkpoint", not "get to the gem".
 :::
 
 ::: step {run = "shaped", at = 300, values = true, path = true, formula = 2}
-**The same hint, given as a potential.** Give the checkpoint a potential $\Phi = 0.2$, and pay $\gam\,\Phi(s') - \Phi(s)$ on every move: stepping on pays $0.95 \times 0.2 = 0.19$, stepping off costs $0.2$. A loop now loses a little each time around, and along any path from start to end the hints add up to nothing at all. In all 20 runs the agent walks to the gem by a shortest path, 14 steps.
+**The same hint, given as a potential.** Give the checkpoint a potential $\Phi = 0.2$, and pay $\gam\,\Phi(s') - \Phi(s)$ on every move: stepping on pays $0.95 \times 0.2 = 0.19$, stepping off costs $0.2$. A loop now loses a little each time around, and along any path from start to end the hints add up to nothing at all: they cancel in pairs, like the ups and downs of a walk ([[a:telescoping-sum|telescoping sums]]). In all 20 runs the agent walks to the gem by a shortest path, 14 steps.
 :::
 
 ::: step {run = "shaped", at = 300, curves = ["naive", "shaped"], metric = "steps"}
@@ -66,14 +66,18 @@ There is a safe way to add dense guidance. **Shaping** adds a term $F$ to the re
 
 ::: theorem {#thm-shaping} Ng, Harada & Russell, 1999
 Let $\Phi$ be any bounded function of the state, a **potential**, and add to every transition the shaping reward
+
 $$F(s, a, s') = \gam\,\Phi(s') - \Phi(s). \label{shaping-term}$$
+
 Then in a discounted MDP with $\gam < 1$, every policy's action values change by the same amount for all actions in a state, $\tilde q_\pi(s,a) = \val{q_\pi(s,a)} - \Phi(s)$, so the optimal policies of the shaped and the original problem are the same.
 :::
 
 ::: proof
-Along any trajectory the shaping rewards telescope:
-$$\sum_{k=0}^{n-1} \gam^k \big(\gam\,\Phi(S_{t+k+1}) - \Phi(S_{t+k})\big) = \gam^n\,\Phi(S_{t+n}) - \Phi(S_t) \;\longrightarrow\; -\Phi(S_t) \quad \text{as } n \to \infty,$$
-because $\Phi$ is bounded and $\gam^n \to 0$. So the shaped return from $(S_t, A_t)$ is the original return minus $\Phi(S_t)$, whatever the actions. Taking expectations, $\tilde q_\pi(s,a) = \val{q_\pi(s,a)} - \Phi(s)$ for every policy. The shift depends on the state only, so in every state the ranking of the actions is unchanged, and so are the optimal policies.
+Along any trajectory the discounted shaping rewards form a telescoping sum ([[a:telescoping-sum|telescoping sums]]): each potential appears once with a plus sign and once with a minus sign, except the first and the last, so
+
+$$\begin{aligned} \sum_{k=0}^{n-1} \gam^k \big(\gam\,\Phi(S_{t+k+1}) - \Phi(S_{t+k})\big) &= \gam^n\,\Phi(S_{t+n}) - \Phi(S_t) \\ &\longrightarrow -\Phi(S_t) \quad \text{as } n \to \infty, \end{aligned}$$
+
+because $\Phi$ is bounded and $\gam^n \to 0$ ([[a:limits|limits]]). So the shaped return from $(S_t, A_t)$ is the original return minus $\Phi(S_t)$, whatever the actions. Taking expectations, $\tilde q_\pi(s,a) = \val{q_\pi(s,a)} - \Phi(s)$ for every policy. The shift depends on the state only, so in every state the ranking of the actions is unchanged, and so are the optimal policies.
 :::
 
 Ng, Harada and Russell also showed a converse: without further knowledge of the MDP, potential-based terms are the only shaping terms guaranteed to preserve optimal policies. A natural potential is an estimate of the state's value: with $\Phi(s)$ equal to minus the distance to the goal, moving one step closer earns a small bonus and moving away a small penalty, and a loop earns nothing undiscounted, and with $\gam < 1$ a little less than nothing, as in the story's checkpoint world, which rules out the bicycle's circles.
@@ -102,7 +106,13 @@ Paying a programmer per line of code. You get plenty of lines.
 
 ### In symbols {#formula}
 
-$$\tilde r = \rew{r} + \gam\,\Phi(s') - \Phi(s) \quad\Longrightarrow\quad \tilde q_\pi(s,a) = \val{q_\pi(s,a)} - \Phi(s)$$
+Shaping adds to every reward the discounted change of a potential $\Phi$ of the state.
+
+$$\tilde r = \rew{r} + \gam\,\Phi(s') - \Phi(s)$$
+
+Then every action value in a state shifts by the same amount, so the best actions stay the best.
+
+$$\tilde q_\pi(s,a) = \val{q_\pi(s,a)} - \Phi(s)$$
 
 ### Rules of thumb {#rules}
 

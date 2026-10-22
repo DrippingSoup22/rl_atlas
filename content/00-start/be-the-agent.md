@@ -55,5 +55,5 @@ It always takes the +2 and never walks far enough forward to discover the +10 ro
 ::: question
 One press in ten did the opposite of usual. Why is one episode a poor judge of a button?
 ---
-The same press can turn out differently, so a single outcome may be the unlucky one. To know what a button does on average you have to try it several times; an agent keeps its estimates as averages over many presses for the same reason.
+The same press can turn out differently, so a single outcome may be the unlucky one. To know what a button does on average you have to try it several times; an agent keeps its estimates as [[a:law-of-large-numbers|averages over many presses]] for the same reason.
 :::

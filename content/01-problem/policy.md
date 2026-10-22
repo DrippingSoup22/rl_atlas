@@ -13,11 +13,11 @@ sources = [
 
 ### Definition {#definition}
 
-A **policy** is a rule for choosing actions. Formally it is a mapping from states to probabilities of selecting each possible action,
+A **policy** is a rule for choosing actions. Formally it is a function that gives, for every state, a probability for each possible action ([[a:sets-functions|functions]], [[a:conditional-probability|conditional probability]]),
 
 $$\pol{\pi(a \mid s)} = \Pr\{A_t = a \mid S_t = s\}, \qquad \sum_{a \in \mathcal{A}(s)} \pol{\pi(a \mid s)} = 1, \label{policy}$$
 
-for every state $s$. A **deterministic** policy picks one action in each state and is written $\pol{\pi(s)}$; it is the special case in which one action has probability 1. A policy that gives every action some positive probability is called *soft*.
+for every state $s$. Read $\pol{\pi(a \mid s)}$ as “the probability of choosing $a$, given that the state is $s$”. For each state, these probabilities form a distribution over the actions ([[a:probability|probability]]), which is what the second formula says. A **deterministic** policy picks one action in each state and is written $\pol{\pi(s)}$; it is the special case in which one action has probability 1. A policy that gives every action some positive probability is called *soft*.
 
 Reinforcement learning methods specify how the agent's policy changes with experience. Everything else in the atlas, values, models and gradients, exists in the service of this one object.
 
@@ -25,11 +25,11 @@ The policy an agent follows need not be the one it is learning about. The **beha
 
 ### A policy and an MDP make a process {#process}
 
-Once a policy is fixed, the interaction with an MDP ([[mdp]]) becomes a well-defined random process. The probability of an episode is a product of factors, alternately chosen by the agent and by the environment:
+Once a policy is fixed, the interaction with an MDP ([[mdp]]) becomes a well-defined random process. The probability of a whole episode follows from the product rule ([[a:conditional-probability|conditional probability]]): the probability of the first state, times the probability of the first action given that state, times the probability of the first outcome given the state and the action, and so on. By the Markov property each factor depends only on the step just before it, so the probability is a product of factors chosen alternately by the agent and by the environment ([[a:sums-products|products]]):
 
-$$\Pr\{S_0, A_0, \rew{R_1}, S_1, \ldots, S_T\} = \mu(S_0) \prod_{t=0}^{T-1} \pol{\pi(A_t \mid S_t)}\; p(S_{t+1}, \rew{R_{t+1}} \mid S_t, A_t), \label{trajectory}$$
+$$\begin{aligned} & \Pr\{S_0, A_0, \rew{R_1}, S_1, \ldots, S_T\} \\ & \qquad = \mu(S_0) \prod_{t=0}^{T-1} \pol{\pi(A_t \mid S_t)}\; p(S_{t+1}, \rew{R_{t+1}} \mid S_t, A_t), \end{aligned} \label{trajectory}$$
 
-where $\mu$ is the distribution of starting states. The policy controls the action factors and nothing else. Under a fixed policy the sequence of states is a Markov chain, with transition probabilities
+where $\mu$ is the distribution of starting states. The policy controls the action factors and nothing else. Under a fixed policy the sequence of states is a Markov chain ([[a:markov-chain|Markov chains]]): the probability of moving from $s$ to $s'$ averages, over the actions the policy might choose, the probability that each action leads there,
 
 $$p_\pi(s' \mid s) = \sum_{a} \pol{\pi(a \mid s)}\, p(s' \mid s, a). \label{chain}$$
 
@@ -52,8 +52,8 @@ Stochastic policies are nevertheless useful, for four reasons: to explore ([[exp
 There are three common ways to write a policy down.
 
 - **A table** with one probability for each state and action. Possible only when both are few.
-- **Derived from action values.** The greedy policy takes $\operatorname*{arg\,max}_a \val{Q(s,a)}$; ε-greedy takes it with probability $1-\eps$ and a uniformly random action otherwise ([[epsilon-greedy]]); the **softmax** or Boltzmann policy chooses with probabilities $\pol{\pi(a \mid s)} = e^{\val{Q(s,a)}/\tau} / \sum_{b} e^{\val{Q(s,b)}/\tau}$, where the temperature $\tau > 0$ sets how sharply it prefers the best action.
-- **Parameterized directly**, as $\pol{\pi(a \mid s, \boldsymbol\theta)}$ with weights $\boldsymbol\theta$: a softmax over learned preferences for discrete actions, or a Gaussian whose mean and spread are computed from the state for continuous actions ([[policy-parameterization]]).
+- **Derived from action values.** The greedy policy takes $\operatorname*{arg\,max}_a \val{Q(s,a)}$, an action with the highest value ([[a:max-argmax|argmax]]); ε-greedy takes it with probability $1-\eps$ and a uniformly random action otherwise ([[epsilon-greedy]]); the **softmax** or Boltzmann policy chooses with probabilities $\pol{\pi(a \mid s)} = e^{\val{Q(s,a)}/\tau} / \sum_{b} e^{\val{Q(s,b)}/\tau}$, where the temperature $\tau > 0$ sets how sharply it prefers the best action ([[a:softmax|softmax]]).
+- **Parameterized directly**, as $\pol{\pi(a \mid s, \boldsymbol\theta)}$ with a vector of adjustable weights $\boldsymbol\theta$: a softmax over learned preferences for discrete actions, or a normal distribution whose mean and spread are computed from the state for continuous actions ([[a:probability-density|the normal distribution]], [[policy-parameterization]]). Learning then means adjusting $\boldsymbol\theta$ in the direction that increases the expected return, by gradient ascent ([[a:derivative-gradient|gradients]]).
 
 Value-based methods use the second form: they learn values, and the policy follows from them. Policy-gradient methods use the third ([[reinforce]]).
 
@@ -78,7 +78,13 @@ A recipe that says, in every situation, what to do, or how likely you are to do 
 
 ### In symbols {#formula}
 
-$$\pol{\pi(a \mid s)} = \Pr\{A_t = a \mid S_t = s\}, \qquad \sum_a \pol{\pi(a \mid s)} = 1$$
+A policy gives each action a probability, in each state.
+
+$$\pol{\pi(a \mid s)} = \Pr\{A_t = a \mid S_t = s\}$$
+
+In every state, the probabilities of all the actions add up to 1.
+
+$$\sum_a \pol{\pi(a \mid s)} = 1$$
 
 ### Kinds {#kinds}
 

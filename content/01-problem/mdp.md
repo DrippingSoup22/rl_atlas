@@ -51,22 +51,26 @@ States, actions, rewards and dynamics together form a **Markov decision process*
 The agent–environment interaction ([[agent-environment]]) is formalized as a Markov decision process. In the finite case it is defined as follows.
 
 ::: definition {#def-mdp} Finite Markov decision process
-A finite MDP consists of a finite set of states $\mathcal{S}$, for each state a finite set of actions $\mathcal{A}(s)$, a finite set of rewards $\mathcal{R} \subset \mathbb{R}$, and a **dynamics function** that gives, for every state $s$ and action $a$, the probability of each next state $s'$ and reward $r$:
+A finite MDP consists of a finite set of states $\mathcal{S}$, for each state a finite set of actions $\mathcal{A}(s)$, a finite set of possible rewards $\mathcal{R}$, which are real numbers, and a **dynamics function** that gives, for every state $s$ and action $a$, the probability of each next state $s'$ and reward $r$:
+
 $$p(s', \rew{r} \mid s, a) = \Pr\{S_{t+1} = s',\ \rew{R_{t+1}} = \rew{r} \mid S_t = s,\ A_t = a\}. \label{dynamics}$$
+
 For every $s$ and $a$ these probabilities add up to one: $\sum_{s' \in \mathcal{S}} \sum_{r \in \mathcal{R}} p(s', \rew{r} \mid s, a) = 1$.
 :::
 
+Read \ref{dynamics} as: *the probability that the next state is $s'$ and the reward is $r$, given that the current state is $s$ and the action is $a$*. The braces hold the event whose probability is taken ([[a:probability|probability]]); the bar separates it from what is known ([[a:conditional-probability|conditional probability]]). For each fixed $s$ and $a$, the numbers $p(s', \rew{r} \mid s, a)$ form a probability distribution over the pairs $(s', r)$: one row of a table, as in the example below.
+
 Together with a discount rate $\gam$ ([[discount]]), an MDP specifies a reinforcement learning problem completely. The function $p$ is the **model** of the environment. Dynamic programming assumes it is known ([[policy-evaluation]]); most of the atlas assumes it is not, and learns from samples of it instead ([[model-based-free]]).
 
-The finite case keeps the mathematics simple, but nothing essential depends on it. With continuous states or actions, such as a car's position and speed or a steering angle, sums over $s'$ become integrals and $p$ becomes a density; the definitions, the Markov property and the Bellman equations carry over, and the hard part becomes representing values and policies, which is what Parts 8 to 11 are about.
+The finite case keeps the mathematics simple, but nothing essential depends on it. With continuous states or actions, such as a car's position and speed or a steering angle, sums over $s'$ become integrals and $p$ becomes a density ([[a:probability-density|densities]]); the definitions, the Markov property and the Bellman equations carry over, and the hard part becomes representing values and policies, which is what Parts 8 to 11 are about.
 
 ### The Markov property {#markov}
 
 Definition \ref{def-mdp} contains a strong assumption: the probabilities in \ref{dynamics} depend only on the current state and action. In full,
 
-$$\Pr\{S_{t+1}, \rew{R_{t+1}} \mid S_t, A_t, \rew{R_t}, S_{t-1}, A_{t-1}, \ldots, S_0, A_0\} = \Pr\{S_{t+1}, \rew{R_{t+1}} \mid S_t, A_t\}. \label{markov-eq}$$
+$$\begin{aligned} & \Pr\{S_{t+1}, \rew{R_{t+1}} \mid S_t, A_t, \rew{R_t}, S_{t-1}, A_{t-1}, \ldots, S_0, A_0\} \\ & \qquad = \Pr\{S_{t+1}, \rew{R_{t+1}} \mid S_t, A_t\}. \end{aligned} \label{markov-eq}$$
 
-Once the present state and action are known, the earlier history adds nothing to the prediction of what happens next. This is the **Markov property**. It is a property of the *state*, not of the world: a state has it when it includes every aspect of the past that makes a difference for the future.
+On the left, the prediction uses the whole history; on the right, only the present state and action. The equation says they agree: once the present is known, the earlier history adds nothing to the prediction of what happens next. This is the **Markov property**. The same idea without actions or rewards defines a Markov chain ([[a:markov-chain|Markov chains]]). It is a property of the *state*, not of the world: a state has it when it includes every aspect of the past that makes a difference for the future.
 
 A chess position nearly has it, but not quite: whether castling is still allowed, whether a pawn may be captured en passant, and how often the position has occurred before (a threefold repetition can end the game) all depend on the history. The board alone is therefore not a Markov state, while the board together with these few facts is. A single photograph of a moving ball is not Markov, because it shows the position but not the velocity; position and velocity together are.
 
@@ -74,11 +78,11 @@ The Markov property is what makes values well defined as functions of the state 
 
 ### Quantities derived from the dynamics {#derived}
 
-Everything else about the environment can be computed from $p$. The **state-transition probabilities** forget the reward,
+Everything else about the environment can be computed from $p$. The **state-transition probabilities** forget the reward, by adding up the probabilities of all the rewards that can come with the same next state ([[a:probability|marginal probabilities]]),
 
 $$p(s' \mid s, a) = \sum_{r \in \mathcal{R}} p(s', \rew{r} \mid s, a), \label{transition}$$
 
-the **expected reward** of a state–action pair averages over all outcomes,
+the **expected reward** of a state–action pair averages the reward over all outcomes, each weighted by its probability ([[a:expectation|expected value]]),
 
 $$r(s, a) = \mathbb{E}[\rew{R_{t+1}} \mid S_t = s, A_t = a] = \sum_{r \in \mathcal{R}} \rew{r} \sum_{s' \in \mathcal{S}} p(s', \rew{r} \mid s, a), \label{expected-reward}$$
 
@@ -131,7 +135,13 @@ A board game whose next move depends only on the board, not on the moves that le
 
 ### In symbols {#formula}
 
-$$p(s', \rew{r} \mid s, a) = \Pr\{S_{t+1} = s',\ \rew{R_{t+1}} = \rew{r} \mid S_t = s,\ A_t = a\}, \qquad \sum_{s', r} p(s', \rew{r} \mid s, a) = 1$$
+The dynamics: the probability of each next state and reward, given the state and the action.
+
+$$p(s', \rew{r} \mid s, a) = \Pr\{S_{t+1} = s',\ \rew{R_{t+1}} = \rew{r} \mid S_t = s,\ A_t = a\}$$
+
+For every state and action, the probabilities of all the outcomes add up to 1.
+
+$$\sum_{s', r} p(s', \rew{r} \mid s, a) = 1$$
 
 ### The pieces {#pieces}
 

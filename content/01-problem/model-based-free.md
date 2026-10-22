@@ -16,8 +16,8 @@ sources = [
 
 A **model** of the environment is anything an agent can use to predict how the environment will respond to its actions: given a state and an action, it predicts the next state and the reward. Models come in two kinds.
 
-- A **distribution model** gives every possible outcome with its probability: the dynamics $p(s', \rew{r} \mid s, a)$ of [[mdp]].
-- A **sample model** produces one outcome at a time, drawn with the right probabilities: $(s', \rew{r}) \sim p(\cdot, \cdot \mid s, a)$.
+- A **distribution model** gives every possible outcome with its probability: the dynamics $p(s', \rew{r} \mid s, a)$ of [[mdp]], a full probability distribution for each state and action ([[a:probability|probability]]).
+- A **sample model** produces one outcome at a time, drawn with the right probabilities: $(s', \rew{r}) \sim p(\cdot, \cdot \mid s, a)$. The tilde reads “is drawn from”, and the dots stand for the outcome being drawn.
 
 A distribution model can always produce samples, but not the other way round, and a sample model is often much easier to obtain. A program that simulates rolling a dozen dice is a few lines long; listing the probability of every possible total and arrangement is a much larger task. Simulators of physical systems and games are sample models.
 
@@ -34,14 +34,14 @@ Using a model to compute or improve values and policies, without acting in the r
 
 ### Model-free methods {#free}
 
-**Model-free** methods never represent the dynamics. They learn values or policies directly from sampled trajectories: Monte Carlo methods from complete returns ([[mc-prediction]]), temporal-difference methods from single transitions ([[td0]]), policy-gradient methods by adjusting the policy toward actions that turned out well ([[reinforce]]). They need nothing but the stream of states, actions and rewards, which is why most of the atlas is about them.
+**Model-free** methods never represent the dynamics. They learn values or policies directly from sampled trajectories: Monte Carlo methods from complete returns ([[mc-prediction]]), temporal-difference methods from single transitions ([[td0]]), policy-gradient methods by adjusting the policy toward actions that turned out well ([[reinforce]]). They need nothing but the stream of states, actions and rewards, which is why most of the atlas is about them. What replaces the model is averaging: an expectation that a model would compute exactly is estimated by the average of many samples, which approaches it as the samples accumulate ([[a:law-of-large-numbers|sample averages]]).
 
 ### The trade-off {#tradeoffs}
 
 | | Model-based | Model-free |
 | --- | --- | --- |
 | Use of experience | each real step can be replayed in planning many times | each real step is used once, or a few times with replay |
-| Errors | the plan exploits the model's mistakes: *model bias* | no model to be wrong, but noisier estimates |
+| Errors | the plan exploits the model's mistakes: *model bias* | no model to be wrong, but noisier estimates (higher [[a:variance|variance]]) |
 | Computation per real step | larger: planning costs time | smaller |
 | Parts to get right | more: the model and the planner | fewer |
 
@@ -65,7 +65,13 @@ Planning a trip with a map, against learning a city by walking it. The map saves
 
 ### In symbols {#formula}
 
-$$\text{distribution model: } p(s', \rew{r} \mid s, a) \qquad\qquad \text{sample model: } (s', \rew{r}) \sim p(\cdot, \cdot \mid s, a)$$
+A distribution model gives the probability of every next state and reward.
+
+$$p(s', \rew{r} \mid s, a)$$
+
+A sample model draws one next state and reward, with those probabilities.
+
+$$(s', \rew{r}) \sim p(\cdot, \cdot \mid s, a)$$
 
 ### Examples {#examples}
 

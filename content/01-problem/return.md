@@ -39,7 +39,7 @@ In a task that never ends, the stream goes on forever. A reward of $\rew{+1}$ at
 :::
 
 ::: step {seq = "forever", sum = true, infinite = true, gamma = 0.9, weights = true, discount = true, formula = 2}
-**Discounting** fixes this. A reward $k$ steps after the next one is multiplied by $\gam^k$, with $\gam$ below 1, so later rewards count less. With $\gam = 0.9$ the endless $\rew{+1}$s add up to $1/(1-\gam) = 10$.
+**Discounting** fixes this. A reward $k$ steps after the next one is multiplied by $\gam^k$, with $\gam$ below 1, so later rewards count less. With $\gam = 0.9$ the endless $\rew{+1}$s add up to $1/(1-\gam) = 10$, the sum of a [[a:geometric-series|geometric series]].
 :::
 
 ::: step {seq = "episode", sum = true, gamma = 0.9, weights = true, discount = true, formula = 2}
@@ -58,11 +58,11 @@ The agent's goal, informally, is to collect as much reward as possible over time
 
 $$\rew{G_t} = \rew{R_{t+1}} + \rew{R_{t+2}} + \rew{R_{t+3}} + \cdots + \rew{R_T}. \label{episodic}$$
 
-The return is defined for every time step, not just the first: $\rew{G_t}$ is what remains to be collected from $t$ on. The agent's objective is to choose actions so as to maximize the **expected** return, for reasons explained in \ref{random}.
+The return is defined for every time step, not just the first: $\rew{G_t}$ is what remains to be collected from $t$ on. It is a **random variable** ([[a:random-variable|random variables]]): the rewards that follow depend on chance and on the agent's choices. The agent's objective is to choose actions so as to maximize the **expected** return, for reasons explained in \ref{random}.
 
 ### Discounting {#discounting}
 
-In a continuing task, $T = \infty$ and the sum in \ref{episodic} may diverge. The standard remedy is to discount: a reward received $k$ steps after the next one is multiplied by $\gam^k$, where the **discount rate** $\gam \in [0, 1]$ is a parameter of the problem ([[discount]]). The discounted return is
+In a continuing task, $T = \infty$ and the sum in \ref{episodic} may diverge. The standard remedy is to discount: a reward received $k$ steps after the next one is multiplied by $\gam^k$, where the **discount rate** $\gam \in [0, 1]$ is a parameter of the problem ([[discount]]). The discounted return, written compactly with a sum sign ([[a:sums-products|sums]]), is
 
 $$\rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{R_{t+2}} + \gam^2\,\rew{R_{t+3}} + \cdots = \sum_{k=0}^{\infty} \gam^k\,\rew{R_{t+k+1}}. \label{discounted}$$
 
@@ -73,7 +73,8 @@ If every reward satisfies $|\rew{R_t}| \le R_{\max}$ and $\gam < 1$, then $|\rew
 :::
 
 ::: proof
-By the triangle inequality and the geometric series,
+The size of a sum is at most the sum of the sizes ([[a:norms|the triangle inequality]]), each reward is at most $R_{\max}$ in size, and the weights $\gam^k$ add up to $1/(1-\gam)$ ([[a:geometric-series|geometric series]]):
+
 $$|\rew{G_t}| \le \sum_{k=0}^{\infty} \gam^k\,|\rew{R_{t+k+1}}| \le R_{\max} \sum_{k=0}^{\infty} \gam^k = \frac{R_{\max}}{1 - \gam}.$$
 :::
 
@@ -81,7 +82,7 @@ So with $\gam < 1$ and bounded rewards, every return is finite and every policy 
 
 ### The recursion {#recursion}
 
-Returns at successive time steps are related by a simple identity. Taking the first term out of \ref{discounted},
+Returns at successive time steps are related by a simple identity. Taking the first term out of \ref{discounted}, and noticing that what remains is the same kind of sum one step later, multiplied by $\gam$,
 
 $$\rew{G_t} = \rew{R_{t+1}} + \gam\big(\rew{R_{t+2}} + \gam\,\rew{R_{t+3}} + \cdots\big) = \rew{R_{t+1}} + \gam\,\rew{G_{t+1}}, \label{recursion-eq}$$
 
@@ -91,9 +92,9 @@ The recursion also gives an efficient way to compute every return of a finished 
 
 ### The return is random {#random}
 
-Policies and environments are usually stochastic, so the same state can be followed by many different streams of reward, and $\rew{G_t}$ is a random variable. Two episodes from the same start can give returns of $\rew{12}$ and $\rew{5}$, as in the story. A random quantity cannot be maximized as such; what can be maximized is its expectation. The expected return from a state, under a given way of acting, is that state's **value** ([[value-functions]]). Maximizing the expectation is a choice too: it is indifferent to risk, rating a sure $\rew{5}$ the same as an even chance of $\rew{0}$ or $\rew{10}$. Risk-sensitive formulations change the objective instead, and **distributional** methods learn the whole distribution of the return rather than its mean, which often helps even when only the mean is used to act (Bellemare, Dabney and Munos, 2017; [[dqn-extensions]]).
+Policies and environments are usually stochastic, so the same state can be followed by many different streams of reward, and $\rew{G_t}$ is a random variable. Two episodes from the same start can give returns of $\rew{12}$ and $\rew{5}$, as in the story. A random quantity cannot be maximized as such; what can be maximized is its expectation, its average over all the ways things can go, each weighted by its probability ([[a:expectation|expected value]]). The expected return from a state, under a given way of acting, is that state's **value** ([[value-functions]]). Maximizing the expectation is a choice too: it is indifferent to risk, rating a sure $\rew{5}$ the same as an even chance of $\rew{0}$ or $\rew{10}$. Risk-sensitive formulations change the objective instead, and **distributional** methods learn the whole distribution of the return rather than its mean, which often helps even when only the mean is used to act (Bellemare, Dabney and Munos, 2017; [[dqn-extensions]]).
 
-The randomness of the return also has a practical side. The return depends on every action and every transition until the end of the episode, so its variance grows with the length of the episode. An estimate built from returns alone needs many episodes to settle; methods that bootstrap, through \ref{recursion-eq}, trade some bias for much less variance ([[mc-vs-td]]).
+The randomness of the return also has a practical side. The return depends on every action and every transition until the end of the episode, so its variance, the typical size of its deviations from the average ([[a:variance|variance]]), grows with the length of the episode. An estimate built from returns alone needs many episodes to settle; methods that bootstrap, through \ref{recursion-eq}, trade some bias for much less variance ([[mc-vs-td]]).
 
 ### Examples {#examples}
 
@@ -115,9 +116,13 @@ A salary over a career, not this month's pay. A job that pays less now but leads
 
 ### In symbols {#formula}
 
-$$\rew{G_t} = \sum_{k=0}^{\infty} \gam^k\,\rew{R_{t+k+1}} \qquad\qquad \rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{G_{t+1}}$$
+The return: every reward from the next one on, the one $k$ steps later discounted by $\gam^k$. In an episode, the sum stops at the end.
 
-In an episode, the sum stops at the end, and $\rew{G_T} = 0$.
+$$\rew{G_t} = \sum_{k=0}^{\infty} \gam^k\,\rew{R_{t+k+1}}$$
+
+The same, one step at a time: the next reward plus the discounted return from the next step, with $\rew{G_T} = 0$ at the end of an episode.
+
+$$\rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{G_{t+1}}$$
 
 ### Numbers to remember {#numbers}
 
@@ -154,5 +159,5 @@ The return is random: the same state can be followed by many different streams o
 ::: question
 With rewards between $-1$ and $1$ and $\gam = 0.9$, how large can a return be?
 ---
-At most $1/(1-0.9) = 10$ in size, by the geometric series.
+At most $1/(1-0.9) = 10$ in size, by the [[a:geometric-series|geometric series]].
 :::

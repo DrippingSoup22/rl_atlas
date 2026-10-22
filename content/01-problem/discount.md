@@ -49,7 +49,7 @@ With $\gam = 0.5$ the same $\rew{+5}$ is worth $5 \times 0.5^9 \approx 0.01$ tod
 :::
 
 ::: step {seq = "steady", gamma = 0.9, weights = true, discount = true, sum = true, infinite = true, formula = 1}
-In a task that never ends, a $\gam$ below 1 keeps the total finite: endless $\rew{+1}$s add up to $1/(1-\gam) = 10$. That number is the agent's **effective horizon**, roughly how many steps ahead it looks. Try other values with the slider in the Card.
+In a task that never ends, a $\gam$ below 1 keeps the total finite: endless $\rew{+1}$s add up to $1/(1-\gam) = 10$ ([[a:geometric-series|geometric series]]). That number is the agent's **effective horizon**, roughly how many steps ahead it looks. Try other values with the slider in the Card.
 :::
 
 ## Textbook
@@ -60,25 +60,25 @@ The **discount rate** $\gam \in [0, 1]$ weighs future rewards in the return ([[r
 
 $$\rew{G_t} = \sum_{k=0}^{\infty} \gam^k\,\rew{R_{t+k+1}}. \label{return}$$
 
-A reward received $k$ steps after the next one is worth $\gam^k$ times what it would be worth if it came immediately. In this sense $\gam$ is an exchange rate between the present and the future. It is part of the definition of the problem, chosen by the designer, not something the agent learns.
+A reward received $k$ steps after the next one is worth $\gam^k$ times what it would be worth if it came immediately: the weights fall exponentially, by the same factor at every step ([[a:exponential-logarithm|exponentials]]). In this sense $\gam$ is an exchange rate between the present and the future. It is part of the definition of the problem, chosen by the designer, not something the agent learns.
 
 ### Why discount {#why}
 
 Three reasons are usually given, and they are of different kinds.
 
-- **Mathematical.** In a continuing task, undiscounted sums of rewards can diverge. With $\gam < 1$ and bounded rewards every return is bounded by $R_{\max}/(1-\gam)$, so every policy has a finite value and policies can be compared ([[return]]). The operators of dynamic programming are then contractions with modulus $\gam$, which makes the theory and the algorithms well behaved ([[q-learning]]).
-- **Uncertainty about the future.** Suppose the interaction may end at any step with probability $1 - \gam$, independently of everything else, and that nothing is collected afterwards. Then the probability of still collecting the reward $k$ steps after the next one is $\gam^k$, and the expected *undiscounted* total equals the discounted return of \ref{return} (Puterman, 1994). Discounting is equivalent to an uncertain horizon.
+- **Mathematical.** In a continuing task, undiscounted sums of rewards can diverge. With $\gam < 1$ and bounded rewards every return is bounded by $R_{\max}/(1-\gam)$, so every policy has a finite value and policies can be compared ([[return]]). The Bellman equations then have exactly one solution, and repeating them converges to it, because each repetition shrinks every error by the factor $\gam$ ([[bellman]], [[a:contraction|contractions]]).
+- **Uncertainty about the future.** Suppose the interaction may end at any step with probability $1 - \gam$, independently of everything else, and that nothing is collected afterwards. To still collect the reward $k$ steps after the next one, the interaction must survive $k$ independent chances of ending, each with probability $\gam$, which happens with probability $\gam^k$ ([[a:conditional-probability|independence]]). So the expected *undiscounted* total equals the expected discounted return of \ref{return} (Puterman, 1994). Discounting is equivalent to an uncertain horizon.
 - **Preference for sooner rewards.** In economics, money now can be invested; in many tasks a reward now is simply preferred, as a battery charge now prevents a failure later.
 
 The first reason makes $\gam$ convenient, the second gives it a meaning, and the third makes it a part of the goal. When the true goal is the undiscounted total, as in most episodic tasks, $\gam$ is best seen as a parameter of the method rather than of the problem.
 
 ### The effective horizon {#horizon}
 
-The weights $\gam^k$ add up to
+The weights $\gam^k$ form a geometric series ([[a:geometric-series|geometric series]]), and they add up to
 
 $$\sum_{k=0}^{\infty} \gam^k = \frac{1}{1-\gam}, \label{weights-sum}$$
 
-so a discounted return behaves roughly like an undiscounted sum over the next $1/(1-\gam)$ steps. This **effective horizon** is 10 steps for $\gam = 0.9$, 100 for $\gam = 0.99$ and 1000 for $\gam = 0.999$. A related number is the half-life of the weights, the $k$ at which $\gam^k = 1/2$: $k = \ln 2 / \ln(1/\gam)$, about 6.6 steps for $\gam = 0.9$ and 69 for $\gam = 0.99$.
+so a discounted return behaves roughly like an undiscounted sum over the next $1/(1-\gam)$ steps. This **effective horizon** is 10 steps for $\gam = 0.9$, 100 for $\gam = 0.99$ and 1000 for $\gam = 0.999$. A related number is the half-life of the weights, the $k$ at which $\gam^k = 1/2$. Taking logarithms of both sides ([[a:exponential-logarithm|logarithms]]) gives $k \ln \gam = -\ln 2$, so $k = \ln 2 / \ln(1/\gam)$: about 6.6 steps for $\gam = 0.9$ and 69 for $\gam = 0.99$.
 
 The horizon tells how far ahead the agent's decisions take consequences into account. A reward far beyond the horizon has almost no influence on what the agent does now.
 
@@ -91,15 +91,19 @@ The weight $\gam^k$ of a reward $k$ steps away, and the effective horizon $1/(1-
 
 Different discount rates can make different policies optimal. Compare two choices: $\rew{+1}$ immediately, or $\rew{+10}$ after twenty steps with nothing in between. Seen from now they are worth $1$ and $10\,\gam^{20}$. Waiting is better exactly when
 
-$$10\,\gam^{20} > 1 \iff \gam > 0.1^{1/20} \approx 0.891.$$
+$$10\,\gam^{20} > 1 \iff \gam^{20} > 0.1 \iff \gam > 0.1^{1/20} \approx 0.891.$$
 
-So an agent with $\gam = 0.9$ waits, and an agent with $\gam = 0.88$ does not, although the world is the same. Choosing $\gam$ is therefore part of specifying the task. A low $\gam$ makes the agent impatient, and in tasks where reward comes late it may never discover the behavior the designer intended.
+The last step takes the 20th root of both sides, which keeps the inequality because both sides are positive. So an agent with $\gam = 0.9$ waits, and an agent with $\gam = 0.88$ does not, although the world is the same. Choosing $\gam$ is therefore part of specifying the task. A low $\gam$ makes the agent impatient, and in tasks where reward comes late it may never discover the behavior the designer intended.
 
 ### γ as a knob in practice {#practice}
 
 In practice $\gam$ also acts as a knob of the learning method. Larger values make the agent far-sighted but make learning harder: the returns are longer sums, so their variance grows, and information has to travel back over more steps ([[mc-vs-td]]). Values between 0.9 and 0.999 are common, 0.99 being a frequent default in deep reinforcement learning. In episodic tasks whose goal is the undiscounted total, a $\gam$ slightly below 1 is often used anyway, because it makes learning more stable. A smaller $\gam$ can even give better behavior than the true one when experience is scarce: a short horizon asks the agent to predict less of the future, so the errors of an estimated model or of noisy values compound over fewer steps (Jiang et al., 2015). Discounting then acts as a form of regularization.
 
-In continuing tasks there is an alternative to discounting: the **average reward per step**, $\lim_{h \to \infty} \frac{1}{h}\,\mathbb{E}\big[\sum_{t=1}^{h} \rew{R_t}\big]$. Sutton and Barto argue that with function approximation the discounted formulation becomes problematic for continuing tasks and that the average-reward setting is more appropriate there (§10.3 and §10.4). The atlas uses discounting throughout, as most of the literature does.
+In continuing tasks there is an alternative to discounting: the **average reward per step**, the expected total over the first $h$ steps divided by $h$, as $h$ grows without bound ([[a:limits|limits]]):
+
+$$\lim_{h \to \infty} \frac{1}{h}\,\mathbb{E}\Big[\sum_{t=1}^{h} \rew{R_t}\Big].$$
+
+Sutton and Barto argue that with function approximation the discounted formulation becomes problematic for continuing tasks and that the average-reward setting is more appropriate there (§10.3 and §10.4). The atlas uses discounting throughout, as most of the literature does.
 
 ### Why geometric {#geometric}
 
@@ -121,7 +125,13 @@ Interest rates in reverse. Money promised in ten years is worth less than money 
 
 ### In symbols {#formula}
 
-$$\rew{G_t} = \sum_{k=0}^{\infty} \gam^k\,\rew{R_{t+k+1}}, \qquad \text{horizon} \approx \frac{1}{1-\gam}$$
+A reward $k$ steps after the next one counts $\gam^k$ of its size.
+
+$$\rew{G_t} = \sum_{k=0}^{\infty} \gam^k\,\rew{R_{t+k+1}}$$
+
+The effective horizon: roughly how many steps ahead the agent looks.
+
+$$\text{horizon} \approx \frac{1}{1-\gam}$$
 
 ### Why it matters {#why}
 

@@ -31,7 +31,7 @@ Watch it wander from the outlined cell. Each walk collects a different discounte
 :::
 
 ::: step {v = "random", agent = "none", formula = 1}
-That average, taken over all possible walks, is the **value** of the state, $\val{v_\pi(s)}$: the expected return from $s$ when following $\pol{\pi}$. Here are all 25 values at once, computed exactly: blue is good, orange is bad.
+That average, taken over all possible walks, each weighted by its probability, is the **value** of the state ([[a:expectation|expected value]]), $\val{v_\pi(s)}$: the expected return from $s$ when following $\pol{\pi}$. Here are all 25 values at once, computed exactly: blue is good, orange is bad.
 :::
 
 ::: step {v = "random", values = true, agent = "none", formula = 1}
@@ -58,8 +58,11 @@ The return is random ([[return]]), so the quality of a state under a policy is m
 
 ::: definition {#def-v} State-value function
 $$\val{v_\pi(s)} = \mathbb{E}_\pi[\,\rew{G_t} \mid S_t = s\,] = \mathbb{E}_\pi\Big[\sum_{k=0}^{\infty} \gam^k\,\rew{R_{t+k+1}} \;\Big|\; S_t = s\Big] \qquad \text{for all } s \in \mathcal{S}. \label{v-def}$$
+
 The value of a terminal state, if there is one, is always 0.
 :::
+
+Read the right-hand side of \ref{v-def} as: *the average of the return $\rew{G_t}$, over all the ways the future can unfold when the agent follows $\pol{\pi}$, counting only the occasions on which the agent is in $s$ at time $t$*. The expectation sign $\mathbb{E}$ is a probability-weighted average ([[a:expectation|expected value]]); the bar restricts it to the cases where what follows is known, here $S_t = s$ ([[a:conditional-expectation|conditional expectation]]).
 
 The subscript $\pi$ matters: a value is always the value *of a policy*. The same state can be excellent under one policy and poor under another. The expectation is over everything random: the agent's choices, drawn from $\pol{\pi}$, and the environment's responses, drawn from $p$. Because the state is Markov ([[mdp]]) and the policy is stationary, the expectation does not depend on $t$.
 
@@ -69,6 +72,7 @@ Choosing among actions requires a finer quantity: how good it is to take a parti
 
 ::: definition {#def-q} Action-value function
 $$\val{q_\pi(s,a)} = \mathbb{E}_\pi[\,\rew{G_t} \mid S_t = s,\ A_t = a\,], \label{q-def}$$
+
 the expected return when starting in $s$, taking action $a$, and following $\pol{\pi}$ afterwards.
 :::
 
@@ -76,15 +80,15 @@ The first action is fixed, whatever the policy would have done; from the next st
 
 ### How the two relate {#relations}
 
-The two functions determine each other, given the policy and the dynamics. A state's value is the average of its action values, weighted by how often the policy chooses each action:
+The two functions determine each other, given the policy and the dynamics. A state's value is the average of its action values, weighted by how often the policy chooses each action. This is the law of total expectation ([[a:conditional-expectation|conditional expectation]]): to average the return over everything that can happen from $s$, first average it separately for each first action, which gives $\val{q_\pi(s,a)}$, and then average those results with the probabilities $\pol{\pi(a \mid s)}$ of the actions:
 
 $$\val{v_\pi(s)} = \sum_{a} \pol{\pi(a \mid s)}\, \val{q_\pi(s,a)}. \label{v-from-q}$$
 
-An action's value is one step of the environment followed by the value of wherever it leads. Using $\rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{G_{t+1}}$ and the Markov property,
+An action's value is one step of the environment followed by the value of wherever it leads. To see it, split the return as $\rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{G_{t+1}}$ ([[return]]); average the second part case by case over the possible next states; and use the Markov property ([[mdp]]): once the next state $s'$ is known, the expected return from there is $\val{v_\pi(s')}$, however the agent got there. The result, written first as an expectation and then as an explicit average over the outcomes $(s', r)$ of the action,
 
 $$\val{q_\pi(s,a)} = \mathbb{E}[\,\rew{R_{t+1}} + \gam\,\val{v_\pi(S_{t+1})} \mid S_t = s,\ A_t = a\,] = \sum_{s',\,r} p(s', \rew{r} \mid s, a)\,\big[\,\rew{r} + \gam\,\val{v_\pi(s')}\,\big]. \label{q-from-v}$$
 
-Substituting either relation into the other gives an equation in one function alone, the Bellman equation ([[bellman]]).
+Substituting either relation into the other gives an equation in one function alone, the Bellman equation, which [[bellman]] derives step by step.
 
 ### The advantage {#advantage}
 
@@ -99,7 +103,9 @@ For every state $s$, $\sum_a \pol{\pi(a \mid s)}\, \err{A_\pi(s,a)} = 0$.
 :::
 
 ::: proof
-By \ref{v-from-q}, $\sum_a \pol{\pi(a \mid s)}\,\val{q_\pi(s,a)} - \val{v_\pi(s)} \sum_a \pol{\pi(a \mid s)} = \val{v_\pi(s)} - \val{v_\pi(s)} = 0$.
+Split the sum in two. The first part is $\val{v_\pi(s)}$ by \ref{v-from-q}, and in the second the probabilities add up to 1:
+
+$$\sum_a \pol{\pi(a \mid s)}\,\err{A_\pi(s,a)} = \sum_a \pol{\pi(a \mid s)}\,\val{q_\pi(s,a)} - \val{v_\pi(s)} \sum_a \pol{\pi(a \mid s)} = \val{v_\pi(s)} - \val{v_\pi(s)} = 0.$$
 :::
 
 So under its own policy, the advantage is centered: some actions are better than average and some worse. Shifting probability toward actions with positive advantage improves the policy; this is the policy improvement theorem ([[policy-improvement]]). The advantage also plays a central role in policy-gradient methods, where subtracting $\val{v_\pi}$ from the return reduces variance without introducing bias ([[baseline]], [[actor-critic]], [[gae]]). The name goes back to Baird (1994).
@@ -130,7 +136,7 @@ The advantages, weighted by ¼ each, add up to zero, as \ref{lem-zero} says.
 
 The definitions say what values are, not how to obtain them. There are three routes, and the rest of the atlas follows all of them.
 
-- **Average sampled returns.** By the law of large numbers, the average of the returns observed after visits to a state converges to its value. This is Monte Carlo prediction ([[mc-prediction]]), and it is what the wandering agent of the story does.
+- **Average sampled returns.** By the law of large numbers, the average of the returns observed after visits to a state converges to its value ([[a:law-of-large-numbers|sample averages]]). This is Monte Carlo prediction ([[mc-prediction]]), and it is what the wandering agent of the story does.
 - **Solve the Bellman equations** with the model, as dynamic programming does ([[policy-evaluation]]). The values in \ref{fig-random} were computed this way.
 - **Sample the Bellman equations**, combining the two: temporal-difference learning ([[td0]]).
 
@@ -152,9 +158,21 @@ The value of a chess position: not what you have captured so far, but how likely
 
 ### In symbols {#formula}
 
-$$\val{v_\pi(s)} = \mathbb{E}_\pi[\rew{G_t} \mid S_t = s], \qquad \val{q_\pi(s,a)} = \mathbb{E}_\pi[\rew{G_t} \mid S_t = s, A_t = a]$$
+The value of a state: the return expected from it when following $\pol{\pi}$.
 
-$$\val{v_\pi(s)} = \sum_a \pol{\pi(a \mid s)}\,\val{q_\pi(s,a)}, \qquad \val{q_\pi(s,a)} = \sum_{s', r} p(s', \rew{r} \mid s, a)\,[\rew{r} + \gam\,\val{v_\pi(s')}]$$
+$$\val{v_\pi(s)} = \mathbb{E}_\pi[\rew{G_t} \mid S_t = s]$$
+
+The value of an action: the same, after first taking $a$.
+
+$$\val{q_\pi(s,a)} = \mathbb{E}_\pi[\rew{G_t} \mid S_t = s,\ A_t = a]$$
+
+A state's value is the policy's average of its action values.
+
+$$\val{v_\pi(s)} = \sum_a \pol{\pi(a \mid s)}\,\val{q_\pi(s,a)}$$
+
+An action's value is one step, then the discounted value of where it leads.
+
+$$\val{q_\pi(s,a)} = \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\rew{r} + \gam\,\val{v_\pi(s')}\big]$$
 
 ### In the gridworld {#example}
 
