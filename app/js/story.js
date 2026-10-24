@@ -55,6 +55,9 @@
     let resized = 0;
     const onResize = () => { clearTimeout(resized); resized = setTimeout(() => { const found = picture(); if (found) found[0].style.maxWidth = ""; later(); }, 200); };
     addEventListener("resize", onResize);
+    // a step can add to the stage after it starts (a chart, a line of numbers): fit again whenever the stage grows
+    const grown = typeof ResizeObserver === "function" ? new ResizeObserver(later) : null;
+    grown?.observe(card);
 
     function activate(i) {
       if (i === current) return;
@@ -82,6 +85,6 @@
     els.forEach((el, i) => el.addEventListener("click", () => activate(i)));
     activate(0);
     frame = requestAnimationFrame(follow); // a page that opens scrolled down (going back to it) starts at its step
-    return { destroy() { removeEventListener("scroll", onScroll); removeEventListener("resize", onResize); cancelAnimationFrame(frame); cancelAnimationFrame(fitting); clearTimeout(resized); stage.destroy(); } };
+    return { destroy() { removeEventListener("scroll", onScroll); removeEventListener("resize", onResize); cancelAnimationFrame(frame); cancelAnimationFrame(fitting); clearTimeout(resized); grown?.disconnect(); stage.destroy(); } };
   };
 })(globalThis.RL = globalThis.RL || {});
