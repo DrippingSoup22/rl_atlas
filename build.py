@@ -603,12 +603,33 @@ def compile_content(problems: Problems) -> dict:
                 problems.error("content/map.toml", f"'{sid}' has label '{label}', which is not in [labels]")
         if st["kind"] == "algorithm" and not st.get("labels"):
             problems.warn("content/map.toml", f"algorithm '{sid}' has no labels")
-    for sid in atlas.get("unified", {}):
-        if stations.get(sid, {}).get("kind") != "algorithm":
-            problems.error("content/map.toml", f"[unified] places '{sid}', which is not an algorithm station")
-    for sid, st in stations.items():
-        if st["kind"] == "algorithm" and sid not in atlas.get("unified", {}):
-            problems.warn("content/map.toml", f"algorithm '{sid}' has no place in [unified]")
+    unified = atlas.get("unified", {})
+    columns = [c["id"] for c in unified.get("columns", [])]
+    rows = {r["id"]: r for r in unified.get("rows", [])}
+    placed: dict[str, str] = {}
+    for row in rows.values():
+        if row.get("band"):
+            if row["band"] not in atlas["lines"]:
+                problems.error("content/map.toml", f"[unified] row '{row['id']}' spreads unknown line '{row['band']}'")
+            for sid, st in stations.items():
+                if st.get("line", parts[st["part"]]["line"]) == row["band"]:
+                    placed.setdefault(sid, row["id"])
+    for rid, cells in unified.get("cells", {}).items():
+        if rid not in rows or rows[rid].get("band"):
+            problems.error("content/map.toml", f"[unified.cells] fills '{rid}', which is not a row of cells")
+        for cell in cells:
+            span = cell["at"].split("-")
+            if not 1 <= len(span) <= 2 or any(c not in columns for c in span) or columns.index(span[0]) > columns.index(span[-1]):
+                problems.error("content/map.toml", f"[unified.cells] {rid}: '{cell['at']}' is not a column or a span of columns")
+            for sid in cell["stations"]:
+                if sid not in stations:
+                    problems.error("content/map.toml", f"[unified.cells] {rid} places unknown station '{sid}'")
+                elif sid in placed:
+                    problems.error("content/map.toml", f"[unified] places '{sid}' twice ({placed[sid]} and {rid})")
+                placed[sid] = rid
+    for sid in stations:
+        if sid not in placed:
+            problems.error("content/map.toml", f"station '{sid}' has no place in [unified]")
     for sid in MACRO_TERMS:
         if sid not in stations:
             problems.error("app/js/math.js", f"a math macro links to unknown station '{sid}'")

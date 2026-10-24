@@ -121,12 +121,29 @@
 .metro .tree-hub text { font: 750 13px var(--font); fill: var(--bg); text-anchor: middle; }
 .metro .spine { fill: none; stroke: var(--ink-3); stroke-width: 2.5; stroke-dasharray: 2 8; stroke-linecap: round; }
 .metro.redraw[data-lens="tree"] .edge { stroke-dasharray: 1; animation: line-in 0.9s var(--ease) 0.3s both; }
-.metro .plane { fill: color-mix(in oklab, var(--surface) 55%, transparent); stroke: var(--line-2); stroke-width: 1.5; stroke-dasharray: 6 6; }
-.metro .axis-title { font: 800 12px var(--font); letter-spacing: 0.14em; text-transform: uppercase; fill: var(--ink-3); }
-.metro .axis-end { font: 500 12.5px var(--font); fill: var(--ink-2); }
-.metro .corner { font: 700 14px var(--font); fill: var(--ink); }
-.metro .region { font: italic 500 12.5px var(--font); fill: var(--ink-3); }
+/* the tree: a ghost names an algorithm of another line that a station changes; its links are dashed */
+.metro .edge.cross { stroke-dasharray: 2 6; opacity: 0.6; }
+.metro.redraw[data-lens="tree"] .edge.cross { stroke-dasharray: 2 6; animation: none; }
+.metro .ghost { cursor: pointer; outline: none; }
+.metro .ghost circle { fill: var(--bg); stroke: var(--c); stroke-width: 2.5; stroke-dasharray: 3 3; }
+.metro .ghost text { font: italic 600 12px var(--font); fill: var(--ink-2); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+.metro .ghost:hover text, .metro .ghost:focus-visible text { fill: var(--ink); text-decoration: underline; }
+/* the unified table */
+.metro .cell { fill: color-mix(in oklab, var(--surface) 82%, transparent); stroke: var(--line); stroke-width: 1; }
+.metro .cell.empty { fill: color-mix(in oklab, var(--surface) 30%, transparent); stroke: none; }
+.metro .cell.band { fill: color-mix(in oklab, var(--surface-2) 70%, transparent); }
+.metro .row-head { font: 800 11.5px var(--font); letter-spacing: 0.12em; text-transform: uppercase; fill: var(--ink-2); }
+.metro .row-note { font: italic 500 12px var(--font); fill: var(--ink-3); }
+.metro .col-sub { font: 600 12px var(--font); fill: var(--ink-2); }
 .metro .credit { font: 500 11px var(--font); fill: var(--ink-3); }
+/* the appendix stop: a dotted pill, like the dotted links that lead to the appendix */
+.metro .stop { cursor: pointer; outline: none; transition: transform 0.9s var(--ease); }
+.metro .stop rect { fill: var(--surface); stroke: var(--ink-2); stroke-width: 2.5; stroke-dasharray: 3 4; transition: fill 0.2s, stroke 0.2s; }
+.metro .stop .stop-name { font: 750 13px var(--font); fill: var(--ink); text-anchor: middle; }
+.metro .stop .stop-note { font: italic 500 12px var(--font); fill: var(--ink-3); text-anchor: middle; }
+.metro .stop:hover rect, .metro .stop:focus-visible rect { fill: var(--surface-2); stroke: var(--ink); stroke-dasharray: none; }
+.metro .stop-link { stroke: var(--ink-3); stroke-width: 2.5; stroke-dasharray: 2 7; stroke-linecap: round; }
+.metro.intro .stop { animation: fade-in 0.4s ease 1.4s both; }
 
 @media (max-width: 760px) {
   .panel-toggle span { display: none; }

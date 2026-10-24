@@ -1,6 +1,6 @@
 /* The home screen: the whole curriculum, seen three ways.
    Metro: each part is a branch hanging from its family's line. Tree: one tree per line, of what builds on what.
-   Unified: every algorithm, placed by how deep and how wide its updates are (after Sutton & Barto, Figure 8.11).
+   Unified: every station in one table, by family of methods (across) and by how far an update looks ahead (down).
    Stations glide from one view to the next, part by part; the filters and the legend dim what does not match.
    Drag to pan, scroll to move, Ctrl + scroll to zoom, click a station to open it. */
 (function (RL) {
@@ -10,15 +10,19 @@
   const LENSES = {
     map: { name: "Metro", caption: "Every station is one idea, in reading order. Start at the top left: first the problem, then methods that keep a table, then methods that scale." },
     tree: { name: "Tree", caption: "One tree per line, read from the top. Each station grows from the one it builds on; an algorithm from the algorithm it changes." },
-    unified: { name: "Unified", caption: "Every algorithm, by how far its update looks ahead (down) and whether it samples one outcome or averages over all of them (across)." },
+    unified: { name: "Unified", caption: "Every station in one table: across, the families of methods; down, how far an update looks ahead, from one step to the whole episode. Each family's ideas sit at the top of its column." },
   };
   const cameras = {}; // one camera per view, kept between visits
   let drawn = false; // the lines draw themselves only the first time
   const filters = new Set();
 
+  // About how wide a station's name is drawn (12.5 px, bold for an algorithm): enough to keep names inside a layout.
+  const nameWidth = (st) => (st.short || st.title).length * (st.kind === "algorithm" ? 7.7 : 7);
+
   // ---- layouts: where every station sits in each view ----
   function metroLayout() {
     const C = RL.content, pos = new Map(), rows = [];
+    const L0 = (row) => pos.get(`part-${row.parts[row.parts.length - 1].n}`);
     let y = TOP;
     C.rows.forEach((nums, ri) => {
       const parts = nums.map((n) => C.parts.find((p) => p.n === n));
@@ -32,16 +36,21 @@
       y = bottom + ROW_GAP;
     });
     const width = LEFT + 30 + Math.max(...C.rows.map((r) => r.length)) * COL;
-    return { pos, rows, width, height: rows[rows.length - 1].bottom + 30 };
+    // The appendix: a stop of its own at the end of the last row, off the curriculum's line.
+    const last = rows[rows.length - 1], end = L0(last);
+    const stop = { x: end.x + COL - 15, y: last.y };
+    return { pos, rows, stop, width: Math.max(width, stop.x + STOP_W + 20), height: last.bottom + 30 };
   }
 
   // One tree per line, stacked in reading order. Every station hangs from the station of its line it builds on
   // most: an algorithm from the algorithm it changes, any other station from its latest prerequisite. Stations
   // that build on nothing in their line hang from the line's badge. Leaves sit one row apart, each parent level
   // with the middle of its children, and the trees grow to the right.
+  // An algorithm that changes an algorithm of another line hangs from a ghost of that algorithm, the first station of
+  // its branch: the family stays whole without a branch crossing the page.
   function treeLayout() {
     const DX = 156, DY = 30, X = 40, HUB = 188, GAP = 58;
-    const pos = new Map(), kids = new Map(), up = new Map(), hubs = [];
+    const pos = new Map(), kids = new Map(), up = new Map(), hubs = [], ghosts = new Map();
     let y = 44, depthMax = 0;
     for (const [line, name] of Object.entries(RL.content.lines)) {
       const ids = RL.order.filter((s) => s.line === line), hub = `line-${line}`;
@@ -50,7 +59,14 @@
       for (const s of ids) kids.set(s.id, []);
       for (const s of ids) {
         const pre = (entry(s.id)?.prereqs || []).filter((q) => before(q, s)).sort((a, b) => station(b).index - station(a).index);
-        const p = s.parent && before(s.parent, s) ? s.parent : pre[0] || hub;
+        let p = s.parent && before(s.parent, s) ? s.parent : pre[0] || hub;
+        if (s.parent && station(s.parent).line !== line) {
+          p = `from-${s.id}`;
+          ghosts.set(p, s.parent);
+          kids.set(p, []);
+          up.set(p, hub);
+          kids.get(hub).push(p);
+        }
         up.set(s.id, p);
         kids.get(p).push(s.id);
       }
@@ -69,15 +85,52 @@
       hubs.push({ id: hub, line, name, x: X, w: HUB, y: place(hub, 0) });
       y = top + leaves * DY + GAP;
     }
-    return { pos, kids, up, hubs, width: X + HUB + 80 + (depthMax - 1) * DX + 90, height: y - GAP + 10 };
+    // wide enough for the names: a leaf's runs to the right of its dot, a branching station's is centered above it
+    let right = 0;
+    for (const [id, at] of pos) {
+      const st = station(id) || station(ghosts.get(id)), w = st ? nameWidth(st) : 0;
+      right = Math.max(right, kids.get(id)?.length ? at.x + w / 2 : at.x + 15 + w);
+    }
+    const stop = { x: X, y: y - GAP + 30 };
+    return { pos, kids, up, hubs, ghosts, stop, width: Math.max(X + HUB + 80 + (depthMax - 1) * DX + 90, right + 24), height: stop.y + 46 };
   }
 
-  // Sutton & Barto's plane, with every algorithm on it. A bandit has no next state, so one step is already the
-  // whole return: the bandits sit in their own strip above the plane, where the reading starts.
+  // Every station in one table (content/map.toml, [unified]): across, the families of methods; down, how far an update
+  // looks ahead. A band row spreads a whole line across the table. A cell grows with its stations, which keep their
+  // reading order down its columns; an empty cell stays, faint, so the table keeps its shape.
   function unifiedLayout() {
-    const X = 110, Y = 250, PW = 1300, PH = 560, STRIP = Y - 168;
-    const pos = new Map(Object.entries(RL.content.unified).map(([id, [w, d]]) => [id, { x: X + w * PW, y: d < 0 ? STRIP + 44 : Y + d * PH }]));
-    return { pos, plane: { X, Y, PW, PH, STRIP }, width: X + PW + 150, height: Y + PH + 60 };
+    const U = RL.content.unified, X = 40, HEAD = 190, GAP = 12, CW = 214, PAD = 24, TOP = 96, BAND = 22;
+    const cols = U.columns.map((c, i) => ({ ...c, x: X + HEAD + GAP + i * (CW + GAP) }));
+    const at = new Map(cols.map((c, i) => [c.id, i]));
+    const pos = new Map(), cells = [], heads = [];
+    const left = (i) => cols[i].x, right = (i) => cols[i].x + CW;
+    let y = TOP;
+    U.rows.forEach((row, r) => {
+      if (r && (row.band || U.rows[r - 1].band)) y += BAND; // the bands stand a little apart from the table
+      const groups = row.band
+        ? [{ span: [0, cols.length - 1], ids: RL.order.filter((s) => s.line === row.band).map((s) => s.id) }]
+        : (U.cells[row.id] || []).map((c) => { const [a, b = a] = c.at.split("-"); return { span: [at.get(a), at.get(b)], ids: c.stations.slice().sort((p, q) => station(p).index - station(q).index) }; });
+      const lines = (g) => Math.ceil(g.ids.length / (g.span[1] - g.span[0] + 1));
+      const n = Math.max(1, ...groups.map(lines)), h = 2 * PAD + (n - 1) * STEP;
+      for (const g of groups) {
+        const k = lines(g);
+        g.ids.forEach((id, i) => pos.set(id, { x: left(g.span[0] + Math.floor(i / k)) + 22, y: y + PAD + (i % k) * STEP }));
+        cells.push({ x: left(g.span[0]), y, w: right(g.span[1]) - left(g.span[0]), h, band: !!row.band });
+      }
+      cols.forEach((c, i) => { if (!groups.some((g) => g.span[0] <= i && i <= g.span[1])) cells.push({ x: c.x, y, w: CW, h, empty: true }); });
+      heads.push({ title: row.title, note: row.note, x: X, y: y + PAD + 4.5 });
+      y += h + GAP;
+    });
+    // over the columns, each family's badge; the tabular methods span their two columns, named under it
+    const families = [], subs = [];
+    cols.forEach((c, i) => {
+      const f = families.find((x) => x.line === c.line);
+      if (f) f.w = right(i) - f.x;
+      else families.push({ line: c.line, name: RL.content.lines[c.line], x: c.x, w: CW });
+      if (cols.filter((d) => d.line === c.line).length > 1) subs.push({ title: c.title, x: c.x + CW / 2 });
+    });
+    const stop = { x: X, y: y + 30 };
+    return { pos, cells, heads, families, subs, top: TOP, stop, width: right(cols.length - 1) + 40, height: stop.y + 46 };
   }
 
   // ---- drawings that belong to one view ----
@@ -103,6 +156,9 @@
       svg += `<path class="ribbon" d="M${a.x + 18} ${a.y} H${right - 24} Q${right} ${a.y} ${right} ${a.y + 24} V${mid - 24} Q${right} ${mid} ${right - 24} ${mid} H${titleEnd}"/>`;
       svg += `<text class="ribbon-label" x="${right - 30}" y="${mid - 9}" text-anchor="end">When tables are not enough, the journey continues</text>`;
     }
+    // the appendix stop, off the end of the last row
+    const end = L.pos.get(`part-${L.rows[L.rows.length - 1].parts.slice(-1)[0].n}`);
+    svg += `<line class="stop-link" x1="${end.x + 18}" y1="${end.y}" x2="${L.stop.x - 4}" y2="${L.stop.y}"/>`;
     for (const p of C.parts) {
       const hub = L.pos.get(`part-${p.n}`), last = L.pos.get(p.stations[p.stations.length - 1].id);
       svg += `<line class="branch" pathLength="1" style="--c:${lineColor(p.line)};--d:${p.n}" x1="${hub.x}" y1="${hub.y}" x2="${last.x}" y2="${last.y}"/>`;
@@ -119,16 +175,23 @@
     let svg = "";
     const hub = new Map(T.hubs.map((h) => [h.id, h]));
     // The trees follow one another down the page: a dotted spine joins their badges in reading order.
-    T.hubs.slice(0, -1).forEach((h, i) => {
-      const n = T.hubs[i + 1], cx = h.x + 14;
+    [...T.hubs, { x: T.stop.x, y: T.stop.y }].slice(0, -1).forEach((h, i, all) => {
+      const n = T.hubs[i + 1] || T.stop, cx = h.x + 14;
       svg += `<path class="spine" d="M${cx} ${h.y + 13} V${n.y - 13}"/>`;
     });
     for (const [id, kids] of T.kids) {
       const h = hub.get(id), a = h ? { x: h.x + h.w - 9, y: h.y } : T.pos.get(id);
       for (const k of kids) {
-        const b = T.pos.get(k), mx = (a.x + b.x) / 2;
-        svg += `<path class="edge" pathLength="1" data-from="${id}" data-to="${k}" style="--c:${lineColor(station(k).line)}" d="M${a.x + 9} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x - 9} ${b.y}"/>`;
+        const b = T.pos.get(k), mx = (a.x + b.x) / 2, line = station(k)?.line || station(T.ghosts.get(k)).line;
+        const cross = T.ghosts.has(k) || T.ghosts.has(id); // into a ghost and out of it: a family link from another line
+        svg += `<path class="edge${cross ? " cross" : ""}"${cross ? "" : ' pathLength="1"'} data-from="${id}" data-to="${k}" style="--c:${lineColor(cross ? station(T.ghosts.get(id) || T.ghosts.get(k)).line : line)}" d="M${a.x + 9} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x - 9} ${b.y}"/>`;
       }
+    }
+    // a ghost names the algorithm of another line that its station changes, and leads to it
+    for (const [g, of] of T.ghosts) {
+      const at = T.pos.get(g), st = station(of);
+      svg += `<g class="ghost" data-href="#/e/${of}" data-term="${of}" role="link" tabindex="0" aria-label="${esc(st.title)}, in ${esc(RL.content.lines[st.line])}" style="--c:${lineColor(st.line)}" transform="translate(${at.x} ${at.y})">
+        <circle r="6.5"/><text y="-12" text-anchor="middle">${esc(st.short || st.title)}</text></g>`;
     }
     for (const h of T.hubs) {
       svg += `<g class="tree-hub" data-line="${h.line}" style="--c:${lineColor(h.line)}" transform="translate(${h.x} ${h.y})"><rect y="-12" width="${h.w}" height="24" rx="12"/><text x="${h.w / 2}" y="4.5">${esc(h.name)}</text></g>`;
@@ -137,25 +200,23 @@
   }
 
   function unifiedDrawing(U) {
-    const { X, Y, PW, PH, STRIP } = U.plane, R = X + PW + 146;
-    return `<rect class="plane" x="${X - 24}" y="${STRIP}" width="${0.52 * PW}" height="64" rx="16"/>
-      <text class="corner" x="${X - 6}" y="${STRIP - 12}">Bandits</text>
-      <text class="region" x="${X + 62}" y="${STRIP - 12}">one situation and no next state, so one step is the whole return</text>
-      <rect class="plane" x="${X - 24}" y="${Y - 10}" width="${PW + 170}" height="${PH + 24}" rx="18"/>
-      <text class="axis-title" x="${X + PW / 2}" y="${Y - 70}" text-anchor="middle">Width of update</text>
-      <text class="axis-end" x="${X - 24}" y="${Y - 48}">← sample updates: one outcome at a time</text>
-      <text class="axis-end" x="${R}" y="${Y - 48}" text-anchor="end">expected updates: every outcome, weighted →</text>
-      <text class="axis-title" transform="translate(${X - 58} ${Y + PH / 2}) rotate(-90)" text-anchor="middle">Depth of update</text>
-      <text class="axis-end" transform="translate(${X - 40} ${Y}) rotate(-90)" text-anchor="end">one step: bootstrapping</text>
-      <text class="axis-end" transform="translate(${X - 40} ${Y + PH}) rotate(-90)">the full return</text>
-      <text class="corner" x="${X - 6}" y="${Y - 20}">Temporal-difference learning</text>
-      <text class="corner" x="${R - 6}" y="${Y - 20}" text-anchor="end">Dynamic programming</text>
-      <text class="corner" x="${X - 6}" y="${Y + PH + 40}">Monte Carlo</text>
-      <text class="corner" x="${R - 6}" y="${Y + PH + 40}" text-anchor="end">Exhaustive search</text>
-      <text class="region" x="${X + 0.74 * PW}" y="${Y + 0.455 * PH}">n-step methods: n rewards, then a guess</text>
-      <text class="region" x="${X + 0.74 * PW}" y="${Y + 0.655 * PH}">traces and GAE: a blend of every depth</text>
-      <text class="credit" x="${R - 6}" y="${Y + PH + 58}" text-anchor="end">after Sutton &amp; Barto, Figure 8.11</text>`;
+    let svg = "";
+    for (const c of U.cells) svg += `<rect class="cell${c.empty ? " empty" : ""}${c.band ? " band" : ""}" x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="14"/>`;
+    for (const h of U.heads) svg += `<text class="row-head" x="${h.x}" y="${h.y}">${esc(h.title)}</text><text class="row-note" x="${h.x}" y="${h.y + 18}">${esc(h.note)}</text>`;
+    for (const f of U.families) {
+      svg += `<g class="tree-hub" style="--c:${lineColor(f.line)}" transform="translate(${f.x} ${U.top - 52})"><rect y="-12" width="${f.w}" height="24" rx="12"/><text x="${f.w / 2}" y="4.5">${esc(f.name)}</text></g>`;
+    }
+    for (const t of U.subs) svg += `<text class="col-sub" x="${t.x}" y="${U.top - 18}" text-anchor="middle">${esc(t.title)}</text>`;
+    svg += `<text class="credit" x="${U.width - 40}" y="${U.stop.y + 4}" text-anchor="end">depth of update after Sutton &amp; Barto, §8.13</text>`;
+    return svg;
   }
+
+  // The appendix: one stop, in every view, that opens the mathematics the atlas leans on.
+  const STOP_W = 118;
+  const stop = () => `<g class="stop" data-href="#/appendix" role="link" tabindex="0" aria-label="Appendix: the mathematics behind the atlas">
+      <title>The mathematics the atlas leans on: sums, probability, vectors, limits, gradients…</title>
+      <rect y="-13" width="${STOP_W}" height="26" rx="13"/><text class="stop-name" x="${STOP_W / 2}" y="4.5">Σ  Appendix</text>
+      <text class="stop-note" x="${STOP_W / 2}" y="34">the mathematics behind the atlas</text></g>`;
 
   function stations(next) {
     let svg = "";
@@ -218,6 +279,7 @@
           <g class="deco deco-tree">${treeDrawing(layouts.tree)}</g>
           <g class="deco deco-unified">${unifiedDrawing(layouts.unified)}</g>
           ${stations(next)}
+          ${stop()}
         </g></svg>
         <div class="map-zoom" role="group" aria-label="Zoom">
           <button class="icon-btn" type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
@@ -248,6 +310,8 @@
         const text = g.querySelector("text"), inner = lens === "tree" && layouts.tree.kids.get(id)?.length;
         text.style.transform = inner ? `translate(${-(+text.getAttribute("x")) - text.getComputedTextLength() / 2}px, -15px)` : "";
       }
+      const at = L().stop;
+      svg.querySelector(".stop").style.transform = `translate(${at.x}px, ${at.y}px)`;
       svg.dataset.lens = lens;
       host.querySelector(".map-view").dataset.lens = lens;
       host.querySelectorAll("[data-lens]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.lens === lens)));
@@ -422,7 +486,7 @@
     let drag = null;
     svg.addEventListener("pointerdown", (e) => {
       if (!wide() && view$.dataset.panel === "open") setPanel(false); // on a small screen the panel covers the map
-      drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false, target: e.target.closest(".st:not(.out)") };
+      drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false, target: e.target.closest(".st:not(.out), [data-href]") };
       svg.setPointerCapture(e.pointerId);
     });
     svg.addEventListener("pointermove", (e) => {
@@ -440,6 +504,7 @@
       drag = null;
       svg.classList.remove("dragging");
       if (d?.moved) keep();
+      else if (d?.target?.dataset.href) location.hash = d.target.dataset.href;
       else if (d?.target) dive(d.target.dataset.id);
     });
     // Scrolling moves the map like a page; Ctrl + scroll (or a pinch) zooms.
@@ -456,8 +521,11 @@
       keep();
     }, { passive: false });
     svg.addEventListener("keydown", (e) => {
-      const st = e.target.closest?.(".st");
-      if (st && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); dive(st.dataset.id); }
+      const st = e.target.closest?.(".st, [data-href]");
+      if (!st || (e.key !== "Enter" && e.key !== " ")) return;
+      e.preventDefault();
+      if (st.dataset.href) location.hash = st.dataset.href;
+      else dive(st.dataset.id);
     });
     host.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.zoom === "fit") return tween(fitted() || view, 400, keep);

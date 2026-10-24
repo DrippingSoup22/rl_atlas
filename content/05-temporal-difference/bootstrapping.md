@@ -58,7 +58,7 @@ Every update in the atlas can be placed by two choices. How deep does its target
 | **bootstraps after one step** | TD(0), [[sarsa]], [[q-learning]] | dynamic programming: [[policy-evaluation]], [[value-iteration]] |
 | **waits for the real return** | Monte Carlo: [[mc-prediction]] | exhaustive search of all futures |
 
-The map's *unified view* arranges the tabular methods in this space. Between the two rows lie methods that bootstrap after $n$ steps, or after a weighted mixture of all numbers of steps ([[n-step-td]], [[lambda-return]], [[td-lambda]]); between the columns, methods that sample some outcomes and average others ([[expected-sarsa]]).
+Between the two rows lie methods that bootstrap after $n$ steps, or after a weighted mixture of all numbers of steps ([[n-step-td]], [[lambda-return]], [[td-lambda]]); between the columns, methods that sample some outcomes and average others ([[expected-sarsa]]). The rows of the map's *unified view* follow this depth, from one step down to the whole episode, for every family of methods.
 
 ### What bootstrapping buys {#benefits}
 

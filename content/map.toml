@@ -255,46 +255,59 @@ stations = [
   { id = "rlhf", title = "RL from human feedback (RLHF)", short = "RLHF" },
 ]
 
-# The unified view (after Sutton & Barto, Figure 8.11): where each algorithm sits.
-# [width, depth]: width 0 = sample updates, 1 = expected updates; depth 0 = one step (bootstrapping), 1 = the full return.
-# Sample methods keep a column per line (tables, planning, approximation, policy gradients, continuous control),
-# so the colors stay together; methods that share a spot are stacked a little apart so their names stay readable.
-# Depth -1 is the bandit strip above the plane: with no next state, one step is already the whole return.
+# The unified view: every station of the atlas in one table. Across, the families of methods (the tabular methods
+# split into those that learn from experience and those that use a model); down, how far an update looks ahead,
+# after Sutton & Barto (§8.13). A family's ideas sit at the top of its column. Rows named in `bands` hold a whole
+# line, spread across the table: the problem above everything, the toolbox and what comes next below.
+# Within a cell, stations keep their reading order. A cell's columns are "a" or "a-b" (a span).
 [unified]
-epsilon-greedy = [0.02, -1]
-optimistic-init = [0.15, -1]
-ucb = [0.29, -1]
-gradient-bandit = [0.39, -1]
-td0 = [0.02, 0.06]
-sarsa = [0.02, 0.11]
-q-learning = [0.02, 0.16]
-double-q = [0.02, 0.21]
-dyna-q = [0.165, 0.06]
-dyna-q-plus = [0.165, 0.11]
-prioritized-sweeping = [0.165, 0.16]
-semi-gradient-td = [0.315, 0.06]
-semi-gradient-sarsa = [0.315, 0.11]
-dqn = [0.315, 0.16]
-dqn-extensions = [0.315, 0.21]
-actor-critic = [0.475, 0.06]
-ddpg = [0.6, 0.06]
-td3 = [0.6, 0.11]
-sac = [0.6, 0.16]
-expected-sarsa = [0.73, 0.11]
-policy-evaluation = [0.865, 0.06]
-policy-iteration = [0.865, 0.11]
-value-iteration = [0.865, 0.16]
-n-step-td = [0.02, 0.43]
-n-step-sarsa = [0.02, 0.48]
-a2c = [0.475, 0.43]
-td-lambda = [0.02, 0.63]
-sarsa-lambda = [0.02, 0.68]
-trpo = [0.475, 0.63]
-ppo = [0.475, 0.68]
-mc-prediction = [0.02, 0.82]
-exploring-starts = [0.02, 0.87]
-mc-control = [0.02, 0.92]
-off-policy-mc = [0.02, 0.97]
-gradient-mc = [0.315, 0.82]
-reinforce = [0.475, 0.82]
-baseline = [0.475, 0.87]
+columns = [
+  { id = "free", title = "from experience", line = "tabular" },
+  { id = "model", title = "with a model", line = "tabular" },
+  { id = "approx", title = "Function approximation", line = "approximation" },
+  { id = "pg", title = "Policy gradients", line = "policy" },
+  { id = "cont", title = "Continuous control", line = "continuous" },
+]
+rows = [
+  { id = "problem", title = "The problem", note = "every method starts here", band = "foundations" },
+  { id = "ideas", title = "The ideas", note = "what each family is built on" },
+  { id = "bandit", title = "No next state", note = "bandits: the reward is all" },
+  { id = "one", title = "One step", note = "a reward, then a guess" },
+  { id = "n", title = "n steps", note = "n rewards, then a guess" },
+  { id = "blend", title = "Every depth", note = "a blend: traces, λ and GAE" },
+  { id = "full", title = "The whole episode", note = "the full return, no guess" },
+  { id = "toolbox", title = "Toolbox", note = "for every method", band = "toolbox" },
+  { id = "next", title = "Where next", note = "beyond this atlas", band = "next" },
+]
+
+[unified.cells]
+ideas = [
+  { at = "free", stations = ["mc-vs-td"] },
+  { at = "model", stations = ["policy-improvement", "gpi", "dp-limits", "models"] },
+  { at = "approx", stations = ["why-approximate", "features", "value-error", "generalization", "deadly-triad", "neural-networks"] },
+  { at = "pg", stations = ["why-policy", "policy-parameterization", "pg-theorem", "entropy-bonus"] },
+  { at = "cont", stations = ["action-noise", "parameter-noise", "gsde", "policy-spread", "smooth-policies", "critic-regularization", "robust-policies", "control-recipe"] },
+]
+bandit = [
+  { at = "free-model", stations = ["k-armed-bandit", "incremental-mean", "step-size", "epsilon-greedy", "optimistic-init", "ucb", "gradient-bandit", "nonstationary"] },
+]
+one = [
+  { at = "free", stations = ["td0", "td-error", "bootstrapping", "sarsa", "q-learning", "expected-sarsa", "double-q"] },
+  { at = "model", stations = ["policy-evaluation", "policy-iteration", "value-iteration", "dyna-q", "dyna-q-plus", "prioritized-sweeping"] },
+  { at = "approx", stations = ["semi-gradient-td", "semi-gradient-sarsa", "dqn", "experience-replay", "target-network", "dqn-extensions"] },
+  { at = "pg", stations = ["actor-critic"] },
+  { at = "cont", stations = ["dpg", "ddpg", "td3", "sac"] },
+]
+n = [
+  { at = "free", stations = ["n-step-td", "n-step-sarsa"] },
+  { at = "pg", stations = ["a2c"] },
+]
+blend = [
+  { at = "free", stations = ["lambda-return", "td-lambda", "sarsa-lambda"] },
+  { at = "pg", stations = ["gae", "trpo", "ppo"] },
+]
+full = [
+  { at = "free", stations = ["mc-prediction", "exploring-starts", "mc-control", "off-policy-mc", "importance-sampling"] },
+  { at = "approx", stations = ["gradient-mc"] },
+  { at = "pg", stations = ["reinforce", "baseline"] },
+]
