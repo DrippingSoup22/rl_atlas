@@ -344,3 +344,13 @@ animations and hover effects this guide relies on would not be smooth.
   recipe have none, on purpose (the trainer has weight decay alone of the critic's regularizers, and on Pendulum it
   does not help; no world here to randomize; a decision guide). What changed on the way, with the reasons, is at the
   end of `docs/control-tools.md`. Released as 1.1.0.
+
+- [x] **M12 · Appendix and layout**: an appendix of 27 short pages on the mathematics the guide uses, off the map and
+  reached by `[[a:id]]` links, hover cards, search and a dotted stop on every view of the map; Parts 0 and 1 revised
+  (the Bellman story and textbook reworked, the mathematics explained where it is used). The map's unified view became
+  a table of all 103 stations (families across, depth of update down) and the tree shows every station. A layout pass
+  over everything: card formulas as sheets in level columns, formulas sized to their room and broken at their signs on
+  a phone, no line starting with punctuation or a sign, story formulas shown whole or not at all with the picture at
+  one size and the stage inside the window (on a phone, room left for the text), and the Lab's long lines of numbers
+  broken into lines. Checked with layout scripts on every page, story step and Lab experiment at five sizes.
+  Released as 1.2.0.

@@ -30,8 +30,8 @@ a real screen. What matters most now:
 2. Test the file readers download. Download
    <https://github.com/DrippingSoup22/rl_atlas/releases/latest/download/rl_atlas.html> into a new folder `downloads/`
    inside the clone. Check it is the same file as the clone's `rl_atlas.html` by comparing their SHA-256: on Windows
-   `Get-FileHash <file> -Algorithm SHA256`, on macOS `shasum -a 256 <file>`, on Linux `sha256sum <file>`. Release 1.1.0
-   is `7e1b9a17bf7f8311219e6f48c23bbeabbeaa128b36cb9753883fb22489f8ccd3`. If a newer release is out, its hash is on
+   `Get-FileHash <file> -Algorithm SHA256`, on macOS `shasum -a 256 <file>`, on Linux `sha256sum <file>`. Release 1.2.0
+   is `126f65ba72ef10804b70d1bc3136e5902cb60837882e1182d8fd836f91c5f70f`. If a newer release is out, its hash is on
    its release page. If the two files differ, say so and test the downloaded one.
 3. Install Node 18 or newer (22 recommended). In the clone, run `npm install --no-save playwright-core`.
    playwright-core drives the browsers already installed and downloads none. `node_modules/` and
