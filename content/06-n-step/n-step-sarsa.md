@@ -137,9 +137,13 @@ After finally finding the restaurant, remembering the last ten turns that led to
 
 ### The update {#update}
 
-$$\val{Q(S_t,A_t)} \leftarrow \val{Q(S_t,A_t)} + \alp\,\big[\,\rew{G_{t:t+n}} - \val{Q(S_t,A_t)}\,\big], \qquad \rew{G_{t:t+n}} = \rew{R_{t+1}} + \cdots + \gam^{n-1}\rew{R_{t+n}} + \gam^n\,\val{Q(S_{t+n},A_{t+n})}$$
+The $n$-step return: $n$ real rewards, then the value of the pair reached. If the episode ends within the $n$ steps, it is the plain return.
 
-*New guess = old guess + step size × (target − old guess)*, made $n$ steps late. If the episode ends within the $n$ steps, the target is the plain return.
+$$\rew{G_{t:t+n}} = \rew{R_{t+1}} + \cdots + \gam^{n-1}\rew{R_{t+n}} + \gam^n\,\val{Q(S_{t+n},A_{t+n})}$$
+
+*New guess = old guess + step size × (target − old guess)*, made $n$ steps late.
+
+$$\val{Q(S_t,A_t)} \leftarrow \val{Q(S_t,A_t)} + \alp\,\big[\,\rew{G_{t:t+n}} - \val{Q(S_t,A_t)}\,\big]$$
 
 ### One change from n-step TD {#change}
 

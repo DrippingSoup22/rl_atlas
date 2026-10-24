@@ -97,7 +97,11 @@ A shop that cannot stock everything stocks what customers ask for most often: a 
 
 ### The objective and the update {#formula}
 
+The objective: the squared error of the estimate, averaged over the states with the weights $\mu(s)$, the share of time spent in each.
+
 $$\overline{\text{VE}}(\mathbf w) = \sum_s \mu(s)\,\big[\val{v_\pi(s)} - \val{\hat v(s, \mathbf w)}\big]^2$$
+
+Stochastic gradient descent on it, with a target $U_t$ in place of the unknown true value: the return, or a bootstrapped estimate.
 
 $$\mathbf w \leftarrow \mathbf w + \alp\,\big[\,U_t - \val{\hat v(S_t, \mathbf w)}\,\big]\,\nabla \val{\hat v(S_t, \mathbf w)}$$
 

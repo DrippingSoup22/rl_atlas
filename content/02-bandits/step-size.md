@@ -135,9 +135,17 @@ A thermostat reading. One that averages every reading since it was installed is 
 
 ### In symbols {#formula}
 
-$$\val{Q_{n+1}} = \val{Q_n} + \alp\,\big[\,\rew{R_n} - \val{Q_n}\,\big] = (1 - \alp)^n\,\val{Q_1} + \sum_{i=1}^{n} \alp\,(1 - \alp)^{n-i}\,\rew{R_i}$$
+A constant step size $\alp$ in place of $1/n$.
 
-Converges to the true value if $\sum_n \alpha_n = \infty$ and $\sum_n \alpha_n^2 < \infty$ (true for $1/n$, false for a constant).
+$$\val{Q_{n+1}} = \val{Q_n} + \alp\,\big[\,\rew{R_n} - \val{Q_n}\,\big]$$
+
+Unrolled, it is a weighted average whose weights shrink by the factor $1 - \alp$ for each step into the past.
+
+$$\val{Q_{n+1}} = (1 - \alp)^n\,\val{Q_1} + \sum_{i=1}^{n} \alp\,(1 - \alp)^{n-i}\,\rew{R_i}$$
+
+The estimate converges to the true value when the step sizes meet both conditions: true for $1/n$, false for a constant.
+
+$$\sum_n \alpha_n = \infty \quad \text{and} \quad \sum_n \alpha_n^2 < \infty$$
 
 ### Choosing it {#choosing}
 

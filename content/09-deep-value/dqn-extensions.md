@@ -98,7 +98,17 @@ A second opinion before trusting the best-looking offer; a map of the terrain be
 
 ### The update {#update}
 
-$$y = \rew{r} + \gam\,\val{\hat q\big(s', \operatorname*{argmax}_{a'} \hat q(s', a', \mathbf w), \mathbf w^-\big)}, \qquad \val{\hat q(s, a)} = \val{\hat v(s)} + \err{\hat a(s, a)} - \overline{\err{\hat a(s, \cdot)}}, \qquad P(i) \propto |\err{\delta_i}|^{\alpha}$$
+Double DQN: the online network picks the next action, the target network says what it is worth.
+
+$$y = \rew{r} + \gam\,\val{\hat q\big(s', \operatorname*{argmax}_{a'} \hat q(s', a', \mathbf w), \mathbf w^-\big)}$$
+
+Dueling: a state value plus each action's advantage, centered so that the advantages average to zero.
+
+$$\val{\hat q(s, a)} = \val{\hat v(s)} + \err{\hat a(s, a)} - \overline{\err{\hat a(s, \cdot)}}$$
+
+Prioritized replay: transitions with a larger TD error are replayed more often.
+
+$$P(i) \propto |\err{\delta_i}|^{\alpha}$$
 
 ### One change from DQN {#change}
 

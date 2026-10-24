@@ -114,9 +114,17 @@ Hand-made features are a fixed set of lenses chosen before looking; a network gr
 
 ### The network {#formula}
 
-$$\mathbf h_1 = \varphi(W_1 s + \mathbf b_1), \qquad \mathbf h_2 = \varphi(W_2 \mathbf h_1 + \mathbf b_2), \qquad \val{\hat q(s, \cdot\,, \mathbf w)} = W_3 \mathbf h_2 + \mathbf b_3$$
+Two hidden layers, each a linear map of the layer below followed by the nonlinearity $\varphi$ on every entry.
 
-trained with the same semi-gradient step as a linear method, $\mathbf w \leftarrow \mathbf w + \alp\,\err{\delta}\,\nabla_{\mathbf w}\val{\hat q(S, A, \mathbf w)}$, the gradient computed by backpropagation, usually over a minibatch and with Adam's step sizes.
+$$\mathbf h_1 = \varphi(W_1 s + \mathbf b_1) \qquad \mathbf h_2 = \varphi(W_2 \mathbf h_1 + \mathbf b_2)$$
+
+The output layer gives one value per action.
+
+$$\val{\hat q(s, \cdot\,, \mathbf w)} = W_3 \mathbf h_2 + \mathbf b_3$$
+
+Trained with the same semi-gradient step as a linear method. Backpropagation computes the gradient, usually over a minibatch and with Adam's step sizes.
+
+$$\mathbf w \leftarrow \mathbf w + \alp\,\err{\delta}\,\nabla_{\mathbf w}\val{\hat q(S, A, \mathbf w)}$$
 
 ### Why it matters {#why}
 

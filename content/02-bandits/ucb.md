@@ -126,9 +126,13 @@ Choosing between restaurants by giving the ones you have barely tried the benefi
 
 ### The rule {#update}
 
-$$A_t = \operatorname*{arg\,max}_a \Big[\,\val{Q_t(a)} + c\sqrt{\frac{\ln t}{N_t(a)}}\;\Big] \qquad \val{Q(A)} \leftarrow \val{Q(A)} + \tfrac{1}{N(A)}\big[\rew{R} - \val{Q(A)}\big]$$
+Pull the arm whose estimate plus bonus is highest. An arm never pulled ($N = 0$) counts as best.
 
-An arm never pulled ($N = 0$) counts as best. The bonus shrinks when the arm is pulled and grows slowly, with $\ln t$, while it waits.
+$$A_t = \operatorname*{arg\,max}_a \Big[\,\val{Q_t(a)} + c\sqrt{\frac{\ln t}{N_t(a)}}\;\Big]$$
+
+The bonus shrinks each time the arm is pulled and grows slowly, with $\ln t$, while it waits. The estimates are plain averages.
+
+$$\val{Q(A)} \leftarrow \val{Q(A)} + \frac{1}{N(A)}\big[\rew{R} - \val{Q(A)}\big]$$
 
 ### One change from [[epsilon-greedy]] {#change}
 

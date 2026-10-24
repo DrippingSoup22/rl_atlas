@@ -128,9 +128,17 @@ Your phone's arrival-time estimate on a drive. Each time it revises the estimate
 
 ### In symbols {#formula}
 
-$$\del_t = \rew{R_{t+1}} + \gam\,\val{V(S_{t+1})} - \val{V(S_t)} \qquad \rew{G_t} - \val{V(S_t)} = \sum_{k=t}^{T-1} \gam^{\,k-t}\,\del_k \ \text{(if } \val{V} \text{ stays fixed)}$$
+The TD error: how much better or worse one step turned out than the estimate expected.
 
-With the true values, the TD error is zero on average, and its average given the action is the advantage $\val{q_\pi(s,a)} - \val{v_\pi(s)}$.
+$$\del_t = \rew{R_{t+1}} + \gam\,\val{V(S_{t+1})} - \val{V(S_t)}$$
+
+If $\val{V}$ stays fixed during the episode, the Monte Carlo error is the discounted sum of the TD errors along the way.
+
+$$\rew{G_t} - \val{V(S_t)} = \sum_{k=t}^{T-1} \gam^{\,k-t}\,\del_k$$
+
+With the true values, the TD error is zero on average, and its average given the action is the advantage.
+
+$$\mathbb{E}\big[\del_t \mid S_t = s,\ A_t = a\big] = \val{q_\pi(s,a)} - \val{v_\pi(s)}$$
 
 ### Why it matters {#why}
 

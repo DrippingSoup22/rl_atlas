@@ -113,9 +113,13 @@ Last year's restaurant reviews in a city where chefs keep moving. An average ove
 
 ### In symbols {#formula}
 
-$$\text{averages: } \val{Q_{n+1}} = \val{Q_n} + \tfrac{1}{n}\big[\rew{R_n} - \val{Q_n}\big] \qquad \text{tracking: } \val{Q_{n+1}} = \val{Q_n} + \alp\,\big[\rew{R_n} - \val{Q_n}\big]$$
+Averages weigh every reward the same. If the value jumps by $\Delta$ after $n_0$ rewards, the estimate is still off by $\Delta\,n_0 / (n_0 + m)$ after $m$ more.
 
-After a change of size $\Delta$: averages are still off by $\Delta\,n_0 / (n_0 + m)$ after $m$ rewards, a constant step size by $\Delta\,(1 - \alp)^m$.
+$$\val{Q_{n+1}} = \val{Q_n} + \frac{1}{n}\big[\rew{R_n} - \val{Q_n}\big]$$
+
+Tracking with a constant step size weighs recent rewards more. After the same jump, the error left after $m$ rewards is $\Delta\,(1 - \alp)^m$.
+
+$$\val{Q_{n+1}} = \val{Q_n} + \alp\,\big[\rew{R_n} - \val{Q_n}\big]$$
 
 ### Why it matters {#why}
 

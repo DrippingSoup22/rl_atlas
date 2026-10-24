@@ -120,9 +120,17 @@ A student who reviews a shuffled box of past exercises every evening, and checks
 
 ### The update {#update}
 
-$$\mathbf w \leftarrow \mathbf w + \alp\,\frac1B \sum_{j=1}^{B} \Big(\rew{r_j} + \gam \max_{a'} \val{\hat q(s'_j, a', \mathbf w^-)} - \val{\hat q(s_j, a_j, \mathbf w)}\Big)\,\nabla_{\mathbf w}\val{\hat q(s_j, a_j, \mathbf w)}$$
+Draw a minibatch of $B$ transitions from the replay memory. Each target is computed by the frozen copy $\mathbf w^-$.
 
-over a minibatch drawn from the replay memory; $\mathbf w^- \leftarrow \mathbf w$ every $C$ steps.
+$$y_j = \rew{r_j} + \gam \max_{a'} \val{\hat q(s'_j, a', \mathbf w^-)}$$
+
+Take one semi-gradient step on the batch.
+
+$$\mathbf w \leftarrow \mathbf w + \alp\,\frac1B \sum_{j=1}^{B} \big(y_j - \val{\hat q(s_j, a_j, \mathbf w)}\big)\,\nabla_{\mathbf w}\val{\hat q(s_j, a_j, \mathbf w)}$$
+
+Every $C$ steps, the frozen copy catches up.
+
+$$\mathbf w^- \leftarrow \mathbf w$$
 
 ### One change from Q-learning {#change}
 

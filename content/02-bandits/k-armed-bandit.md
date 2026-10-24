@@ -147,9 +147,21 @@ A row of slot machines in a casino, each with its own hidden odds, and a fixed b
 
 ### In symbols {#formula}
 
-$$\val{q_*(a)} = \mathbb{E}\big[\rew{R_t} \mid A_t = a\big] \qquad \val{Q_t(a)} = \frac{\text{sum of the rewards from } a \text{ before } t}{N_t(a)} \qquad A_t^{\text{greedy}} = \operatorname*{arg\,max}_a \val{Q_t(a)}$$
+The value of an arm: the reward it gives on average.
 
-Regret after $T$ steps: $L_T = T\,\val{q_*} - \mathbb{E}\big[\sum_{t \le T} \rew{R_t}\big] = \sum_a \Delta_a\,\mathbb{E}[N(a)]$.
+$$\val{q_*(a)} = \mathbb{E}\big[\rew{R_t} \mid A_t = a\big]$$
+
+Its estimate at time $t$: the average of the rewards it has given so far.
+
+$$\val{Q_t(a)} = \frac{\text{sum of the rewards from } a \text{ before } t}{N_t(a)}$$
+
+The greedy choice: the arm with the highest estimate.
+
+$$A_t^{\text{greedy}} = \operatorname*{arg\,max}_a \val{Q_t(a)}$$
+
+The regret after $T$ steps: what was lost by not always pulling the best arm. Each pull of an arm costs its gap $\Delta_a$.
+
+$$L_T = T\,\val{q_*} - \mathbb{E}\Big[\sum_{t \le T} \rew{R_t}\Big] = \sum_a \Delta_a\,\mathbb{E}[N(a)]$$
 
 ### The testbed {#testbed}
 

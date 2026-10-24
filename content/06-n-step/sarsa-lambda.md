@@ -123,9 +123,17 @@ A trail of breadcrumbs that fades with time: when you find the treasure, every c
 
 ### The update {#update}
 
-$$\val{Q(s,a)} \leftarrow \val{Q(s,a)} + \alp\,\del\,\htmlClass{q-trc}{z(s,a)} \ \text{ for every pair}, \qquad \del = \rew{R} + \gam\,\val{Q(S',A')} - \val{Q(S,A)}$$
+One TD error per step, the SARSA one.
 
-The trace fades by $\gamma\lambda$ each step and grows by 1 (accumulating) or resets to 1 (replacing) on the pair just taken. With λ = 0 it is SARSA.
+$$\del = \rew{R} + \gam\,\val{Q(S',A')} - \val{Q(S,A)}$$
+
+Every pair moves by it, in proportion to its trace. With λ = 0 only the last pair moves: SARSA.
+
+$$\val{Q(s,a)} \leftarrow \val{Q(s,a)} + \alp\,\del\,\htmlClass{q-trc}{z(s,a)} \quad \text{for every pair}$$
+
+The trace fades by $\gam\lam$ each step and grows by 1 on the pair just taken. A replacing trace resets to 1 instead.
+
+$$\htmlClass{q-trc}{z(s,a)} \leftarrow \gam\lam\,\htmlClass{q-trc}{z(s,a)} + \mathbb{1}[s = S,\ a = A]$$
 
 ### One change from TD(λ) {#change}
 

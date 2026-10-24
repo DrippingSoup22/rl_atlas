@@ -127,7 +127,11 @@ A team of scouts mapping a forest. Each walks a different trail; every hour they
 
 ### The update {#update}
 
+The advantage estimate: $k$ real rewards and then the critic's value, minus the critic's value of the starting state.
+
 $$\err{\hat A_t} = \sum_{i=0}^{k-1} \gam^i\,\rew{R_{t+i+1}} + \gam^k\,\val{\hat v(S_{t+k})} - \val{\hat v(S_t)}$$
+
+The actor's step, averaged over $N$ parallel workers, with an entropy bonus that keeps it exploring.
 
 $$\boldsymbol\theta \leftarrow \boldsymbol\theta + \frac{\alp}{N} \sum \big[\err{\hat A_t}\,\nabla \ln \pol{\pi(A_t \mid S_t, \boldsymbol\theta)} + \beta\,\nabla \pol{H}\big]$$
 

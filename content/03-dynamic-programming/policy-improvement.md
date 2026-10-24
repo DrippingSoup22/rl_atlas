@@ -129,9 +129,17 @@ Planning a commute from a map of how long each junction takes to get home by you
 
 ### In symbols {#formula}
 
+The new policy: in every state, the action that looks best one step ahead, judged by the old policy's values.
+
 $$\pol{\pi'(s)} = \operatorname*{arg\,max}_a \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\,\rew{r} + \gam\,\val{v_\pi(s')}\,\big] = \operatorname*{arg\,max}_a \val{q_\pi(s,a)}$$
 
-Theorem: if $\val{q_\pi(s, \pol{\pi'(s)})} \ge \val{v_\pi(s)}$ in every state, then $\val{v_{\pi'}} \ge \val{v_\pi}$ everywhere.
+The theorem. Suppose that taking the action of $\pol{\pi'}$ once, then following $\pol{\pi}$, is never worse than following $\pol{\pi}$ from the start.
+
+$$\val{q_\pi(s, \pol{\pi'(s)})} \ge \val{v_\pi(s)} \ \text{ in every state } s$$
+
+Then following $\pol{\pi'}$ all the way is never worse either.
+
+$$\val{v_{\pi'}(s)} \ge \val{v_\pi(s)} \ \text{ in every state } s$$
 
 ### Why it matters {#why}
 

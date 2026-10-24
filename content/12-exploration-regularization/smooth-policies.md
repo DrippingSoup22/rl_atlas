@@ -111,7 +111,13 @@ A driver who swerves between lanes reaches the exit as fast as a calm one, and w
 
 ### The update {#update}
 
-$$L = L_\pi + \knob{\lambda_T}\,\|\pol{\mu(s)} - \pol{\mu(s')}\| + \knob{\lambda_S}\,\|\pol{\mu(s)} - \pol{\mu(\bar s)}\|, \qquad \bar s \sim \mathcal N(s, \knob\sigma^2)$$
+The policy's loss plus two penalties: one for changing the action between consecutive states, one for changing it between nearby states.
+
+$$L = L_\pi + \knob{\lambda_T}\,\|\pol{\mu(s)} - \pol{\mu(s')}\| + \knob{\lambda_S}\,\|\pol{\mu(s)} - \pol{\mu(\bar s)}\|$$
+
+The nearby state $\bar s$ is drawn around $s$.
+
+$$\bar s \sim \mathcal N(s, \knob\sigma^2)$$
 
 ### Pseudocode
 

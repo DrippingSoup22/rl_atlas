@@ -106,9 +106,9 @@ Adjusting a shower knob by feel. You do not try random positions and keep the go
 
 ### The gradient {#gradient}
 
-$$\nabla_{\boldsymbol\theta} J = \mathbb E_s\Big[\nabla_{\boldsymbol\theta}\pol{\mu(s)}\;\nabla_a \val{\hat q(s, a)}\big|_{a = \pol{\mu(s)}}\Big]$$
+The chain rule through the critic: how the parameters move the action, times how the action moves the value.
 
-the chain rule through the critic: how the action moves the value, times how the parameters move the action.
+$$\nabla_{\boldsymbol\theta} J = \mathbb E_s\Big[\nabla_{\boldsymbol\theta}\pol{\mu(s)}\;\nabla_a \val{\hat q(s, a)}\big|_{a = \pol{\mu(s)}}\Big]$$
 
 ### Pseudocode
 

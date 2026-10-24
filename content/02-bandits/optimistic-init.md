@@ -112,9 +112,17 @@ A new town where you assume every restaurant is excellent. Each visit brings you
 
 ### The update {#update}
 
-$$\val{Q_1(a)} = \text{high, e.g. } 5 \qquad A \leftarrow \operatorname*{arg\,max}_a \val{Q(a)} \qquad \val{Q(A)} \leftarrow \val{Q(A)} + \alp\,\big[\rew{R} - \val{Q(A)}\big]$$
+Start every estimate high, above any reward the arms can give.
 
-The optimism of an arm pulled $n$ times has shrunk by the factor $(1 - \alp)^n$.
+$$\val{Q_1(a)} = \text{high, e.g. } 5$$
+
+Then play greedily. Every arm tried disappoints, so the untried ones get their turn.
+
+$$A \leftarrow \operatorname*{arg\,max}_a \val{Q(a)}$$
+
+Each pull moves the estimate toward the reward. After $n$ pulls, the arm's optimism has shrunk by the factor $(1 - \alp)^n$.
+
+$$\val{Q(A)} \leftarrow \val{Q(A)} + \alp\,\big[\rew{R} - \val{Q(A)}\big]$$
 
 ### One change from [[epsilon-greedy]] {#change}
 

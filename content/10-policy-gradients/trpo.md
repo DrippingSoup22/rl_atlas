@@ -93,7 +93,7 @@ $$J(\pol{\pi'}) - J(\pol{\pi}) \ge L_\pi(\pol{\pi'}) - \frac{4\,\epsilon\,\gam}{
 
 Maximizing the right side at each step can only improve $J$, since the bound is tight at $\pol{\pi'} = \pol{\pi}$. Its penalty coefficient is so large that the steps would be tiny; TRPO keeps the idea but replaces the penalty by a constraint on the **average** KL divergence, with a bound $\delta$ chosen by hand:
 
-$$\max_{\boldsymbol\theta}\ L_{\pi_{\text{old}}}(\pol{\pi_{\boldsymbol\theta}}) \quad \text{subject to} \quad \overline{D}_{\mathrm{KL}}(\boldsymbol\theta) = \mathbb E_{\pi_{\text{old}}}\Big[D_{\mathrm{KL}}\big(\pol{\pi_{\text{old}}(\cdot \mid S)} \,\|\, \pol{\pi_{\boldsymbol\theta}(\cdot \mid S)}\big)\Big] \le \delta. \label{eq-trpo}$$
+$$\max_{\boldsymbol\theta}\ L_{\pi_{\text{old}}}(\pol{\pi_{\boldsymbol\theta}}) \qquad \text{subject to} \quad \overline{D}_{\mathrm{KL}}(\boldsymbol\theta) = \mathbb E_{\pi_{\text{old}}}\Big[D_{\mathrm{KL}}\big(\pol{\pi_{\text{old}}(\cdot \mid S)} \,\|\, \pol{\pi_{\boldsymbol\theta}(\cdot \mid S)}\big)\Big] \le \delta. \label{eq-trpo}$$
 
 ::: figure {#fig-region}
 {{trust-region}}
@@ -148,9 +148,13 @@ A hiker in fog with a map of the slope that is only accurate nearby. Instead of 
 
 ### The update {#update}
 
-$$\max_{\boldsymbol\theta}\ \hat{\mathbb E}\Big[\frac{\pol{\pi_{\boldsymbol\theta}(A \mid S)}}{\pol{\pi_{\text{old}}(A \mid S)}}\,\err{\hat A}\Big] \quad \text{subject to} \quad \overline{D}_{\mathrm{KL}}\big(\pol{\pi_{\text{old}}} \,\|\, \pol{\pi_{\boldsymbol\theta}}\big) \le \delta$$
+Improve the reweighted advantage, without letting the average KL divergence from the old policy exceed $\delta$.
 
-solved approximately by $\boldsymbol\Delta = \sqrt{2\delta / \mathbf g^\top \mathbf F^{-1} \mathbf g}\ \mathbf F^{-1}\mathbf g$ and a line search.
+$$\max_{\boldsymbol\theta}\ \hat{\mathbb E}\Big[\frac{\pol{\pi_{\boldsymbol\theta}(A \mid S)}}{\pol{\pi_{\text{old}}(A \mid S)}}\,\err{\hat A}\Big] \qquad \text{subject to} \quad \overline{D}_{\mathrm{KL}}\big(\pol{\pi_{\text{old}}} \,\|\, \pol{\pi_{\boldsymbol\theta}}\big) \le \delta$$
+
+Solved approximately by a natural-gradient step that reaches the edge of the constraint, then a line search. $\mathbf g$ is the gradient and $\mathbf F$ the Fisher matrix.
+
+$$\boldsymbol\Delta = \sqrt{\frac{2\delta}{\mathbf g^\top \mathbf F^{-1} \mathbf g}}\ \mathbf F^{-1}\mathbf g$$
 
 ### One change from the actor–critic {#change}
 

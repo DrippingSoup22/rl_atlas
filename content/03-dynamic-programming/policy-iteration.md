@@ -146,9 +146,13 @@ Revising a travel plan: work out what your current plan really costs from every 
 
 ### The update {#update}
 
-$$\text{evaluate: } \val{V} \leftarrow \text{the values of } \pol{\pi} \qquad \text{improve: } \pol{\pi(s)} \leftarrow \operatorname*{arg\,max}_a \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\,\rew{r} + \gam\,\val{V(s')}\,\big]$$
+Evaluate: compute the values of the current policy.
 
-Stop when improvement leaves the policy unchanged.
+$$\val{V} \leftarrow \val{v_\pi}$$
+
+Improve: make the policy greedy with respect to those values. Stop when this leaves the policy unchanged.
+
+$$\pol{\pi(s)} \leftarrow \operatorname*{arg\,max}_a \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\,\rew{r} + \gam\,\val{V(s')}\,\big]$$
 
 ### One change from policy evaluation {#change}
 

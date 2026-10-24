@@ -143,9 +143,13 @@ Choosing a restaurant from one critic's ratings, then judging your choice by a s
 
 ### The update {#update}
 
-$$\begin{gathered} \val{Q_1(S,A)} \leftarrow \val{Q_1(S,A)} + \alp\,\big[\,\rew{R} + \gam\,\val{Q_2(S', A^*)} - \val{Q_1(S,A)}\,\big] \\ \text{where } A^* = \operatorname*{arg\,max}_a \val{Q_1(S',a)} \end{gathered}$$
+Flip a coin. On heads, update $\val{Q_1}$: it picks the best next action.
 
-Or, with probability ½, the same with the two tables swapped. Act ε-greedily on their sum.
+$$A^* = \operatorname*{arg\,max}_a \val{Q_1(S',a)}$$
+
+Then $\val{Q_2}$ says what that action is worth. On tails, the same with the two tables swapped. Act ε-greedily on their sum.
+
+$$\val{Q_1(S,A)} \leftarrow \val{Q_1(S,A)} + \alp\,\big[\,\rew{R} + \gam\,\val{Q_2(S', A^*)} - \val{Q_1(S,A)}\,\big]$$
 
 ### One change from Q-learning {#change}
 

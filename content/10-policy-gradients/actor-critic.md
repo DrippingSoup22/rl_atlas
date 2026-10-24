@@ -162,9 +162,17 @@ A trainee and a coach at the trainee's side. After each move the coach says “b
 
 ### The update {#update}
 
+The critic's TD error: how much better the step went than it expected.
+
 $$\del = \rew{R} + \gam\,\val{\hat v(S', \mathbf w)} - \val{\hat v(S, \mathbf w)}$$
 
-$$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp^{\boldsymbol\theta}\,I\,\del\,\nabla \ln \pol{\pi(A \mid S, \boldsymbol\theta)}, \qquad \mathbf w \leftarrow \mathbf w + \alp^{\mathbf w}\,\del\,\nabla \val{\hat v(S, \mathbf w)}$$
+The actor makes the action just taken more likely if $\del > 0$, less likely if $\del < 0$. $I$ is $\gam^t$, kept as a running product.
+
+$$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp^{\boldsymbol\theta}\,I\,\del\,\nabla \ln \pol{\pi(A \mid S, \boldsymbol\theta)}$$
+
+The critic moves its estimate toward the target.
+
+$$\mathbf w \leftarrow \mathbf w + \alp^{\mathbf w}\,\del\,\nabla \val{\hat v(S, \mathbf w)}$$
 
 ### One change from REINFORCE with baseline {#change}
 

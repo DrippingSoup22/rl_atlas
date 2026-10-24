@@ -116,9 +116,9 @@ Judging a restaurant by its street: a quick guess for every restaurant you have 
 
 ### What an update touches {#formula}
 
-$$\Delta \val{\hat v(s)} = \alp\,\del\;\mathbf x(s)^\top \mathbf x(S)$$
+An update at the state $S$ moves every state $s$ by the overlap of their features. That overlap is the generalization pattern.
 
-The overlap of features with the updated state: the generalization pattern.
+$$\Delta \val{\hat v(s)} = \alp\,\del\;\mathbf x(s)^\top \mathbf x(S)$$
 
 ### Why it matters {#why}
 

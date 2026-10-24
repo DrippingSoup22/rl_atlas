@@ -136,13 +136,13 @@ Asking several advisers how a decision will turn out, from the one who looks one
 
 ### In symbols {#formula}
 
+An average of all the $n$-step returns, the $n$-step one with the weight $(1 - \lam)\,\lam^{n-1}$. The weight left over goes to the full return, so the weights add up to 1.
+
 $$\rew{G^\lambda_t} = (1 - \lam) \sum_{n=1}^{T-t-1} \lam^{n-1}\,\rew{G_{t:t+n}} + \lam^{T-t-1}\,\rew{G_t}$$
 
-The weights add up to 1. The same return, one step at a time, computed backward from the end of the episode:
+The same return one step at a time, computed backward from the end of the episode. At each step: trust the estimate with weight $1 - \lam$, or keep following what happened with weight $\lam$.
 
 $$\rew{G^\lambda_t} = \rew{R_{t+1}} + \gam\,\big[(1-\lam)\,\val{V(S_{t+1})} + \lam\,\rew{G^\lambda_{t+1}}\big]$$
-
-At each step: trust the estimate with weight $1 - \lambda$, or keep following what happened with weight $\lambda$.
 
 ### Weights {#weights}
 

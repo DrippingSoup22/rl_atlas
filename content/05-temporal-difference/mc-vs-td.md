@@ -140,7 +140,13 @@ Predicting an election. One forecaster waits for the final result before updatin
 
 ### In symbols {#formula}
 
-$$\text{MC: } \val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\,\rew{G_t} - \val{V(S_t)}\,\big] \qquad \text{TD: } \val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\,\rew{R_{t+1}} + \gam\,\val{V(S_{t+1})} - \val{V(S_t)}\,\big]$$
+Monte Carlo waits for the end of the episode and moves toward the actual return.
+
+$$\val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\,\rew{G_t} - \val{V(S_t)}\,\big]$$
+
+TD moves after one step, toward the reward plus its own estimate of what follows.
+
+$$\val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\,\rew{R_{t+1}} + \gam\,\val{V(S_{t+1})} - \val{V(S_t)}\,\big]$$
 
 ### The trade-off {#tradeoff}
 

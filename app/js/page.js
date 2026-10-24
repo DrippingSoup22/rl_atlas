@@ -39,9 +39,21 @@
   // questions.
   const FULL = new Set(["idea", "formula", "knobs", "check"]);
 
+  // A section written as pairs, a line of text and then its formula, is a sheet: the words on the left, each formula
+  // on the right of its own words. A sheet takes the whole width of the card.
+  function pairs(html) {
+    const t = document.createElement("template");
+    t.innerHTML = html;
+    const kids = [...t.content.children];
+    return kids.length >= 2 && kids.length % 2 === 0 && kids.every((k, i) => k.matches(i % 2 ? ".tex-display" : "p")) ? kids : null;
+  }
+  // each pair on a row of its own, so that a rule under the row runs under both the words and their formula
+  const rows = (kids) => kids.reduce((out, k, i) => i % 2 ? out + `<div class="sheet-row">${kids[i - 1].outerHTML}${k.outerHTML}</div>` : out, "");
+
   function card(e) {
     const sources = e.sources.map((s) => `<li>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.text)}</a>` : esc(s.text)}</li>`).join("");
-    const section = (s, i) => `<section class="sec sec-${s.id}" style="--i:${i}"><h2>${s.title}</h2>${s.html}</section>`;
+    const sheet = new Map(e.card.map((s) => [s.id, pairs(s.html)]).filter(([, kids]) => kids));
+    const section = (s, i) => `<section class="sec sec-${s.id}${sheet.has(s.id) ? " sheet" : ""}" style="--i:${i}"><h2>${s.title}</h2>${sheet.has(s.id) ? rows(sheet.get(s.id)) : s.html}</section>`;
     // The other sections, between two full-width ones, flow into two balanced columns: each keeps its own height,
     // instead of being stretched to its neighbour's and left half empty. One alone takes the whole row.
     let html = "", run = [];
@@ -50,7 +62,7 @@
       run = [];
     };
     e.card.forEach((s, i) => {
-      if (FULL.has(s.id)) { flush(); html += section(s, i); }
+      if (FULL.has(s.id) || sheet.has(s.id)) { flush(); html += section(s, i); }
       else run.push(section(s, i));
     });
     flush();
@@ -59,33 +71,50 @@
     </div>`;
   }
 
-  // A card's formulas written as pairs, a line of text and then its formula, become a sheet: the words on the left,
-  // each formula on the right of its own words.
-  function sheets(root) {
-    for (const sec of root.querySelectorAll(".sec-formula")) {
-      const kids = [...sec.children].slice(1);
-      if (kids.length >= 2 && kids.length % 2 === 0 && kids.every((k, i) => k.matches(i % 2 ? ".tex-display" : "p"))) sec.classList.add("sheet");
-    }
-  }
-
   // Columns that end far apart leave a hole under the shorter one. Three or more sections between two full-width ones
   // try three columns too, and keep whichever leaves less empty space (measured, since text wraps differently).
+  // The sections of a flow go into columns, two or (on a wide card) three, so that the columns end as level as can be:
+  // every way of dealing the sections out is tried (there are few), each column keeping the sections in their order
+  // and the first section at the top left. Among the layouts that waste about the least room at the bottom, the one
+  // that reads most like the written order wins: fewest sections placed in a column before one that came earlier.
   function balance(root) {
-    const empty = (flow) => {
-      const cols = new Map();
-      for (const sec of flow.children) {
-        const r = sec.getBoundingClientRect(), key = Math.round(r.left);
-        cols.set(key, Math.max(cols.get(key) || 0, r.bottom));
-      }
-      const top = flow.getBoundingClientRect().top, ends = [...cols.values()].map((b) => b - top), width = flow.clientWidth / Math.max(1, cols.size);
-      return ends.reduce((sum, h) => sum + (Math.max(...ends) - h) * width, 0);
-    };
+    const GAP = 18;
     for (const flow of root.querySelectorAll(".card-flow")) {
-      flow.classList.remove("three");
-      if (flow.children.length < 3 || getComputedStyle(flow).columnCount === "1") continue;
-      const two = empty(flow);
-      flow.classList.add("three");
-      if (getComputedStyle(flow).columnCount !== "3" || empty(flow) >= two) flow.classList.remove("three");
+      const secs = [...flow.querySelectorAll(":scope > .sec, :scope > .flow-col > .sec")];
+      if (flow.dataset.balanced) flow.classList.add("settled"); // laid out again: no second entrance
+      flow.dataset.balanced = "1";
+      flow.classList.remove("cols");
+      flow.replaceChildren(...secs);
+      const width = flow.clientWidth;
+      if (secs.length < 2 || matchMedia("(max-width: 760px)").matches) continue;
+      let best = null;
+      for (const k of width >= 1000 && secs.length >= 3 ? [2, 3] : [2]) {
+        const colW = (width - GAP * (k - 1)) / k;
+        const h = secs.map((sec) => { sec.style.width = `${colW}px`; return sec.offsetHeight + GAP; });
+        secs.forEach((sec) => { sec.style.width = ""; });
+        const total = h.reduce((a, b) => a + b, 0), n = secs.length;
+        const found = [];
+        for (let code = 0; code < k ** (n - 1); code++) {
+          const at = [0];
+          for (let c = code, i = 1; i < n; i++, c = Math.floor(c / k)) at.push(c % k);
+          const ends = Array(k).fill(0);
+          at.forEach((col, i) => { ends[col] += h[i]; });
+          if (ends.some((e) => !e)) continue; // no empty column
+          const top = Math.max(...ends), waste = (k * top - total) * colW;
+          let swaps = 0;
+          for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (at[j] < at[i]) swaps++;
+          found.push({ k, at, waste, swaps, area: top * width });
+        }
+        if (!found.length) continue;
+        const least = Math.min(...found.map((f) => f.waste)), slack = Math.max(least, 0) + 40 * width;
+        const pick = found.filter((f) => f.waste <= slack).sort((a, b) => a.swaps - b.swaps || a.waste - b.waste)[0];
+        if (!best || pick.waste < best.waste - 40 * width || (pick.waste <= best.waste + 40 * width && pick.k < best.k)) best = pick;
+      }
+      if (!best) continue;
+      const cols = Array.from({ length: best.k }, () => Object.assign(document.createElement("div"), { className: "flow-col" }));
+      best.at.forEach((col, i) => cols[col].append(secs[i]));
+      flow.replaceChildren(...cols);
+      flow.classList.add("cols");
     }
   }
 
@@ -146,7 +175,7 @@
       body.className = `mode-body mode-${m}`;
       if (m === "story") current = RL.story(body, e);
       else if (m === "textbook") { current = RL.textbook(body, e); wire(body); }
-      else { body.innerHTML = card(e); wire(body); sheets(body); balance(body); document.fonts?.ready.then(() => { if (current === null && body.isConnected) balance(body); }); }
+      else { body.innerHTML = card(e); wire(body); balance(body); document.fonts?.ready.then(() => { if (current === null && body.isConnected) balance(body); }); }
       body.insertAdjacentHTML("beforeend", onward(m));
       if (location.hash.startsWith(`#/e/${id}`)) history.replaceState(history.state, "", `#/e/${id}/${m}`); // the state keeps the scroll
       store.set("mode", m);

@@ -219,9 +219,13 @@ A route planner that assumes you will take the fastest road at every junction, e
 
 ### The update {#update}
 
+Read it as *new guess = old guess + step size × (target − old guess)*. The target is the reward plus the value of the best next move.
+
 $$\val{Q(S,A)} \leftarrow \val{Q(S,A)} + \alp\,\big[\,\rew{R} + \gam \max_a \val{Q(S',a)} - \val{Q(S,A)}\,\big]$$
 
-Read it as *new guess = old guess + step size × (target − old guess)*. The target is $\rew{R} + \gam \max_a \val{Q(S',a)}$ and the bracket is the surprise $\del$. At a terminal tile there is nothing left to earn, so the max term is 0.
+The bracket is the surprise $\del$. At a terminal tile there is nothing left to earn, so the max term is 0.
+
+$$\del = \rew{R} + \gam \max_a \val{Q(S',a)} - \val{Q(S,A)}$$
 
 ### One change from SARSA {#change}
 

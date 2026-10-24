@@ -126,9 +126,13 @@ When a road closes, the traffic service updates the junctions next to it first, 
 
 ### The update {#update}
 
-$$\val{Q(S,A)} \leftarrow \val{Q(S,A)} + \alp\,\big[\,\rew{R} + \gam \max_a \val{Q(S',a)} - \val{Q(S,A)}\,\big]$$
+The priority of a remembered move: the size of the change its update would make. Moves are updated in order of priority, and a big change queues the moves that lead into its state.
 
-The Q-learning update on remembered moves, in order of priority $P = |\rew{R} + \gam \max_a \val{Q(S',a)} - \val{Q(S,A)}|$.
+$$P = \big|\rew{R} + \gam \max_a \val{Q(S',a)} - \val{Q(S,A)}\big|$$
+
+The update itself is Q-learning's, applied to remembered moves.
+
+$$\val{Q(S,A)} \leftarrow \val{Q(S,A)} + \alp\,\big[\,\rew{R} + \gam \max_a \val{Q(S',a)} - \val{Q(S,A)}\,\big]$$
 
 ### One change from Dyna-Q {#change}
 

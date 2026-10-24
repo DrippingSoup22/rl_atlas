@@ -114,9 +114,17 @@ A pupil and a coach. The pupil (the actor) plays; the coach (the critic) watches
 
 ### The update {#update}
 
-$$y = \rew{r} + \gam\,\val{\hat q'(s', \pol{\mu'(s')})}, \qquad \boldsymbol\theta \leftarrow \boldsymbol\theta + \alp\,\nabla_a \val{\hat q(s, a)}\big|_{a = \pol{\mu(s)}}\,\nabla_{\boldsymbol\theta}\pol{\mu(s)}$$
+The critic's target, computed with the target copies of both networks. The critic regresses on it.
 
-the critic regresses on $y$, the actor follows its slope, and both target copies move by $\tau$ toward the networks every step.
+$$y = \rew{r} + \gam\,\val{\hat q'(s', \pol{\mu'(s')})}$$
+
+The actor follows the critic's slope: how the parameters move the action, times how the action moves the value.
+
+$$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp\,\nabla_a \val{\hat q(s, a)}\big|_{a = \pol{\mu(s)}}\,\nabla_{\boldsymbol\theta}\pol{\mu(s)}$$
+
+Every step, both target copies move a fraction $\tau$ of the way toward the networks.
+
+$$\mathbf w^- \leftarrow \tau\,\mathbf w + (1 - \tau)\,\mathbf w^- \qquad \boldsymbol\theta^- \leftarrow \tau\,\boldsymbol\theta + (1 - \tau)\,\boldsymbol\theta^-$$
 
 ### One change from DQN {#change}
 

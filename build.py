@@ -69,9 +69,9 @@ FRONT = re.compile(r"\+\+\+\n(.*?)\n\+\+\+\n", re.S)
 BLOCK = re.compile(r"^::: *([\w-]+) *(.*?)\n(.*?)^:::[ \t]*$", re.M | re.S)
 # Inline math takes along an opening bracket just before it and the punctuation just after it ("$x$," "($x$)" and
 # "$n$-step"), so that a line never ends or begins between a formula and its punctuation.
-MATH = re.compile(r"\$\$(.+?)\$\$|([(“‘]?)\$([^\n$]+?)\$((?:[.,;:!?)’”…]|-\w+)*)", re.S)
+MATH = re.compile(r"\$\$(.+?)\$\$|([(“‘]?)\$([^\n$]+?)\$((?:[.,;:!?)'’”…]|-\w+)*)", re.S)
 TERM = re.compile(r"\[\[((?:a:)?[\w-]+)(?:\|([^\]]+))?\]\]")  # [[station]], [[station|label]], [[a:appendix-entry|label]]
-LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)([.,;:!?)]*)")
 DEMO = re.compile(r"\{\{([\w-]+)(?: +([\w-]+))?\}\}")
 SLOT = re.compile("\x00(\\d+)\x00")
 REF = re.compile("\x01([\\w-]+)\x01")
@@ -140,6 +140,8 @@ class Markdown:
 
     def _inline(self, text: str) -> str:
         text = html.escape(text, quote=False)
+        # an operator in prose ("old guess + step size × ...") stays on the line of the word before it
+        text = re.sub(r" ([−×=+≈≤≥→←]) ", "\u00a0\\1 ", text)
         text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
         text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
         text = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])", r"<em>\1</em>", text)
@@ -164,18 +166,20 @@ class Markdown:
         return f'<a class="term" data-term="{sid}" href="#/e/{sid}">{label}</a>'
 
     def _link(self, m: re.Match) -> str:
-        text, href = m.group(1), m.group(2)
+        text, href, after = m.group(1), m.group(2), m.group(3)
         if href.startswith("lab:"):
             preset = href[4:]
             if preset not in self.presets:
                 self.problems.error(self.where, f"lab preset '{preset}' is not in content/lab.toml")
-            return f'<a class="lab-link" href="#/lab/{preset}">{text}</a>'
+            link = f'<a class="lab-link" href="#/lab/{preset}">{text}</a>'
+            # a lab link is a pill, after which a line can break: keep the punctuation that follows it on its line
+            return f'<span class="nobr">{link}{after}</span>' if after else link
         if href.startswith(("http://", "https://")):
-            return f'<a href="{href}" target="_blank" rel="noopener">{text}</a>'
+            return f'<a href="{href}" target="_blank" rel="noopener">{text}</a>{after}'
         if href.startswith("#/"):
-            return f'<a href="{href}">{text}</a>'
+            return f'<a href="{href}">{text}</a>{after}'
         self.problems.error(self.where, f"unknown link target '{href}'")
-        return text
+        return text + after
 
     def _protect_math(self, text: str) -> tuple[str, list[str]]:
         slots: list[str] = []

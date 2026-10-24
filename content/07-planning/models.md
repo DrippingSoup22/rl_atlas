@@ -104,9 +104,13 @@ A chess player thinking before moving: the rules of the game are the model, and 
 
 ### Planning as learning {#formula}
 
+Planning: simulated experience from the model improves the values, and with them the policy.
+
 $$\text{model} \;\to\; \text{simulated experience} \;\to\; \text{values} \;\to\; \text{policy}$$
 
-Real experience can improve the model (model learning) and the values directly (direct RL); simulated experience improves the values (planning). See [[dyna-q]].
+Real experience does two jobs: it improves the model (model learning) and the values directly (direct RL), as in [[dyna-q]].
+
+$$\text{real experience} \;\to\; \text{model} \qquad \text{real experience} \;\to\; \text{values}$$
 
 ### Why it matters {#why}
 

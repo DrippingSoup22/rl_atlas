@@ -122,9 +122,9 @@ Taking a different street home now and then, just in case a new road has opened 
 
 ### The update {#update}
 
-$$\val{Q(s,a)} \leftarrow \val{Q(s,a)} + \alp\,\big[\,\rew{r} + \knob{\kappa}\sqrt{\tau} + \gam \max_{a'} \val{Q(s',a')} - \val{Q(s,a)}\,\big]$$
+In planning only, each remembered move earns a bonus that grows with $\tau$, the number of real steps since it was last tried. Real transitions keep the real reward.
 
-In planning only; real transitions use the real reward. $\tau$: real steps since $(s, a)$ was last tried.
+$$\val{Q(s,a)} \leftarrow \val{Q(s,a)} + \alp\,\big[\,\rew{r} + \knob{\kappa}\sqrt{\tau} + \gam \max_{a'} \val{Q(s',a')} - \val{Q(s,a)}\,\big]$$
 
 ### One change from Dyna-Q {#change}
 

@@ -150,9 +150,13 @@ Ordering at your favorite restaurant, except that one night in ten you roll a di
 
 ### The rule {#update}
 
-$$A \leftarrow \begin{cases} \operatorname*{arg\,max}_a \val{Q(a)} & \text{with probability } 1 - \eps \\ \text{a random arm} & \text{with probability } \eps \end{cases} \qquad \val{Q(A)} \leftarrow \val{Q(A)} + \tfrac{1}{N(A)}\big[\rew{R} - \val{Q(A)}\big]$$
+Choose the arm: with probability $1 - \eps$ the one with the best estimate, otherwise any arm at random.
 
-The estimate is the arm's average reward, updated incrementally; for changing problems use a constant $\alp$ instead of $1/N(A)$.
+$$A \leftarrow \begin{cases} \operatorname*{arg\,max}_a \val{Q(a)} & \text{with probability } 1 - \eps \\ \text{a random arm} & \text{with probability } \eps \end{cases}$$
+
+Move the pulled arm's estimate toward the reward: its running average. For changing problems, use a constant $\alp$ instead of $1/N(A)$.
+
+$$\val{Q(A)} \leftarrow \val{Q(A)} + \frac{1}{N(A)}\big[\rew{R} - \val{Q(A)}\big]$$
 
 ### One change from greedy {#change}
 

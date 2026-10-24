@@ -16,7 +16,8 @@
 
   // KaTeX's fonts load as first used: a formula fitted before one arrived is fitted again
   let fonts = 0;
-  document.fonts?.addEventListener?.("loadingdone", () => fonts++);
+  const fitters = new Set();
+  document.fonts?.addEventListener?.("loadingdone", () => { fonts++; for (const f of fitters) f(); });
 
   // A formula made of \step pieces alone, as a column: one piece a line, without the \qquad that spaced them in a row.
   // Null for any other formula, or a single piece.
@@ -57,17 +58,25 @@
     // too wide for the card: shrink it, down to 70% (55% on a phone), the pieces side by side as the steps reveal them;
     // still too wide, put them in a column, shrunk the same way. Fitted again when the card's width or the fonts change.
     const fit = () => {
+      if (!sym.isConnected) { fitters.delete(fit); return; }
       const room = sym.clientWidth, key = `${room} ${fonts}`;
       if (!room || key === fitted) return;
       fitted = key;
       draw("row");
       sym.style.fontSize = "";
       const floor = innerWidth < 640 ? 0.55 : 0.7; // a phone's card is narrow: it may shrink further
+      if (sym.scrollWidth <= room + 1) { // room to spare: it grows into it, a little (--grow in the CSS)
+        const ink = RL.math.inkWidth(sym), cap = parseFloat(getComputedStyle(sym).getPropertyValue("--grow")) || 1;
+        const scale = ink ? Math.min(cap, (room * 0.92) / ink) : 1;
+        if (scale > 1.02) sym.style.fontSize = `${(parseFloat(getComputedStyle(sym).fontSize) * scale).toFixed(2)}px`;
+        return;
+      }
       if (RL.math.shrink(sym, floor) || !shapes.column) return;
       draw("column");
       sym.style.fontSize = "";
       RL.math.shrink(sym, floor);
     };
+    fitters.add(fit);
     return (st) => {
       n = st.formula || 0;
       pieces.forEach((p) => p.classList.toggle("shown", +p.dataset.step <= n));

@@ -136,9 +136,17 @@ Judging a chess move. You can trust your evaluation of the position right after 
 
 ### The estimator {#estimator}
 
-$$\err{\hat A_t} = \sum_{k \ge 0} (\gam\lam)^k\,\del_{t+k}, \qquad \del_t = \rew{R_{t+1}} + \gam\,\val{\hat v(S_{t+1})} - \val{\hat v(S_t)}$$
+The critic's one-step TD errors.
 
-computed backward: $\err{\hat A_t} = \del_t + \gam\lam\,\err{\hat A_{t+1}}$.
+$$\del_t = \rew{R_{t+1}} + \gam\,\val{\hat v(S_{t+1})} - \val{\hat v(S_t)}$$
+
+The advantage: their sum, each later one discounted by $\gam\lam$. With λ = 0 it is one TD error; with λ = 1, the return minus the value.
+
+$$\err{\hat A_t} = \sum_{k \ge 0} (\gam\lam)^k\,\del_{t+k}$$
+
+Computed backward from the end of the batch, one step at a time.
+
+$$\err{\hat A_t} = \del_t + \gam\lam\,\err{\hat A_{t+1}}$$
 
 ### The two ends {#ends}
 

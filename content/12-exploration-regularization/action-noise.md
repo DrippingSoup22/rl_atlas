@@ -138,9 +138,17 @@ Pushing a child on a swing. Random taps, each in any direction, leave the swing 
 
 ### The colors {#colors}
 
-$$\text{power} \propto 1/f^{\knob\beta}: \quad \knob\beta = 0 \text{ white}, \quad \knob\beta = 1 \text{ pink}, \quad \knob\beta = 2 \text{ red}$$
+The color of a noise: how its power falls with the frequency $f$. White ($\knob\beta = 0$) has no memory, pink ($\knob\beta = 1$) some, red ($\knob\beta = 2$) a lot.
 
-one sequence per episode, scaled to spread 1, then $a_t = \operatorname{clip}(\pol{\mu(s_t)} + \knob\sigma\varepsilon_t)$. Ornstein–Uhlenbeck: $\varepsilon_{t+1} = 0.9985\,\varepsilon_t + \text{a small normal}$, from 0 at each episode.
+$$\text{power} \propto 1/f^{\knob\beta}$$
+
+One sequence per episode, scaled to spread 1, added to the deterministic action.
+
+$$a_t = \operatorname{clip}\big(\pol{\mu(s_t)} + \knob\sigma\varepsilon_t\big)$$
+
+Ornstein–Uhlenbeck noise: each value a fraction of the last plus a small normal, starting from 0 at each episode.
+
+$$\varepsilon_{t+1} = 0.9985\,\varepsilon_t + \text{a small normal}$$
 
 ### Pseudocode
 

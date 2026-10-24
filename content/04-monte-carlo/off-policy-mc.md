@@ -130,9 +130,21 @@ Learning the best route through a city by studying the trips of a tourist who tu
 
 ### The update {#update}
 
-$$C(S_t,A_t) \leftarrow C(S_t,A_t) + W \qquad \val{Q(S_t,A_t)} \leftarrow \val{Q(S_t,A_t)} + \frac{W}{C(S_t,A_t)}\,\big[\,\rew{G} - \val{Q(S_t,A_t)}\,\big] \qquad W \leftarrow \frac{W}{\pol{b(A_t \mid S_t)}}$$
+Walk back through an episode of the behavior policy $\pol{b}$, from its end, building the return. The weight $W$ starts at 1.
 
-Walking back through an episode of the behavior policy $\pol{b}$; stop at the first action that is not greedy.
+$$\rew{G} \leftarrow \gam\,\rew{G} + \rew{R_{t+1}}$$
+
+Add the weight to the pair's total.
+
+$$C(S_t,A_t) \leftarrow C(S_t,A_t) + W$$
+
+Move the estimate toward the return with the step size $W / C$: this keeps a weighted average of the returns.
+
+$$\val{Q(S_t,A_t)} \leftarrow \val{Q(S_t,A_t)} + \frac{W}{C(S_t,A_t)}\,\big[\,\rew{G} - \val{Q(S_t,A_t)}\,\big]$$
+
+Grow the weight for the earlier steps. Stop at the first action that is not greedy: the greedy policy would never take it, so its weight is 0.
+
+$$W \leftarrow \frac{W}{\pol{b(A_t \mid S_t)}}$$
 
 ### One change from on-policy MC control {#change}
 

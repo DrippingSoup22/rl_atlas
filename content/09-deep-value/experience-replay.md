@@ -95,9 +95,17 @@ Studying from a shuffled deck of old flashcards instead of re-reading only today
 
 ### How it works {#how}
 
-$$\mathcal D \leftarrow \mathcal D \cup \{(S_t, A_t, R_{t+1}, S_{t+1})\} \ \text{(the oldest out when full)}, \qquad (s, a, r, s')_{1..B} \sim \operatorname{Uniform}(\mathcal D),$$
+Store every transition in the memory $\mathcal D$. When it is full, the oldest goes out.
 
-then one gradient step on the batch's average of $\big(\rew{r} + \gam \max_{a'} \val{\hat q(s', a', \mathbf w^-)} - \val{\hat q(s, a, \mathbf w)}\big)^2$.
+$$\mathcal D \leftarrow \mathcal D \cup \{(S_t, A_t, R_{t+1}, S_{t+1})\}$$
+
+Draw a batch of $B$ transitions, uniformly at random.
+
+$$(s, a, r, s')_{1..B} \sim \operatorname{Uniform}(\mathcal D)$$
+
+Take one gradient step on the batch's average squared TD error.
+
+$$\frac1B \sum_{j=1}^{B} \big(\rew{r_j} + \gam \max_{a'} \val{\hat q(s'_j, a', \mathbf w^-)} - \val{\hat q(s_j, a_j, \mathbf w)}\big)^2$$
 
 ### Why it matters {#why}
 

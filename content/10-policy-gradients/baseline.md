@@ -138,9 +138,13 @@ A student who scores 70 on a hard test did well; on an easy one, badly. Grading 
 
 ### The update {#update}
 
+REINFORCE, with the return measured against a learned baseline: an action becomes more likely only if it did better than usual.
+
 $$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp^{\boldsymbol\theta}\,\gam^t\,\big(\rew{G_t} - \val{\hat v(S_t, \mathbf w)}\big)\,\nabla \ln \pol{\pi(A_t \mid S_t, \boldsymbol\theta)}$$
 
-with $\val{\hat v}$ learned from the same returns, $\mathbf w \leftarrow \mathbf w + \alp^{\mathbf w}\,\big(\rew{G_t} - \val{\hat v(S_t, \mathbf w)}\big)\,\nabla \val{\hat v(S_t, \mathbf w)}$.
+The baseline is learned from the same returns.
+
+$$\mathbf w \leftarrow \mathbf w + \alp^{\mathbf w}\,\big(\rew{G_t} - \val{\hat v(S_t, \mathbf w)}\big)\,\nabla \val{\hat v(S_t, \mathbf w)}$$
 
 ### One change from REINFORCE {#change}
 

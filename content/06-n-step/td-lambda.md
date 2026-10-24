@@ -152,9 +152,17 @@ After a pleasant surprise at the end of a walk, giving credit to the last few tu
 
 ### The update {#update}
 
-$$\val{V(s)} \leftarrow \val{V(s)} + \alp\,\del\,\htmlClass{q-trc}{z(s)} \quad \text{for every } s, \qquad \htmlClass{q-trc}{z(s)} \leftarrow \gam\lam\,\htmlClass{q-trc}{z(s)} + \mathbb{1}[s = S]$$
+One TD error per step.
 
-One TD error $\del = \rew{R} + \gam\,\val{V(S')} - \val{V(S)}$ per step, shared out by the traces. With λ = 0 it is TD(0).
+$$\del = \rew{R} + \gam\,\val{V(S')} - \val{V(S)}$$
+
+Every state moves by it, in proportion to its trace. With λ = 0 only the last state moves: TD(0).
+
+$$\val{V(s)} \leftarrow \val{V(s)} + \alp\,\del\,\htmlClass{q-trc}{z(s)} \quad \text{for every } s$$
+
+The trace of each state fades by $\gam\lam$ each step and grows by 1 when the state is visited.
+
+$$\htmlClass{q-trc}{z(s)} \leftarrow \gam\lam\,\htmlClass{q-trc}{z(s)} + \mathbb{1}[s = S]$$
 
 ### One change from n-step TD {#change}
 

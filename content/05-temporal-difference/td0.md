@@ -165,9 +165,13 @@ Revising your estimate of when you will get home, at every junction: you do not 
 
 ### The update {#update}
 
+*New guess = old guess + step size × (target − old guess)*. The target is one real reward, then the estimate of the next state.
+
 $$\val{V(S)} \leftarrow \val{V(S)} + \alp\,\big[\,\rew{R} + \gam\,\val{V(S')} - \val{V(S)}\,\big]$$
 
-*New guess = old guess + step size × (target − old guess)*, with the target $\rew{R} + \gam\,\val{V(S')}$. The bracket is the TD error $\del$. At the end of an episode, $\val{V(S')} = 0$.
+The bracket is the TD error. At the end of an episode, $\val{V(S')} = 0$.
+
+$$\del = \rew{R} + \gam\,\val{V(S')} - \val{V(S)}$$
 
 ### One change from Monte Carlo prediction {#change}
 

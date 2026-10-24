@@ -116,9 +116,13 @@ Adjusting a recipe after each dinner by how the guests liked it: a tweak to the 
 
 ### The update {#update}
 
+Move the weights along the gradient of the estimate, in proportion to its error against the return.
+
 $$\mathbf w \leftarrow \mathbf w + \alp\,\big[\,\rew{G_t} - \val{\hat v(S_t, \mathbf w)}\,\big]\,\nabla \val{\hat v(S_t, \mathbf w)}$$
 
-With linear features, $\nabla \val{\hat v(S_t, \mathbf w)} = \mathbf x(S_t)$: each weight moves in proportion to its feature.
+With linear features, the gradient is the feature vector: each weight moves in proportion to its feature.
+
+$$\nabla \val{\hat v(S_t, \mathbf w)} = \mathbf x(S_t)$$
 
 ### One change from Monte Carlo prediction {#change}
 

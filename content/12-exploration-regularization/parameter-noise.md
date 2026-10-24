@@ -114,9 +114,13 @@ To learn a dance, one dancer jitters a little at every beat; another dances a wh
 
 ### The update {#update}
 
-$$\tilde{\boldsymbol\theta} = \boldsymbol\theta + \knob\sigma\boldsymbol\xi \ \text{(per episode)}, \qquad \knob\sigma \leftarrow \begin{cases} 1.01\,\knob\sigma & d(\pol\mu, \pol{\tilde\mu}) < \knob\delta \\ \knob\sigma / 1.01 & \text{otherwise} \end{cases}$$
+Perturb the actor's weights, once per episode.
 
-with $d$ the root mean squared difference of the two actors' actions over a batch of remembered states.
+$$\tilde{\boldsymbol\theta} = \boldsymbol\theta + \knob\sigma\boldsymbol\xi$$
+
+Adapt the scale so that the perturbed actions differ from the plain ones by about $\knob\delta$. $d$ is the root mean squared difference of the two actors' actions over a batch of remembered states.
+
+$$\knob\sigma \leftarrow \begin{cases} 1.01\,\knob\sigma & d(\pol\mu, \pol{\tilde\mu}) < \knob\delta \\ \knob\sigma / 1.01 & \text{otherwise} \end{cases}$$
 
 ### Pseudocode
 

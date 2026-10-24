@@ -101,7 +101,13 @@ Aiming at a target that someone moves after every shot, against one they move on
 
 ### The loss {#formula}
 
-$$L(\mathbf w) = \mathbb E\Big[\big(\rew{r} + \gam \max_{a'} \val{\hat q(s', a', \mathbf w^-)} - \val{\hat q(s, a, \mathbf w)}\big)^2\Big], \qquad \mathbf w^- \leftarrow \mathbf w \ \text{every } C \text{ steps}$$
+The loss: the squared TD error, with the target computed by a frozen copy $\mathbf w^-$ of the weights.
+
+$$L(\mathbf w) = \mathbb E\Big[\big(\rew{r} + \gam \max_{a'} \val{\hat q(s', a', \mathbf w^-)} - \val{\hat q(s, a, \mathbf w)}\big)^2\Big]$$
+
+Every $C$ steps, the copy catches up with the network.
+
+$$\mathbf w^- \leftarrow \mathbf w$$
 
 ### Why it matters {#why}
 

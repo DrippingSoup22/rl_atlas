@@ -123,9 +123,13 @@ Your average grade after a new exam: if it is the fifth exam, the new grade pull
 
 ### In symbols {#formula}
 
+The average of the first $n$ rewards, kept up to date with one subtraction and one division.
+
 $$\val{Q_{n+1}} = \val{Q_n} + \frac{1}{n}\,\big[\,\rew{R_n} - \val{Q_n}\,\big]$$
 
-$\textit{new estimate} = \textit{old estimate} + \textit{step size} \times (\textit{target} - \textit{old estimate})$: here the target is the reward and the step size is $1/n$.
+The general shape, used by almost every method in the atlas. Here the target is the reward and the step size is $1/n$.
+
+$$\text{new} = \text{old} + \text{step size} \times \big(\text{target} - \text{old}\big)$$
 
 ### Why it matters {#why}
 

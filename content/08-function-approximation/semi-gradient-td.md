@@ -128,6 +128,8 @@ Correcting tomorrow's weather forecast with today's forecast for the day after, 
 
 ### The update {#update}
 
+The TD error times the gradient of the current estimate. *Semi*: the target depends on $\mathbf w$ too, and that dependence is ignored.
+
 $$\mathbf w \leftarrow \mathbf w + \alp\,\big[\,\rew{R} + \gam\,\val{\hat v(S', \mathbf w)} - \val{\hat v(S, \mathbf w)}\,\big]\,\nabla \val{\hat v(S, \mathbf w)}$$
 
 ### One change from gradient Monte Carlo {#change}

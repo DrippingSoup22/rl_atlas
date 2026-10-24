@@ -148,9 +148,13 @@ Rating a commute by its total travel time. You learn how good it is to be at a g
 
 ### The update {#update}
 
-$$\val{V(S_t)} \leftarrow \val{V(S_t)} + \frac{1}{N(S_t)}\,\big[\,\rew{G_t} - \val{V(S_t)}\,\big] \qquad \rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{G_{t+1}}$$
+After the episode ends, compute the returns from the last step back to the first, with $\rew{G_T} = 0$.
 
-Applied after the episode ends, from the last step back to the first, at the first visit to each state. With a constant $\alp$ instead of $1/N$: constant-α MC.
+$$\rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{G_{t+1}}$$
+
+At the first visit to each state, move its estimate toward the return. With a constant $\alp$ instead of $1/N$, this is constant-α MC.
+
+$$\val{V(S_t)} \leftarrow \val{V(S_t)} + \frac{1}{N(S_t)}\,\big[\,\rew{G_t} - \val{V(S_t)}\,\big]$$
 
 ### One change from policy evaluation {#change}
 

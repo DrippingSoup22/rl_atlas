@@ -162,9 +162,13 @@ Working out the shortest drive home from every town, by repeatedly setting each 
 
 ### The update {#update}
 
+Policy evaluation with a max in place of the policy's average, applied to every state until the values stop changing.
+
 $$\val{V(s)} \leftarrow \max_a \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\,\rew{r} + \gam\,\val{V(s')}\,\big]$$
 
-Then act greedily: $\pol{\pi(s)} = \operatorname*{arg\,max}_a$ of the same expression.
+Then act greedily: in each state, the action that achieves the max.
+
+$$\pol{\pi(s)} = \operatorname*{arg\,max}_a \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\,\rew{r} + \gam\,\val{V(s')}\,\big]$$
 
 ### One change from policy iteration {#change}
 

@@ -151,9 +151,9 @@ Learning to get a stuck car out of a ditch by rocking it: no one tells you to re
 
 ### The update {#update}
 
-$$\mathbf w \leftarrow \mathbf w + \alp\,\big[\,\rew{R} + \gam\,\val{\hat q(S', A', \mathbf w)} - \val{\hat q(S, A, \mathbf w)}\,\big]\,\nabla \val{\hat q(S, A, \mathbf w)}$$
+The SARSA error of the move times the gradient of its estimate. With one copy of the weights per action, that gradient is $\mathbf x(S)$ in $A$'s copy and 0 elsewhere.
 
-With one copy of the weights per action, $\nabla \val{\hat q(S, A, \mathbf w)}$ is $\mathbf x(S)$ in $A$'s copy and 0 elsewhere.
+$$\mathbf w \leftarrow \mathbf w + \alp\,\big[\,\rew{R} + \gam\,\val{\hat q(S', A', \mathbf w)} - \val{\hat q(S, A, \mathbf w)}\,\big]\,\nabla \val{\hat q(S, A, \mathbf w)}$$
 
 ### One change from semi-gradient TD {#change}
 

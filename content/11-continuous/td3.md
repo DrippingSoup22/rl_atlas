@@ -119,9 +119,17 @@ Two estimators bid on a job, and you take the lower bid; and before acting on an
 
 ### The update {#update}
 
-$$y = \rew{r} + \gam \min_{i = 1, 2} \val{\hat q'_i\big(s', \pol{\mu'(s')} + \epsilon\big)}, \qquad \epsilon = \operatorname{clip}(\mathcal N(0, \tilde\sigma^2), -c, c)$$
+The target: the smaller of the two target critics, at the target actor's action plus noise. Both critics regress on it.
 
-both critics regress on $y$; every $d$ steps the actor climbs $\val{\hat q_1(s, \pol{\mu(s)})}$ and the target copies move by $\tau$.
+$$y = \rew{r} + \gam \min_{i = 1, 2} \val{\hat q'_i\big(s', \pol{\mu'(s')} + \epsilon\big)}$$
+
+The noise is clipped and smooths the target, so that a narrow peak of the critic cannot be exploited.
+
+$$\epsilon = \operatorname{clip}(\mathcal N(0, \tilde\sigma^2), -c, c)$$
+
+Every $d$ steps, the actor climbs the first critic and the target copies move by $\tau$.
+
+$$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp\,\nabla_{\boldsymbol\theta}\,\val{\hat q_1(s, \pol{\mu(s)})}$$
 
 ### One change from DDPG {#change}
 

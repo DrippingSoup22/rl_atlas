@@ -133,9 +133,13 @@ Learning the best way through a new city with a rule: one turn in ten is chosen 
 
 ### The update {#update}
 
-$$\val{Q(S_t,A_t)} \leftarrow \val{Q(S_t,A_t)} + \frac{1}{N(S_t,A_t)}\,\big[\,\rew{G_t} - \val{Q(S_t,A_t)}\,\big] \qquad \text{then act ε-greedily with respect to } \val{Q}$$
+After every episode, at the first visit to each pair, move the estimate toward the return.
 
-After every episode, at the first visit to each pair.
+$$\val{Q(S_t,A_t)} \leftarrow \val{Q(S_t,A_t)} + \frac{1}{N(S_t,A_t)}\,\big[\,\rew{G_t} - \val{Q(S_t,A_t)}\,\big]$$
+
+Then act ε-greedily with respect to the new estimates.
+
+$$A \leftarrow \begin{cases} \operatorname*{arg\,max}_a \val{Q(S,a)} & \text{with probability } 1 - \eps \\ \text{a random action} & \text{with probability } \eps \end{cases}$$
 
 ### One change from Monte Carlo ES {#change}
 

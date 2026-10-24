@@ -154,9 +154,21 @@ Estimating the average height of a town's adults from a survey taken at a basket
 
 ### In symbols {#formula}
 
-$$\rho_{t:T-1} = \prod_{k=t}^{T-1} \frac{\pol{\pi(A_k \mid S_k)}}{\pol{b(A_k \mid S_k)}} \qquad \text{ordinary: } \frac{\sum \rho\,\rew{G}}{n} \qquad \text{weighted: } \frac{\sum \rho\,\rew{G}}{\sum \rho}$$
+The importance ratio: how much more likely the target policy $\pol{\pi}$ was to take the episode's actions than the behavior policy $\pol{b}$.
 
-Unbiased: $\mathbb{E}_b[\rho_{t:T-1}\,\rew{G_t} \mid S_t = s] = \val{v_\pi(s)}$, provided $\pol{b}$ covers $\pol{\pi}$.
+$$\rho_{t:T-1} = \prod_{k=t}^{T-1} \frac{\pol{\pi(A_k \mid S_k)}}{\pol{b(A_k \mid S_k)}}$$
+
+Reweighted by it, the returns of $\pol{b}$ average to the value under $\pol{\pi}$, provided $\pol{b}$ covers $\pol{\pi}$.
+
+$$\mathbb{E}_b\big[\rho_{t:T-1}\,\rew{G_t} \mid S_t = s\big] = \val{v_\pi(s)}$$
+
+Ordinary importance sampling: the average of the reweighted returns. Unbiased, but its variance can be huge.
+
+$$\val{V(s)} = \frac{\sum \rho\,\rew{G}}{n}$$
+
+Weighted importance sampling divides by the sum of the ratios instead: slightly biased, far steadier.
+
+$$\val{V(s)} = \frac{\sum \rho\,\rew{G}}{\sum \rho}$$
 
 ### Why it matters {#why}
 

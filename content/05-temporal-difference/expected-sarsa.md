@@ -130,9 +130,13 @@ Planning the next leg of a trip by averaging over every road you might take, wei
 
 ### The update {#update}
 
+The target averages over the next move instead of sampling it: each move's value, weighted by its probability under the policy. At a terminal state the sum is 0.
+
 $$\val{Q(S,A)} \leftarrow \val{Q(S,A)} + \alp\,\Big[\,\rew{R} + \gam \sum_a \pol{\pi(a \mid S')}\,\val{Q(S',a)} - \val{Q(S,A)}\,\Big]$$
 
-With ε-greedy, the weights are $1 - \eps + \eps/|\mathcal{A}|$ for the best move and $\eps/|\mathcal{A}|$ for each other. At a terminal state the sum is 0.
+With ε-greedy, the best move has this weight, and every other move $\eps/|\mathcal{A}|$.
+
+$$\pol{\pi(a^* \mid S')} = 1 - \eps + \frac{\eps}{|\mathcal{A}|}$$
 
 ### One change from SARSA {#change}
 

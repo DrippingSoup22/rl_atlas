@@ -109,7 +109,13 @@ A new driver wobbles the wheel at random every second. Another has a slightly di
 
 ### The update {#update}
 
-$$a = \pol{\mu(s)} + \sum_i z_i(s)\,\theta_{ij}, \quad \theta_{ij} \sim \mathcal N(0, \knob{\sigma_{ij}}^2) \ \text{every } n \text{ steps}, \qquad \pol{\pi(a_j \mid s)} = \mathcal N\Big(\pol{\mu_j(s)}, \sum_i \big(z_i(s)\knob{\sigma_{ij}}\big)^2\Big)$$
+The noise is a function of the state: the policy's features $z(s)$ times a random matrix, drawn again every $n$ steps.
+
+$$a = \pol{\mu(s)} + \sum_i z_i(s)\,\theta_{ij}, \quad \theta_{ij} \sim \mathcal N(0, \knob{\sigma_{ij}}^2)$$
+
+So each action dimension is normal around the mean, with a spread that depends on the state.
+
+$$\pol{\pi(a_j \mid s)} = \mathcal N\Big(\pol{\mu_j(s)}, \sum_i \big(z_i(s)\knob{\sigma_{ij}}\big)^2\Big)$$
 
 ### Pseudocode
 

@@ -145,9 +145,13 @@ Revising an essay with a rule: you may rework every paragraph as often as you li
 
 ### The update {#update}
 
-$$L^{\text{CLIP}}(\boldsymbol\theta) = \hat{\mathbb E}\Big[\min\big(r_t\,\err{\hat A_t},\ \operatorname{clip}(r_t, 1 - \epsilon, 1 + \epsilon)\,\err{\hat A_t}\big)\Big], \qquad r_t = \frac{\pol{\pi_{\boldsymbol\theta}(A_t \mid S_t)}}{\pol{\pi_{\text{old}}(A_t \mid S_t)}}$$
+The probability ratio of the action under the new policy and under the policy that collected the data.
 
-maximized by $K$ epochs of minibatch gradient ascent on each batch.
+$$r_t = \frac{\pol{\pi_{\boldsymbol\theta}(A_t \mid S_t)}}{\pol{\pi_{\text{old}}(A_t \mid S_t)}}$$
+
+The clipped objective: once the ratio leaves $[1 - \epsilon, 1 + \epsilon]$ in the helpful direction, the gain stops growing. Maximized by $K$ epochs of minibatch gradient ascent on each batch.
+
+$$L^{\text{CLIP}}(\boldsymbol\theta) = \hat{\mathbb E}\Big[\min\big(r_t\,\err{\hat A_t},\ \operatorname{clip}(r_t, 1 - \epsilon, 1 + \epsilon)\,\err{\hat A_t}\big)\Big]$$
 
 ### One change from TRPO {#change}
 

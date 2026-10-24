@@ -218,9 +218,13 @@ Learning a mountain trail while you sometimes trip. The route you end up preferr
 
 ### The update {#update}
 
+Read it as *new guess = old guess + step size × (target − old guess)*. The target uses the next move $A'$, chosen *before* the update with the same ε-greedy rule.
+
 $$\val{Q(S,A)} \leftarrow \val{Q(S,A)} + \alp\,\big[\,\rew{R} + \gam\,\val{Q(S',A')} - \val{Q(S,A)}\,\big]$$
 
-Read it as *new guess = old guess + step size × (target − old guess)*. The target $\rew{R} + \gam\,\val{Q(S',A')}$ uses the next move $A'$, chosen *before* the update with the same ε-greedy rule. The bracket is the surprise $\del$. At a terminal tile there is no next move, so that term is 0.
+The bracket is the surprise $\del$. At a terminal tile there is no next move, so that term is 0.
+
+$$\del = \rew{R} + \gam\,\val{Q(S',A')} - \val{Q(S,A)}$$
 
 ### One change from TD(0) {#change}
 

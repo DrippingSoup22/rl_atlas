@@ -166,9 +166,17 @@ Pricing a house from its size, number of rooms and distance to the station inste
 
 ### The estimate {#formula}
 
-$$\val{\hat v(s, \mathbf w)} = \mathbf w^\top \mathbf x(s), \qquad \nabla \val{\hat v(s, \mathbf w)} = \mathbf x(s)$$
+A linear estimate: the weighted sum of the state's features.
 
-An update moves the visited state by $\alp\,\delta\,\lVert\mathbf x\rVert^2$ and any other state by $\alp\,\delta\,\mathbf x(s)^\top \mathbf x(S)$.
+$$\val{\hat v(s, \mathbf w)} = \mathbf w^\top \mathbf x(s)$$
+
+Its gradient is the feature vector itself.
+
+$$\nabla \val{\hat v(s, \mathbf w)} = \mathbf x(s)$$
+
+So an update at $S$ moves each state by the overlap of its features with those of $S$. The visited state moves by $\alp\,\del\,\lVert\mathbf x(S)\rVert^2$.
+
+$$\Delta \val{\hat v(s)} = \alp\,\del\;\mathbf x(s)^\top \mathbf x(S)$$
 
 ### Why it matters {#why}
 

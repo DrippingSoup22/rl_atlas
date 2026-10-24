@@ -140,9 +140,13 @@ A traveler who takes the best road when one is clearly best, but when several ar
 
 ### The update {#update}
 
-$$y = \rew{r} + \gam\Big(\min_i \val{\hat q'_i(s', a')} - \alpha \ln \pol{\pi(a' \mid s')}\Big), \quad a' \sim \pol\pi; \qquad \boldsymbol\theta \leftarrow \boldsymbol\theta - \alp\,\nabla_{\boldsymbol\theta}\Big(\alpha \ln \pol{\pi(a_{\boldsymbol\theta} \mid s)} - \min_i \val{\hat q_i(s, a_{\boldsymbol\theta})}\Big)$$
+The critics' soft target: the smaller of the two target critics plus an entropy bonus, at an action $a'$ drawn from the current policy.
 
-the critics regress on soft targets; the actor's sampled action $a_{\boldsymbol\theta} = a_{\max}\tanh(\mu + \sigma\varepsilon)$ is differentiated through; $\ln\alpha$ moves toward the target entropy.
+$$y = \rew{r} + \gam\Big(\min_i \val{\hat q'_i(s', a')} - \alpha \ln \pol{\pi(a' \mid s')}\Big), \quad a' \sim \pol\pi$$
+
+The actor differentiates through its sampled action $a_{\boldsymbol\theta} = a_{\max}\tanh(\mu + \sigma\varepsilon)$. The temperature $\ln\alpha$ moves toward the target entropy.
+
+$$\boldsymbol\theta \leftarrow \boldsymbol\theta - \alp\,\nabla_{\boldsymbol\theta}\Big(\alpha \ln \pol{\pi(a_{\boldsymbol\theta} \mid s)} - \min_i \val{\hat q_i(s, a_{\boldsymbol\theta})}\Big)$$
 
 ### One change from TD3 {#change}
 

@@ -93,9 +93,17 @@ Forecasting tomorrow's weather partly from the forecast for the day after. It ca
 
 ### In symbols {#formula}
 
-$$\text{bootstraps: } \rew{R_{t+1}} + \gam\,\val{V(S_{t+1})} \qquad \text{does not: } \rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{R_{t+2}} + \cdots + \gam^{T-t-1}\,\rew{R_T}$$
+A target that bootstraps: one real reward, then the current estimate of what follows.
 
-In between: $\rew{R_{t+1}} + \cdots + \gam^{n-1}\rew{R_{t+n}} + \gam^n\,\val{V(S_{t+n})}$, the $n$-step target.
+$$\rew{R_{t+1}} + \gam\,\val{V(S_{t+1})}$$
+
+A target that does not: every reward until the end of the episode.
+
+$$\rew{G_t} = \rew{R_{t+1}} + \gam\,\rew{R_{t+2}} + \cdots + \gam^{T-t-1}\,\rew{R_T}$$
+
+In between, the $n$-step target: $n$ real rewards, then the estimate.
+
+$$\rew{G_{t:t+n}} = \rew{R_{t+1}} + \cdots + \gam^{n-1}\rew{R_{t+n}} + \gam^n\,\val{V(S_{t+n})}$$
 
 ### The trade-off {#tradeoff}
 

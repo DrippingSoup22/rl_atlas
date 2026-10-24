@@ -157,9 +157,13 @@ Judging a chess move by playing $n$ more moves and then evaluating the position,
 
 ### The update {#update}
 
-$$\val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\,\rew{G_{t:t+n}} - \val{V(S_t)}\,\big], \qquad \rew{G_{t:t+n}} = \rew{R_{t+1}} + \gam\rew{R_{t+2}} + \cdots + \gam^{n-1}\rew{R_{t+n}} + \gam^n\,\val{V(S_{t+n})}$$
+The $n$-step return: $n$ real rewards, then the estimate of the state reached. If the episode ends first, it is the plain return.
 
-*New guess = old guess + step size × (target − old guess)*, with the $n$-step return $\rew{G_{t:t+n}}$ as the target. It is made at time $t + n$. If the episode ends first, the target is the plain return.
+$$\rew{G_{t:t+n}} = \rew{R_{t+1}} + \gam\rew{R_{t+2}} + \cdots + \gam^{n-1}\rew{R_{t+n}} + \gam^n\,\val{V(S_{t+n})}$$
+
+*New guess = old guess + step size × (target − old guess)*, made at time $t + n$, once the return is known.
+
+$$\val{V(S_t)} \leftarrow \val{V(S_t)} + \alp\,\big[\,\rew{G_{t:t+n}} - \val{V(S_t)}\,\big]$$
 
 ### One change from TD(0) {#change}
 

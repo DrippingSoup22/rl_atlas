@@ -166,13 +166,13 @@ To find out whether to serve more often to the left, you do not need a theory of
 
 ### The theorem {#statement}
 
+The gradient of the policy's performance: each action's value times how the parameters change its probability, averaged over the states with the distribution $\mu$.
+
 $$\nabla J(\boldsymbol\theta) \propto \sum_s \mu(s) \sum_a \val{q_\pi(s, a)}\,\nabla \pol{\pi(a \mid s, \boldsymbol\theta)}$$
 
-or, as an average over the policy's own experience,
+The same as an average over the policy's own experience. Following the policy samples $\mu$, and the gradient of $\mu$ never appears.
 
-$$\nabla J(\boldsymbol\theta) \propto \mathbb E_\pi\big[\val{q_\pi(S, A)}\,\nabla \ln \pol{\pi(A \mid S, \boldsymbol\theta)}\big].$$
-
-The state distribution $\mu$ is sampled by following the policy; its gradient never appears.
+$$\nabla J(\boldsymbol\theta) \propto \mathbb E_\pi\big[\val{q_\pi(S, A)}\,\nabla \ln \pol{\pi(A \mid S, \boldsymbol\theta)}\big]$$
 
 ### One template {#template}
 

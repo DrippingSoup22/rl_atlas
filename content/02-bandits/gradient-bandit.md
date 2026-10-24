@@ -153,9 +153,17 @@ A coach adjusting playing time. A player who does better than the team's usual l
 
 ### The update {#update}
 
-$$\pol{\pi(a)} = \frac{e^{\pol{H(a)}}}{\sum_b e^{\pol{H(b)}}} \qquad \pol{H(a)} \leftarrow \pol{H(a)} + \alp\,\big(\rew{R} - \rew{\bar{R}}\big)\big(\mathbb{1}_{a = A} - \pol{\pi(a)}\big) \ \text{ for every arm } a$$
+Each arm has a preference $\pol{H(a)}$. A softmax turns the preferences into probabilities.
 
-$\rew{\bar{R}}$ is the average of the rewards so far: the baseline. The factor $\mathbb{1}_{a = A} - \pol{\pi(a)}$ is $\partial \ln \pol{\pi(A)} / \partial \pol{H(a)}$.
+$$\pol{\pi(a)} = \frac{e^{\pol{H(a)}}}{\sum_b e^{\pol{H(b)}}}$$
+
+After each reward, every arm's preference moves. If the reward beats the baseline $\rew{\bar{R}}$, the average of the rewards so far, the pulled arm goes up and the others go down.
+
+$$\pol{H(a)} \leftarrow \pol{H(a)} + \alp\,\big(\rew{R} - \rew{\bar{R}}\big)\big(\mathbb{1}_{a = A} - \pol{\pi(a)}\big)$$
+
+The last factor is the slope of the pulled arm's log-probability with respect to each preference.
+
+$$\frac{\partial \ln \pol{\pi(A)}}{\partial \pol{H(a)}} = \mathbb{1}_{a = A} - \pol{\pi(a)}$$
 
 ### One change from [[epsilon-greedy]] {#change}
 

@@ -158,9 +158,13 @@ Working out house prices street by street from the prices of neighboring streets
 
 ### The update {#update}
 
+In one state: the average, over the policy's actions and the world's responses, of the reward plus the discounted value of the next state.
+
 $$\val{V(s)} \leftarrow \sum_a \pol{\pi(a \mid s)} \sum_{s', r} p(s', \rew{r} \mid s, a)\,\big[\,\rew{r} + \gam\,\val{V(s')}\,\big]$$
 
-Applied to every state, sweep after sweep, until the largest change $\Delta$ is below $\theta$.
+Repeat for every state, sweep after sweep, until the largest change of a sweep is below a small threshold.
+
+$$\Delta = \max_s \big|\val{V_{\text{new}}(s)} - \val{V_{\text{old}}(s)}\big| < \theta$$
 
 ### One change from the Bellman equation {#change}
 

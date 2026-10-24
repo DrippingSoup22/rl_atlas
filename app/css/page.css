@@ -55,7 +55,7 @@
 .f-sym:not(.on) [data-step] { opacity: 1; }
 .f-sym [data-step] { opacity: 0.1; transition: opacity 0.5s calc(var(--k, 0) * 120ms); }
 .f-sym [data-step].shown { opacity: 1; }
-.f-sym { font-size: 1.2em; }
+.f-sym { font-size: 1.2em; --grow: 1.25; }
 .f-num { font-size: 1.05em; }
 @media (max-width: 900px) { .f-sym { font-size: 1em; } .f-num { font-size: 0.95em; } }
 .scene-view { min-height: 120px; }
@@ -438,11 +438,11 @@ a.ref:hover { text-decoration-color: var(--ink); }
 
 /* ---- card ---- */
 .card-grid { display: flex; flex-direction: column; gap: 18px; margin-top: 14px; }
-/* Sections between two full-width ones, in two balanced columns (app/js/page.js); the negative margin takes back the
-   last section's own. */
-.card-flow { columns: 2; column-gap: 18px; margin-bottom: -18px; }
-.card-flow > .sec { break-inside: avoid; margin-bottom: 18px; }
-@media (min-width: 1000px) { .card-flow.three { columns: 3; } }
+/* Sections between two full-width ones: one under the other until app/js/page.js deals them into level columns. */
+.card-flow { display: flex; flex-direction: column; gap: 18px; }
+.card-flow.cols { flex-direction: row; align-items: flex-start; }
+.flow-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.card-flow.settled .sec { animation: none; }
 .sec { min-width: 0; padding: 20px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); animation: rise-in 0.5s var(--ease) calc(var(--i) * 60ms) both; }
 .sec h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
 .sec h2 .term { text-transform: none; letter-spacing: 0.02em; } /* a station's name as written: uppercase would turn ε into Ε */
@@ -456,15 +456,17 @@ a.ref:hover { text-decoration-color: var(--ink); }
 /* A numbered formula too wide to keep clear of its number: the number goes under it, at the right (app/js/math.js). */
 .tex-display.tag-below .katex-display > .katex > .katex-html { display: block; }
 .tex-display.tag-below .katex-display > .katex > .katex-html > .katex-tag { position: static; display: block; text-align: right; margin-top: 4px; }
+.tex-display.tag-below .katex-tag > .katex-strut { display: none; } /* it is as tall as the formula: the number would sit far below it */
+/* formulas on a card may grow into the room they have (math.js: grow) */
+.card-grid .tex-display { --grow: 1.4; }
 .sec-update .tex-display, .sec-formula .tex-display { font-size: 1.1em; }
-.sec-formula.sheet > .tex-display { font-size: 1.2em; }
-/* A formula sheet (app/js/page.js): each line of words on the left, its formula on the right. */
-.sec-formula.sheet { display: grid; grid-template-columns: minmax(180px, 32%) minmax(0, 1fr); column-gap: 28px; row-gap: 6px; align-items: center; }
-.sec-formula.sheet h2 { grid-column: 1 / -1; }
-.sec-formula.sheet > p { margin: 0; color: var(--ink-2); }
-.sec-formula.sheet > .tex-display { padding: 6px 0; border-bottom: 1px solid var(--line); }
-.sec-formula.sheet > .tex-display:last-child { border-bottom: 0; }
-.sec-formula.sheet .katex-display > .katex { text-align: left; }
+/* A formula sheet (app/js/page.js): rows of words on the left and their formula on the right. */
+.sheet-row { display: grid; grid-template-columns: minmax(180px, 32%) minmax(0, 1fr); column-gap: 28px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.sheet-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.sheet-row > p { margin: 0; color: var(--ink-2); }
+.sheet-row > .tex-display { font-size: 1.2em; --grow: 1.25; }
+.sheet-row .katex-display { margin: 0.4em 0; }
+.sheet-row .katex-display > .katex { text-align: left; }
 .analogy { margin: 12px 0 0; padding: 12px 16px; background: var(--surface-2); border-radius: 14px; color: var(--ink-2); }
 .analogy::before { content: "Analogy"; display: block; margin-bottom: 2px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .analogy p { margin: 0; }
@@ -580,10 +582,10 @@ a.ref:hover { text-decoration-color: var(--ink); }
 }
 @media (max-width: 760px) {
   .entry { padding: 12px 16px 60px; }
-  .card-flow, .appx-groups { columns: 1; }
-  .sec-formula.sheet { grid-template-columns: minmax(0, 1fr); }
-  .sec-formula.sheet > p { margin-top: 8px; }
-  .sec-formula.sheet > .tex-display { font-size: 1.05em; }
+  .appx-groups { columns: 1; }
+  .card-flow.cols { flex-direction: column; }
+  .sheet-row { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
+  .sheet-row > .tex-display { font-size: 1.05em; }
   .tb-paper { padding: 22px 18px 30px; font-size: 17.5px; }
   .tb-sec h2 { gap: 12px; font-size: 21px; }
   .tb-definition, .tb-theorem, .tb-lemma, .tb-example { padding: 12px 14px; }

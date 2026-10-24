@@ -128,9 +128,13 @@ Learning a card game by dealing yourself random hands and forcing a random first
 
 ### The update {#update}
 
-$$\val{Q(S_t, A_t)} \leftarrow \val{Q(S_t, A_t)} + \frac{1}{N(S_t, A_t)}\,\big[\,\rew{G_t} - \val{Q(S_t, A_t)}\,\big] \qquad \pol{\pi(S_t)} \leftarrow \operatorname*{arg\,max}_a \val{Q(S_t, a)}$$
+Each episode starts from a random state and action. After it, at the first visit to each pair, move the estimate toward the return.
 
-After every episode, at the first visit to each pair; each episode starts with a random state and action.
+$$\val{Q(S_t, A_t)} \leftarrow \val{Q(S_t, A_t)} + \frac{1}{N(S_t, A_t)}\,\big[\,\rew{G_t} - \val{Q(S_t, A_t)}\,\big]$$
+
+Then make the policy greedy in that state.
+
+$$\pol{\pi(S_t)} \leftarrow \operatorname*{arg\,max}_a \val{Q(S_t, a)}$$
 
 ### One change from Monte Carlo prediction {#change}
 

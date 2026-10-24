@@ -106,7 +106,17 @@ A company and its accountant. Management changes the strategy based on the lates
 
 ### In symbols {#formula}
 
-$$\text{evaluation: } \val{V} \to \val{v_\pi} \qquad \text{improvement: } \pol{\pi} \to \operatorname{greedy}(\val{V}) \qquad \text{fixed point: } \val{V} = \val{v_*},\ \pol{\pi} = \pol{\pi_*}$$
+Evaluation: make the values consistent with the current policy.
+
+$$\val{V} \to \val{v_\pi}$$
+
+Improvement: make the policy greedy with respect to the current values.
+
+$$\pol{\pi} \to \operatorname{greedy}(\val{V})$$
+
+The two stop changing each other only when both are optimal.
+
+$$\val{V} = \val{v_*} \qquad \pol{\pi} = \pol{\pi_*}$$
 
 ### The family {#family}
 

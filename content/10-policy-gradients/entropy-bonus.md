@@ -125,7 +125,13 @@ A new city's restaurants. Eating every night at the first good one means never f
 
 ### The bonus {#bonus}
 
-$$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp \sum \Big[\err{\hat A_t}\,\nabla \ln \pol{\pi(A_t \mid S_t, \boldsymbol\theta)} + \beta\,\nabla \pol{H\big(\pi(\cdot \mid S_t, \boldsymbol\theta)\big)}\Big], \qquad \pol{H} = -\sum_a \pol{\pi(a \mid s)} \ln \pol{\pi(a \mid s)}$$
+The policy's entropy: high when its probabilities are spread out, zero when it always takes the same action.
+
+$$\pol{H} = -\sum_a \pol{\pi(a \mid s)} \ln \pol{\pi(a \mid s)}$$
+
+Added to the objective with a weight $\beta$, it keeps the policy from committing too early.
+
+$$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp \sum \Big[\err{\hat A_t}\,\nabla \ln \pol{\pi(A_t \mid S_t, \boldsymbol\theta)} + \beta\,\nabla \pol{H\big(\pi(\cdot \mid S_t, \boldsymbol\theta)\big)}\Big]$$
 
 ### Why it matters {#why}
 

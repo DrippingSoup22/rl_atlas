@@ -132,9 +132,9 @@ After a day in a new city, lying in bed and going over the streets you walked: e
 
 ### The update {#update}
 
-$$\val{Q(S,A)} \leftarrow \val{Q(S,A)} + \alp\,\big[\,\rew{R} + \gam \max_a \val{Q(S',a)} - \val{Q(S,A)}\,\big]$$
-
 The Q-learning update, made once for the real transition and $n$ more times for transitions $(S, A, \rew{R}, S')$ replayed from the model.
+
+$$\val{Q(S,A)} \leftarrow \val{Q(S,A)} + \alp\,\big[\,\rew{R} + \gam \max_a \val{Q(S',a)} - \val{Q(S,A)}\,\big]$$
 
 ### One change from Q-learning {#change}
 

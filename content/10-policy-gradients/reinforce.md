@@ -134,9 +134,9 @@ A coach who watches the whole match before saying anything, then reviews every d
 
 ### The update {#update}
 
-$$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp\,\gam^t\,\rew{G_t}\,\nabla \ln \pol{\pi(A_t \mid S_t, \boldsymbol\theta)}$$
+After the episode ends, for every step $t$: make the action taken more likely, in proportion to the return that followed it.
 
-for every step $t$ of the episode, after it ends.
+$$\boldsymbol\theta \leftarrow \boldsymbol\theta + \alp\,\gam^t\,\rew{G_t}\,\nabla \ln \pol{\pi(A_t \mid S_t, \boldsymbol\theta)}$$
 
 ### One change from the gradient bandit {#change}
 

@@ -131,9 +131,9 @@ Two hikers roped together, each trying to stay a step behind the other: if only 
 
 ### The chase in one line {#formula}
 
-$$w \leftarrow \big(1 + \alp\,(2\gamma - 1)\big)\,w$$
+Two states worth $w$ and $2w$, with the first updated toward the second. Each update multiplies the weight by the same factor, and for $\gamma > 0.5$ that factor is above 1: $w$ grows every step.
 
-Two states worth $w$ and $2w$, updating only the first toward the second: for $\gamma > 0.5$, $w$ grows every step.
+$$w \leftarrow \big(1 + \alp\,(2\gamma - 1)\big)\,w$$
 
 ### Why it matters {#why}
 

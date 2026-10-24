@@ -57,7 +57,7 @@
 
   // A chain of relations, a = b = c, broken into lines that line up at the signs. Only top-level signs count (none
   // inside braces, brackets or environments); with fewer than two there is nothing to break, and null comes back.
-  const RELATIONS = ["\\Longleftrightarrow", "\\Longrightarrow", "\\iff", "\\implies", "\\approx", "\\le", "\\ge", "="];
+  const RELATIONS = ["\\Longleftrightarrow", "\\Longrightarrow", "\\iff", "\\implies", "\\leftarrow", "\\approx", "\\le", "\\ge", "="];
   function chain(src) {
     const tags = src.match(/\\tag\{[^}]*\}/g) || [], body = src.replace(/\\tag\{[^}]*\}/g, "");
     const cuts = [];
@@ -82,6 +82,94 @@
     // the spacing commands that sat around a sign (\quad, \qquad) would only push the next line out
     const clean = (t) => t.replace(/^(\\q?quad\s*)+|(\s*\\q?quad)+$/g, "");
     return `\\begin{aligned} ${clean(lead)} &${lines.map(clean).join(" \\\\ &")} \\end{aligned} ${tags.join(" ")}`;
+  }
+
+  // A long formula broken at plus and minus signs after its first relation, into n lines that line up at that
+  // relation, the later lines indented: the way a long equation is set on a narrow page. Signs inside braces,
+  // environments or \left...\right stay; a sign inside a plain or \big bracket may break, as the brackets need not
+  // close on the same line. The cuts nearest to even shares of the right side come first; null if there are none.
+  const WRAP_RELATIONS = ["\\leftarrow", "\\approx", "\\propto", "\\le", "\\ge", "\\to", "="];
+  function wraps(src, n) {
+    if (/\\begin\{/.test(src)) return [];
+    let depth = 0, rel = -1, after = 0;
+    const cuts = [];
+    for (let i = 0; i < src.length; i++) {
+      const c = src[i];
+      if (c === "\\") {
+        const word = /^\\[a-zA-Z]+/.exec(src.slice(i))?.[0] || src.slice(i, i + 2);
+        if (word === "\\left") depth++;
+        else if (word === "\\right") depth--;
+        else if (!depth && rel < 0 && WRAP_RELATIONS.includes(word)) { rel = i; after = i + word.length; }
+        i += word.length - 1;
+      } else if (c === "{") depth++;
+      else if (c === "}") depth--;
+      else if (!depth && rel < 0 && c === "=") { rel = i; after = i + 1; }
+      else if (!depth && rel >= 0 && (c === "+" || c === "-")) {
+        // a sign between two terms, not a leading minus: what comes before it ends a term
+        const before = src.slice(after, i).replace(/\\[,;:! ]|\\q?quad/g, "").trimEnd();
+        if (/[\w)\]}'|]$/.test(before)) cuts.push(i);
+      }
+    }
+    if (rel < 0) return [];
+    const lhs = src.slice(0, rel).trim(), sign = src.slice(rel, after), len = src.length - after;
+    const layout = (at) => {
+      const pieces = [src.slice(after, at[0]), ...at.map((c, k) => src.slice(c, at[k + 1] ?? src.length))].map((t) => t.trim());
+      return `\\begin{aligned} ${lhs} &${sign} ${pieces[0]} \\\\ ${pieces.slice(1).map((p) => `&\\quad {}${p}`).join(" \\\\ ")} \\end{aligned}`;
+    };
+    // or the left side alone on the first line, and the rest under it (itself in two lines if at is given)
+    const alone = (at) => {
+      const rest = at ? `${src.slice(after, at).trim()} \\\\ &\\qquad {}${src.slice(at).trim()}` : src.slice(after).trim();
+      return lhs ? `\\begin{aligned} &${lhs} \\\\ &\\quad ${sign} ${rest} \\end{aligned}` : null;
+    };
+    const middle = (k, m) => after + (len * k) / m;
+    const near = (goal, from = -1) => cuts.filter((c) => c > from).sort((a, b) => Math.abs(a - goal) - Math.abs(b - goal));
+    if (n === 2) return [...near(middle(1, 2)).slice(0, 4).map((c) => layout([c])), alone(null)].filter(Boolean);
+    const at = [];
+    for (let k = 1; k < n; k++) {
+      const best = near(middle(k, n), at[at.length - 1])[0];
+      if (best === undefined) break;
+      at.push(best);
+    }
+    return [at.length === n - 1 && layout(at), cuts.length && alone(near(middle(1, 2))[0])].filter(Boolean);
+  }
+
+  // The rows of an aligned or gathered formula: its top-level \\ (none inside braces or inner environments).
+  function rowsOf(body) {
+    const out = [];
+    let depth = 0, from = 0;
+    for (let i = 0; i < body.length; i++) {
+      const c = body[i];
+      if (c === "\\") {
+        if (body.startsWith("\\begin{", i)) depth++;
+        else if (body.startsWith("\\end{", i)) depth--;
+        else if (!depth && body[i + 1] === "\\") { out.push(body.slice(from, i)); from = i + 2; }
+        i++;
+      } else if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    out.push(body.slice(from));
+    return out.map((t) => t.trim().replace(/^\[[^\]]*\]\s*/, "")).filter(Boolean);
+  }
+  const inner = (t) => t.replace(/^\s*\\begin\{aligned\}/, "").replace(/\\end\{aligned\}[\s\S]*$/, "");
+  // roughly how wide a row is: its source without the commands that print nothing
+  const visible = (t) => t.replace(/\\(?:val|rew|pol|err|knob|mathbf|boldsymbol|text|mathrm|operatorname\*?|big|Big|bigg|Bigg|left|right|htmlClass\{[^}]*\}|htmlData\{[^}]*\})/g, "")
+    .replace(/\\[a-zA-Z]+/g, "x").replace(/[{}\s&]/g, "").length;
+  // An aligned or gathered formula (a chain is one) with rows still too wide: in an aligned one, each row breaks at
+  // its own relations first; then the longest row, and then every long row, breaks at a sign.
+  function realign(src) {
+    const m = /^\s*\\begin\{(aligned|gathered)\}([\s\S]*)\\end\{\1\}\s*$/.exec(src);
+    if (!m) return [];
+    const [, env, body] = m, plain = (r) => r.replace("&", "");
+    let rows = rowsOf(body);
+    if (env === "aligned") rows = rows.flatMap((r) => { const c = chain(plain(r)); return c ? rowsOf(inner(c)) : [r]; });
+    const wrap = (r) => { const w = wraps(plain(r), 2)[0]; return !w ? [r] : env === "aligned" ? rowsOf(inner(w)) : [w]; };
+    const build = (rs) => `\\begin{${env}} ${rs.join(" \\\\ ")} \\end{${env}}`;
+    const longest = Math.max(...rows.map(visible)), first = rows.findIndex((r) => visible(r) === longest);
+    const out = [build(rows), build(rows.flatMap((r, i) => (i === first ? wrap(r) : [r]))), build(rows.flatMap((r) => (visible(r) > 0.6 * longest ? wrap(r) : [r])))];
+    // last, a long left side alone on the first line, every relation under it
+    const amp = rows[0].indexOf("&"), lead = env === "aligned" && amp > 0 ? rows[0].slice(0, amp).trim() : "";
+    if (lead) out.push(build([`&${lead}`, ...rows.map((r) => `&\\quad ${r.slice(r.indexOf("&") + 1).trim()}`)]));
+    return [...new Set(out)].filter((l) => l.replace(/\s+/g, "") !== src.replace(/\s+/g, ""));
   }
 
   // Shrink a formula wider than its box, down to a floor (a share of its size). Its width does not quite follow the
@@ -121,8 +209,48 @@
     el.classList.add("tag-below");
   }
 
+  // How wide a rendered formula really is (KaTeX's box always takes the whole line): from its first piece to its last,
+  // plus, for a numbered one, the number and its gap on both sides, since the formula is centered and the number is not.
+  function inkWidth(el) {
+    const html = el.querySelector(".katex-html");
+    if (!html) return 0;
+    let left = Infinity, right = -Infinity, tag = 0;
+    for (const part of html.children) {
+      const r = part.getBoundingClientRect();
+      if (part.classList.contains("katex-tag")) tag = r.width;
+      else { left = Math.min(left, r.left); right = Math.max(right, r.right); }
+    }
+    return right > left ? right - left + (tag ? 2 * (tag + 24) : 0) : 0;
+  }
+
+  // A formula with room to spare grows into it, up to the factor its place allows (--grow in the CSS: more on a card or
+  // beside a story's picture than in running text) and never past 92% of its box. The formulas of one card section
+  // share one size, the largest that suits them all; a section where one of them had to shrink keeps them all as set.
+  function grow(root) {
+    const groups = new Map();
+    for (const el of root.querySelectorAll(".tex-display[data-done]")) {
+      if (!el.clientWidth) continue;
+      const cap = parseFloat(getComputedStyle(el).getPropertyValue("--grow")) || 1;
+      if (cap <= 1) continue;
+      const key = el.closest(".sec") || el;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push([el, cap]);
+    }
+    for (const members of groups.values()) {
+      if (members.some(([el]) => el.dataset.stacked || el.style.fontSize || el.classList.contains("tag-below"))) continue;
+      let scale = Infinity;
+      for (const [el, cap] of members) {
+        const ink = inkWidth(el);
+        scale = Math.min(scale, cap, ink ? (el.clientWidth * 0.92) / ink : cap);
+      }
+      if (!(scale > 1.02)) continue;
+      for (const [el] of members) el.style.fontSize = `${(parseFloat(getComputedStyle(el).fontSize) * scale).toFixed(2)}px`;
+    }
+  }
+
   // A display formula a little wider than its column shrinks to fit, down to 80% of its size (65% on a phone). One
   // written as parts side by side stacks them instead when even that is too wide; anything still too wide scrolls.
+  // A formula with room to spare may grow (grow, above).
   function fit(root) {
     for (const el of root.querySelectorAll(".tex-display[data-done]")) {
       el.style.fontSize = "";
@@ -137,9 +265,19 @@
       // breaks at its signs, before anything is left to scroll. The number (\\tag) stays outside the stack.
       const tags = (src.match(/\\tag\{[^}]*\}/g) || []).join(" "), bare = src.replace(/\\tag\{[^}]*\}/g, ""), split = parts(bare);
       const chained = split.map((p) => chain(p) || p);
-      for (const layout of [split.length > 1 && `\\begin{gathered} ${split.join(" \\\\[3pt] ")} \\end{gathered} ${tags}`,
+      const layouts = [split.length > 1 && `\\begin{gathered} ${split.join(" \\\\[3pt] ")} \\end{gathered} ${tags}`,
         split.length > 1 && chained.some((p, i) => p !== split[i]) && `\\begin{gathered} ${chained.join(" \\\\[6pt] ")} \\end{gathered} ${tags}`,
-        split.length < 2 && chained[0] !== split[0] && `${chained[0]} ${tags}`]) {
+        split.length < 2 && chained[0] !== split[0] && `${chained[0]} ${tags}`];
+      // still too wide: rows of a chain or of an aligned formula break further, and a long side breaks at its plus and
+      // minus signs, into two lines and then three
+      if (split.length < 2) {
+        layouts.push(...realign(chained[0]).map((l) => `${l} ${tags}`));
+        if (chained[0] === split[0]) for (const n of [2, 3]) layouts.push(...wraps(split[0], n).map((w) => `${w} ${tags}`));
+      } else for (const n of [2, 3]) {
+        const each = split.map((p) => (wraps(p, n)[0] || p));
+        if (each.some((p, i) => p !== split[i])) layouts.push(`\\begin{gathered} ${each.join(" \\\\[6pt] ")} \\end{gathered} ${tags}`);
+      }
+      for (const layout of layouts) {
         if (!layout) continue;
         el.style.fontSize = "";
         el.innerHTML = tex(layout, true);
@@ -148,6 +286,7 @@
       }
       if (el.dataset.stacked) clearTag(el);
     }
+    grow(root);
   }
   // Fit again when the column changes width, and when a KaTeX font arrives (they load as first used).
   let resizing = 0;
@@ -155,5 +294,5 @@
   addEventListener("resize", refit);
   document.fonts?.addEventListener?.("loadingdone", refit);
 
-  RL.math = { tex, render, fit, shrink };
+  RL.math = { tex, render, fit, shrink, inkWidth };
 })(globalThis.RL = globalThis.RL || {});
