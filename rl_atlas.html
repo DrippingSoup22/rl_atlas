@@ -16590,24 +16590,40 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
     // before the formula opens. On a phone, where the stage sits above the text, it takes at most 60% of the window's
     // height, so that the text keeps the rest.
     let fitting = 0;
-    // the picture: the largest drawing on the stage, other than the formula and the chart
-    const picture = () => [...card.querySelectorAll("svg, canvas")].filter((e) => !e.closest(".scene-formula, .scene-chart, .katex"))
-      .map((e) => [e, e.getBoundingClientRect()]).sort((a, b) => b[1].width * b[1].height - a[1].width * a[1].height)[0];
+    // The drawings on the stage, other than the formula and the chart, largest first, with their twins (the two maps
+    // of a blackjack table shrink together). The largest shrinks first; if that does not make the stage lower (a
+    // drawing beside a taller one), it keeps its size and the next one shrinks.
+    const drawings = () => {
+      const all = [...card.querySelectorAll("svg, canvas")].filter((e) => !e.closest(".scene-formula, .scene-chart, .katex"))
+        .map((e) => [e, e.getBoundingClientRect()]).filter(([, b]) => b.width && b.height).sort((a, b) => b[1].width * b[1].height - a[1].width * a[1].height);
+      const groups = [];
+      for (const d of all) {
+        const twin = groups.find((g) => Math.abs(g[0][1].width - d[1].width) <= 2 && Math.abs(g[0][1].height - d[1].height) <= 2);
+        if (twin) twin.push(d); else groups.push([d]);
+      }
+      return groups;
+    };
     // The first step starts lower when the stage is tall, so that by the time it is read, a third of the way down the
     // window, the stage has reached its place under the bar and shows whole.
     const column = host.querySelector(".story-steps");
     function keepInView() {
       fitting = 0;
-      const found = picture();
-      if (!found || !card.isConnected) return;
+      if (!card.isConnected) return;
       const phone = innerWidth <= 900, top = parseFloat(getComputedStyle(phone ? card.parentElement : card).top) || 0;
       const closed = [...card.querySelectorAll(".f-sym, .f-num")].reduce((h, e) => h + Math.max(0, (+e.dataset.full || e.scrollHeight) - e.clientHeight), 0);
-      const room = innerHeight * (phone ? 0.6 : 1) - top - 12, over = card.offsetHeight + closed - room;
-      const [pic, box] = found, natural = +(pic.dataset.natural ||= box.width);
-      const width = Math.max(natural * 0.55, (box.width * (box.height - over)) / box.height); // at most to 55% of its size
-      if (over > 1 && width < box.width - 1) {
-        pic.style.maxWidth = `${width.toFixed(0)}px`; // narrower, so lower: it keeps its shape
-        pic.style.marginInline = "auto";
+      const room = innerHeight * (phone ? 0.6 : 1) - top - 12;
+      let over = card.offsetHeight + closed - room;
+      for (const group of over > 1 ? drawings() : []) {
+        const [pic, box] = group[0], natural = +(pic.dataset.natural || box.width);
+        const width = Math.max(natural * 0.55, (box.width * (box.height - over)) / box.height); // at most to 55% of its size
+        if (width >= box.width - 1) continue;
+        const before = card.offsetHeight, was = group.map(([e]) => e.style.maxWidth);
+        const set = (w) => group.forEach(([e], i) => { e.style.maxWidth = w ?? was[i]; e.style.marginInline = "auto"; });
+        set(`${width.toFixed(0)}px`); // narrower, so lower: it keeps its shape
+        if (card.offsetHeight >= before - 1) { set(null); continue; }
+        group.forEach(([e]) => { e.dataset.natural ||= natural; });
+        over = card.offsetHeight + closed - room;
+        if (over <= 1) break;
       }
       const lower = phone ? 0 : Math.round(card.offsetHeight + closed + 12 - innerHeight * 0.65);
       column.style.paddingTop = lower > innerHeight * 0.04 ? `${lower}px` : ""; // more than the usual 4vh
@@ -16620,8 +16636,7 @@ globalThis.RL.sweeps = {"a2c-cartpole":{"name":"a2c-cartpole","world":"cartpole"
       resized = setTimeout(() => {
         if (innerWidth === size[0] && innerWidth <= 900 && Math.abs(innerHeight - size[1]) < 120) return;
         size = [innerWidth, innerHeight];
-        const found = picture();
-        if (found) { found[0].style.maxWidth = ""; delete found[0].dataset.natural; }
+        for (const [e] of drawings().flat()) if (e.dataset.natural) { e.style.maxWidth = ""; delete e.dataset.natural; }
         later();
       }, 200);
     };
