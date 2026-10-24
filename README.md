@@ -193,11 +193,18 @@ shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of 
   `baird-weights`, `corridor-values`, `softmax-play`, `gaussian-play`, `pg-estimates`, `reinforce-alpha`, `baseline-curves`,
   `critic-speed`, `entropy-study`, `gae-weights`, `gae-study`, `trust-region` (clip), `ppo-clip`. A backup label breaks into lines at `\n`, and
   a display formula too wide for its column shrinks a little, then stacks the parts written side by side with `\qquad`,
-  then breaks a chain of relations at its signs, and an equation number that would touch its formula moves under it;
+  then breaks a chain of relations at its signs, then breaks a long side at its plus and minus signs (or puts the left
+  side alone on the first line), and an equation number that would touch its formula moves under it; a formula with
+  room to spare on a card grows into some of it;
 - `::: pseudocode` (end a line with `{#id}` to link it to the Lab's step-by-step mode), `::: question` (answer after `---`) and `::: analogy`.
 
-A card's formula section (`{#formula}`) written as pairs, a line of words and then its formula, is laid out as a sheet:
-the words on the left, each formula beside its own words.
+Any card section written as pairs, a line of words and then its formula (one formula a pair), is laid out as a sheet:
+the words on the left, each formula beside its own words, a rule under each pair. Write every formula section of a card
+this way. The other sections between two full-width ones are dealt into two or three columns that end as level as
+possible.
+
+In prose, an operator between spaces (`a + b`, `x = 2`) is kept on the line of the word before it, and a lab link or a
+formula keeps the punctuation that follows it, so that no line starts with a sign or a full stop.
 
 The Textbook numbers its sections, figures and statements, and any display equation with a `\label{name}`;
 `\ref{name}` links to them (§2, (3), Figure 1, Theorem 1). Its blocks are `::: definition`, `theorem`, `lemma`,

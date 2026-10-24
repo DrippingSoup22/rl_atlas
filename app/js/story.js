@@ -30,8 +30,31 @@
     const scene = RL.scenes[config.scene];
     if (!scene) { RL.warn(`unknown story scene '${config.scene}'`); return {}; }
     const els = Array.from(host.querySelectorAll(".story-step"));
-    const stage = scene.create(host.querySelector(".stage-card"), config, steps.map((s) => s.state)); // the states: a scene may prepare ahead
+    const card = host.querySelector(".stage-card");
+    const stage = scene.create(card, config, steps.map((s) => s.state)); // the states: a scene may prepare ahead
     let current = -1;
+
+    // The stage stays inside the window, under the bar: when a step makes it taller than that, its picture shrinks to
+    // make room, and keeps that size for the rest of the story, so that it does not change size at every step.
+    // Not on a phone, where the stage sits above the text and scrolls with the page.
+    let fitting = 0;
+    // the picture: the largest drawing on the stage, other than the formula and the chart
+    const picture = () => [...card.querySelectorAll("svg, canvas")].filter((e) => !e.closest(".scene-formula, .scene-chart, .katex"))
+      .map((e) => [e, e.getBoundingClientRect()]).sort((a, b) => b[1].width * b[1].height - a[1].width * a[1].height)[0];
+    function keepInView() {
+      fitting = 0;
+      const found = picture();
+      if (!found || !card.isConnected || innerWidth <= 900) return;
+      const room = innerHeight - parseFloat(getComputedStyle(card).top) - 12, over = card.offsetHeight - room;
+      if (over <= 1) return;
+      const [pic, box] = found, scale = Math.max(0.55, (box.height - over) / box.height);
+      pic.style.maxWidth = `${(box.width * scale).toFixed(0)}px`; // narrower, so lower: it keeps its shape
+      pic.style.marginInline = "auto";
+    }
+    const later = () => { cancelAnimationFrame(fitting); fitting = requestAnimationFrame(() => { fitting = requestAnimationFrame(keepInView); }); };
+    let resized = 0;
+    const onResize = () => { clearTimeout(resized); resized = setTimeout(() => { const found = picture(); if (found) found[0].style.maxWidth = ""; later(); }, 200); };
+    addEventListener("resize", onResize);
 
     function activate(i) {
       if (i === current) return;
@@ -39,6 +62,7 @@
       current = i;
       els.forEach((el, k) => { el.classList.toggle("active", k === i); el.classList.toggle("seen", k < i); });
       stage.apply(steps[i].state, forward);
+      later();
     }
 
     // The active step is the one whose top has passed a line across the screen, a little above the middle (lower on
@@ -58,6 +82,6 @@
     els.forEach((el, i) => el.addEventListener("click", () => activate(i)));
     activate(0);
     frame = requestAnimationFrame(follow); // a page that opens scrolled down (going back to it) starts at its step
-    return { destroy() { removeEventListener("scroll", onScroll); cancelAnimationFrame(frame); stage.destroy(); } };
+    return { destroy() { removeEventListener("scroll", onScroll); removeEventListener("resize", onResize); cancelAnimationFrame(frame); cancelAnimationFrame(fitting); clearTimeout(resized); stage.destroy(); } };
   };
 })(globalThis.RL = globalThis.RL || {});

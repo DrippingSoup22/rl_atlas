@@ -37,9 +37,9 @@
       hzName.setAttribute("text-anchor", hx > 560 ? "end" : "middle");
       hzName.textContent = `horizon ≈ ${fmt(horizon, horizon < 10 ? 1 : 0)} steps`;
       facts.innerHTML = `
-        <li>A reward 10 steps away counts γ<sup>10</sup> = <b>${(g ** 10).toFixed(2)}</b> of its size.</li>
-        <li>All the weights add up to 1/(1 − γ) = <b>${fmt(horizon, 1)}</b>: roughly, the agent looks that many steps ahead.</li>
-        <li>+1 now, or +10 in 20 steps? Seen from now, the +10 is worth 10γ<sup>20</sup> = <b>${later.toFixed(2)}</b>, so the agent
+        <li>A reward 10 steps away counts γ<sup>10</sup>&nbsp;= <b>${(g ** 10).toFixed(2)}</b> of its size.</li>
+        <li>All the weights add up to 1/(1&nbsp;−&nbsp;γ)&nbsp;= <b>${fmt(horizon, 1)}</b>: roughly, the agent looks that many steps ahead.</li>
+        <li>+1 now, or +10 in 20 steps? Seen from now, the +10 is worth 10γ<sup>20</sup>&nbsp;= <b>${later.toFixed(2)}</b>, so the agent
           <b>${later > 1 ? "waits for the +10" : "takes the +1 now"}</b>.</li>`;
     }
     input.addEventListener("input", draw);

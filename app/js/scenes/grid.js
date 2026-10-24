@@ -59,7 +59,7 @@
       function explore(q) {
         const rng = lab.rng(cfg.seed + 1);
         let s = env.start, t = 0, walks = 0, falls = 0;
-        const tally = () => { note.textContent = `Walking with ε = ${cfg.epsilon}: ${walks} ${walks === 1 ? "walk" : "walks"}, ${falls} ${falls === 1 ? "fall" : "falls"}`; };
+        const tally = () => { note.textContent = `Walking with ε\u00a0= ${cfg.epsilon}: ${walks} ${walks === 1 ? "walk" : "walks"}, ${falls} ${falls === 1 ? "fall" : "falls"}`; };
         const step = () => {
           if (env.terminal(s) || t > 60) {
             walks += 1;
