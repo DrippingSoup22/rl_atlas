@@ -164,3 +164,5 @@ html.vt-side::view-transition-new(root) { animation: vt-fade-in 0.3s ease both; 
   .brand span, .pill.search span, .pill kbd { display: none; }
   .crumbs > a:first-child:not(:only-child), .crumbs > a:first-child:not(:only-child) + .sep { display: none; } /* the logo leads to the map */
 }
+/* text for screen readers only (app/js/math.js draws punctuation inside a formula's boxes, which they skip) */
+.unseen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

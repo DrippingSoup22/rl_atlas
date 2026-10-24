@@ -19,7 +19,7 @@ formula = '''\step{1}{\tilde{\boldsymbol\theta} = \boldsymbol\theta + \knob{\sig
 [story.runs]
 action = { recording = "td3-car-white-noise", name = "noise on the actions" }
 weights = { recording = "td3-car-param-noise", name = "noise in the weights" }
-norm = { recording = "td3-car-param-noise-norm", name = "weights, inputs normalized" }
+norm = { recording = "td3-car-param-noise-norm", name = "normalized inputs" }
 +++
 
 ## Story

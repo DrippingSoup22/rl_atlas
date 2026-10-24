@@ -44,7 +44,7 @@
       const fx = hx(GOAL), fy = hy(GOAL);
       el("line", { class: "pole", x1: fx, x2: fx, y1: fy, y2: fy - 26 }, svg);
       el("path", { class: "flag", d: `M${fx} ${fy - 26}l14 4.5l-14 4.5z` }, svg);
-      el("text", { class: "track-note", x: M, y: 12 }, svg).textContent = "the engine is weaker than the slope: swing";
+      el("text", { class: "track-note", x: M, y: 12 }, svg).textContent = "the engine is too weak: swing";
       this.car = el("g", { class: "car" }, svg);
       el("rect", { class: "car-shell", x: -11, y: -13, width: 22, height: 8, rx: 3.5 }, this.car);
       el("rect", { class: "car-top", x: -6, y: -18, width: 11, height: 6, rx: 2.5 }, this.car);

@@ -552,10 +552,16 @@
 .cardsview .verdict.act { color: var(--pol-ink); }
 .cardsview .maps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; }
 /* a narrow stage (three racers): the maps go under the table */
-.view-host:has(> .cardsview) { container-type: inline-size; }
-@container (max-width: 560px) { .cardsview { grid-template-columns: minmax(0, 1fr); } .cardsview .table { min-height: 0; } }
+.view-host:has(> .cardsview), .scene-view:has(> .cardsview) { container-type: inline-size; }
+/* narrow: the table above the maps, and smaller, so that the maps keep room (a phone's story stage is short) */
+@container (max-width: 560px) {
+  .cardsview { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .cardsview .table { min-height: 0; gap: 8px; padding: 10px 12px; }
+  .cardsview .cards { min-height: 42px; }
+  .cardsview .pcard { width: 30px; height: 42px; font-size: 13.5px; }
+}
 .bj-map { margin: 0; min-width: 0; }
-.view-host:has(> .cartview) { container: ctlhost / inline-size; }
+.view-host:has(> .cartview), .scene-view:has(> .cartview) { container: ctlhost / inline-size; }
 @container ctlhost (max-width: 640px) { .cartview .map-head span { display: none; } } /* a small map's legend wraps to many lines: in its title's tooltip instead */
 .bj-map figcaption { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; margin-bottom: 2px; }
 .bj-map svg { display: block; width: 100%; height: auto; }

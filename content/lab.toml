@@ -549,7 +549,7 @@ success = { metric = "return", min = -50, text = "end up reaching the goal in un
 title = "A Gaussian policy learns to throw"
 env = "throw"
 racers = [
-  { algorithm = "baseline", name = "with a learned baseline (α = 0.003)", alpha = 0.003, alphaW = 0.1 },
+  { algorithm = "baseline", name = "with a baseline (α = 0.003)", alpha = 0.003, alphaW = 0.1 },
   { algorithm = "reinforce", name = "without a baseline (α = 0.0003)", alpha = 0.0003 },
 ]
 units = 1000
@@ -832,7 +832,7 @@ success = { metric = "test", min = 90, text = "end up reaching the flag in the t
 [parameter-noise-car]
 title = "Noise on the actions or in the weights"
 env = "mountain-car-continuous"
-racers = [{ recording = "td3-car-white-noise", name = "noise on the actions" }, { recording = "td3-car-param-noise", name = "noise in the weights" }, { recording = "td3-car-param-noise-norm", name = "weights, inputs normalized" }]
+racers = [{ recording = "td3-car-white-noise", name = "noise on the actions" }, { recording = "td3-car-param-noise", name = "noise in the weights" }, { recording = "td3-car-param-noise-norm", name = "normalized inputs" }]
 charts = ["test", "return", "jitter-train"]
 film = [0, 5, 10, 20, 40]
 seeds = true

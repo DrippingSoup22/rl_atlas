@@ -41,22 +41,27 @@
     fit(root);
   }
 
-  // A formula and the punctuation build.py keeps beside it (in a .nobr): the punctuation goes into the formula's
-  // first or last box, which KaTeX never breaks, in the font of the text around it. The formula itself may then break
-  // inside, after a sign, and a comma still never starts a line.
+  // A formula and the punctuation build.py keeps beside it (in a .nobr): the punctuation is drawn in the formula's
+  // first or last box, which KaTeX never breaks, in the font of the text around it; where it was, it stays for screen
+  // readers only (KaTeX's boxes are hidden from them). The formula itself may then break inside, after a sign, and a
+  // comma still never starts a line.
   function hold(el) {
     const nobr = el.parentElement, boxes = el.querySelectorAll(".katex-html > .katex-base");
     if (!nobr?.classList.contains("nobr") || !boxes.length) return;
     const look = getComputedStyle(nobr);
-    const mark = (node) => {
+    const drawn = (node) => {
       const span = document.createElement("span");
       span.className = "held";
       for (const k of ["fontFamily", "fontSize", "fontWeight", "fontStyle"]) span.style[k] = look[k];
-      span.append(node);
+      span.textContent = node.textContent;
+      const said = document.createElement("span");
+      said.className = "unseen";
+      node.replaceWith(said);
+      said.append(node);
       return span;
     };
-    if (el.previousSibling?.nodeType === 3) boxes[0].prepend(mark(el.previousSibling));
-    if (el.nextSibling?.nodeType === 3) boxes[boxes.length - 1].append(mark(el.nextSibling));
+    if (el.previousSibling?.nodeType === 3) boxes[0].prepend(drawn(el.previousSibling));
+    if (el.nextSibling?.nodeType === 3) boxes[boxes.length - 1].append(drawn(el.nextSibling));
     nobr.classList.add("held");
   }
 
