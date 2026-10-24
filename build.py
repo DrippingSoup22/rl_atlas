@@ -140,8 +140,7 @@ class Markdown:
 
     def _inline(self, text: str) -> str:
         text = html.escape(text, quote=False)
-        # an operator in prose ("old guess + step size × ...") stays on the line of the word before it
-        text = re.sub(r" ([−×=+≈≤≥→←]) ", "\u00a0\\1 ", text)
+        text = _held_signs(text)
         text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
         text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
         text = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])", r"<em>\1</em>", text)
@@ -507,14 +506,14 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
             elif rec["world"] != raw.get("env"):
                 problems.error(where, f"recording '{r['recording']}' is on '{rec['world']}', not on '{raw.get('env')}'")
             else:
-                racers.append({"recording": r["recording"], "algorithm": rec["station"], "name": r.get("name") or rec["title"], "params": {}})
+                racers.append({"recording": r["recording"], "algorithm": rec["station"], "name": _glued(r.get("name") or rec["title"]), "params": {}})
             continue
         algo = r.get("algorithm", "")
         if stations.get(algo, {}).get("kind") != "algorithm" and algo not in RUNNABLE_CONCEPTS:
             problems.error(where, f"runs '{algo}', which is not an algorithm station")
             continue
         own = {k: v for k, v in r.items() if k not in ("algorithm", "name")}
-        racers.append({"algorithm": algo, "name": r.get("name") or stations[RUNNABLE_CONCEPTS.get(algo, algo)]["title"], "params": own})
+        racers.append({"algorithm": algo, "name": _glued(r.get("name") or stations[RUNNABLE_CONCEPTS.get(algo, algo)]["title"]), "params": own})
     if not racers:
         problems.error(where, "runs no algorithm")
     charts, measures = raw.get("charts", ["return"]), raw.get("measures", [])
@@ -567,7 +566,7 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
     return {
         "title": raw.get("title", pid), "env": raw.get("env", ""), "racers": racers,
         "units": raw.get("units", 500), "seed": 1, "runs": raw.get("runs", 1),
-        "charts": charts, "measures": measures, "film": raw.get("film", []), "intro": raw.get("intro", ""),
+        "charts": charts, "measures": measures, "film": raw.get("film", []), "intro": _held_signs(raw.get("intro", "")),
         "params": {k: v for k, v in raw.items() if k not in PRESET_KEYS},
         **({"success": success} if success is not None else {}),
         **({"sweep": sweep} if sweep is not None else {}),
@@ -575,6 +574,16 @@ def compile_preset(pid: str, raw: dict, stations: dict, recordings: dict, proble
         **({"fixed": fixed} if fixed else {}),
         **({"home": raw["home"]} if raw.get("home") else {}),
     }
+
+
+def _glued(name):
+    """A racer's name with its signs held to both neighbors: "α = 2⁻¹³" never breaks, in a legend or a heading."""
+    return re.sub(r" ([=≈≤≥<>×→]) ", "\u00a0\\1\u00a0", name)
+
+
+def _held_signs(text):
+    """An operator in prose ("old guess + step size × ...") stays on the line of the word before it."""
+    return re.sub(r" ([−×=+≈≤≥→←]) ", "\u00a0\\1 ", text)
 
 
 def compile_content(problems: Problems) -> dict:

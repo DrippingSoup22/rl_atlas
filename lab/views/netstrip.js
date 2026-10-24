@@ -21,7 +21,7 @@
       grid.querySelectorAll(".net").forEach((e) => e.remove());
       if (!net || !units) return;
       const relu = net.act === "relu";
-      grid.appendChild(RL.h('<div class="net net-title"></div>')).textContent = `${net.of}: ${net.sizes.join(" → ")} · ${relu ? "ReLU" : "tanh"}`;
+      grid.appendChild(RL.h('<div class="net net-title"></div>')).textContent = `${net.of}: ${net.sizes.join("\u00a0→ ")}\u00a0· ${relu ? "ReLU" : "tanh"}`;
       units.forEach((f, i) => {
         const cells = Array.from(f, (share) => (off(relu, share) ? '<i class="dead"></i>' : `<i style="--s: ${Math.round(100 * share)}%"></i>`)).join(""), marked = marks(relu, f);
         const row = grid.appendChild(RL.h(`<div class="net ctl-row net-row${relu ? "" : " tanh"}"><span class="bar-name">layer ${i + 1}</span><span class="cells">${cells}</span><span class="bar-num">${marked} ${relu ? "dead" : "saturated"}</span></div>`));

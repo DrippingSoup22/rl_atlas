@@ -455,7 +455,7 @@ success = { metric = "steps", max = 300, text = "end up getting out in under 300
 title = "The deadly triad on Baird's counterexample"
 env = "baird"
 racers = [
-  { algorithm = "semi-gradient-td", name = "All three: off-policy, shared features, bootstrapping", features = "own", behavior = "behavior" },
+  { algorithm = "semi-gradient-td", name = "All three ingredients", features = "own", behavior = "behavior" },
   { algorithm = "semi-gradient-td", name = "A table instead of shared features", features = "table", behavior = "behavior" },
   { algorithm = "semi-gradient-td", name = "On-policy instead of off-policy", features = "own" },
 ]

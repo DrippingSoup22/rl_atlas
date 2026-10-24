@@ -3,7 +3,7 @@
    step after some training plays its test episode in a loop. */
 (function (RL) {
   "use strict";
-  const options = (st) => ({ map: st.map || "value", path: st.path !== false });
+  const options = (st) => ({ map: st.map || "value", path: st.path !== false, count: true });
   RL.scenes.cartpole = RL.sceneKit.runScene(RL.labViews.cartpole, { options, test: true });
   RL.scenes.pendulum = RL.sceneKit.runScene(RL.labViews.pendulum, { options, test: true });
   RL.scenes.hillcar = RL.sceneKit.runScene(RL.labViews.hillcar, { options, test: true });

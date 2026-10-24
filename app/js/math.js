@@ -25,7 +25,10 @@
     trust: (ctx) => ctx.command === "\\htmlClass" || ctx.command === "\\htmlData",
   };
 
-  const tex = (src, display = false) => katex.renderToString(src, { ...OPTIONS, displayMode: display });
+  // In running text a formula may break after any sign, but never inside a conditional like p(s', r | s, a), which
+  // reads as one thing: it goes in braces, which KaTeX does not break.
+  const whole = (src) => src.replace(/(?<![_^A-Za-z\\])((?:\\[A-Za-z]+|[A-Za-z])(?:_\{(?:[^{}]|\{[^{}]*\})*\}|_\\[A-Za-z]+|_[A-Za-z0-9])?)\(([^()]*?\\mid[^()]*?)\)/g, "{$1($2)}");
+  const tex = (src, display = false) => katex.renderToString(display ? src : whole(src), { ...OPTIONS, displayMode: display });
 
   // Render every .tex element under root (their text is the TeX source written by build.py).
   function render(root) {
@@ -33,8 +36,28 @@
       el.dataset.src = el.textContent;
       el.innerHTML = tex(el.textContent, el.classList.contains("tex-display"));
       el.dataset.done = "1";
+      hold(el);
     }
     fit(root);
+  }
+
+  // A formula and the punctuation build.py keeps beside it (in a .nobr): the punctuation goes into the formula's
+  // first or last box, which KaTeX never breaks, in the font of the text around it. The formula itself may then break
+  // inside, after a sign, and a comma still never starts a line.
+  function hold(el) {
+    const nobr = el.parentElement, boxes = el.querySelectorAll(".katex-html > .katex-base");
+    if (!nobr?.classList.contains("nobr") || !boxes.length) return;
+    const look = getComputedStyle(nobr);
+    const mark = (node) => {
+      const span = document.createElement("span");
+      span.className = "held";
+      for (const k of ["fontFamily", "fontSize", "fontWeight", "fontStyle"]) span.style[k] = look[k];
+      span.append(node);
+      return span;
+    };
+    if (el.previousSibling?.nodeType === 3) boxes[0].prepend(mark(el.previousSibling));
+    if (el.nextSibling?.nodeType === 3) boxes[boxes.length - 1].append(mark(el.nextSibling));
+    nobr.classList.add("held");
   }
 
   // The parts of a formula written side by side: its top-level \qquad separators, none inside braces or environments.
@@ -131,6 +154,67 @@
       at.push(best);
     }
     return [at.length === n - 1 && layout(at), cuts.length && alone(near(middle(1, 2))[0])].filter(Boolean);
+  }
+
+  // A long left side before a short result, such as a sum of numbers and its value: it breaks into lines at the
+  // separators nested least deep in brackets. Those are the commas of a list if there are any there (n lines), and
+  // then, with signs, each item of the list breaks again at its plus and minus signs (n lines an item); otherwise its
+  // plus and minus signs (n lines). The result stays at the end of the last line. Empty if there are not enough
+  // places to break.
+  function leading(src, n, signs = false) {
+    if (/\\begin\{/.test(src)) return [];
+    let depth = 0, nest = 0, rel = -1;
+    const cuts = [];
+    for (let i = 0; i < src.length; i++) {
+      const c = src[i];
+      if (c === "\\") {
+        const word = /^\\[a-zA-Z]+/.exec(src.slice(i))?.[0] || src.slice(i, i + 2);
+        if (word === "\\left") depth++;
+        else if (word === "\\right") depth--;
+        else if (word === "\\{") nest++;
+        else if (word === "\\}") nest--;
+        else if (!depth && WRAP_RELATIONS.includes(word)) rel = i;
+        i += word.length - 1;
+      } else if (c === "{") depth++;
+      else if (c === "}") depth--;
+      else if (c === "(" || c === "[") nest++;
+      else if (c === ")" || c === "]") nest--;
+      else if (!depth && c === "=") rel = i;
+      else if (!depth && c === ",") cuts.push({ at: i + 1, nest, comma: true });
+      else if (!depth && (c === "+" || c === "-") && /[\w)\]}'|]$/.test(src.slice(0, i).replace(/\\[,;:! ]|\\q?quad/g, "").trimEnd())) cuts.push({ at: i, nest });
+    }
+    const before = cuts.filter((c) => c.at < rel);
+    if (!before.length) return [];
+    const least = Math.min(...before.map((c) => c.nest)), level = before.filter((c) => c.nest === least);
+    const commas = level.filter((c) => c.comma).map((c) => c.at);
+    // up to n - 1 places among spots, nearest to even shares of from..to, after the last place taken
+    const at = [];
+    const share = (spots, from, to, k) => {
+      for (let j = 1; j < k; j++) {
+        const goal = from + ((to - from) * j) / k, best = spots.filter((c) => c > (at[at.length - 1] ?? -1)).sort((x, y) => Math.abs(x - goal) - Math.abs(y - goal))[0];
+        if (best !== undefined) at.push(best);
+      }
+    };
+    if (commas.length && signs) {
+      const bounds = [0, ...commas, rel];
+      for (let k = 0; k + 1 < bounds.length; k++) {
+        if (k) at.push(bounds[k]);
+        const inner = before.filter((c) => !c.comma && c.at > bounds[k] && c.at < bounds[k + 1]);
+        if (!inner.length) continue;
+        const low = Math.min(...inner.map((c) => c.nest));
+        share(inner.filter((c) => c.nest === low).map((c) => c.at), bounds[k], bounds[k + 1], n);
+      }
+      if (at.length <= commas.length) return []; // no item broke: the list alone did that already
+    } else {
+      const places = commas.length ? commas : level.map((c) => c.at);
+      if (places.length < n - 1) return [];
+      share(places, 0, rel, n);
+      if (at.length < n - 1) return [];
+    }
+    // a new item of the list starts a little in, the rest of an item further in
+    const pieces = [0, ...at].map((c, k) => src.slice(c, at[k] ?? src.length).replace(/^\s*(\\[,;: ]\s*)*/, "").trim());
+    const lines = pieces.slice(1).map((p, k) => `&${commas.length && !commas.includes(at[k]) ? "\\qquad" : "\\quad"} {}${p}`);
+    return [`\\begin{aligned} &${pieces[0]} \\\\ ${lines.join(" \\\\ ")} \\end{aligned}`];
   }
 
   // The rows of an aligned or gathered formula: its top-level \\ (none inside braces or inner environments).
@@ -273,11 +357,16 @@
       if (split.length < 2) {
         layouts.push(...realign(chained[0]).map((l) => `${l} ${tags}`));
         if (chained[0] === split[0]) for (const n of [2, 3]) layouts.push(...wraps(split[0], n).map((w) => `${w} ${tags}`));
+        // a long left side before its result, a line of numbers for instance, breaks into as many lines as it needs
+        if (chained[0] === split[0]) {
+          for (let n = 2; n <= 8; n++) layouts.push(...leading(split[0], n).map((w) => `${w} ${tags}`));
+          for (let n = 2; n <= 4; n++) layouts.push(...leading(split[0], n, true).map((w) => `${w} ${tags}`));
+        }
       } else for (const n of [2, 3]) {
         const each = split.map((p) => (wraps(p, n)[0] || p));
         if (each.some((p, i) => p !== split[i])) layouts.push(`\\begin{gathered} ${each.join(" \\\\[6pt] ")} \\end{gathered} ${tags}`);
       }
-      for (const layout of layouts) {
+      for (const layout of new Set(layouts)) {
         if (!layout) continue;
         el.style.fontSize = "";
         el.innerHTML = tex(layout, true);

@@ -141,8 +141,8 @@
       return Number.isInteger(e) && e < -3 ? `2${[...String(e)].map((c) => SUP[c]).join("")}` : String(+v.toPrecision(2));
     };
     const stepNamed = (name, p) => name
-      .replace(/αw = [^,)·]+/, (m) => (p.alphaW > 0 ? `αw = ${stepText(p.alphaW)}` : m))
-      .replace(/α = (?!1\/n)[^,)·]+/, (m) => (p.alpha > 0 ? `α = ${stepText(p.alpha)}` : m));
+      .replace(/αw\s=\s[^,)·]+/, (m) => (p.alphaW > 0 ? `αw\u00a0=\u00a0${stepText(p.alphaW)}` : m))
+      .replace(/α\s=\s(?!1\/n)[^,)·]+/, (m) => (p.alpha > 0 ? `α\u00a0=\u00a0${stepText(p.alpha)}` : m));
     const paramsOf = (r) => {
       const own = preset.env === base.env ? r.params : lab.carryRacer(r.params, { env, base: base.params, racers: racers.map((x) => x.params), knobs });
       return { ...preset.params, ...pick(knobs, Object.keys(KNOBS)), ...own };
@@ -324,7 +324,7 @@
       box.className = `stages n${racers.length}`;
       box.innerHTML = racers.map((r, i) => `
         <figure class="stage card" data-i="${i}" style="--k: var(--s${i + 1})">
-          <figcaption><span class="who"><i class="key"></i><b>${esc(r.name)}</b></span><span class="odds-badge" hidden></span><span class="stat"></span></figcaption>
+          <figcaption><span class="who"><i class="key"></i><b title="${esc(r.name)}">${esc(r.name)}</b></span><span class="odds-badge" hidden></span><span class="stat"></span></figcaption>
           <div class="view-host"></div>
         </figure>`).join("");
       stages = Array.from(box.querySelectorAll(".stage"));
@@ -1213,8 +1213,8 @@
       else text = `${signed(M.return[t], 0)} · ${plural(M.steps[t], ["step", "steps"])}${M.falls[t] ? ` · ${plural(M.falls[t], ["fall", "falls"])}` : ""}`;
       stat.textContent = `${cap(one)} ${P.e}: ${text}`;
     }
-    const live = (w) => (recorded ? `step ${w.n} of the test episode` : unitOf() === "sweep" ? `state ${w.n}` : env.kind === "bandit" ? "pulling" : env.kind === "star" ? "one step" : env.kind === "throw" ? "throwing"
-      : env.kind === "car" ? `${plural(w.n, ["step", "steps"])} so far` : unitOf() === "round" ? `${plural(w.n, ["move", "moves"])} so far, all workers together`
+    const live = (w) => (recorded ? `test episode, step ${w.n}` : unitOf() === "sweep" ? `state ${w.n}` : env.kind === "bandit" ? "pulling" : env.kind === "star" ? "one step" : env.kind === "throw" ? "throwing"
+      : env.kind === "car" ? `${plural(w.n, ["step", "steps"])} so far` : unitOf() === "round" ? `${plural(w.n, ["move", "moves"])} so far, all workers`
         : `${signed(w.G, env.kind === "grid" ? 0 : 2)} so far · ${plural(w.n, ["step", "steps"])}`);
 
     // ---- walking through a unit, event by event ----

@@ -46,23 +46,20 @@
 .story-end { height: 36vh; }
 .seed-line { margin: 28px 0 0 56px; font-size: 12px; color: var(--ink-3); }
 .stage-card { position: sticky; top: calc(56px + 4vh); padding: 18px 18px 12px; }
-.scene-formula { display: grid; gap: 2px; min-height: 104px; margin-top: 8px; }
-.scene-formula.bare { min-height: 52px; }
+/* The formula and the line of numbers under the picture take room only while a step shows them, and open and close
+   smoothly (scenes/common.js). A formula shows whole once it opens: the pieces the story has not reached yet keep
+   their place, unseen, so nothing moves when they come. */
+.scene-formula { display: grid; margin-top: 8px; }
 .f-sym, .f-num { opacity: 0; transform: translateY(6px); transition: opacity 0.45s, transform 0.45s var(--ease); overflow-x: auto; overflow-y: hidden; }
+.f-sym:not(.on), .f-num:not(.on) { height: 0; }
 .f-sym.on, .f-num.on { opacity: 1; transform: none; }
-/* a step without the formula keeps it as a faint reminder, so the space stays meaningful and the card does not jump */
-.f-sym:not(.on) { opacity: 0.16; transform: none; }
-.f-sym:not(.on) [data-step] { opacity: 1; }
-.f-sym [data-step] { opacity: 0.1; transition: opacity 0.5s calc(var(--k, 0) * 120ms); }
+.f-sym [data-step] { opacity: 0; transition: opacity 0.5s calc(var(--k, 0) * 120ms); }
 .f-sym [data-step].shown { opacity: 1; }
 .f-sym { font-size: 1.2em; --grow: 1.25; }
 .f-num { font-size: 1.05em; }
 @media (max-width: 900px) { .f-sym { font-size: 1em; } .f-num { font-size: 0.95em; } }
 .scene-view { min-height: 120px; }
 .scene-chart { margin-top: 6px; }
-/* With a chart under the picture and no formula showing, the formula's space goes to the chart. */
-.stage-card:has(.scene-chart:not([hidden])) .scene-formula:not(:has(.on)) { min-height: 0; margin: 0; }
-.stage-card:has(.scene-chart:not([hidden])) .scene-formula:not(:has(.on)) > div { display: none; }
 .scene-chart-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
 .scene-chart-title .faint { text-transform: none; letter-spacing: 0; font-weight: 500; }
 .scene-chart-legend { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 3px 0 0; font-size: 12.5px; color: var(--ink-2); }
@@ -451,8 +448,10 @@ a.ref:hover { text-decoration-color: var(--ink); }
 .sec-sources li { break-inside: avoid; }
 .sec-idea > p:first-of-type { font-size: 18px; }
 .tex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
-/* A formula and the punctuation around it stay on one line (build.py wraps them together). */
+/* A formula and the punctuation around it stay on one line (build.py wraps them together); once the punctuation is
+   inside the formula's end boxes (app/js/math.js), a long formula may break inside, after a sign, as KaTeX allows. */
 .nobr { white-space: nowrap; }
+.nobr.held { white-space: normal; }
 /* A numbered formula too wide to keep clear of its number: the number goes under it, at the right (app/js/math.js). */
 .tex-display.tag-below .katex-display > .katex > .katex-html { display: block; }
 .tex-display.tag-below .katex-display > .katex > .katex-html > .katex-tag { position: static; display: block; text-align: right; margin-top: 4px; }
@@ -576,8 +575,6 @@ a.ref:hover { text-decoration-color: var(--ink); }
   .story { grid-template-columns: 1fr; gap: 0; }
   .story-stage { order: -1; position: sticky; top: 56px; z-index: 3; }
   .stage-card { position: relative; top: 0; padding: 10px; }
-  .scene-formula { min-height: 0; }
-  .f-sym:not(.on), .f-num:not(.on) { display: none; }
   .story-step { min-height: 46vh; }
 }
 @media (max-width: 760px) {

@@ -1,6 +1,6 @@
 +++
 title = "Conditional probability"
-summary = "How likely something is once something else is known: the bar in Pr{A | B} reads “given”. With it come independence, the chain rule for sequences, and Bayes' rule."
+summary = "How likely something is once something else is known: the bar in Pr{A |⁠ B} reads “given”. With it come independence, the chain rule for sequences, and Bayes' rule."
 group = "Probability"
 sources = [
   { text = "Blitzstein & Hwang (2019), Introduction to Probability, 2nd ed., CRC Press, chapter 2", url = "https://projects.iq.harvard.edu/stat110" },

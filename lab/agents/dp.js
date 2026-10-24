@@ -79,10 +79,14 @@
     return { delta, converged: +(delta < p.theta) };
   }
 
-  // The backup with its numbers: ¼·(−1 + 1·(−1.00)) + … for a policy, or max(…) for value iteration.
+  // The backup with its numbers: ¼·(−1 + 1·(−1.00)) + … for a policy, or max(…) for value iteration. Outcomes of one
+  // move that are equally likely share their probability: ⅓·[(…) + (…) + (…)].
   function numbers(ev, p) {
-    const one = ({ p: q, r, v }) => `${q === 1 ? "" : `${+q.toFixed(3)}\\,`}(\\rew{${+r.toFixed(2)}} + ${p.gamma}\\cdot\\val{${lab.texNum(v)}})`;
-    const action = (t) => t.outs.map(one).join(" + ");
+    const bare = ({ r, v }) => `(\\rew{${+r.toFixed(2)}} + ${p.gamma}\\cdot\\val{${lab.texNum(v)}})`;
+    const one = (o) => `${o.p === 1 ? "" : `${+o.p.toFixed(3)}\\,`}${bare(o)}`;
+    const action = (t) => (t.outs.length > 1 && t.outs.every((o) => Math.abs(o.p - t.outs[0].p) < 1e-9)
+      ? `${+t.outs[0].p.toFixed(3)}\\,\\big[${t.outs.map(bare).join(" + ")}\\big]`
+      : t.outs.map(one).join(" + "));
     const shown = ev.terms.slice(0, 4), more = ev.terms.length > 4 ? " + \\cdots" : "";
     const body = ev.max
       ? `\\max\\big\\{${shown.map(action).join(",\\ ")}${more ? ",\\ \\dots" : ""}\\big\\}`

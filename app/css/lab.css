@@ -796,6 +796,8 @@
   .cardsview { grid-template-columns: 1fr; }
   .chart-grid.n2, .sweep-grid.n3 { grid-template-columns: 1fr; }
 }
+/* Too narrow for two simulations side by side: a long name takes a second line instead of an ellipsis */
+@media (max-width: 540px) { .stage .who b { white-space: normal; } }
 @media (max-width: 640px) {
   .lab { padding: 14px 12px 40px; }
   /* Two rows: the buttons and the settings, then the slider with the count beside it */

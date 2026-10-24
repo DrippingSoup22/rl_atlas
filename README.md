@@ -163,7 +163,7 @@ An entry is `content/<part folder>/<id>.md`, where `<id>` is a station in `map.t
 front matter between `+++` lines: `summary`, `change` (what changed from the parent), `prereqs`, `lab`, `sources`,
 `story_in` (for an entry without a story of its own: the stations whose stories show its idea at work),
 and for a story a `[story]` table: its scene (`grid`, `loop`, `timeline`, `mdp`, or one of the Lab's views: `bandit`,
-`chain`, `cards`, `graph`, `line`, `car`, `star`, `corridor`, `throw`, `cartpole`, `pendulum`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}`. Scenes on
+`chain`, `cards`, `graph`, `line`, `car`, `star`, `corridor`, `throw`, `cartpole`, `pendulum`), the scene's settings, and a formula whose pieces are wrapped in `\step{n}{…}` (the formula opens under the picture at the first step that shows a piece of it, and closes at a step that shows none; a row of an `aligned` block comes in with its first piece; pieces parted by `\qquad` are separate formulas, centered together as they come). Scenes on
 a Lab view, and grid stories that replay dynamic programming or Monte Carlo, name their runs in a `[story.runs]`
 table (`name = { algorithm, <knobs> }`, or `name = { recording }` for a run trained offline); a step then picks a run and a moment (`run`, `at`), can replay some units
 (`play`, `pace`), or only the first few updates of one (`updates`; with `instant`, without animation, to jump to a moment inside a unit), or hold a few moments of the run in turn (`checkpoints`, a list of units
@@ -194,8 +194,10 @@ shows), a `## Textbook` and a `## Card`, both made of `###` sections. On top of 
   `critic-speed`, `entropy-study`, `gae-weights`, `gae-study`, `trust-region` (clip), `ppo-clip`. A backup label breaks into lines at `\n`, and
   a display formula too wide for its column shrinks a little, then stacks the parts written side by side with `\qquad`,
   then breaks a chain of relations at its signs, then breaks a long side at its plus and minus signs (or puts the left
-  side alone on the first line), and an equation number that would touch its formula moves under it; a formula with
-  room to spare on a card grows into some of it;
+  side alone on the first line), or a long left side before a short result (a line of numbers and its value) at the
+  commas or signs nested least deep, and an equation number that would touch its formula moves under it; a formula
+  with room to spare on a card grows into some of it. Inline, a formula breaks only after a sign, never inside a
+  conditional like $p(s', r \mid s, a)$;
 - `::: pseudocode` (end a line with `{#id}` to link it to the Lab's step-by-step mode), `::: question` (answer after `---`) and `::: analogy`.
 
 Any card section written as pairs, a line of words and then its formula (one formula a pair), is laid out as a sheet:

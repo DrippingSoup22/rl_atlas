@@ -19,10 +19,16 @@
   const fitters = new Set();
   document.fonts?.addEventListener?.("loadingdone", () => { fonts++; for (const f of fitters) f(); });
 
-  // A formula made of \step pieces alone, as a column: one piece a line, without the \qquad that spaced them in a row.
-  // Null for any other formula, or a single piece.
-  function column(src) {
+  // The \step numbers in a piece of a formula.
+  const stepsIn = (tex) => [...tex.matchAll(/\\step\{(\d+)\}/g)].map((m) => +m[1]);
+  // Whether a row of a formula shows anything by step n: it does once one of its pieces has come, or if it has none.
+  const showing = (row, n) => { const k = stepsIn(row); return !k.length || Math.min(...k) <= n; };
+
+  // The pieces of a formula made of \step pieces alone, each without the \qquad that spaced it from the next; they
+  // are separate formulas if a \qquad parts every two. Null for any other formula, or a single piece.
+  function piecesOf(src) {
     const s = (src || "").trim(), out = [];
+    let spaced = 0;
     for (let i = 0; i < s.length;) {
       const m = /^\\step\{(\d+)\}\{/.exec(s.slice(i));
       if (!m) return null;
@@ -33,62 +39,134 @@
         else if (s[j] === "{") depth++;
         else if (s[j] === "}") depth--;
       }
-      out.push(`\\step{${m[1]}}{${s.slice(i + m[0].length, j - 1).replace(/^\s*\\qquad\s*|\s*\\qquad\s*$/g, "")}}`);
+      const body = s.slice(i + m[0].length, j - 1);
+      if (/^\s*\\qquad/.test(body) || /\\qquad\s*$/.test(body)) spaced++;
+      out.push(`\\step{${m[1]}}{${body.replace(/^\s*\\qquad\s*|\s*\\qquad\s*$/g, "")}}`);
       for (i = j; /\s/.test(s[i] || ""); i++);
     }
-    return out.length > 1 ? RL.math.tex(`\\begin{gathered} ${out.join(" \\\\[3pt] ")} \\end{gathered}`, true) : null;
+    return out.length > 1 ? { list: out, separate: spaced >= out.length - 1 } : null;
+  }
+  // Such a formula with only the pieces that have come by step n, side by side (separate formulas, centered together
+  // as they come), or in a column, one piece a line.
+  function shownPieces(list, n, column) {
+    const shown = list.filter((piece) => showing(piece, n));
+    if (!shown.length) return "";
+    return column ? `\\begin{gathered} ${shown.join(" \\\\[3pt] ")} \\end{gathered}` : shown.join(" \\qquad ");
+  }
+
+  // A formula with only the rows of its aligned or gathered block that show something by step n: a row whose pieces
+  // all come later is left out until then, so that no blank line waits for it. The later pieces of a row already
+  // showing keep their place, unseen. A formula without such a block is one row.
+  function rows(src, n = Infinity) {
+    const m = /\\begin\{(aligned|gathered)\}/.exec(src), end = m ? src.lastIndexOf(`\\end{${m[1]}}`) : -1;
+    if (!m || end < m.index) return showing(src, n) ? src : "";
+    const body = src.slice(m.index + m[0].length, end), parts = [];
+    let braces = 0, envs = 0, from = 0;
+    for (let i = 0; i < body.length; i++) {
+      if (body.startsWith("\\begin{", i)) envs++;
+      else if (body.startsWith("\\end{", i)) envs--;
+      if (body[i] === "{") braces++;
+      else if (body[i] === "}") braces--;
+      else if (body[i] === "\\") {
+        if (body[i + 1] === "\\" && !braces && !envs) {
+          const gap = /^\\\\(\[[^\]]*\])?/.exec(body.slice(i))[0];
+          parts.push([body.slice(from, i), gap]);
+          from = i + gap.length;
+          i = from - 1;
+        } else i++;
+      }
+    }
+    parts.push([body.slice(from), ""]);
+    const kept = parts.filter(([row]) => showing(row, n));
+    if (!kept.length) return "";
+    const inner = kept.map(([row, gap], i) => row + (i < kept.length - 1 ? gap || "\\\\" : "")).join("");
+    return src.slice(0, m.index + m[0].length) + inner + src.slice(end);
   }
 
   // A story formula whose \step{n}{..} pieces appear one step at a time, and named lines of numbers under it.
   function formula(card, cfg) {
-    const sym = card.querySelector(".f-sym"), num = card.querySelector(".f-num");
-    const shapes = { row: cfg.formula ? RL.math.tex(cfg.formula, true) : "", column: column(cfg.formula) };
-    let pieces = [], n = 0, shape = null, fitted = "";
-    const draw = (to) => {
-      if (shape === to) return;
-      shape = to;
-      sym.innerHTML = shapes[to];
-      pieces = Array.from(sym.querySelectorAll("[data-step]"));
+    const sym = card.querySelector(".f-sym"), num = card.querySelector(".f-num"), src = cfg.formula || "";
+    const split = piecesOf(src);
+    const shapes = { row: split?.separate ? (k) => shownPieces(split.list, k, false) : (k) => rows(src, k), column: split && ((k) => shownPieces(split.list, k, true)) };
+    let pieces = [], n = 0, shape = "row", drawn = null, fitted = "", line = null;
+    // the formula with the rows that show something by step k, in the current shape; a piece showing before it was
+    // drawn again does not fade in again
+    const draw = (k, was = n) => {
+      const tex = shapes[shape](k), key = `${shape} ${tex}`;
+      if (key !== drawn) {
+        drawn = key;
+        sym.innerHTML = tex ? RL.math.tex(tex, true) : "";
+        pieces = Array.from(sym.querySelectorAll("[data-step]"));
+        const still = pieces.filter((p) => +p.dataset.step <= was);
+        still.forEach((p) => { p.style.transition = "none"; p.classList.add("shown"); });
+        void sym.offsetWidth;
+        still.forEach((p) => { p.style.transition = ""; });
+      }
       pieces.forEach((p) => { p.style.setProperty("--k", p.dataset.step); p.classList.toggle("shown", +p.dataset.step <= n); });
+      return tex;
     };
-    draw("row");
+    draw(Infinity);
     const lines = typeof cfg.numbers === "string" ? { main: cfg.numbers } : cfg.numbers || {};
-    // a story without lines of numbers keeps room for the formula alone
-    card.querySelector(".scene-formula")?.classList.toggle("bare", !Object.keys(lines).length);
-    // too wide for the card: shrink it, down to 70% (55% on a phone), the pieces side by side as the steps reveal them;
-    // still too wide, put them in a column, shrunk the same way. Fitted again when the card's width or the fonts change.
+    // a line of numbers too wide for the card shrinks like the formula
+    const write = (tex) => {
+      num.innerHTML = RL.math.tex(tex, true);
+      num.style.fontSize = "";
+      RL.math.shrink(num, innerWidth < 640 ? 0.55 : 0.7);
+    };
+    // Sized on the whole formula, so that it keeps one size through the story. Too wide for the card: it shrinks,
+    // down to 70% (55% on a phone), the pieces side by side as the steps reveal them; still too wide, the pieces go in
+    // a column, shrunk the same way. A formula of several rows takes at most a fifth of the window's height, shrunk
+    // down to 85% if need be: the picture needs the room more. Fitted again when the card's width or the fonts
+    // change. Its whole height, and the height of the tallest line of numbers, are kept for the story's stage, which
+    // saves room for them from the start (story.js).
     const fit = () => {
       if (!sym.isConnected) { fitters.delete(fit); return; }
-      const room = sym.clientWidth, key = `${room} ${fonts}`;
+      const room = sym.clientWidth, key = `${room} ${Math.round(innerHeight / 100)} ${fonts}`;
       if (!room || key === fitted) return;
       fitted = key;
-      draw("row");
+      shape = "row";
+      draw(Infinity);
       sym.style.fontSize = "";
-      const floor = innerWidth < 640 ? 0.55 : 0.7; // a phone's card is narrow: it may shrink further
+      const base = parseFloat(getComputedStyle(sym).fontSize), floor = innerWidth < 640 ? 0.55 : 0.7; // a phone's card is narrow: it may shrink further
       if (sym.scrollWidth <= room + 1) { // room to spare: it grows into it, a little (--grow in the CSS)
         const ink = RL.math.inkWidth(sym), cap = parseFloat(getComputedStyle(sym).getPropertyValue("--grow")) || 1;
         const scale = ink ? Math.min(cap, (room * 0.92) / ink) : 1;
         if (scale > 1.02) sym.style.fontSize = `${(parseFloat(getComputedStyle(sym).fontSize) * scale).toFixed(2)}px`;
-        return;
+      } else if (!RL.math.shrink(sym, floor) && shapes.column) {
+        shape = "column";
+        draw(Infinity);
+        sym.style.fontSize = "";
+        RL.math.shrink(sym, floor);
       }
-      if (RL.math.shrink(sym, floor) || !shapes.column) return;
-      draw("column");
-      sym.style.fontSize = "";
-      RL.math.shrink(sym, floor);
+      const tall = sym.scrollHeight, most = innerHeight * 0.2, size = parseFloat(getComputedStyle(sym).fontSize);
+      const lower = Math.max(base * 0.85, (size * most) / tall);
+      if (tall > most && lower < size) sym.style.fontSize = `${lower.toFixed(2)}px`;
+      sym.dataset.full = sym.scrollHeight;
+      if (n > 0) draw(n);
+      let tallest = 0;
+      for (const tex of Object.values(lines)) { write(tex); tallest = Math.max(tallest, num.scrollHeight); }
+      num.dataset.full = tallest;
+      if (line) write(line);
     };
     fitters.add(fit);
     return (st) => {
+      const was = n, heights = [sym.offsetHeight, num.offsetHeight];
       n = st.formula || 0;
-      pieces.forEach((p) => p.classList.toggle("shown", +p.dataset.step <= n));
-      sym.classList.toggle("on", n > 0);
-      fit(); // its faint preview too
-      const line = st.numbers === true ? lines.main : st.numbers ? lines[st.numbers] : null;
-      num.classList.toggle("on", !!line); // shown first (a phone hides it otherwise), so that it can be measured
-      if (line) {
-        num.innerHTML = RL.math.tex(line, true);
-        num.style.fontSize = "";
-        RL.math.shrink(num, innerWidth < 640 ? 0.55 : 0.7); // a line of numbers too wide for the card shrinks like the formula
-      }
+      // closing, it keeps what it showed while it folds away
+      const shows = n > 0 && !!draw(n, was);
+      sym.classList.toggle("on", shows);
+      fit();
+      const next = st.numbers === true ? lines.main : st.numbers ? lines[st.numbers] : null;
+      num.classList.toggle("on", !!next);
+      if (next && next !== line) write(next); // closing, it too keeps what it showed
+      if (next) line = next;
+      // opening, closing, or a row coming or going: the height follows smoothly
+      [sym, num].forEach((el, i) => {
+        const after = el.offsetHeight;
+        if (Math.abs(after - heights[i]) > 1 && !RL.reducedMotion()) {
+          el.animate([{ height: `${heights[i]}px` }, { height: `${after}px` }], { duration: 450, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+        }
+      });
     };
   }
 

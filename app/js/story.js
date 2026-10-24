@@ -35,25 +35,46 @@
     let current = -1;
 
     // The stage stays inside the window, under the bar: when a step makes it taller than that, its picture shrinks to
-    // make room, and keeps that size for the rest of the story, so that it does not change size at every step.
-    // Not on a phone, where the stage sits above the text and scrolls with the page.
+    // make room, and keeps that size for the rest of the story, so that it does not change size at every step. The
+    // formula counts whole even while it is closed or shows only its first rows, so the picture has its final size
+    // before the formula opens. On a phone, where the stage sits above the text, it takes at most 60% of the window's
+    // height, so that the text keeps the rest.
     let fitting = 0;
     // the picture: the largest drawing on the stage, other than the formula and the chart
     const picture = () => [...card.querySelectorAll("svg, canvas")].filter((e) => !e.closest(".scene-formula, .scene-chart, .katex"))
       .map((e) => [e, e.getBoundingClientRect()]).sort((a, b) => b[1].width * b[1].height - a[1].width * a[1].height)[0];
+    // The first step starts lower when the stage is tall, so that by the time it is read, a third of the way down the
+    // window, the stage has reached its place under the bar and shows whole.
+    const column = host.querySelector(".story-steps");
     function keepInView() {
       fitting = 0;
       const found = picture();
-      if (!found || !card.isConnected || innerWidth <= 900) return;
-      const room = innerHeight - parseFloat(getComputedStyle(card).top) - 12, over = card.offsetHeight - room;
-      if (over <= 1) return;
-      const [pic, box] = found, scale = Math.max(0.55, (box.height - over) / box.height);
-      pic.style.maxWidth = `${(box.width * scale).toFixed(0)}px`; // narrower, so lower: it keeps its shape
-      pic.style.marginInline = "auto";
+      if (!found || !card.isConnected) return;
+      const phone = innerWidth <= 900, top = parseFloat(getComputedStyle(phone ? card.parentElement : card).top) || 0;
+      const closed = [...card.querySelectorAll(".f-sym, .f-num")].reduce((h, e) => h + Math.max(0, (+e.dataset.full || e.scrollHeight) - e.clientHeight), 0);
+      const room = innerHeight * (phone ? 0.6 : 1) - top - 12, over = card.offsetHeight + closed - room;
+      const [pic, box] = found, natural = +(pic.dataset.natural ||= box.width);
+      const width = Math.max(natural * 0.55, (box.width * (box.height - over)) / box.height); // at most to 55% of its size
+      if (over > 1 && width < box.width - 1) {
+        pic.style.maxWidth = `${width.toFixed(0)}px`; // narrower, so lower: it keeps its shape
+        pic.style.marginInline = "auto";
+      }
+      const lower = phone ? 0 : Math.round(card.offsetHeight + closed + 12 - innerHeight * 0.65);
+      column.style.paddingTop = lower > innerHeight * 0.04 ? `${lower}px` : ""; // more than the usual 4vh
     }
     const later = () => { cancelAnimationFrame(fitting); fitting = requestAnimationFrame(() => { fitting = requestAnimationFrame(keepInView); }); };
-    let resized = 0;
-    const onResize = () => { clearTimeout(resized); resized = setTimeout(() => { const found = picture(); if (found) found[0].style.maxWidth = ""; later(); }, 200); };
+    // fitted again from its full size when the window changes, but not when a phone's address bar comes and goes
+    let resized = 0, size = [innerWidth, innerHeight];
+    const onResize = () => {
+      clearTimeout(resized);
+      resized = setTimeout(() => {
+        if (innerWidth === size[0] && innerWidth <= 900 && Math.abs(innerHeight - size[1]) < 120) return;
+        size = [innerWidth, innerHeight];
+        const found = picture();
+        if (found) { found[0].style.maxWidth = ""; delete found[0].dataset.natural; }
+        later();
+      }, 200);
+    };
     addEventListener("resize", onResize);
     // a step can add to the stage after it starts (a chart, a line of numbers): fit again whenever the stage grows
     const grown = typeof ResizeObserver === "function" ? new ResizeObserver(later) : null;

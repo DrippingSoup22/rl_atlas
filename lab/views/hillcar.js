@@ -150,7 +150,7 @@
         case "start":
           this.points = [ev.s];
           this.place(ev.s);
-          this.readout.textContent = "step 0";
+          this.readout.textContent = this.o.count ? "step 0" : `position ${sgn(ev.s[0])} · speed ${sgn(ev.s[1], 3)}`;
           this._drawPath();
           return 0;
         case "choose":
@@ -161,7 +161,8 @@
           this.place(ev.s2);
           this.points.push(ev.s2);
           this._drawPath();
-          this.readout.textContent = `step ${ev.k + 1} · position ${sgn(ev.s2[0])} · speed ${sgn(ev.s2[1], 3)}`;
+          // the step too in a story; the Lab counts the steps in the line under the pane
+          this.readout.textContent = `${this.o.count ? `step ${ev.k + 1} · ` : ""}position ${sgn(ev.s2[0])} · speed ${sgn(ev.s2[1], 3)}`;
           if (ev.end) {
             this.pop(ev.k + 1 < this.env.maxSteps ? `the flag, in ${ev.k + 1} steps` : `${this.env.maxSteps} steps: no flag`);
             return 600;
